@@ -75,7 +75,6 @@ import net.brlns.gdownloader.ui.MediaCard;
 //TODO setting to download channels as playlists
 //TODO keep older versions of ytdlp and retry failed downloads against them
 //TODO open url in default browser for linux, don't try to guess it
-//TODO remove links from the playlists set when
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
@@ -204,6 +203,7 @@ public class YtDlpDownloader{
                                                 get("dialog.confirm"),
                                                 get("dialog.download_playlist") + "\n\n" + playlist,
                                                 30000,
+                                                defaultOption,
                                                 playlistDialogOption,
                                                 singleDialogOption);
 
