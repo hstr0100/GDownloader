@@ -17,9 +17,7 @@
 package net.brlns.gdownloader.ui;
 
 import java.awt.*;
-import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.Transferable;
-import java.awt.datatransfer.UnsupportedFlavorException;
 import java.awt.dnd.*;
 import java.awt.event.*;
 import java.io.IOException;
@@ -110,6 +108,10 @@ public class GUIManager{
             appWindow.setExtendedState(JFrame.ICONIFIED);
             appWindow.setExtendedState(JFrame.NORMAL);
         }
+    }
+
+    public void requestFocus(){
+        appWindow.requestFocus();
     }
 
     //TODO: light theme
@@ -394,12 +396,27 @@ public class GUIManager{
         return button;
     }
 
-    public void showConfirmDialog(String title, String message, DialogButton... buttons){
-        JDialog dialog = new JDialog((JFrame)null, title, true);
+    public void showConfirmDialog(String title, String message, int timeoutMs, DialogButton onClose, DialogButton... buttons){
+        JDialog dialog = new JDialog(appWindow, title, Dialog.ModalityType.APPLICATION_MODAL){
+            private boolean actionPerformed = false;
+
+            @Override
+            public void dispose(){
+                if(!actionPerformed){
+                    actionPerformed = true;
+
+                    onClose.getAction().accept(false);
+                }
+
+                super.dispose();
+            }
+        };
+
         dialog.setAlwaysOnTop(true);
         dialog.setSize(400, 260);
         dialog.setResizable(false);
         dialog.setLocationRelativeTo(null);
+        dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
 
         try{
             dialog.setIconImage(getAppIcon());
@@ -452,7 +469,43 @@ public class GUIManager{
         JPanel southPanel = new JPanel();
         southPanel.setLayout(new BorderLayout());
         southPanel.setOpaque(false);
+
         southPanel.add(checkboxPanel, BorderLayout.NORTH);
+
+        JProgressBar dialogProgressBar = new JProgressBar(0, 100);
+        dialogProgressBar.setValue(100);
+        dialogProgressBar.setStringPainted(false);
+        dialogProgressBar.setForeground(Color.WHITE);
+        dialogProgressBar.setBackground(Color.DARK_GRAY);
+        dialogProgressBar.setBorderPainted(false);
+        dialogProgressBar.setPreferredSize(new Dimension(dialog.getWidth() - 10, 7));
+
+        Timer timer = new Timer(50, new ActionListener(){
+            int elapsed = 0;
+
+            @Override
+            public void actionPerformed(ActionEvent e){
+                elapsed += 50;
+
+                int progress = 100 - (elapsed * 100) / timeoutMs;
+                dialogProgressBar.setValue(progress);
+
+                if(elapsed >= timeoutMs){
+                    ((Timer)e.getSource()).stop();
+                    dialog.dispose();
+                }
+            }
+        });
+
+        dialog.addWindowListener(new WindowAdapter(){
+            @Override
+            public void windowOpened(WindowEvent e){
+                timer.start();
+            }
+        });
+
+        southPanel.add(dialogProgressBar, BorderLayout.CENTER);
+
         southPanel.add(buttonPanel, BorderLayout.SOUTH);
 
         panel.add(southPanel, BorderLayout.SOUTH);
@@ -890,8 +943,6 @@ public class GUIManager{
 
         scrollToBottom(queueScrollPane);
 
-        appWindow.requestFocus();
-
         //updateAppWindowSize();
         return mediaCard;
     }
@@ -979,9 +1030,10 @@ public class GUIManager{
         }
     }
 
-    public void closeProgressWindow(){
+    public void closeAppWindow(){
         if(appWindow != null){
             appWindow.setVisible(false);
+
 //          mediaCards.clear();
 //          queuePanel.removeAll();
             SwingUtilities.invokeLater(() -> {

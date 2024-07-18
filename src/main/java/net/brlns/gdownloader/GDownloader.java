@@ -32,6 +32,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.PosixFilePermission;
+import java.util.List;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -39,6 +40,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.swing.UIManager;
 import lombok.Getter;
@@ -99,7 +101,7 @@ public class GDownloader{
     private final Clipboard clipboard;
     private final Map<FlavorType, String> lastClipboardState = new HashMap<>();
 
-    private ExecutorService clipboardExecutor = new ThreadPoolExecutor(0, 3,
+    private ExecutorService clipboardExecutor = new ThreadPoolExecutor(0, 5,
         1L, TimeUnit.MINUTES, new LinkedBlockingQueue<>());
 
     public GDownloader(){
@@ -522,7 +524,7 @@ public class GDownloader{
         resetOnce = true;
 
         for(FlavorType type : new HashSet<>(lastClipboardState.keySet())){
-            lastClipboardState.put(type, "");
+            lastClipboardState.put(type, "reset");
         }
     }
 
@@ -580,12 +582,11 @@ public class GDownloader{
 
     private void handleClipboardInput(String data){
         clipboardExecutor.execute(() -> {
-            int captured = 0;
+            List<CompletableFuture<Boolean>> list = new ArrayList<>();
+
             for(String url : extractUrlsFromString(data)){
                 if(url.startsWith("http")){
-                    if(downloadManager.captureUrl(url)){
-                        captured++;
-                    }
+                    list.add(downloadManager.captureUrl(url));
                 }
 
                 if(url.startsWith("magnet")){
@@ -593,14 +594,40 @@ public class GDownloader{
                 }
             }
 
-            if(captured > 0){
-                guiManager.showMessage(
-                    get("gui.clipboard_monitor.captured_title"),
-                    get("gui.clipboard_monitor.captured", captured),
-                    2500,
-                    MessageType.INFO,
-                    false
-                );
+            CompletableFuture<Void> futures = CompletableFuture.allOf(list.toArray(new CompletableFuture[0]));
+
+            futures.thenRun(() -> {
+                int captured = 0;
+
+                List<Boolean> results = list.stream()
+                    .map(CompletableFuture::join)
+                    .collect(Collectors.toList());
+
+                for(boolean result : results){
+                    if(result){
+                        captured++;
+                    }
+                }
+
+                if(captured > 0){
+                    guiManager.showMessage(
+                        get("gui.clipboard_monitor.captured_title"),
+                        get("gui.clipboard_monitor.captured", captured),
+                        2500,
+                        MessageType.INFO,
+                        false
+                    );
+                }
+            });
+
+            try{
+                futures.get(1l, TimeUnit.MINUTES);
+
+                guiManager.requestFocus();
+            }catch(InterruptedException | ExecutionException e){
+                handleException(e);
+            }catch(TimeoutException e){
+                log.warn("Timed out waiting for futures {}", e.getLocalizedMessage());
             }
         });
     }
@@ -619,13 +646,13 @@ public class GDownloader{
         }
     }
 
-    private static final Object sync = new Object();
+    private static final Object _logSync = new Object();
 
     private void logUrl(String format, String file, Object... params){
         FormattingTuple ft = MessageFormatter.arrayFormat(format, params);
         String message = ft.getMessage();
 
-        synchronized(sync){
+        synchronized(_logSync){
             try(FileWriter fw = new FileWriter(getOrCreateDownloadsDirectory().toPath().resolve(file + ".txt").toFile(), true);
                 PrintWriter pw = new PrintWriter(fw)){
                 for(String str : message.split("\n")){
@@ -708,10 +735,9 @@ public class GDownloader{
         try(Stream<Path> dirStream = Files.walk(directory)){
             dirStream
                 .sorted(Comparator.reverseOrder()) //Ensure deeper directories are deleted first
-                .map(Path::toFile)
                 .forEach(file -> {
                     try{
-                        Files.deleteIfExists(file.toPath());
+                        Files.deleteIfExists(file);
                     }catch(IOException e){
                         log.error("Failed to delete: {} {}", file, e.getLocalizedMessage());
                     }

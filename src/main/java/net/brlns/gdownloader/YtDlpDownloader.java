@@ -51,7 +51,6 @@ import net.brlns.gdownloader.settings.enums.ISettingsEnum;
 import net.brlns.gdownloader.settings.enums.PlayListOptionEnum;
 import net.brlns.gdownloader.settings.enums.VideoContainerEnum;
 import net.brlns.gdownloader.settings.enums.WebFilterEnum;
-import net.brlns.gdownloader.ui.GUIManager.ButtonFunction;
 import net.brlns.gdownloader.ui.GUIManager.DialogButton;
 import net.brlns.gdownloader.ui.MediaCard;
 
@@ -76,6 +75,7 @@ import net.brlns.gdownloader.ui.MediaCard;
 //TODO setting to download channels as playlists
 //TODO keep older versions of ytdlp and retry failed downloads against them
 //TODO open url in default browser for linux, don't try to guess it
+//TODO remove links from the playlists set when
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
@@ -89,6 +89,7 @@ public class YtDlpDownloader{
     private final List<Consumer<YtDlpDownloader>> listeners = new ArrayList<>();
 
     private final Set<String> capturedLinks = Collections.synchronizedSet(new HashSet<>());
+    private final Set<String> capturedPlaylists = Collections.synchronizedSet(new HashSet<>());
 
     private final Deque<QueueEntry> downloadDeque = new LinkedBlockingDeque<>();
     private final Queue<QueueEntry> completedDownloads = new ConcurrentLinkedQueue<>();
@@ -112,85 +113,130 @@ public class YtDlpDownloader{
         listeners.add(consumer);
     }
 
-    public boolean captureUrl(String inputUrl){
-        return captureUrl(inputUrl, false);
+    public CompletableFuture<Boolean> captureUrl(String inputUrl){
+        return captureUrl(inputUrl, main.getConfig().getPlaylistDownloadOption());
     }
 
-    public boolean captureUrl(String inputUrl, boolean skipDialog){
+    public CompletableFuture<Boolean> captureUrl(@Nullable String inputUrl, PlayListOptionEnum playlistOption){
+        CompletableFuture<Boolean> future = new CompletableFuture<>();
+
+        if(inputUrl == null || inputUrl.contains("ytimg") || WebFilterEnum.isYoutubeChannel(inputUrl)){//Nope, maybe as a setting later
+            future.complete(false);
+            return future;
+        }
+
         for(WebFilterEnum webFilter : WebFilterEnum.values()){
             if(webFilter == WebFilterEnum.DEFAULT && main.getConfig().isCaptureAnyLinks() || webFilter.getPattern().apply(inputUrl)){
-                if(inputUrl.contains("ytimg")){
-                    return false;
-                }
-
                 if(!capturedLinks.contains(inputUrl)){
-                    if(WebFilterEnum.isYoutubeChannel(inputUrl)){//Nope, maybe as a setting later
-                        return false;
-                    }
+                    String filteredUrl;
 
-                    String filteredUrl = inputUrl;
-
-                    if(webFilter == WebFilterEnum.YOUTUBE){
-                        filteredUrl = stripQuery(inputUrl);
-                    }
-
-                    if(!skipDialog && webFilter == WebFilterEnum.YOUTUBE_PLAYLIST){
-                        ButtonFunction playlist = (boolean setDefault) -> {
-                            if(setDefault){
-                                main.getConfig().setPlaylistDownloadOption(PlayListOptionEnum.DOWNLOAD_PLAYLIST);
-                                main.updateConfig();
-                            }
-
-                            if(captureUrl(inputUrl, true)){
-                                //TODO: increment a counter and call on the ticker
-//                                main.getGuiManager().showMessage(
-//                                    "URL CAPTURE",
-//                                    "Captured Playlist\n" + inputUrl,
-//                                    2500,
-//                                    MessageType.INFO,
-//                                    false
-//                                );
-                            }
-                        };
-
-                        ButtonFunction single = (boolean setDefault) -> {
-                            if(setDefault){
-                                main.getConfig().setPlaylistDownloadOption(PlayListOptionEnum.DOWNLOAD_SINGLE);
-                                main.updateConfig();
-                            }
-
-                            String newUrl = stripQuery(inputUrl);
-
-                            if(captureUrl(newUrl, true)){
-//                                main.getGuiManager().showMessage(
-//                                    "URL CAPTURE",
-//                                    "Captured single video from playlist\n" + newUrl,
-//                                    2500,
-//                                    MessageType.INFO,
-//                                    false
-//                                );
-                            }
-                        };
-
-                        switch(main.getConfig().getPlaylistDownloadOption()){
-                            case DOWNLOAD_PLAYLIST:
-                                playlist.accept(false);
-                                break;
-                            case DOWNLOAD_SINGLE:
-                                single.accept(false);
-                                break;
-                            default:
-                                main.getGuiManager().showConfirmDialog(
-                                    get("dialog.confirm"),
-                                    get("dialog.download_playlist") + "\n\n" + inputUrl,
-                                    new DialogButton(PlayListOptionEnum.DOWNLOAD_PLAYLIST.getDisplayName(), playlist),
-                                    new DialogButton(PlayListOptionEnum.DOWNLOAD_SINGLE.getDisplayName(), single));
+                    switch(webFilter){
+                        case YOUTUBE: {
+                            filteredUrl = filterVideo(inputUrl);
+                            break;
                         }
 
-                        return false;
+                        case YOUTUBE_PLAYLIST: {
+                            switch(playlistOption){
+                                case DOWNLOAD_PLAYLIST: {
+                                    filteredUrl = filterPlaylist(inputUrl);
+
+                                    if(filteredUrl != null){
+                                        capturedPlaylists.add(filteredUrl);
+                                    }
+
+                                    break;
+                                }
+
+                                case DOWNLOAD_SINGLE: {
+                                    String playlist = filterPlaylist(inputUrl);
+
+                                    if(playlist != null){
+                                        capturedPlaylists.add(playlist);
+                                    }
+
+                                    return captureUrl(filterVideo(inputUrl));
+                                }
+
+                                case ALWAYS_ASK:
+                                default: {
+                                    String playlist = filterPlaylist(inputUrl);
+
+                                    if(playlist != null){
+                                        if(!capturedPlaylists.contains(playlist)){
+                                            DialogButton playlistDialogOption = new DialogButton(PlayListOptionEnum.DOWNLOAD_PLAYLIST.getDisplayName(), (boolean setDefault) -> {
+                                                if(setDefault){
+                                                    main.getConfig().setPlaylistDownloadOption(PlayListOptionEnum.DOWNLOAD_PLAYLIST);
+                                                    main.updateConfig();
+                                                }
+
+                                                captureUrl(playlist, PlayListOptionEnum.DOWNLOAD_PLAYLIST)
+                                                    .whenComplete((Boolean result, Throwable e) -> {
+                                                        if(e != null){
+                                                            main.handleException(e);
+                                                        }
+
+                                                        future.complete(result);
+                                                    });
+                                            });
+
+                                            DialogButton singleDialogOption = new DialogButton(PlayListOptionEnum.DOWNLOAD_SINGLE.getDisplayName(), (boolean setDefault) -> {
+                                                if(setDefault){
+                                                    main.getConfig().setPlaylistDownloadOption(PlayListOptionEnum.DOWNLOAD_SINGLE);
+                                                    main.updateConfig();
+                                                }
+
+                                                captureUrl(inputUrl, PlayListOptionEnum.DOWNLOAD_SINGLE)
+                                                    .whenComplete((Boolean result, Throwable e) -> {
+                                                        if(e != null){
+                                                            main.handleException(e);
+                                                        }
+
+                                                        future.complete(result);
+                                                    });
+                                            });
+
+                                            DialogButton defaultOption = new DialogButton("", (boolean setDefault) -> {
+                                                future.complete(false);
+                                            });
+
+                                            main.getGuiManager().showConfirmDialog(
+                                                get("dialog.confirm"),
+                                                get("dialog.download_playlist") + "\n\n" + playlist,
+                                                30000,
+                                                playlistDialogOption,
+                                                singleDialogOption);
+
+                                            return future;
+                                        }else{
+                                            return captureUrl(filterVideo(inputUrl));
+                                        }
+                                    }
+
+                                    future.complete(false);
+                                    return future;
+                                }
+                            }
+                        }
+
+                        default: {
+                            filteredUrl = inputUrl;
+                            break;
+                        }
                     }
 
-                    if(capturedLinks.add(inputUrl)){
+                    if(filteredUrl == null){
+                        if(main.getConfig().isDebugMode()){
+                            main.handleException(new Throwable("Filtered url was null"));
+                        }
+
+                        future.complete(false);
+                        return future;
+                    }
+
+                    if(capturedLinks.add(filteredUrl)){
+                        capturedLinks.add(inputUrl);
+
                         MediaCard mediaCard = main.getGuiManager().addMediaCard(!main.getConfig().isDownloadAudioOnly(), "");
 
                         int downloadId = downloadCounter.incrementAndGet();
@@ -198,10 +244,13 @@ public class YtDlpDownloader{
                         QueueEntry queueEntry = new QueueEntry(mediaCard, webFilter, inputUrl, filteredUrl, downloadId);
                         queueEntry.updateStatus(DownloadStatus.QUERYING, get("gui.download_status.querying"));
 
+                        String filtered = filteredUrl;
                         mediaCard.setOnClose(() -> {
                             queueEntry.close();
 
+                            capturedPlaylists.remove(inputUrl);
                             capturedLinks.remove(inputUrl);
+                            capturedLinks.remove(filtered);
 
                             downloadDeque.remove(queueEntry);
                             failedDownloads.remove(queueEntry);
@@ -219,15 +268,15 @@ public class YtDlpDownloader{
                         downloadDeque.offerLast(queueEntry);
                         fireListeners();
 
-                        return true;
+                        future.complete(true);
+                        return future;
                     }
-
-                    return false;
                 }
             }
         }
 
-        return false;
+        future.complete(false);
+        return future;
     }
 
     public boolean isRunning(){
@@ -284,6 +333,7 @@ public class YtDlpDownloader{
 
     public void clearQueue(){
         capturedLinks.clear();
+        capturedPlaylists.clear();
 
         QueueEntry next;
         while((next = downloadDeque.peek()) != null){
@@ -320,6 +370,10 @@ public class YtDlpDownloader{
 
         downloadScheduler.execute(() -> {
             try{
+                if(queueEntry.getCancelHook().get()){
+                    return;
+                }
+
                 List<String> list = readOutput(
                     main.getYtDlpUpdater().getYtDlpExecutablePath().toString(),
                     "--dump-json",
@@ -338,7 +392,6 @@ public class YtDlpDownloader{
                 queueEntry.updateStatus(DownloadStatus.QUEUED, get("gui.download_status.not_started"));
             }
         });
-
     }
 
     public void processQueue(){
@@ -522,6 +575,11 @@ public class YtDlpDownloader{
                             break;
                         case CRUNCHYROLL:
                         case DROPOUT:
+                            if(!main.getConfig().isReadCookies()){
+                                log.warn("Cookies Required for this website " + next.getOriginalUrl());
+                            }
+
+                        //fall
                         default:
                             args.addAll(Arrays.asList(
                                 "-o",
@@ -639,7 +697,8 @@ public class YtDlpDownloader{
         }
     }
 
-    private static String stripQuery(String youtubeUrl){
+    @Nullable
+    private static String filterVideo(String youtubeUrl){
         try{
             URL url = new URL(youtubeUrl);
             String host = url.getHost();
@@ -651,12 +710,33 @@ public class YtDlpDownloader{
                 }
             }
 
-            return youtubeUrl;
+            return null;
         }catch(MalformedURLException e){
             log.warn("Invalid url {} {}", youtubeUrl, e.getLocalizedMessage());
         }
 
-        return youtubeUrl;
+        return null;
+    }
+
+    @Nullable
+    private static String filterPlaylist(String youtubeUrl){
+        try{
+            URL url = new URL(youtubeUrl);
+            String host = url.getHost();
+
+            if(host != null && host.contains("youtube.com")){
+                String videoId = getParameter(url, "list");
+                if(videoId != null){
+                    return "https://www.youtube.com/playlist?list=" + videoId;
+                }
+            }
+
+            return null;
+        }catch(MalformedURLException e){
+            log.warn("Invalid url {} {}", youtubeUrl, e.getLocalizedMessage());
+        }
+
+        return null;
     }
 
     @Nullable
