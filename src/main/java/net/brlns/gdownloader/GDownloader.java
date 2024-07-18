@@ -1,3 +1,19 @@
+/*
+ * Copyright (C) 2024 hstr0100
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 package net.brlns.gdownloader;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -80,8 +96,8 @@ public class GDownloader{
     @Getter
     private GUIManager guiManager;
 
-    private static Clipboard CLIPBOARD;
-    private Map<FlavorType, String> LAST_CLIPBOARD_STATE = new HashMap<>();
+    private final Clipboard clipboard;
+    private final Map<FlavorType, String> lastClipboardState = new HashMap<>();
 
     private ExecutorService clipboardExecutor = new ThreadPoolExecutor(0, 3,
         1L, TimeUnit.MINUTES, new LinkedBlockingQueue<>());
@@ -114,7 +130,7 @@ public class GDownloader{
         Language.initLanguage(config.getLanguage());
         log.info(Language.get("startup"));
 
-        CLIPBOARD = Toolkit.getDefaultToolkit().getSystemClipboard();
+        clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
         tray = SystemTray.getSystemTray();
 
         try{
@@ -503,14 +519,14 @@ public class GDownloader{
 
         resetOnce = true;
 
-        for(FlavorType type : new HashSet<>(LAST_CLIPBOARD_STATE.keySet())){
-            LAST_CLIPBOARD_STATE.put(type, "");
+        for(FlavorType type : new HashSet<>(lastClipboardState.keySet())){
+            lastClipboardState.put(type, "");
         }
     }
 
     private void updateClipboard(){
         if(watchClipboard){
-            Transferable contents = CLIPBOARD.getContents(null);
+            Transferable contents = clipboard.getContents(null);
 
             if(contents == null){
                 return;
@@ -518,7 +534,7 @@ public class GDownloader{
 
             if(contents.isDataFlavorSupported(FlavorType.STRING.getFlavor())){
                 try{
-                    String data = (String)CLIPBOARD.getData(FlavorType.STRING.getFlavor());
+                    String data = (String)clipboard.getData(FlavorType.STRING.getFlavor());
                     processClipboardData(FlavorType.STRING, data);
                 }catch(UnsupportedFlavorException | IOException e){
                     log.warn(e.getLocalizedMessage());
@@ -527,7 +543,7 @@ public class GDownloader{
 
             if(contents.isDataFlavorSupported(FlavorType.HTML.getFlavor())){
                 try{
-                    String data = (String)CLIPBOARD.getData(FlavorType.HTML.getFlavor());
+                    String data = (String)clipboard.getData(FlavorType.HTML.getFlavor());
                     processClipboardData(FlavorType.HTML, data);
                 }catch(UnsupportedFlavorException | IOException e){
                     log.warn(e.getLocalizedMessage());
@@ -537,13 +553,13 @@ public class GDownloader{
     }
 
     private void processClipboardData(FlavorType flavorType, String data){
-        if(!LAST_CLIPBOARD_STATE.containsKey(flavorType)){ // Ignore state during startup
-            LAST_CLIPBOARD_STATE.put(flavorType, data);
+        if(!lastClipboardState.containsKey(flavorType)){ // Ignore state during startup
+            lastClipboardState.put(flavorType, data);
         }else{
-            String last = LAST_CLIPBOARD_STATE.get(flavorType);
+            String last = lastClipboardState.get(flavorType);
 
             if(!last.equals(data)){
-                LAST_CLIPBOARD_STATE.put(flavorType, data);
+                lastClipboardState.put(flavorType, data);
 
                 clipboardExecutor.execute(() -> {
                     int captured = 0;
@@ -735,11 +751,11 @@ public class GDownloader{
         }
     }
 
+    @Getter
     private enum FlavorType{
         STRING(DataFlavor.stringFlavor),
         HTML(DataFlavor.selectionHtmlFlavor);
 
-        @Getter
         private final DataFlavor flavor;
 
         private FlavorType(DataFlavor flavorIn){

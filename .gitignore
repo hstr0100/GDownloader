@@ -8,5 +8,5 @@ hs_err_pid*
 /target/*
 #/target/GDownloader.jar
 
-#Cannot include these because it's too large for github
+#Cannot include these because they're too large for github
 /src/main/resources/bin/*

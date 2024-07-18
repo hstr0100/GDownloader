@@ -1,3 +1,19 @@
+/*
+ * Copyright (C) 2024 hstr0100
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 package net.brlns.gdownloader;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -256,6 +272,7 @@ public class YtDlpUpdater{
         MAC;
     }
 
+    @Getter
     private static enum ArchVersion{
         MAC_X86("yt-dlp_macos_legacy", null, OS.MAC),
         MAC_X64("yt-dlp_macos", null, OS.MAC),
@@ -265,11 +282,8 @@ public class YtDlpUpdater{
         LINUX_ARM("yt-dlp_linux_armv7l", null, OS.LINUX),
         LINUX_ARM64("yt-dlp_linux_aarch64", null, OS.LINUX);
 
-        @Getter
         private final String ytDlpBinary;
-        @Getter
         private final String ffmpegBinary;
-        @Getter
         private final OS os;
 
         private ArchVersion(String ytDlpBinaryIn, String ffmpegBinaryIn, OS osIn){
