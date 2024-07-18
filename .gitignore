@@ -1,0 +1,12 @@
+dependency-reduced-pom.xml
+nb-configuration.xml
+nbactions.xml
+config.json
+*.log
+hs_err_pid*
+
+/target/*
+#/target/GDownloader.jar
+
+#Cannot include these because it's too large for github
+/src/main/resources/bin/*

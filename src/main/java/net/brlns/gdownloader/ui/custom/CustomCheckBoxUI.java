@@ -1,0 +1,67 @@
+package net.brlns.gdownloader.ui.custom;
+
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
+import javax.swing.*;
+import javax.swing.plaf.basic.BasicCheckBoxUI;
+
+/**
+ * @author Gabriel / hstr0100 / vertx010
+ */
+public class CustomCheckBoxUI extends BasicCheckBoxUI{
+
+    @Override
+    public void installUI(JComponent c){
+        super.installUI(c);
+
+        JCheckBox checkBox = (JCheckBox)c;
+        checkBox.setOpaque(false);
+        checkBox.setFont(UIManager.getFont("CheckBox.font"));
+        checkBox.setBackground(UIManager.getColor("CheckBox.background"));
+        checkBox.setForeground(UIManager.getColor("CheckBox.foreground"));
+        checkBox.setBorder(UIManager.getBorder("CheckBox.border"));
+        checkBox.setIcon(new MaterialCheckBoxIcon());
+        checkBox.setSelectedIcon(new MaterialCheckBoxIcon());
+    }
+
+    @Override
+    public void paint(Graphics g, JComponent c){
+        AbstractButton b = (AbstractButton)c;
+        Graphics2D g2 = (Graphics2D)g;
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+        super.paint(g2, c);
+    }
+
+    private static class MaterialCheckBoxIcon implements Icon{
+
+        private static final int SIZE = 16;
+
+        @Override
+        public void paintIcon(Component c, Graphics g, int x, int y){
+            AbstractButton button = (AbstractButton)c;
+            ButtonModel model = button.getModel();
+
+            if(model.isSelected()){
+                g.setColor(Color.WHITE);
+                g.fillOval(x, y, SIZE, SIZE);
+            }else{
+                g.setColor(UIManager.getColor("CheckBox.background"));
+                g.drawOval(x, y, SIZE - 1, SIZE - 1);
+            }
+        }
+
+        @Override
+        public int getIconWidth(){
+            return SIZE;
+        }
+
+        @Override
+        public int getIconHeight(){
+            return SIZE;
+        }
+    }
+}
