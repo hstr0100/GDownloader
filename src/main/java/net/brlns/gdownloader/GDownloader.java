@@ -524,37 +524,57 @@ public class GDownloader{
         }
     }
 
-    private void updateClipboard(){
-        if(watchClipboard){
-            Transferable transferable = clipboard.getContents(null);
+    public boolean updateClipboard(){
+        return updateClipboard(null, false);
+    }
 
+    public boolean updateClipboard(Transferable transferable, boolean force){
+        if(watchClipboard || force){
             if(transferable == null){
-                return;
+                transferable = clipboard.getContents(null);
+
+                if(transferable == null){
+                    return false;
+                }
             }
 
-            DataFlavor[] flavors = transferable.getTransferDataFlavors();
-
-            for(DataFlavor flavor : flavors){
+            if(transferable.isDataFlavorSupported(FlavorType.STRING.getFlavor())){
                 try{
-                    if(flavor.isFlavorTextType()){
-                        String text = transferable.getTransferData(flavor).toString();
+                    String data = (String)transferable.getTransferData(FlavorType.STRING.getFlavor());
 
-                        if(flavor.equals(GDownloader.FlavorType.STRING.getFlavor())){
-                            processClipboardData(FlavorType.STRING, text);
-                        }
-
-                        if(flavor.equals(GDownloader.FlavorType.HTML.getFlavor())){
-                            processClipboardData(FlavorType.HTML, text);
-                        }
+                    if(!force){
+                        processClipboardData(FlavorType.STRING, data);
+                    }else{
+                        handleClipboardInput(data);
                     }
+
+                    return true;
+                }catch(UnsupportedFlavorException | IOException e){
+                    log.warn(e.getLocalizedMessage());
+                }
+            }
+
+            if(transferable.isDataFlavorSupported(FlavorType.HTML.getFlavor())){
+                try{
+                    String data = (String)transferable.getTransferData(FlavorType.HTML.getFlavor());
+
+                    if(!force){
+                        processClipboardData(FlavorType.HTML, data);
+                    }else{
+                        handleClipboardInput(data);
+                    }
+
+                    return true;
                 }catch(UnsupportedFlavorException | IOException e){
                     log.warn(e.getLocalizedMessage());
                 }
             }
         }
+
+        return false;
     }
 
-    public void handleClipboardInput(String data){
+    private void handleClipboardInput(String data){
         clipboardExecutor.execute(() -> {
             int captured = 0;
             for(String url : extractUrlsFromString(data)){

@@ -678,7 +678,7 @@ public class GUIManager{
                 }
             });
 
-            updateProgressWindowSize();
+            updateAppWindowSize();
 
             JPanel mainPanel = new JPanel(new BorderLayout());
             mainPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
@@ -722,24 +722,10 @@ public class GUIManager{
                         dtde.acceptDrop(DnDConstants.ACTION_COPY_OR_MOVE);
 
                         Transferable transferable = dtde.getTransferable();
-                        DataFlavor[] flavors = transferable.getTransferDataFlavors();
 
-                        for(DataFlavor flavor : flavors){
-                            try{
-                                if(flavor.isFlavorTextType()){
-                                    String text = transferable.getTransferData(flavor).toString();
+                        boolean result = main.updateClipboard(transferable, true);
 
-                                    if(flavor.equals(GDownloader.FlavorType.STRING.getFlavor())
-                                        || flavor.equals(GDownloader.FlavorType.HTML.getFlavor())){
-                                        main.handleClipboardInput(text);
-                                    }
-                                }
-                            }catch(UnsupportedFlavorException | IOException e){
-                                log.warn(e.getLocalizedMessage());
-                            }
-                        }
-
-                        dtde.dropComplete(true);
+                        dtde.dropComplete(result);
                     }catch(Exception e){
                         main.handleException(e);
 
@@ -761,13 +747,7 @@ public class GUIManager{
             queueScrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
             queueScrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
 
-            JPanel borderPanel = new JPanel(new BorderLayout());
-            borderPanel.setOpaque(false);
-            borderPanel.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0));
-
-            borderPanel.add(queueScrollPane, BorderLayout.CENTER);
-
-            mainPanel.add(borderPanel, BorderLayout.CENTER);
+            mainPanel.add(queueScrollPane, BorderLayout.CENTER);
 
             appWindow.add(mainPanel);
         }
@@ -912,7 +892,7 @@ public class GUIManager{
 
         appWindow.requestFocus();
 
-        //updateProgressWindowSize();
+        //updateAppWindowSize();
         return mediaCard;
     }
 
@@ -930,7 +910,7 @@ public class GUIManager{
         });
     }
 
-    private void updateProgressWindowSize(){
+    private void updateAppWindowSize(){
         SwingUtilities.invokeLater(() -> {
             appWindow.setSize(550, 350);
 
@@ -990,10 +970,10 @@ public class GUIManager{
             appWindow.revalidate();
             appWindow.repaint();
 
-            //updateProgressWindowSize();
+            //updateAppWindowSize();
 //            if(mediaCards.isEmpty()){
 //                SwingUtilities.invokeLater(() -> {
-//                    closeProgressWindow();
+//                    closeAppWindow();
 //                });
 //            }
         }

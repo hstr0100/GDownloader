@@ -71,7 +71,6 @@ import net.brlns.gdownloader.ui.MediaCard;
 //TODO restart program on language change
 //TODO dark and white themes
 //TODO scale on resolution DPI
-//TODO check if removing the border from the bottom fixes the scrolling down
 //TODO should we move the window back up when a new card is added?
 //TODO save last window size in config
 //TODO setting to download channels as playlists
@@ -367,6 +366,8 @@ public class YtDlpDownloader{
             downloadScheduler.execute(() -> {
                 if(!downloadsRunning.get()){
                     downloadDeque.offerFirst(next);
+
+                    runningDownloads.decrementAndGet();
                     fireListeners();
                     return;
                 }
@@ -790,7 +791,7 @@ public class YtDlpDownloader{
         private DownloadStatus downloadStatus;
         private VideoInfo videoInfo;
 
-        private File tmpDirectory;//TODO
+        private File tmpDirectory;
         private List<File> finalMediaFiles = new ArrayList<>();
 
         private AtomicBoolean cancelHook = new AtomicBoolean(false);

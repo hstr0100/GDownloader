@@ -234,7 +234,7 @@ public class SettingsPanel{
 
                         File file = new File(settings.getDownloadsPath());
                         if(file.exists() && file.canWrite()){
-                            main.setDownloadsPath(file);
+                            main.setDownloadsPath(file);//We are uselessly calling on updateConfig() here, but should be no problem
                         }else{
                             settings.setDownloadsPath("");
 
