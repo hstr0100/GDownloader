@@ -23,7 +23,7 @@ import static net.brlns.gdownloader.Language.*;
  * @author Gabriel / hstr0100 / vertx010
  */
 @Getter
-public enum FPSEnum implements SettingsEnum{
+public enum FPSEnum implements ISettingsEnum{
     FPS_30(30),
     FPS_60(60);
 

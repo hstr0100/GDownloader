@@ -69,7 +69,6 @@ public class Settings{
     @JsonProperty("DownloadAudioOnly")
     private boolean downloadAudioOnly = false;
 
-    //TODO: need to refresh ui for this one
     @JsonProperty("KeepWindowAlwaysOnTop")
     private boolean keepWindowAlwaysOnTop = false;
 

@@ -22,7 +22,7 @@ import lombok.Getter;
  * @author Gabriel / hstr0100 / vertx010
  */
 @Getter
-public enum AudioBitrateEnum implements SettingsEnum{
+public enum AudioBitrateEnum implements ISettingsEnum{
     BITRATE_192(192, "192kbps"),
     BITRATE_256(256, "256kbps"),
     BITRATE_320(320, "320kbps");

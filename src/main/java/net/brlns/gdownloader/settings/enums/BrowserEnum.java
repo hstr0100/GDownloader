@@ -23,7 +23,7 @@ import static net.brlns.gdownloader.Language.*;
  * @author Gabriel / hstr0100 / vertx010
  */
 @Getter
-public enum BrowserEnum implements SettingsEnum{
+public enum BrowserEnum implements ISettingsEnum{
     UNSET("", ""),
     CHROME("chrome", "Google Chrome", "chromium"),
     FIREFOX("firefox", "Firefox"),

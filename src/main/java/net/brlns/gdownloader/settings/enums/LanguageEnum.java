@@ -23,7 +23,7 @@ import lombok.Getter;
  * @author Gabriel / hstr0100 / vertx010
  */
 @Getter
-public enum LanguageEnum implements SettingsEnum{
+public enum LanguageEnum implements ISettingsEnum{
     ENGLISH(Locale.ENGLISH),
     BRAZIL_PORTUGUESE(new Locale("pt", "BR"));
 

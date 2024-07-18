@@ -24,7 +24,7 @@ import static net.brlns.gdownloader.Language.*;
  * @author Gabriel / hstr0100 / vertx010
  */
 @Getter
-public enum WebFilterEnum implements SettingsEnum{
+public enum WebFilterEnum implements ISettingsEnum{
     YOUTUBE("Youtube", s -> (s.contains("youtube.com/watch?v=") || s.contains("youtube.com/embed")) && !isYoutubePlaylist(s) || s.contains("youtu.be")),
     YOUTUBE_PLAYLIST("Youtube - PLAYLIST", s -> s.contains("youtube.com/") && isYoutubePlaylist(s)),
     TWITCH("Twitch", s -> s.contains("twitch.tv")),//best[height<=480]+Audio_Only

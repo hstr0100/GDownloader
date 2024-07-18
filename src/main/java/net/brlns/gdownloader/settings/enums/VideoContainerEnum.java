@@ -19,7 +19,7 @@ package net.brlns.gdownloader.settings.enums;
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-public enum VideoContainerEnum implements SettingsEnum{
+public enum VideoContainerEnum implements ISettingsEnum{
     MP4,
     MKV,
     WEBM;

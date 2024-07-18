@@ -17,6 +17,10 @@
 package net.brlns.gdownloader.ui;
 
 import java.awt.*;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.Transferable;
+import java.awt.datatransfer.UnsupportedFlavorException;
+import java.awt.dnd.*;
 import java.awt.event.*;
 import java.io.IOException;
 import java.util.Map;
@@ -110,7 +114,11 @@ public class GUIManager{
 
     //TODO: light theme
     public String getCurrentAppIconPath(){
-        return "assets/app_icon_dark.png";
+        return "assets/app_icon.png";
+    }
+
+    public String getCurrentTrayIconPath(){
+        return "assets/tray_icon.png";
     }
 
     public Image getAppIcon() throws IOException{
@@ -687,6 +695,59 @@ public class GUIManager{
             queuePanel.setLayout(new BoxLayout(queuePanel, BoxLayout.Y_AXIS));
             queuePanel.setBackground(Color.DARK_GRAY);
 
+            new DropTarget(queuePanel, new DropTargetListener(){
+                @Override
+                public void dragEnter(DropTargetDragEvent dtde){
+                    //Not implemented
+                }
+
+                @Override
+                public void dragOver(DropTargetDragEvent dtde){
+                    //Not implemented
+                }
+
+                @Override
+                public void dropActionChanged(DropTargetDragEvent dtde){
+                    //Not implemented
+                }
+
+                @Override
+                public void dragExit(DropTargetEvent dte){
+                    //Not implemented
+                }
+
+                @Override
+                public void drop(DropTargetDropEvent dtde){
+                    try{
+                        dtde.acceptDrop(DnDConstants.ACTION_COPY_OR_MOVE);
+
+                        Transferable transferable = dtde.getTransferable();
+                        DataFlavor[] flavors = transferable.getTransferDataFlavors();
+
+                        for(DataFlavor flavor : flavors){
+                            try{
+                                if(flavor.isFlavorTextType()){
+                                    String text = transferable.getTransferData(flavor).toString();
+
+                                    if(flavor.equals(GDownloader.FlavorType.STRING.getFlavor())
+                                        || flavor.equals(GDownloader.FlavorType.HTML.getFlavor())){
+                                        main.handleClipboardInput(text);
+                                    }
+                                }
+                            }catch(UnsupportedFlavorException | IOException e){
+                                log.warn(e.getLocalizedMessage());
+                            }
+                        }
+
+                        dtde.dropComplete(true);
+                    }catch(Exception e){
+                        main.handleException(e);
+
+                        dtde.dropComplete(false);
+                    }
+                }
+            });
+
             queuePanel.add(getEmptyQueuePanel(), BorderLayout.CENTER);
 
             queueScrollPane = new JScrollPane(queuePanel);
@@ -871,7 +932,6 @@ public class GUIManager{
 
     private void updateProgressWindowSize(){
         SwingUtilities.invokeLater(() -> {
-            int newHeight = calculateProgressWindowHeight();
             appWindow.setSize(550, 350);
 
             Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
@@ -891,22 +951,6 @@ public class GUIManager{
 
             adjustMessageWindowPosition();
         });
-    }
-
-    //TODO rewrite the logic, this no longer works
-    private int calculateProgressWindowHeight(){
-//        int totalHeight = 0;
-//        if(queuePanel != null && !mediaCards.isEmpty()){
-//            for(Component comp : queuePanel.getComponents()){
-//                totalHeight += comp.getPreferredSize().height + 15;
-//            }
-//        }else{
-//            totalHeight = 115;
-//        }
-
-        return 120;
-
-//        return Math.min(totalHeight + 100, 320);
     }
 
     private void adjustMessageWindowPosition(){

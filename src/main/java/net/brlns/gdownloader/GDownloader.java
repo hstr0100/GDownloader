@@ -139,7 +139,7 @@ public class GDownloader{
             guiManager = new GUIManager(this);
 
             //Register to the system tray
-            Image image = Toolkit.getDefaultToolkit().createImage(this.getClass().getResource("/assets/tray_icon_dark.png"));
+            Image image = Toolkit.getDefaultToolkit().createImage(getClass().getClassLoader().getResource(guiManager.getCurrentTrayIconPath()));
             trayIcon = new TrayIcon(image, REGISTRY_APP_NAME, buildPopupMenu());
             trayIcon.setImageAutoSize(true);
 
@@ -526,30 +526,59 @@ public class GDownloader{
 
     private void updateClipboard(){
         if(watchClipboard){
-            Transferable contents = clipboard.getContents(null);
+            Transferable transferable = clipboard.getContents(null);
 
-            if(contents == null){
+            if(transferable == null){
                 return;
             }
 
-            if(contents.isDataFlavorSupported(FlavorType.STRING.getFlavor())){
-                try{
-                    String data = (String)clipboard.getData(FlavorType.STRING.getFlavor());
-                    processClipboardData(FlavorType.STRING, data);
-                }catch(UnsupportedFlavorException | IOException e){
-                    log.warn(e.getLocalizedMessage());
-                }
-            }
+            DataFlavor[] flavors = transferable.getTransferDataFlavors();
 
-            if(contents.isDataFlavorSupported(FlavorType.HTML.getFlavor())){
+            for(DataFlavor flavor : flavors){
                 try{
-                    String data = (String)clipboard.getData(FlavorType.HTML.getFlavor());
-                    processClipboardData(FlavorType.HTML, data);
+                    if(flavor.isFlavorTextType()){
+                        String text = transferable.getTransferData(flavor).toString();
+
+                        if(flavor.equals(GDownloader.FlavorType.STRING.getFlavor())){
+                            processClipboardData(FlavorType.STRING, text);
+                        }
+
+                        if(flavor.equals(GDownloader.FlavorType.HTML.getFlavor())){
+                            processClipboardData(FlavorType.HTML, text);
+                        }
+                    }
                 }catch(UnsupportedFlavorException | IOException e){
                     log.warn(e.getLocalizedMessage());
                 }
             }
         }
+    }
+
+    public void handleClipboardInput(String data){
+        clipboardExecutor.execute(() -> {
+            int captured = 0;
+            for(String url : extractUrlsFromString(data)){
+                if(url.startsWith("http")){
+                    if(downloadManager.captureUrl(url)){
+                        captured++;
+                    }
+                }
+
+                if(url.startsWith("magnet")){
+                    logUrl(url, "magnets");
+                }
+            }
+
+            if(captured > 0){
+                guiManager.showMessage(
+                    get("gui.clipboard_monitor.captured_title"),
+                    get("gui.clipboard_monitor.captured", captured),
+                    2500,
+                    MessageType.INFO,
+                    false
+                );
+            }
+        });
     }
 
     private void processClipboardData(FlavorType flavorType, String data){
@@ -561,30 +590,7 @@ public class GDownloader{
             if(!last.equals(data)){
                 lastClipboardState.put(flavorType, data);
 
-                clipboardExecutor.execute(() -> {
-                    int captured = 0;
-                    for(String url : extractUrlsFromString(data)){
-                        if(url.startsWith("http")){
-                            if(downloadManager.captureUrl(url)){
-                                captured++;
-                            }
-                        }
-
-                        if(url.startsWith("magnet")){
-                            logUrl(url, "magnets");
-                        }
-                    }
-
-                    if(captured > 0){
-                        guiManager.showMessage(
-                            get("gui.clipboard_monitor.captured_title"),
-                            get("gui.clipboard_monitor.captured", captured),
-                            2500,
-                            MessageType.INFO,
-                            false
-                        );
-                    }
-                });
+                handleClipboardInput(data);
             }
         }
     }
@@ -651,7 +657,7 @@ public class GDownloader{
     public final void handleException(Throwable e, boolean displayToUser){
         e.printStackTrace();
 
-        if(displayToUser && trayIcon != null){
+        if(displayToUser){
             guiManager.showMessage(
                 get("gui.error_popup_title"),
                 get("gui.error_popup", e.getLocalizedMessage()),
@@ -752,7 +758,7 @@ public class GDownloader{
     }
 
     @Getter
-    private enum FlavorType{
+    public static enum FlavorType{
         STRING(DataFlavor.stringFlavor),
         HTML(DataFlavor.selectionHtmlFlavor);
 

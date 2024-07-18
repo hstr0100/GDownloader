@@ -22,7 +22,7 @@ import lombok.Getter;
  * @author Gabriel / hstr0100 / vertx010
  */
 @Getter
-public enum QualitySelectorEnum implements SettingsEnum{
+public enum QualitySelectorEnum implements ISettingsEnum{
     BEST_VIDEO("bestvideo", "enums.quality_selector.bestvideo"),
     BEST("best", "enums.quality_selector.best"),
     WORST("worst", "enums.quality_selector.worst");

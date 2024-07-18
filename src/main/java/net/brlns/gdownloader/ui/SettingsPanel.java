@@ -338,12 +338,12 @@ public class SettingsPanel{
             gbcPanel.gridy++;
             generalSettingsPanel.add(label, gbcPanel);
 
-            JComboBox<String> comboBox = new JComboBox<>(SettingsEnum.getDisplayNames(LanguageEnum.class));
+            JComboBox<String> comboBox = new JComboBox<>(ISettingsEnum.getDisplayNames(LanguageEnum.class));
             comboBox.setToolTipText("settings.requires_restart.tooltip");
             comboBox.setSelectedIndex(settings.getLanguage().ordinal());
 
             comboBox.addActionListener((ActionEvent e) -> {
-                settings.setLanguage(SettingsEnum.getEnumByIndex(LanguageEnum.class, comboBox.getSelectedIndex()));
+                settings.setLanguage(ISettingsEnum.getEnumByIndex(LanguageEnum.class, comboBox.getSelectedIndex()));
             });
 
             customizeComponent(comboBox, Color.LIGHT_GRAY, Color.DARK_GRAY);
@@ -506,12 +506,12 @@ public class SettingsPanel{
             gbcPanel.gridy++;
             downloadSettingsPanel.add(label, gbcPanel);
 
-            JComboBox<String> comboBox = new JComboBox<>(SettingsEnum.getDisplayNames(BrowserEnum.class));
+            JComboBox<String> comboBox = new JComboBox<>(ISettingsEnum.getDisplayNames(BrowserEnum.class));
             comboBox.setToolTipText("settings.requires_restart.tooltip");
             comboBox.setSelectedIndex(settings.getBrowser().ordinal());
 
             comboBox.addActionListener((ActionEvent e) -> {
-                settings.setBrowser(SettingsEnum.getEnumByIndex(BrowserEnum.class, comboBox.getSelectedIndex()));
+                settings.setBrowser(ISettingsEnum.getEnumByIndex(BrowserEnum.class, comboBox.getSelectedIndex()));
             });
 
             customizeComponent(comboBox, Color.LIGHT_GRAY, Color.DARK_GRAY);
@@ -656,11 +656,11 @@ public class SettingsPanel{
             gbcPanel.gridy++;
             downloadSettingsPanel.add(label, gbcPanel);
 
-            JComboBox<String> comboBox = new JComboBox<>(SettingsEnum.getDisplayNames(PlayListOptionEnum.class));
+            JComboBox<String> comboBox = new JComboBox<>(ISettingsEnum.getDisplayNames(PlayListOptionEnum.class));
             comboBox.setSelectedIndex(settings.getPlaylistDownloadOption().ordinal());
 
             comboBox.addActionListener((ActionEvent e) -> {
-                settings.setPlaylistDownloadOption(SettingsEnum.getEnumByIndex(PlayListOptionEnum.class, comboBox.getSelectedIndex()));
+                settings.setPlaylistDownloadOption(ISettingsEnum.getEnumByIndex(PlayListOptionEnum.class, comboBox.getSelectedIndex()));
             });
 
             customizeComponent(comboBox, Color.LIGHT_GRAY, Color.DARK_GRAY);
@@ -714,11 +714,11 @@ public class SettingsPanel{
                 gbcItem.gridy++;
                 itemPanel.add(label, gbcItem);
 
-                JComboBox<String> comboBox = new JComboBox<>(SettingsEnum.getDisplayNames(QualitySelectorEnum.class));
+                JComboBox<String> comboBox = new JComboBox<>(ISettingsEnum.getDisplayNames(QualitySelectorEnum.class));
                 comboBox.setSelectedIndex(qualitySettings.getSelector().ordinal());
 
                 comboBox.addActionListener((ActionEvent e) -> {
-                    qualitySettings.setSelector(SettingsEnum.getEnumByIndex(QualitySelectorEnum.class, comboBox.getSelectedIndex()));
+                    qualitySettings.setSelector(ISettingsEnum.getEnumByIndex(QualitySelectorEnum.class, comboBox.getSelectedIndex()));
                 });
 
                 customizeComponent(comboBox, Color.LIGHT_GRAY, Color.DARK_GRAY);
@@ -737,7 +737,7 @@ public class SettingsPanel{
                 gbcItem.gridy++;
                 itemPanel.add(label, gbcItem);
 
-                minHeightComboBox = new JComboBox<>(SettingsEnum.getDisplayNames(ResolutionEnum.class));
+                minHeightComboBox = new JComboBox<>(ISettingsEnum.getDisplayNames(ResolutionEnum.class));
                 minHeightComboBox.setSelectedIndex(qualitySettings.getMinHeight().ordinal());
 
                 customizeComponent(minHeightComboBox, Color.LIGHT_GRAY, Color.DARK_GRAY);
@@ -753,7 +753,7 @@ public class SettingsPanel{
                 gbcItem.gridy++;
                 itemPanel.add(label, gbcItem);
 
-                maxHeightComboBox = new JComboBox<>(SettingsEnum.getDisplayNames(ResolutionEnum.class));
+                maxHeightComboBox = new JComboBox<>(ISettingsEnum.getDisplayNames(ResolutionEnum.class));
                 maxHeightComboBox.setSelectedIndex(qualitySettings.getMaxHeight().ordinal());
 
                 customizeComponent(maxHeightComboBox, Color.LIGHT_GRAY, Color.DARK_GRAY);
@@ -769,11 +769,11 @@ public class SettingsPanel{
                 gbcItem.gridy++;
                 itemPanel.add(label, gbcItem);
 
-                JComboBox<String> comboBox = new JComboBox<>(SettingsEnum.getDisplayNames(VideoContainerEnum.class));
+                JComboBox<String> comboBox = new JComboBox<>(ISettingsEnum.getDisplayNames(VideoContainerEnum.class));
                 comboBox.setSelectedIndex(qualitySettings.getContainer().ordinal());
 
                 comboBox.addActionListener((ActionEvent e) -> {
-                    qualitySettings.setContainer(SettingsEnum.getEnumByIndex(VideoContainerEnum.class, comboBox.getSelectedIndex()));
+                    qualitySettings.setContainer(ISettingsEnum.getEnumByIndex(VideoContainerEnum.class, comboBox.getSelectedIndex()));
                 });
 
                 customizeComponent(comboBox, Color.LIGHT_GRAY, Color.DARK_GRAY);
@@ -784,23 +784,23 @@ public class SettingsPanel{
 
             {
                 minHeightComboBox.addActionListener((ActionEvent e) -> {
-                    ResolutionEnum minResolution = SettingsEnum.getEnumByIndex(ResolutionEnum.class, minHeightComboBox.getSelectedIndex());
+                    ResolutionEnum minResolution = ISettingsEnum.getEnumByIndex(ResolutionEnum.class, minHeightComboBox.getSelectedIndex());
                     ResolutionEnum maxResolution = minResolution.getValidMax(qualitySettings.getMaxHeight());
 
                     qualitySettings.setMinHeight(minResolution);
                     qualitySettings.setMaxHeight(maxResolution);
 
-                    maxHeightComboBox.setSelectedIndex(SettingsEnum.getEnumIndex(ResolutionEnum.class, maxResolution));
+                    maxHeightComboBox.setSelectedIndex(ISettingsEnum.getEnumIndex(ResolutionEnum.class, maxResolution));
                 });
 
                 maxHeightComboBox.addActionListener((ActionEvent e) -> {
-                    ResolutionEnum maxResolution = SettingsEnum.getEnumByIndex(ResolutionEnum.class, maxHeightComboBox.getSelectedIndex());
+                    ResolutionEnum maxResolution = ISettingsEnum.getEnumByIndex(ResolutionEnum.class, maxHeightComboBox.getSelectedIndex());
                     ResolutionEnum minResolution = maxResolution.getValidMin(qualitySettings.getMinHeight());
 
                     qualitySettings.setMinHeight(minResolution);
                     qualitySettings.setMaxHeight(maxResolution);
 
-                    minHeightComboBox.setSelectedIndex(SettingsEnum.getEnumIndex(ResolutionEnum.class, minResolution));
+                    minHeightComboBox.setSelectedIndex(ISettingsEnum.getEnumIndex(ResolutionEnum.class, minResolution));
                 });
             }
 
@@ -811,11 +811,11 @@ public class SettingsPanel{
                 gbcItem.gridy++;
                 itemPanel.add(label, gbcItem);
 
-                JComboBox<String> comboBox = new JComboBox<>(SettingsEnum.getDisplayNames(FPSEnum.class));
+                JComboBox<String> comboBox = new JComboBox<>(ISettingsEnum.getDisplayNames(FPSEnum.class));
                 comboBox.setSelectedIndex(qualitySettings.getFps().ordinal());
 
                 comboBox.addActionListener((ActionEvent e) -> {
-                    qualitySettings.setFps(SettingsEnum.getEnumByIndex(FPSEnum.class, comboBox.getSelectedIndex()));
+                    qualitySettings.setFps(ISettingsEnum.getEnumByIndex(FPSEnum.class, comboBox.getSelectedIndex()));
                 });
 
                 customizeComponent(comboBox, Color.LIGHT_GRAY, Color.DARK_GRAY);
@@ -831,11 +831,11 @@ public class SettingsPanel{
                 gbcItem.gridy++;
                 itemPanel.add(label, gbcItem);
 
-                JComboBox<String> comboBox = new JComboBox<>(SettingsEnum.getDisplayNames(AudioBitrateEnum.class));
+                JComboBox<String> comboBox = new JComboBox<>(ISettingsEnum.getDisplayNames(AudioBitrateEnum.class));
                 comboBox.setSelectedIndex(qualitySettings.getAudioBitrate().ordinal());
 
                 comboBox.addActionListener((ActionEvent e) -> {
-                    qualitySettings.setAudioBitrate(SettingsEnum.getEnumByIndex(AudioBitrateEnum.class, comboBox.getSelectedIndex()));
+                    qualitySettings.setAudioBitrate(ISettingsEnum.getEnumByIndex(AudioBitrateEnum.class, comboBox.getSelectedIndex()));
                 });
 
                 customizeComponent(comboBox, Color.LIGHT_GRAY, Color.DARK_GRAY);

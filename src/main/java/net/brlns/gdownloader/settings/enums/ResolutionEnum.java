@@ -24,7 +24,7 @@ import lombok.Getter;
  * @author Gabriel / hstr0100 / vertx010
  */
 @Getter
-public enum ResolutionEnum implements SettingsEnum{
+public enum ResolutionEnum implements ISettingsEnum{
     RES_144(144, "144p"),
     RES_240(240, "240p"),
     RES_360(360, "360p"),

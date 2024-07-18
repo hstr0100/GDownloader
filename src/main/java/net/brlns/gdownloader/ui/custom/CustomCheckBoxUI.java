@@ -39,8 +39,8 @@ public class CustomCheckBoxUI extends BasicCheckBoxUI{
         checkBox.setBackground(UIManager.getColor("CheckBox.background"));
         checkBox.setForeground(UIManager.getColor("CheckBox.foreground"));
         checkBox.setBorder(UIManager.getBorder("CheckBox.border"));
-        checkBox.setIcon(new MaterialCheckBoxIcon());
-        checkBox.setSelectedIcon(new MaterialCheckBoxIcon());
+        checkBox.setIcon(new CustomCheckBoxIcon());
+        checkBox.setSelectedIcon(new CustomCheckBoxIcon());
     }
 
     @Override
@@ -52,7 +52,7 @@ public class CustomCheckBoxUI extends BasicCheckBoxUI{
         super.paint(g2, c);
     }
 
-    private static class MaterialCheckBoxIcon implements Icon{
+    private static class CustomCheckBoxIcon implements Icon{
 
         private static final int SIZE = 16;
 

@@ -47,8 +47,8 @@ import lombok.extern.slf4j.Slf4j;
 import static net.brlns.gdownloader.Language.*;
 import net.brlns.gdownloader.settings.QualitySettings;
 import net.brlns.gdownloader.settings.enums.BrowserEnum;
+import net.brlns.gdownloader.settings.enums.ISettingsEnum;
 import net.brlns.gdownloader.settings.enums.PlayListOptionEnum;
-import net.brlns.gdownloader.settings.enums.SettingsEnum;
 import net.brlns.gdownloader.settings.enums.VideoContainerEnum;
 import net.brlns.gdownloader.settings.enums.WebFilterEnum;
 import net.brlns.gdownloader.ui.GUIManager.ButtonFunction;
@@ -70,12 +70,13 @@ import net.brlns.gdownloader.ui.MediaCard;
 //TODO check if empty spaces in filenames are ok
 //TODO restart program on language change
 //TODO dark and white themes
-//TODO drag and drop
 //TODO scale on resolution DPI
 //TODO check if removing the border from the bottom fixes the scrolling down
 //TODO should we move the window back up when a new card is added?
 //TODO save last window size in config
-//TODO setting do download channels as playlists
+//TODO setting to download channels as playlists
+//TODO keep older versions of ytdlp and retry failed downloads against them
+//TODO open url in default browser for linux, don't try to guess it
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
@@ -759,7 +760,7 @@ public class YtDlpDownloader{
     }
 
     @Getter
-    private enum DownloadStatus implements SettingsEnum{
+    private enum DownloadStatus implements ISettingsEnum{
         QUERYING("enums.download_status.querying"),
         STOPPED("enums.download_status.stopped"),
         QUEUED("enums.download_status.queued"),
@@ -769,7 +770,6 @@ public class YtDlpDownloader{
         COMPLETE("enums.download_status.complete"),
         FAILED("enums.download_status.failed");
 
-        @JsonIgnore
         private final String translationKey;
 
         private DownloadStatus(String translationKeyIn){
