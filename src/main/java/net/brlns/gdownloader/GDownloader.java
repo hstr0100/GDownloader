@@ -166,6 +166,8 @@ public class GDownloader{
                         if((e.getModifiers() & NativeKeyEvent.CTRL_MASK) != 0
                             && e.getKeyCode() == NativeKeyEvent.VC_C){
                             resetClipboard();
+
+                            //TODO check how the clipboard deals with concurrency
                             updateClipboard();
                         }
                     }catch(Exception ex){
@@ -529,13 +531,15 @@ public class GDownloader{
     }
 
     public boolean updateClipboard(Transferable transferable, boolean force){
-        if(watchClipboard || force){
-            if(transferable == null){
-                transferable = clipboard.getContents(null);
+        boolean success = false;
 
-                if(transferable == null){
-                    return false;
-                }
+        if(watchClipboard || force){
+            if(transferable == null && !force){
+                transferable = clipboard.getContents(null);
+            }
+
+            if(transferable == null){
+                return false;
             }
 
             if(transferable.isDataFlavorSupported(FlavorType.STRING.getFlavor())){
@@ -548,7 +552,7 @@ public class GDownloader{
                         handleClipboardInput(data);
                     }
 
-                    return true;
+                    success = true;
                 }catch(UnsupportedFlavorException | IOException e){
                     log.warn(e.getLocalizedMessage());
                 }
@@ -564,14 +568,14 @@ public class GDownloader{
                         handleClipboardInput(data);
                     }
 
-                    return true;
+                    success = true;
                 }catch(UnsupportedFlavorException | IOException e){
                     log.warn(e.getLocalizedMessage());
                 }
             }
         }
 
-        return false;
+        return success;
     }
 
     private void handleClipboardInput(String data){
