@@ -1,4 +1,4 @@
-name: Build Shaded JAR
+name: Build and Package
 
 on:
   push:
@@ -14,31 +14,39 @@ jobs:
 
     strategy:
       matrix:
-        java-version: [11]
+        java-version: [21]
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-    - name: Set up JDK
-      uses: actions/setup-java@v3
-      with:
-        java-version: ${{ matrix.java-version }}
-        distribution: 'adopt'
+      - name: Set up JDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: ${{ matrix.java-version }}
+          distribution: 'temurin'
 
-    - name: Cache Maven packages
-      uses: actions/cache@v3
-      with:
-        path: ~/.m2
-        key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-        restore-keys: ${{ runner.os }}-maven
+      - name: Cache Gradle packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.gradle/caches
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: ${{ runner.os }}-gradle
 
-    - name: Build with Maven
-      run: mvn clean package
+      - name: Build with Gradle
+        run: ./gradlew clean build
 
-    - name: Upload Shaded JAR
-      uses: actions/upload-artifact@v3
-      with:
-        name: shaded-jar
-        path: target/*.jar
- 
+      - name: Create native image with jpackage
+        run: ./gradlew jpackage
+
+      - name: Upload Shaded JAR
+        uses: actions/upload-artifact@v3
+        with:
+          name: shaded-jar
+          path: build/libs/*.jar
+
+      - name: Upload Native Image
+        uses: actions/upload-artifact@v3
+        with:
+          name: native-image
+          path: build/jpackage/*
