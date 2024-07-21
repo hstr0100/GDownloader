@@ -23,15 +23,15 @@ import javax.swing.JLabel;
 import javax.swing.JSlider;
 import javax.swing.plaf.basic.BasicSliderUI;
 
+import static net.brlns.gdownloader.ui.themes.ThemeProvider.*;
+import static net.brlns.gdownloader.ui.themes.UIColors.*;
+
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
 public class CustomSliderUI extends BasicSliderUI{
 
-    private static final Color TRACK_COLOR = Color.LIGHT_GRAY;
-    private static final Color THUMB_COLOR = Color.WHITE;
-    private static final Color TICK_COLOR = Color.WHITE;
-    private static final Color LABEL_COLOR = Color.WHITE;
+    private static final Font FONT = new Font("Arial", Font.PLAIN, 12);
 
     public CustomSliderUI(JSlider slider){
         super(slider);
@@ -48,7 +48,7 @@ public class CustomSliderUI extends BasicSliderUI{
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
         Rectangle trackBounds = trackRect;
-        g2d.setColor(TRACK_COLOR);
+        g2d.setColor(color(SLIDER_TRACK));
         g2d.fillRect(trackBounds.x, trackBounds.y + (trackBounds.height / 2) - 2,
             trackBounds.width, 4);
 
@@ -61,7 +61,7 @@ public class CustomSliderUI extends BasicSliderUI{
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
         Rectangle thumbBounds = thumbRect;
-        g2d.setColor(THUMB_COLOR);
+        g2d.setColor(color(SLIDER_FOREGROUND));
         g2d.fillOval(thumbBounds.x, thumbBounds.y, thumbBounds.width, thumbBounds.height);
 
         g2d.dispose();
@@ -70,7 +70,7 @@ public class CustomSliderUI extends BasicSliderUI{
     @Override
     public void paintTicks(Graphics g){
         Rectangle tickBounds = tickRect;
-        g.setColor(TICK_COLOR);
+        g.setColor(color(SLIDER_FOREGROUND));
 
         for(int i = slider.getMinimum(); i <= slider.getMaximum(); i += slider.getMajorTickSpacing()){
             int x = xPositionForValue(i);
@@ -80,11 +80,11 @@ public class CustomSliderUI extends BasicSliderUI{
 
     @Override
     public void paintLabels(Graphics g){
-        Font font = new Font("Arial", Font.PLAIN, 12);
-        g.setFont(font);
-        g.setColor(LABEL_COLOR);
+        g.setFont(FONT);
+        g.setColor(color(SLIDER_FOREGROUND));
 
-        Dictionary<Integer, JLabel> labels = slider.getLabelTable();
+        @SuppressWarnings("unchecked")
+        Dictionary<Integer, JLabel> labels = (Dictionary<Integer, JLabel>)slider.getLabelTable();
 
         if(labels != null){
             Rectangle labelBounds = labelRect;
@@ -102,7 +102,7 @@ public class CustomSliderUI extends BasicSliderUI{
 
     @Override
     public void paint(Graphics g, JComponent c){
-        c.setBackground(Color.DARK_GRAY);
+        c.setBackground(color(BACKGROUND));
 
         super.paint(g, c);
     }

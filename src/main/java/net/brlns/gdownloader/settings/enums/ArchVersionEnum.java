@@ -18,33 +18,33 @@ package net.brlns.gdownloader.settings.enums;
 
 import lombok.Getter;
 
-import static net.brlns.gdownloader.Language.get;
-
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
 @Getter
-public enum AudioBitrateEnum implements ISettingsEnum{
-    NO_AUDIO(0, ""),
-    BITRATE_192(192, "192kbps"),
-    BITRATE_256(256, "256kbps"),
-    BITRATE_320(320, "320kbps");
+public enum ArchVersionEnum{
+    MAC_X86("yt-dlp_macos_legacy", null, OS.MAC),
+    MAC_X64("yt-dlp_macos", null, OS.MAC),
+    WINDOWS_X86("yt-dlp_x86.exe", null, OS.WINDOWS),
+    WINDOWS_X64("yt-dlp.exe", "ffmpeg.exe", OS.WINDOWS),
+    LINUX_X64("yt-dlp_linux", null, OS.LINUX),//You're on your own for ffmpeg buddy @TODO: add binary
+    LINUX_ARM("yt-dlp_linux_armv7l", null, OS.LINUX),
+    LINUX_ARM64("yt-dlp_linux_aarch64", null, OS.LINUX);
 
-    private final int value;
-    private final String displayName;
+    private final String ytDlpBinary;
+    private final String ffmpegBinary;
+    private final OS os;
 
-    private AudioBitrateEnum(int valueIn, String displayNameIn){
-        value = valueIn;
-        displayName = displayNameIn;
+    private ArchVersionEnum(String ytDlpBinaryIn, String ffmpegBinaryIn, OS osIn){
+        ytDlpBinary = ytDlpBinaryIn;
+        ffmpegBinary = ffmpegBinaryIn;
+        os = osIn;
     }
 
-    @Override
-    public String getDisplayName(){
-        return this == NO_AUDIO ? get("enums.audio.no_audio") : displayName;
+    public static enum OS{
+        WINDOWS,
+        LINUX,
+        MAC;
     }
 
-    @Override
-    public String getTranslationKey(){
-        return "";
-    }
 }

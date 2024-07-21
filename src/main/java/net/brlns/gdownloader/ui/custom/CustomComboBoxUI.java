@@ -18,12 +18,15 @@ package net.brlns.gdownloader.ui.custom;
 
 import java.awt.Color;
 import java.awt.Component;
-import javax.swing.BorderFactory;
-import javax.swing.JButton;
-import javax.swing.JList;
-import javax.swing.ListCellRenderer;
-import javax.swing.plaf.basic.BasicComboBoxRenderer;
+import java.awt.Graphics;
+import java.awt.Rectangle;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
+import javax.swing.*;
 import javax.swing.plaf.basic.BasicComboBoxUI;
+
+import static net.brlns.gdownloader.ui.themes.ThemeProvider.*;
+import static net.brlns.gdownloader.ui.themes.UIColors.*;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -34,35 +37,62 @@ public class CustomComboBoxUI extends BasicComboBoxUI{
     protected JButton createArrowButton(){
         JButton button = new JButton();
         button.setText("▼");
-        button.setBackground(Color.WHITE);
+        button.setBackground(color(COMBO_BOX_BUTTON_FOREGROUND));
         button.setBorder(BorderFactory.createLineBorder(Color.WHITE));
-        button.setForeground(Color.DARK_GRAY);
+        button.setForeground(color(COMBO_BOX_BUTTON_BACKGROUND));
 
         return button;
     }
 
     @Override
-    public ListCellRenderer<? super Object> createRenderer(){
-        return new CustomComboBoxRenderer();
+    protected void installListeners(){
+        super.installListeners();
+
+        LookAndFeel.uninstallBorder(comboBox);
+
+        comboBox.addFocusListener(new FocusAdapter(){
+            @Override
+            public void focusGained(FocusEvent e){
+                comboBox.setBackground(color(COMBO_BOX_SELECTION_BACKGROUND));
+                comboBox.setForeground(color(COMBO_BOX_SELECTION_FOREGROUND));
+            }
+
+            @Override
+            public void focusLost(FocusEvent e){
+                comboBox.setBackground(color(COMBO_BOX_BACKGROUND));
+                comboBox.setForeground(color(COMBO_BOX_FOREGROUND));
+            }
+        });
     }
 
-    public static class CustomComboBoxRenderer extends BasicComboBoxRenderer{
+    @Override
+    protected ListCellRenderer<Object> createRenderer(){
+        return new DefaultListCellRenderer(){
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus){
+                Component component = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                if(isSelected){
+                    component.setBackground(color(COMBO_BOX_SELECTION_BACKGROUND));
+                    component.setForeground(color(COMBO_BOX_SELECTION_FOREGROUND));
+                }else if(cellHasFocus){
+                    //TODO
+                    setBackground(Color.LIGHT_GRAY.darker());
+                    setForeground(Color.BLACK);
+                }else{
+                    component.setBackground(color(COMBO_BOX_BACKGROUND));
+                    component.setForeground(color(COMBO_BOX_FOREGROUND));
+                }
 
-        @Override
-        public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus){
-            super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                return component;
+            }
+        };
+    }
 
-//            if(isSelected){
-//                setBackground(Color.LIGHT_GRAY);
-//                setForeground(Color.BLACK);
-//            }else if(cellHasFocus){
-//                setBackground(Color.LIGHT_GRAY.darker());
-//                setForeground(Color.BLACK);
-//            }else{
-//                setBackground(list.getBackground());
-//                setForeground(list.getForeground());
-//            }
-            return this;
-        }
+    @Override
+    public void paintCurrentValueBackground(Graphics g, Rectangle bounds, boolean hasFocus){
+        Color oldColor = g.getColor();
+        g.setColor(comboBox.hasFocus() ? color(COMBO_BOX_SELECTION_BACKGROUND) : color(COMBO_BOX_BACKGROUND));
+        g.fillRect(bounds.x, bounds.y, bounds.width, bounds.height);
+        g.setColor(oldColor);
     }
 }

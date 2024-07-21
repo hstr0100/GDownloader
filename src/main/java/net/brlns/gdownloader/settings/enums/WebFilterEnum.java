@@ -18,6 +18,7 @@ package net.brlns.gdownloader.settings.enums;
 
 import java.util.function.Function;
 import lombok.Getter;
+
 import static net.brlns.gdownloader.Language.*;
 
 /**

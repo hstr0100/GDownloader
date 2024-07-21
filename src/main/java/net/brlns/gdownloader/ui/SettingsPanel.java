@@ -35,7 +35,6 @@ import javax.swing.plaf.basic.BasicButtonUI;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
-import static net.brlns.gdownloader.Language.*;
 import net.brlns.gdownloader.settings.QualitySettings;
 import net.brlns.gdownloader.settings.Settings;
 import net.brlns.gdownloader.settings.enums.*;
@@ -44,6 +43,11 @@ import net.brlns.gdownloader.ui.custom.CustomCheckBoxUI;
 import net.brlns.gdownloader.ui.custom.CustomComboBoxUI;
 import net.brlns.gdownloader.ui.custom.CustomScrollBarUI;
 import net.brlns.gdownloader.ui.custom.CustomSliderUI;
+import net.brlns.gdownloader.ui.themes.UIColors;
+
+import static net.brlns.gdownloader.Language.*;
+import static net.brlns.gdownloader.ui.themes.ThemeProvider.*;
+import static net.brlns.gdownloader.ui.themes.UIColors.*;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -51,10 +55,8 @@ import net.brlns.gdownloader.ui.custom.CustomSliderUI;
 @Slf4j
 public class SettingsPanel{
 
-    private static final Color SIDE_PANEL_COLOR = new Color(134, 134, 134);
-    private static final Color SIDE_PANEL_SELECTED_COLOR = new Color(93, 93, 93);
-
     private final GDownloader main;
+    private final GUIManager manager;
 
     private final List<SettingsMenuEntry> contentPanels = new ArrayList<>();
 
@@ -66,22 +68,23 @@ public class SettingsPanel{
     private JPanel contentPanel;
     private CardLayout cardLayout;
 
-    public SettingsPanel(GDownloader mainIn){
+    public SettingsPanel(GDownloader mainIn, GUIManager managerIn){
         main = mainIn;
+        manager = managerIn;
 
         contentPanels.add(new SettingsMenuEntry(
             "settings.general",
-            "assets/settings.png",
+            "/assets/settings.png",
             () -> createGeneralSettings()
         ));
         contentPanels.add(new SettingsMenuEntry(
             "settings.downloads",
-            "assets/download.png",
+            "/assets/download.png",
             () -> createDownloadSettings()
         ));
         contentPanels.add(new SettingsMenuEntry(
             "settings.resolution",
-            "assets/resolution.png",
+            "/assets/resolution.png",
             () -> createResolutionSettings()
         ));
     }
@@ -94,9 +97,12 @@ public class SettingsPanel{
 
             reloadSettings();
 
-            cardLayout.show(contentPanel, String.valueOf(0));
+            contentPanel.revalidate();
+            contentPanel.repaint();
 
             frame.setVisible(true);
+
+            cardLayout.show(contentPanel, String.valueOf(0));
 
             return;
         }
@@ -104,6 +110,7 @@ public class SettingsPanel{
         settings = GDownloader.OBJECT_MAPPER.convertValue(main.getConfig(), Settings.class);
 
         frame = new JFrame(get("settings.title", GDownloader.REGISTRY_APP_NAME));
+
         frame.setSize(800, 500);
         frame.setLayout(new BorderLayout());
         frame.setResizable(false);
@@ -116,7 +123,7 @@ public class SettingsPanel{
         }
 
         sidebarPanel = new JPanel();
-        sidebarPanel.setBackground(SIDE_PANEL_COLOR);
+        sidebarPanel.setBackground(color(SIDE_PANEL));
         sidebarPanel.setLayout(new GridBagLayout());
 
         JPanel mainContentPanel = new JPanel(new BorderLayout());
@@ -131,10 +138,10 @@ public class SettingsPanel{
 
         {
             JPanel headerPanel = new JPanel();
-            headerPanel.setBackground(SIDE_PANEL_COLOR);
+            headerPanel.setBackground(color(SIDE_PANEL));
 
             JLabel headerLabel = new JLabel(get("settings.sidebar_title"));
-            headerLabel.setForeground(Color.WHITE);
+            headerLabel.setForeground(color(FOREGROUND));
             headerLabel.setHorizontalAlignment(SwingConstants.CENTER);
             headerPanel.setLayout(new BorderLayout());
             headerPanel.add(headerLabel, BorderLayout.CENTER);
@@ -148,13 +155,13 @@ public class SettingsPanel{
         {
             cardLayout = new CardLayout();
             contentPanel = new JPanel(cardLayout);
-            contentPanel.setBackground(Color.DARK_GRAY);
+            contentPanel.setBackground(color(BACKGROUND));
 
             JPanel headerPanel = new JPanel(new GridBagLayout());
-            headerPanel.setBackground(SIDE_PANEL_SELECTED_COLOR);
+            headerPanel.setBackground(color(SIDE_PANEL_SELECTED));
 
             JLabel headerLabel = new JLabel(contentPanels.get(0).getDisplayName());
-            headerLabel.setForeground(Color.WHITE);
+            headerLabel.setForeground(color(FOREGROUND));
             headerLabel.setHorizontalAlignment(SwingConstants.CENTER);
             headerLabel.setVerticalAlignment(SwingConstants.CENTER);
 
@@ -174,19 +181,19 @@ public class SettingsPanel{
                 button.setContentAreaFilled(false);
                 button.setOpaque(true);
                 button.setFocusPainted(false);
-                button.setBackground(index == 0 ? SIDE_PANEL_SELECTED_COLOR : SIDE_PANEL_COLOR);
+                button.setBackground(color(index == 0 ? SIDE_PANEL_SELECTED : SIDE_PANEL));
 
-                button.setIcon(GUIManager.loadIcon(entry.getIcon(), 48));
+                button.setIcon(manager.loadIcon(entry.getIcon(), ICON, 48));
                 button.addActionListener((ActionEvent e) -> {
                     cardLayout.show(contentPanel, String.valueOf(index));
                     headerLabel.setText(entry.getDisplayName());
 
                     Component[] buttons = sidebarPanel.getComponents();
                     for(Component button1 : buttons){
-                        button1.setBackground(SIDE_PANEL_COLOR);
+                        button1.setBackground(color(SIDE_PANEL));
                     }
 
-                    button.setBackground(SIDE_PANEL_SELECTED_COLOR);
+                    button.setBackground(color(SIDE_PANEL_SELECTED));
                 });
 
                 sidebarPanel.add(button, gbc);
@@ -202,14 +209,16 @@ public class SettingsPanel{
 
             {
                 JPanel bottomPanel = new JPanel();
-                bottomPanel.setBackground(SIDE_PANEL_SELECTED_COLOR);
+                bottomPanel.setBackground(color(SIDE_PANEL_SELECTED));
                 bottomPanel.setLayout(new FlowLayout(FlowLayout.RIGHT, 10, 10));
                 bottomPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
                 JButton resetButton = createButton(
                     "settings.restore_defaults",
                     "settings.restore_defaults.tooltip",
-                    Color.WHITE, Color.DARK_GRAY, new Color(128, 128, 128));
+                    BUTTON_BACKGROUND,
+                    BUTTON_FOREGROUND,
+                    BUTTON_HOVER);
 
                 resetButton.setPreferredSize(new Dimension(200, 30));
                 resetButton.addActionListener((ActionEvent e) -> {
@@ -225,7 +234,9 @@ public class SettingsPanel{
                 JButton saveButton = createButton(
                     "settings.save",
                     "settings.save.tooltip",
-                    Color.WHITE, Color.DARK_GRAY, new Color(128, 128, 128));
+                    BUTTON_BACKGROUND,
+                    BUTTON_FOREGROUND,
+                    BUTTON_HOVER);
 
                 saveButton.setPreferredSize(new Dimension(200, 30));
                 saveButton.addActionListener((ActionEvent e) -> {
@@ -273,7 +284,7 @@ public class SettingsPanel{
             JButton gabButton = new JButton("@hstr0100");
             gabButton.setToolTipText("Gabriel's GitHub");
             gabButton.setUI(new BasicButtonUI());
-            gabButton.setForeground(Color.WHITE);
+            gabButton.setForeground(color(FOREGROUND));
             gabButton.setFocusPainted(false);
             gabButton.setBorderPainted(false);
             gabButton.setContentAreaFilled(false);
@@ -286,12 +297,12 @@ public class SettingsPanel{
             gabButton.addMouseListener(new MouseAdapter(){
                 @Override
                 public void mouseEntered(MouseEvent e){
-                    gabButton.setForeground(Color.DARK_GRAY);
+                    gabButton.setForeground(color(LIGHT_TEXT));
                 }
 
                 @Override
                 public void mouseExited(MouseEvent e){
-                    gabButton.setForeground(Color.WHITE);
+                    gabButton.setForeground(color(FOREGROUND));
                 }
             });
 
@@ -322,7 +333,7 @@ public class SettingsPanel{
 
     private JPanel createGeneralSettings(){
         JPanel generalSettingsPanel = new JPanel(new GridBagLayout());
-        generalSettingsPanel.setBackground(Color.DARK_GRAY);
+        generalSettingsPanel.setBackground(color(BACKGROUND));
         generalSettingsPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
         GridBagConstraints gbcPanel = new GridBagConstraints();
@@ -332,21 +343,42 @@ public class SettingsPanel{
         gbcPanel.weightx = 1;
 
         {
-            JLabel label = createLabel("settings.language", Color.LIGHT_GRAY);
+            JLabel label = createLabel("settings.language", LIGHT_TEXT);
 
             gbcPanel.gridx = 0;
             gbcPanel.gridy++;
             generalSettingsPanel.add(label, gbcPanel);
 
             JComboBox<String> comboBox = new JComboBox<>(ISettingsEnum.getDisplayNames(LanguageEnum.class));
-            comboBox.setToolTipText("settings.requires_restart.tooltip");
+            comboBox.setToolTipText(get("settings.requires_restart.tooltip"));
             comboBox.setSelectedIndex(settings.getLanguage().ordinal());
 
             comboBox.addActionListener((ActionEvent e) -> {
                 settings.setLanguage(ISettingsEnum.getEnumByIndex(LanguageEnum.class, comboBox.getSelectedIndex()));
             });
 
-            customizeComponent(comboBox, Color.LIGHT_GRAY, Color.DARK_GRAY);
+            customizeComboBox(comboBox);
+
+            gbcPanel.gridx = 1;
+            generalSettingsPanel.add(comboBox, gbcPanel);
+        }
+
+        {
+            JLabel label = createLabel("settings.theme", LIGHT_TEXT);
+
+            gbcPanel.gridx = 0;
+            gbcPanel.gridy++;
+            generalSettingsPanel.add(label, gbcPanel);
+
+            JComboBox<String> comboBox = new JComboBox<>(ISettingsEnum.getDisplayNames(ThemeEnum.class));
+            comboBox.setToolTipText(get("settings.requires_restart.tooltip"));
+            comboBox.setSelectedIndex(settings.getTheme().ordinal());
+
+            comboBox.addActionListener((ActionEvent e) -> {
+                settings.setTheme(ISettingsEnum.getEnumByIndex(ThemeEnum.class, comboBox.getSelectedIndex()));
+            });
+
+            customizeComboBox(comboBox);
 
             gbcPanel.gridx = 1;
             gbcPanel.gridwidth = 2;
@@ -354,7 +386,7 @@ public class SettingsPanel{
         }
 
         {
-            JLabel label = createLabel("settings.always_on_top", Color.LIGHT_GRAY);
+            JLabel label = createLabel("settings.always_on_top", LIGHT_TEXT);
 
             gbcPanel.gridx = 0;
             gbcPanel.gridy++;
@@ -367,14 +399,14 @@ public class SettingsPanel{
                 settings.setKeepWindowAlwaysOnTop(checkBox.isSelected());
             });
 
-            customizeComponent(checkBox, Color.DARK_GRAY, Color.LIGHT_GRAY);
+            customizeComponent(checkBox, BACKGROUND, LIGHT_TEXT);
 
             gbcPanel.gridx = 1;
             generalSettingsPanel.add(checkBox, gbcPanel);
         }
 
         {
-            JLabel label = createLabel("settings.exit_on_close", Color.LIGHT_GRAY);
+            JLabel label = createLabel("settings.exit_on_close", LIGHT_TEXT);
 
             gbcPanel.gridx = 0;
             gbcPanel.gridy++;
@@ -387,14 +419,14 @@ public class SettingsPanel{
                 settings.setExitOnClose(checkBox.isSelected());
             });
 
-            customizeComponent(checkBox, Color.DARK_GRAY, Color.LIGHT_GRAY);
+            customizeComponent(checkBox, BACKGROUND, LIGHT_TEXT);
 
             gbcPanel.gridx = 1;
             generalSettingsPanel.add(checkBox, gbcPanel);
         }
 
         {
-            JLabel label = createLabel("settings.debug_mode", Color.LIGHT_GRAY);
+            JLabel label = createLabel("settings.debug_mode", LIGHT_TEXT);
 
             gbcPanel.gridx = 0;
             gbcPanel.gridy++;
@@ -407,14 +439,14 @@ public class SettingsPanel{
                 settings.setDebugMode(checkBox.isSelected());
             });
 
-            customizeComponent(checkBox, Color.DARK_GRAY, Color.LIGHT_GRAY);
+            customizeComponent(checkBox, BACKGROUND, LIGHT_TEXT);
 
             gbcPanel.gridx = 1;
             generalSettingsPanel.add(checkBox, gbcPanel);
         }
 
         {
-            JLabel label = createLabel("settings.start_on_system_startup", Color.LIGHT_GRAY);
+            JLabel label = createLabel("settings.start_on_system_startup", LIGHT_TEXT);
 
             gbcPanel.gridx = 0;
             gbcPanel.gridy++;
@@ -427,14 +459,14 @@ public class SettingsPanel{
                 settings.setAutoStart(checkBox.isSelected());
             });
 
-            customizeComponent(checkBox, Color.DARK_GRAY, Color.LIGHT_GRAY);
+            customizeComponent(checkBox, BACKGROUND, LIGHT_TEXT);
 
             gbcPanel.gridx = 1;
             generalSettingsPanel.add(checkBox, gbcPanel);
         }
 
         {
-            JLabel label = createLabel("settings.play_sounds", Color.LIGHT_GRAY);
+            JLabel label = createLabel("settings.play_sounds", LIGHT_TEXT);
 
             gbcPanel.gridx = 0;
             gbcPanel.gridy++;
@@ -447,7 +479,7 @@ public class SettingsPanel{
                 settings.setPlaySounds(checkBox.isSelected());
             });
 
-            customizeComponent(checkBox, Color.DARK_GRAY, Color.LIGHT_GRAY);
+            customizeComponent(checkBox, BACKGROUND, LIGHT_TEXT);
 
             gbcPanel.gridx = 1;
             generalSettingsPanel.add(checkBox, gbcPanel);
@@ -461,7 +493,7 @@ public class SettingsPanel{
             gbcPanel.gridwidth = 1;
             gbcPanel.fill = GridBagConstraints.BOTH;
             JPanel filler = new JPanel();
-            filler.setBackground(Color.DARK_GRAY);
+            filler.setBackground(color(BACKGROUND));
             generalSettingsPanel.add(filler, gbcPanel);
         }
 
@@ -471,7 +503,7 @@ public class SettingsPanel{
     private JPanel createDownloadSettings(){
         JPanel downloadSettingsPanel = new JPanel(new GridBagLayout());
         downloadSettingsPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        downloadSettingsPanel.setBackground(Color.DARK_GRAY);
+        downloadSettingsPanel.setBackground(color(BACKGROUND));
 
         GridBagConstraints gbcPanel = new GridBagConstraints();
         gbcPanel.insets = new Insets(5, 5, 5, 5);
@@ -480,7 +512,7 @@ public class SettingsPanel{
         gbcPanel.weightx = 1;
 
         {
-            JLabel label = createLabel("settings.read_cookies", Color.LIGHT_GRAY);
+            JLabel label = createLabel("settings.read_cookies", LIGHT_TEXT);
 
             gbcPanel.gridx = 0;
             gbcPanel.gridy++;
@@ -493,28 +525,28 @@ public class SettingsPanel{
                 settings.setReadCookies(checkBox.isSelected());
             });
 
-            customizeComponent(checkBox, Color.DARK_GRAY, Color.LIGHT_GRAY);
+            customizeComponent(checkBox, BACKGROUND, LIGHT_TEXT);
 
             gbcPanel.gridx = 1;
             downloadSettingsPanel.add(checkBox, gbcPanel);
         }
 
         {
-            JLabel label = createLabel("settings.browser_for_cookies", Color.LIGHT_GRAY);
+            JLabel label = createLabel("settings.browser_for_cookies", LIGHT_TEXT);
 
             gbcPanel.gridx = 0;
             gbcPanel.gridy++;
             downloadSettingsPanel.add(label, gbcPanel);
 
             JComboBox<String> comboBox = new JComboBox<>(ISettingsEnum.getDisplayNames(BrowserEnum.class));
-            comboBox.setToolTipText("settings.requires_restart.tooltip");
+            comboBox.setToolTipText(get("settings.requires_restart.tooltip"));
             comboBox.setSelectedIndex(settings.getBrowser().ordinal());
 
             comboBox.addActionListener((ActionEvent e) -> {
                 settings.setBrowser(ISettingsEnum.getEnumByIndex(BrowserEnum.class, comboBox.getSelectedIndex()));
             });
 
-            customizeComponent(comboBox, Color.LIGHT_GRAY, Color.DARK_GRAY);
+            customizeComboBox(comboBox);
 
             gbcPanel.gridx = 1;
             gbcPanel.gridwidth = 2;
@@ -522,7 +554,7 @@ public class SettingsPanel{
         }
 
         {
-            JLabel label = createLabel("settings.downloads_path", Color.LIGHT_GRAY);
+            JLabel label = createLabel("settings.downloads_path", LIGHT_TEXT);
 
             gbcPanel.gridx = 0;
             gbcPanel.gridy++;
@@ -530,8 +562,8 @@ public class SettingsPanel{
 
             JTextField downloadPathField = new JTextField(20);
             downloadPathField.setText(main.getOrCreateDownloadsDirectory().getAbsolutePath());
-            downloadPathField.setForeground(Color.BLACK);
-            downloadPathField.setBackground(Color.LIGHT_GRAY);
+            downloadPathField.setForeground(color(TEXT_AREA_FOREGROUND));
+            downloadPathField.setBackground(color(TEXT_AREA_BACKGROUND));
             downloadPathField.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
 
             downloadPathField.getDocument().addDocumentListener(new DocumentListener(){
@@ -559,7 +591,9 @@ public class SettingsPanel{
             JButton selectButton = createButton(
                 "settings.select_download_directory",
                 "settings.select_download_directory.tooltip",
-                Color.WHITE, Color.DARK_GRAY, new Color(128, 128, 128));
+                COMBO_BOX_BUTTON_FOREGROUND,
+                BACKGROUND,
+                BUTTON_HOVER);
 
             selectButton.addActionListener((ActionEvent e) -> {
                 JFileChooser fileChooser = new JFileChooser();
@@ -579,7 +613,7 @@ public class SettingsPanel{
         }
 
         {
-            JLabel label = createLabel("settings.capture_any_clipboard_link", Color.LIGHT_GRAY);
+            JLabel label = createLabel("settings.capture_any_clipboard_link", LIGHT_TEXT);
 
             gbcPanel.gridx = 0;
             gbcPanel.gridy++;
@@ -593,7 +627,7 @@ public class SettingsPanel{
                 settings.setCaptureAnyLinks(checkBox.isSelected());
             });
 
-            customizeComponent(checkBox, Color.DARK_GRAY, Color.LIGHT_GRAY);
+            customizeComponent(checkBox, BACKGROUND, LIGHT_TEXT);
 
             gbcPanel.gridx = 1;
             gbcPanel.gridwidth = 2;
@@ -602,7 +636,7 @@ public class SettingsPanel{
         }
 
         {
-            JLabel label = createLabel("settings.download_audio_only", Color.LIGHT_GRAY);
+            JLabel label = createLabel("settings.download_audio_only", LIGHT_TEXT);
 
             gbcPanel.gridx = 0;
             gbcPanel.gridy++;
@@ -615,14 +649,14 @@ public class SettingsPanel{
                 settings.setDownloadAudioOnly(checkBox.isSelected());
             });
 
-            customizeComponent(checkBox, Color.DARK_GRAY, Color.LIGHT_GRAY);
+            customizeComponent(checkBox, BACKGROUND, LIGHT_TEXT);
 
             gbcPanel.gridx = 1;
             downloadSettingsPanel.add(checkBox, gbcPanel);
         }
 
         {
-            JLabel label = createLabel("settings.maximum_simultaneous_downloads", Color.LIGHT_GRAY);
+            JLabel label = createLabel("settings.maximum_simultaneous_downloads", LIGHT_TEXT);
 
             gbcPanel.gridx = 0;
             gbcPanel.gridy++;
@@ -643,14 +677,14 @@ public class SettingsPanel{
                 }
             });
 
-            customizeSlider(slider, Color.DARK_GRAY, Color.LIGHT_GRAY);
+            customizeSlider(slider, BACKGROUND, SLIDER_FOREGROUND);
 
             gbcPanel.gridx = 1;
             downloadSettingsPanel.add(slider, gbcPanel);
         }
 
         {
-            JLabel label = createLabel("settings.playlist_download_option", Color.LIGHT_GRAY);
+            JLabel label = createLabel("settings.playlist_download_option", LIGHT_TEXT);
 
             gbcPanel.gridx = 0;
             gbcPanel.gridy++;
@@ -663,7 +697,7 @@ public class SettingsPanel{
                 settings.setPlaylistDownloadOption(ISettingsEnum.getEnumByIndex(PlayListOptionEnum.class, comboBox.getSelectedIndex()));
             });
 
-            customizeComponent(comboBox, Color.LIGHT_GRAY, Color.DARK_GRAY);
+            customizeComboBox(comboBox);
 
             gbcPanel.gridx = 1;
             downloadSettingsPanel.add(comboBox, gbcPanel);
@@ -677,7 +711,7 @@ public class SettingsPanel{
             gbcPanel.gridwidth = 1;
             gbcPanel.fill = GridBagConstraints.BOTH;
             JPanel filler = new JPanel();
-            filler.setBackground(Color.DARK_GRAY);
+            filler.setBackground(color(BACKGROUND));
             downloadSettingsPanel.add(filler, gbcPanel);
         }
 
@@ -687,18 +721,20 @@ public class SettingsPanel{
     private JPanel createResolutionSettings(){
         JPanel resolutionPanel = new JPanel();
         resolutionPanel.setLayout(new BoxLayout(resolutionPanel, BoxLayout.Y_AXIS));
-        resolutionPanel.setBackground(Color.DARK_GRAY);
+        resolutionPanel.setBackground(color(BACKGROUND));
 
         for(Map.Entry<WebFilterEnum, QualitySettings> entry : settings.getQualitySettings().entrySet()){
             WebFilterEnum filter = entry.getKey();
             QualitySettings qualitySettings = entry.getValue();
 
             JPanel itemPanel = new JPanel(new GridBagLayout());
-            TitledBorder border = BorderFactory.createTitledBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY), filter.getDisplayName());
-            border.setTitleColor(Color.WHITE);
+            TitledBorder border = BorderFactory.createTitledBorder(
+                BorderFactory.createLineBorder(color(LIGHT_TEXT)), filter.getDisplayName());
+
+            border.setTitleColor(color(FOREGROUND));
             itemPanel.setBorder(border);
 
-            itemPanel.setBackground(Color.DARK_GRAY);
+            itemPanel.setBackground(color(BACKGROUND));
 
             GridBagConstraints gbcItem = new GridBagConstraints();
             gbcItem.insets = new Insets(5, 10, 5, 10);
@@ -709,7 +745,7 @@ public class SettingsPanel{
             gbcItem.gridy = 1;
 
             {
-                JLabel label = createLabel("settings.quality_selector", Color.LIGHT_GRAY);
+                JLabel label = createLabel("settings.quality_selector", LIGHT_TEXT);
 
                 gbcItem.gridy++;
                 itemPanel.add(label, gbcItem);
@@ -721,7 +757,7 @@ public class SettingsPanel{
                     qualitySettings.setSelector(ISettingsEnum.getEnumByIndex(QualitySelectorEnum.class, comboBox.getSelectedIndex()));
                 });
 
-                customizeComponent(comboBox, Color.LIGHT_GRAY, Color.DARK_GRAY);
+                customizeComboBox(comboBox);
 
                 gbcItem.gridx = 1;
                 itemPanel.add(comboBox, gbcItem);
@@ -731,7 +767,7 @@ public class SettingsPanel{
             JComboBox<String> maxHeightComboBox;
 
             {
-                JLabel label = createLabel("settings.minimum_quality", Color.LIGHT_GRAY);
+                JLabel label = createLabel("settings.minimum_quality", LIGHT_TEXT);
 
                 gbcItem.gridx = 0;
                 gbcItem.gridy++;
@@ -740,14 +776,14 @@ public class SettingsPanel{
                 minHeightComboBox = new JComboBox<>(ISettingsEnum.getDisplayNames(ResolutionEnum.class));
                 minHeightComboBox.setSelectedIndex(qualitySettings.getMinHeight().ordinal());
 
-                customizeComponent(minHeightComboBox, Color.LIGHT_GRAY, Color.DARK_GRAY);
+                customizeComboBox(minHeightComboBox);
 
                 gbcItem.gridx = 1;
                 itemPanel.add(minHeightComboBox, gbcItem);
             }
 
             {
-                JLabel label = createLabel("settings.maximum_quality", Color.LIGHT_GRAY);
+                JLabel label = createLabel("settings.maximum_quality", LIGHT_TEXT);
 
                 gbcItem.gridx = 0;
                 gbcItem.gridy++;
@@ -756,14 +792,14 @@ public class SettingsPanel{
                 maxHeightComboBox = new JComboBox<>(ISettingsEnum.getDisplayNames(ResolutionEnum.class));
                 maxHeightComboBox.setSelectedIndex(qualitySettings.getMaxHeight().ordinal());
 
-                customizeComponent(maxHeightComboBox, Color.LIGHT_GRAY, Color.DARK_GRAY);
+                customizeComboBox(maxHeightComboBox);
 
                 gbcItem.gridx = 1;
                 itemPanel.add(maxHeightComboBox, gbcItem);
             }
 
             {
-                JLabel label = createLabel("settings.video_container", Color.LIGHT_GRAY);
+                JLabel label = createLabel("settings.video_container", LIGHT_TEXT);
 
                 gbcItem.gridx = 0;
                 gbcItem.gridy++;
@@ -776,7 +812,7 @@ public class SettingsPanel{
                     qualitySettings.setContainer(ISettingsEnum.getEnumByIndex(VideoContainerEnum.class, comboBox.getSelectedIndex()));
                 });
 
-                customizeComponent(comboBox, Color.LIGHT_GRAY, Color.DARK_GRAY);
+                customizeComboBox(comboBox);
 
                 gbcItem.gridx = 1;
                 itemPanel.add(comboBox, gbcItem);
@@ -805,7 +841,7 @@ public class SettingsPanel{
             }
 
             {
-                JLabel label = createLabel("settings.fps", Color.LIGHT_GRAY);
+                JLabel label = createLabel("settings.fps", LIGHT_TEXT);
 
                 gbcItem.gridx = 0;
                 gbcItem.gridy++;
@@ -818,14 +854,14 @@ public class SettingsPanel{
                     qualitySettings.setFps(ISettingsEnum.getEnumByIndex(FPSEnum.class, comboBox.getSelectedIndex()));
                 });
 
-                customizeComponent(comboBox, Color.LIGHT_GRAY, Color.DARK_GRAY);
+                customizeComboBox(comboBox);
 
                 gbcItem.gridx = 1;
                 itemPanel.add(comboBox, gbcItem);
             }
 
             {
-                JLabel label = createLabel("settings.audio_bitrate", Color.LIGHT_GRAY);
+                JLabel label = createLabel("settings.audio_bitrate", LIGHT_TEXT);
 
                 gbcItem.gridx = 0;
                 gbcItem.gridy++;
@@ -838,7 +874,7 @@ public class SettingsPanel{
                     qualitySettings.setAudioBitrate(ISettingsEnum.getEnumByIndex(AudioBitrateEnum.class, comboBox.getSelectedIndex()));
                 });
 
-                customizeComponent(comboBox, Color.LIGHT_GRAY, Color.DARK_GRAY);
+                customizeComboBox(comboBox);
 
                 gbcItem.gridx = 1;
                 itemPanel.add(comboBox, gbcItem);
@@ -851,54 +887,57 @@ public class SettingsPanel{
         resolutionScrollPane.getVerticalScrollBar().setUI(new CustomScrollBarUI());
         resolutionScrollPane.getHorizontalScrollBar().setUI(new CustomScrollBarUI());
         resolutionScrollPane.setBorder(BorderFactory.createEmptyBorder());
-        resolutionScrollPane.setBackground(Color.DARK_GRAY);
+        resolutionScrollPane.setBackground(color(BACKGROUND));
         resolutionScrollPane.getVerticalScrollBar().setUnitIncrement(8);
         resolutionScrollPane.setPreferredSize(new Dimension(Integer.MAX_VALUE, 200));
 
         JPanel resolutionPanelWrapper = new JPanel(new BorderLayout());
         resolutionPanelWrapper.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 2));
-        resolutionPanelWrapper.setBackground(Color.DARK_GRAY);
+        resolutionPanelWrapper.setBackground(color(BACKGROUND));
 
         resolutionPanelWrapper.add(resolutionScrollPane, BorderLayout.CENTER);
 
         return resolutionPanelWrapper;
     }
 
-    private JLabel createLabel(String text, Color color){
+    private JLabel createLabel(String text, UIColors uiColor){
         JLabel label = new JLabel(get(text));
-        label.setForeground(color);
+        label.setForeground(color(uiColor));
 
         return label;
     }
 
-    private JButton createButton(String text, String tooltipText, Color backgroundColor, Color textColor, Color hoverColor){
-        CustomButton button = new CustomButton(get(text));
-        button.setToolTipText(tooltipText);
-        button.setHoverBackgroundColor(hoverColor);
-        button.setPressedBackgroundColor(hoverColor.brighter());
+    private JButton createButton(String text, String tooltipText, UIColors backgroundColor, UIColors textColor, UIColors hoverColor){
+        CustomButton button = new CustomButton(get(text),
+            color(hoverColor),
+            color(hoverColor).brighter());
+
+        button.setToolTipText(get(tooltipText));
 
         button.setFocusPainted(false);
-        button.setForeground(textColor);
-        button.setBackground(backgroundColor);
+        button.setForeground(color(textColor));
+        button.setBackground(color(backgroundColor));
         button.setBorder(BorderFactory.createEmptyBorder(10, 25, 10, 25));
 
         return button;
     }
 
-    private void customizeComponent(JComponent component, Color backgroundColor, Color textColor){
-        component.setForeground(textColor);
-        component.setBackground(backgroundColor);
+    private void customizeComboBox(JComboBox<String> component){
+        component.setUI(new CustomComboBoxUI());
+    }
 
-        if(component instanceof JComboBox){
-            ((JComboBox)component).setUI(new CustomComboBoxUI());
-        }else if(component instanceof JCheckBox){
+    private void customizeComponent(JComponent component, UIColors backgroundColor, UIColors textColor){
+        component.setForeground(color(textColor));
+        component.setBackground(color(backgroundColor));
+
+        if(component instanceof JCheckBox){
             ((JCheckBox)component).setUI(new CustomCheckBoxUI());
         }
     }
 
-    private void customizeSlider(JSlider slider, Color backgroundColor, Color textColor){
-        slider.setForeground(textColor);
-        slider.setBackground(backgroundColor);
+    private void customizeSlider(JSlider slider, UIColors backgroundColor, UIColors textColor){
+        slider.setForeground(color(textColor));
+        slider.setBackground(color(backgroundColor));
         slider.setOpaque(true);
         slider.setBorder(BorderFactory.createEmptyBorder());
         slider.setUI(new CustomSliderUI(slider));

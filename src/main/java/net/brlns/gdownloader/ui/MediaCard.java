@@ -19,7 +19,8 @@ package net.brlns.gdownloader.ui;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
-import java.net.URL;
+import java.net.URI;
+import java.net.URISyntaxException;
 import javax.imageio.ImageIO;
 import javax.swing.ImageIcon;
 import javax.swing.JLabel;
@@ -88,7 +89,7 @@ public class MediaCard{
 
     public void setThumbnailAndDuration(String url, long duration){
         try{
-            BufferedImage img = ImageIO.read(new URL(url));
+            BufferedImage img = ImageIO.read(new URI(url).toURL());
 
             if(img != null){
                 Image scaledImg = img.getScaledInstance(THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT, Image.SCALE_SMOOTH);
@@ -130,7 +131,7 @@ public class MediaCard{
             }else{
                 log.error("ImageIO.read returned null for {}", url);
             }
-        }catch(IOException e){
+        }catch(IOException | URISyntaxException e){
             log.error("ImageIO.read exception {}", e.getLocalizedMessage());
         }
     }

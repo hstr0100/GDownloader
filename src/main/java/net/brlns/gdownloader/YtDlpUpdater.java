@@ -34,9 +34,10 @@ import java.nio.file.attribute.PosixFilePermissions;
 import java.util.Iterator;
 import java.util.Locale;
 import java.util.Set;
-import javax.annotation.Nullable;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import net.brlns.gdownloader.settings.enums.ArchVersionEnum;
+import net.brlns.gdownloader.util.Nullable;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -61,7 +62,7 @@ public class YtDlpUpdater{
     private File ffmpegExecutablePath;
 
     @Getter
-    private ArchVersion archVersion;
+    private ArchVersionEnum archVersion;
 
     public YtDlpUpdater(GDownloader mainIn){
         main = mainIn;
@@ -78,34 +79,34 @@ public class YtDlpUpdater{
             case "x86":
             case "i386":
                 if(os.contains("mac")){
-                    archVersion = ArchVersion.MAC_X86;
+                    archVersion = ArchVersionEnum.MAC_X86;
                 }else if(os.contains("win")){
-                    archVersion = ArchVersion.WINDOWS_X86;
+                    archVersion = ArchVersionEnum.WINDOWS_X86;
                 }
 
                 break;
             case "amd64":
             case "x86_64":
                 if(os.contains("nux")){
-                    archVersion = ArchVersion.LINUX_X64;
+                    archVersion = ArchVersionEnum.LINUX_X64;
                 }else if(os.contains("mac")){
-                    archVersion = ArchVersion.MAC_X64;
+                    archVersion = ArchVersionEnum.MAC_X64;
                 }else if(os.contains("win")){
-                    archVersion = ArchVersion.WINDOWS_X64;
+                    archVersion = ArchVersionEnum.WINDOWS_X64;
                 }
 
                 break;
             case "arm":
             case "aarch32":
                 if(os.contains("nux")){
-                    archVersion = ArchVersion.LINUX_ARM;
+                    archVersion = ArchVersionEnum.LINUX_ARM;
                 }
 
                 break;
             case "arm64":
             case "aarch64":
                 if(os.contains("nux")){
-                    archVersion = ArchVersion.LINUX_ARM64;
+                    archVersion = ArchVersionEnum.LINUX_ARM64;
                 }
 
                 break;
@@ -166,7 +167,7 @@ public class YtDlpUpdater{
             String fileName = archVersion.getFfmpegBinary();
             if(fileName != null){
                 ffmpegExecutablePath = copyResource(
-                    "bin/ffmpeg/" + fileName,
+                    "/bin/ffmpeg/" + fileName,
                     new File(workDir, fileName));
             }
         }
@@ -201,7 +202,7 @@ public class YtDlpUpdater{
     }
 
     @Nullable
-    private static String getDownloadUrl(ArchVersion version, String tag) throws IOException, InterruptedException{
+    private static String getDownloadUrl(ArchVersionEnum version, String tag) throws IOException, InterruptedException{
         String apiUrl = String.format("https://api.github.com/repos/%s/%s/releases/tags/%s", USER, REPO, tag);
         HttpRequest request = HttpRequest.newBuilder().uri(URI.create(apiUrl)).build();
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
@@ -264,32 +265,5 @@ public class YtDlpUpdater{
         String content = new String(Files.readAllBytes(lockFile.toPath()));
 
         return content.equals(tag);
-    }
-
-    private static enum OS{
-        WINDOWS,
-        LINUX,
-        MAC;
-    }
-
-    @Getter
-    private static enum ArchVersion{
-        MAC_X86("yt-dlp_macos_legacy", null, OS.MAC),
-        MAC_X64("yt-dlp_macos", null, OS.MAC),
-        WINDOWS_X86("yt-dlp_x86.exe", null, OS.WINDOWS),
-        WINDOWS_X64("yt-dlp.exe", "ffmpeg.exe", OS.WINDOWS),
-        LINUX_X64("yt-dlp_linux", null, OS.LINUX),//You're on your own for ffmpeg buddy @TODO: add binary
-        LINUX_ARM("yt-dlp_linux_armv7l", null, OS.LINUX),
-        LINUX_ARM64("yt-dlp_linux_aarch64", null, OS.LINUX);
-
-        private final String ytDlpBinary;
-        private final String ffmpegBinary;
-        private final OS os;
-
-        private ArchVersion(String ytDlpBinaryIn, String ffmpegBinaryIn, OS osIn){
-            ytDlpBinary = ytDlpBinaryIn;
-            ffmpegBinary = ffmpegBinaryIn;
-            os = osIn;
-        }
     }
 }

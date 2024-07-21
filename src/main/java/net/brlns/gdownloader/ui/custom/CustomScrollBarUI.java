@@ -16,11 +16,18 @@
  */
 package net.brlns.gdownloader.ui.custom;
 
-import java.awt.*;
+import java.awt.Dimension;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.Rectangle;
+import java.awt.RenderingHints;
 import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JScrollBar;
 import javax.swing.plaf.basic.BasicScrollBarUI;
+
+import static net.brlns.gdownloader.ui.themes.ThemeProvider.*;
+import static net.brlns.gdownloader.ui.themes.UIColors.*;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -29,8 +36,8 @@ public class CustomScrollBarUI extends BasicScrollBarUI{
 
     @Override
     protected void configureScrollBarColors(){
-        thumbColor = Color.WHITE;
-        trackColor = Color.DARK_GRAY;
+        thumbColor = color(FOREGROUND);
+        trackColor = color(BACKGROUND);
     }
 
     @Override

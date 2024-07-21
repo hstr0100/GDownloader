@@ -14,37 +14,38 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package net.brlns.gdownloader.settings.enums;
-
-import lombok.Getter;
-
-import static net.brlns.gdownloader.Language.get;
+package net.brlns.gdownloader.ui.themes;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-@Getter
-public enum AudioBitrateEnum implements ISettingsEnum{
-    NO_AUDIO(0, ""),
-    BITRATE_192(192, "192kbps"),
-    BITRATE_256(256, "256kbps"),
-    BITRATE_320(320, "320kbps");
+public enum UIColors{
+    ICON,
+    ICON_ACTIVE,
+    ICON_HOVER,
+    ICON_CLOSE,
+    BACKGROUND,
+    TEXT_AREA_BACKGROUND,
+    TEXT_AREA_FOREGROUND,
+    FOREGROUND,
+    SIDE_PANEL,
+    MEDIA_CARD_HOVER,
+    MEDIA_CARD,
+    MEDIA_CARD_THUMBNAIL,
+    LIGHT_TEXT,
+    BUTTON_FOREGROUND,
+    BUTTON_BACKGROUND,
+    BUTTON_HOVER,
+    SLIDER_FOREGROUND,
+    SIDE_PANEL_SELECTED,
+    TOOLTIP_BACKGROUND,
+    TOOLTIP_FOREGROUND,
+    COMBO_BOX_FOREGROUND,
+    COMBO_BOX_BACKGROUND,
+    COMBO_BOX_SELECTION_BACKGROUND,
+    COMBO_BOX_SELECTION_FOREGROUND,
+    SLIDER_TRACK,
+    COMBO_BOX_BUTTON_FOREGROUND,
+    COMBO_BOX_BUTTON_BACKGROUND;
 
-    private final int value;
-    private final String displayName;
-
-    private AudioBitrateEnum(int valueIn, String displayNameIn){
-        value = valueIn;
-        displayName = displayNameIn;
-    }
-
-    @Override
-    public String getDisplayName(){
-        return this == NO_AUDIO ? get("enums.audio.no_audio") : displayName;
-    }
-
-    @Override
-    public String getTranslationKey(){
-        return "";
-    }
 }

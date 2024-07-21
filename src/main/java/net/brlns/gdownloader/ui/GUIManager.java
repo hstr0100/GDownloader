@@ -20,7 +20,11 @@ import java.awt.*;
 import java.awt.datatransfer.Transferable;
 import java.awt.dnd.*;
 import java.awt.event.*;
+import java.awt.image.BufferedImage;
+import java.awt.image.WritableRaster;
 import java.io.IOException;
+import java.io.InputStream;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
@@ -36,35 +40,32 @@ import javax.swing.*;
 import javax.swing.plaf.ColorUIResource;
 import javax.swing.plaf.basic.BasicButtonUI;
 import lombok.Data;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
-import static net.brlns.gdownloader.Language.*;
 import net.brlns.gdownloader.YtDlpDownloader;
 import net.brlns.gdownloader.ui.custom.CustomButton;
 import net.brlns.gdownloader.ui.custom.CustomCheckBoxUI;
 import net.brlns.gdownloader.ui.custom.CustomProgressBar;
 import net.brlns.gdownloader.ui.custom.CustomScrollBarUI;
 import net.brlns.gdownloader.ui.custom.CustomToolTip;
+import net.brlns.gdownloader.ui.themes.UIColors;
+
+import static net.brlns.gdownloader.Language.*;
+import static net.brlns.gdownloader.ui.themes.ThemeProvider.*;
+import static net.brlns.gdownloader.ui.themes.UIColors.*;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
+//TODO add custom tooltip to all buttons
 @Slf4j
-public class GUIManager{
+public final class GUIManager{
 
     static{
         ToolTipManager.sharedInstance().setInitialDelay(0);
         ToolTipManager.sharedInstance().setDismissDelay(5000);
         ToolTipManager.sharedInstance().setEnabled(true);
-
-        UIManager.put("ToolTip.background", Color.DARK_GRAY);
-        UIManager.put("ToolTip.foreground", Color.WHITE);
-        UIManager.put("ToolTip.border", BorderFactory.createEmptyBorder(5, 5, 5, 5));
-
-        UIManager.put("ComboBox.background", new ColorUIResource(Color.WHITE));
-        UIManager.put("ComboBox.selectionBackground", new ColorUIResource(Color.DARK_GRAY.brighter()));
-        UIManager.put("ComboBox.selectionForeground", new ColorUIResource(Color.LIGHT_GRAY));
-        UIManager.put("ComboBox.borderPaintsFocus", Boolean.FALSE);
     }
 
     private JWindow messageWindow;
@@ -88,20 +89,36 @@ public class GUIManager{
 
     private final SettingsPanel settingsPanel;
 
+    //TODO
+    @Getter
+    private final double uiScale;
+
     public GUIManager(GDownloader mainIn){
         main = mainIn;
 
-        threadPool = Executors.newSingleThreadExecutor();
-        settingsPanel = new SettingsPanel(main);
+        uiScale = Math.clamp(mainIn.getConfig().getUiScale(), 0.5, 3.0);
 
-        setUpAppWindow();
+        threadPool = Executors.newSingleThreadExecutor();
+        settingsPanel = new SettingsPanel(main, this);
+
+        UIManager.put("ToolTip.background", color(TOOLTIP_BACKGROUND));
+        UIManager.put("ToolTip.foreground", color(TOOLTIP_FOREGROUND));
+        UIManager.put("ToolTip.border", BorderFactory.createEmptyBorder(5, 5, 5, 5));
+
+        UIManager.put("ComboBox.background", new ColorUIResource(color(COMBO_BOX_BACKGROUND)));
+        UIManager.put("ComboBox.selectionBackground", new ColorUIResource(color(COMBO_BOX_SELECTION_BACKGROUND)));
+        UIManager.put("ComboBox.selectionForeground", new ColorUIResource(color(COMBO_BOX_SELECTION_FOREGROUND)));
+        UIManager.put("ComboBox.borderPaintsFocus", Boolean.FALSE);
     }
 
     public void displaySettingsPanel(){
         settingsPanel.createAndShowGUI();
     }
 
+    //TODO: only call after initialized
     public void wakeUp(){
+        setUpAppWindow();
+
         appWindow.setVisible(true);
 
         if((appWindow.getExtendedState() & Frame.ICONIFIED) == 1){
@@ -116,15 +133,15 @@ public class GUIManager{
 
     //TODO: light theme
     public String getCurrentAppIconPath(){
-        return "assets/app_icon.png";
+        return "/assets/launcher/GDownloader.png";
     }
 
     public String getCurrentTrayIconPath(){
-        return "assets/tray_icon.png";
+        return "/assets/tray_icon.png";
     }
 
     public Image getAppIcon() throws IOException{
-        Image icon = ImageIO.read(getClass().getClassLoader().getResource(getCurrentAppIconPath()));
+        Image icon = ImageIO.read(getClass().getResource(getCurrentAppIconPath()));
 
         return icon;
     }
@@ -132,7 +149,7 @@ public class GUIManager{
     private void constructToolBar(JPanel mainPanel){
         JPanel topPanel = new JPanel(new GridBagLayout());
         topPanel.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0));
-        topPanel.setBackground(Color.DARK_GRAY);
+        topPanel.setBackground(color(BACKGROUND));
 
         JPanel statusPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 0));
         statusPanel.setOpaque(false);
@@ -140,11 +157,11 @@ public class GUIManager{
         {
             JLabel statusLabel = new JLabel("");
             statusLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 5));
-            statusLabel.setForeground(Color.LIGHT_GRAY);
+            statusLabel.setForeground(color(LIGHT_TEXT));
             statusLabel.setHorizontalAlignment(SwingConstants.LEFT);
             statusLabel.setVerticalAlignment(SwingConstants.CENTER);
 
-            Consumer<YtDlpDownloader> startConsumer = (YtDlpDownloader downloadManager) -> {
+            Consumer<YtDlpDownloader> consumer = (YtDlpDownloader downloadManager) -> {
                 statusLabel.setText(
                     "<html>"
                     + downloadManager.getDownloadsRunning() + " " + get("gui.statusbar.running")
@@ -153,9 +170,10 @@ public class GUIManager{
                     + "</html>"
                 );
             };
-            startConsumer.accept(main.getDownloadManager());
 
-            main.getDownloadManager().registerListener(startConsumer);
+            consumer.accept(main.getDownloadManager());
+
+            main.getDownloadManager().registerListener(consumer);
 
             statusPanel.add(statusLabel);
         }
@@ -163,11 +181,11 @@ public class GUIManager{
         {
             JLabel statusLabel = new JLabel("");
             statusLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 5));
-            statusLabel.setForeground(Color.LIGHT_GRAY);
+            statusLabel.setForeground(color(LIGHT_TEXT));
             statusLabel.setHorizontalAlignment(SwingConstants.LEFT);
             statusLabel.setVerticalAlignment(SwingConstants.CENTER);
 
-            Consumer<YtDlpDownloader> startConsumer = (YtDlpDownloader downloadManager) -> {
+            Consumer<YtDlpDownloader> consumer = (YtDlpDownloader downloadManager) -> {
                 statusLabel.setText(
                     "<html>"
                     + downloadManager.getQueueSize() + " " + get("gui.statusbar.queued")
@@ -176,9 +194,10 @@ public class GUIManager{
                     + "</html>"
                 );
             };
-            startConsumer.accept(main.getDownloadManager());
 
-            main.getDownloadManager().registerListener(startConsumer);
+            consumer.accept(main.getDownloadManager());
+
+            main.getDownloadManager().registerListener(consumer);
 
             statusPanel.add(statusLabel);
         }
@@ -194,8 +213,8 @@ public class GUIManager{
         buttonPanel.setOpaque(false);
 
         JButton retryButton = createButton(
-            loadIcon("assets/redo.png"),
-            loadIcon("assets/redo-hover.png"),
+            loadIcon("/assets/redo.png", ICON),
+            loadIcon("/assets/redo.png", ICON_HOVER),
             "gui.retry_failed_downloads.tooltip",
             e -> main.getDownloadManager().retryFailedDownloads()
         );
@@ -207,23 +226,29 @@ public class GUIManager{
         });
 
         buttonPanel.add(createToggleButton(
-            loadIcon("assets/copy-link.png"),
-            loadIcon("assets/copy-link-hover.png"),
-            loadIcon("assets/copy-link-inactive.png"),
-            loadIcon("assets/copy-link-hover.png"),
+            loadIcon("/assets/copy-link.png", ICON_ACTIVE),
+            loadIcon("/assets/copy-link.png", ICON_HOVER),
+            loadIcon("/assets/copy-link.png", ICON),
+            loadIcon("/assets/copy-link.png", ICON_HOVER),
             "gui.start_clipboard_monitor.tooltip",
             "gui.stop_clipboard_monitor.tooltip",
             main::isWatchClipboard,
             () -> {
                 main.setWatchClipboard(!main.isWatchClipboard());
+
+                updateQueuePanelMessage();
             }
         ));
 
+        main.getDownloadManager().registerListener((YtDlpDownloader downloadManager) -> {
+            updateQueuePanelMessage();
+        });
+
         buttonPanel.add(createToggleButton(
-            loadIcon("assets/mp3.png"),
-            loadIcon("assets/mp3-hover.png"),
-            loadIcon("assets/mp3-inactive.png"),
-            loadIcon("assets/mp3-hover.png"),
+            loadIcon("/assets/mp3.png", ICON_ACTIVE),
+            loadIcon("/assets/mp3.png", ICON_HOVER),
+            loadIcon("/assets/mp3.png", ICON),
+            loadIcon("/assets/mp3.png", ICON_HOVER),
             "gui.audio_only.tooltip",
             "gui.audio_and_video.tooltip",
             main.getConfig()::isDownloadAudioOnly,
@@ -233,11 +258,11 @@ public class GUIManager{
             }
         ));
 
-        JButton startStopButton = createToggleDownloadsButton(
-            loadIcon("assets/pause.png"),
-            loadIcon("assets/pause-hover.png"),
-            loadIcon("assets/play.png"),
-            loadIcon("assets/play-hover.png"),
+        buttonPanel.add(createToggleDownloadsButton(
+            loadIcon("/assets/pause.png", ICON),
+            loadIcon("/assets/pause.png", ICON_HOVER),
+            loadIcon("/assets/play.png", ICON),
+            loadIcon("/assets/play.png", ICON_HOVER),
             "gui.start_downloads.tooltip",
             "gui.stop_downloads.tooltip",
             main.getDownloadManager()::isRunning,
@@ -248,24 +273,21 @@ public class GUIManager{
                     main.getDownloadManager().startDownloads();
                 }
             }
-        );
-        buttonPanel.add(startStopButton);
+        ));
 
-        JButton resumeButton = createButton(
-            loadIcon("assets/erase.png"),
-            loadIcon("assets/erase-hover.png"),
+        buttonPanel.add(createButton(
+            loadIcon("/assets/erase.png", ICON),
+            loadIcon("/assets/erase.png", ICON_HOVER),
             "gui.clear_download_queue.tooltip",
             e -> main.getDownloadManager().clearQueue()
-        );
-        buttonPanel.add(resumeButton);
+        ));
 
-        JButton stopButton = createButton(
-            loadIcon("assets/settings.png"),
-            loadIcon("assets/settings-hover.png"),
+        buttonPanel.add(createButton(
+            loadIcon("/assets/settings.png", ICON),
+            loadIcon("/assets/settings.png", ICON_HOVER),
             "settings.sidebar_title",
             e -> displaySettingsPanel()
-        );
-        buttonPanel.add(stopButton);
+        ));
 
         GridBagConstraints gbcButtons = new GridBagConstraints();
         gbcButtons.gridx = 1;
@@ -296,6 +318,20 @@ public class GUIManager{
         });
 
         return button;
+    }
+
+    private void updateQueuePanelMessage(){
+        JLabel label = (JLabel)getEmptyQueuePanel().getComponent(0);
+
+        if(!main.getDownloadManager().isBlocked()){
+            if(main.isWatchClipboard()){
+                label.setText(get("gui.empty_queue"));
+            }else{
+                label.setText(get("gui.empty_queue.enable_clipboard"));
+            }
+        }else{
+            label.setText(get("gui.checking_updates"));
+        }
     }
 
     private JButton createToggleButton(
@@ -383,14 +419,14 @@ public class GUIManager{
         return button;
     }
 
-    private JButton createDialogButton(String text, Color backgroundColor, Color textColor, Color hoverColor){
-        CustomButton button = new CustomButton(text);
-        button.setHoverBackgroundColor(hoverColor);
-        button.setPressedBackgroundColor(hoverColor.brighter());
+    private JButton createDialogButton(String text, UIColors backgroundColor, UIColors textColor, UIColors hoverColor){
+        CustomButton button = new CustomButton(text,
+            color(hoverColor),
+            color(hoverColor).brighter());
 
         button.setFocusPainted(false);
-        button.setForeground(textColor);
-        button.setBackground(backgroundColor);
+        button.setForeground(color(textColor));
+        button.setBackground(color(backgroundColor));
         button.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
 
         return button;
@@ -427,14 +463,14 @@ public class GUIManager{
         JPanel panel = new JPanel();
         panel.setLayout(new BorderLayout());
         panel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
-        panel.setBackground(Color.DARK_GRAY);
+        panel.setBackground(color(BACKGROUND));
 
         JPanel dialogPanel = new JPanel(new BorderLayout());
         dialogPanel.setOpaque(false);
         dialogPanel.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0));
 
         JLabel dialogLabel = new JLabel(wrapText(50, message), SwingConstants.CENTER);
-        dialogLabel.setForeground(Color.WHITE);
+        dialogLabel.setForeground(color(FOREGROUND));
         dialogPanel.add(dialogLabel, BorderLayout.CENTER);
 
         panel.add(dialogPanel, BorderLayout.CENTER);
@@ -445,18 +481,21 @@ public class GUIManager{
 
         JCheckBox rememberCheckBox = new JCheckBox(get("gui.remember_choice"));
         rememberCheckBox.setUI(new CustomCheckBoxUI());
-        rememberCheckBox.setBackground(Color.DARK_GRAY);
-        rememberCheckBox.setForeground(Color.WHITE);
+        rememberCheckBox.setBackground(color(BACKGROUND));
+        rememberCheckBox.setForeground(color(FOREGROUND));
         rememberCheckBox.setOpaque(false);
         checkboxPanel.add(rememberCheckBox);
 
         JPanel buttonPanel = new JPanel();
+        buttonPanel.setBackground(color(SIDE_PANEL_SELECTED));
         buttonPanel.setOpaque(false);
 
         for(DialogButton dialogButton : buttons){
             JButton button = createDialogButton(
                 dialogButton.getTitle(),
-                Color.WHITE, Color.DARK_GRAY, new Color(128, 128, 128));
+                BUTTON_BACKGROUND,
+                BUTTON_FOREGROUND,
+                BUTTON_HOVER);
 
             button.addActionListener(e -> {
                 dialogButton.getAction().accept(rememberCheckBox.isSelected());
@@ -475,8 +514,8 @@ public class GUIManager{
         JProgressBar dialogProgressBar = new JProgressBar(0, 100);
         dialogProgressBar.setValue(100);
         dialogProgressBar.setStringPainted(false);
-        dialogProgressBar.setForeground(Color.WHITE);
-        dialogProgressBar.setBackground(Color.DARK_GRAY);
+        dialogProgressBar.setForeground(color(FOREGROUND));
+        dialogProgressBar.setBackground(color(BACKGROUND));
         dialogProgressBar.setBorderPainted(false);
         dialogProgressBar.setPreferredSize(new Dimension(dialog.getWidth() - 10, 7));
 
@@ -545,23 +584,24 @@ public class GUIManager{
         Color titleColor;
         Color textColor;
         switch(nextMessage.getMessageType()){
-            case ERROR:
+            case ERROR -> {
                 titleColor = Color.RED;
                 textColor = Color.GRAY;
-                break;
-            case WARNING:
+            }
+            case WARNING -> {
                 titleColor = Color.YELLOW;
                 textColor = Color.GRAY;
-                break;
-            default:
-                titleColor = new Color(0.85f, 0.85f, 0.85f, 1f);
-                textColor = Color.WHITE;
+            }
+            default -> {
+                titleColor = color(LIGHT_TEXT);
+                textColor = color(FOREGROUND);
+            }
         }
 
         JPanel panel = new JPanel();
         panel.setLayout(new BorderLayout());
         panel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
-        panel.setBackground(Color.DARK_GRAY);
+        panel.setBackground(color(BACKGROUND));
 
         JPanel titlePanel = new JPanel(new BorderLayout());
         titlePanel.setOpaque(false);
@@ -573,14 +613,12 @@ public class GUIManager{
 
         AtomicBoolean cancelHook = new AtomicBoolean(false);
 
-        JButton closeButton = createButton(
-            loadIcon("assets/x-mark.png", 12),
-            loadIcon("assets/x-mark-alt.png", 12),
+        titlePanel.add(createButton(
+            loadIcon("/assets/x-mark.png", ICON, 12),
+            loadIcon("/assets/x-mark.png", ICON_CLOSE, 12),
             "gui.close.tooltip",
             e -> cancelHook.set(true)
-        );
-
-        titlePanel.add(closeButton, BorderLayout.EAST);
+        ), BorderLayout.EAST);
 
         panel.add(titlePanel, BorderLayout.NORTH);
 
@@ -597,8 +635,8 @@ public class GUIManager{
         JProgressBar messageProgressBar = new JProgressBar(0, nextMessage.getDurationMillis());
         messageProgressBar.setValue(nextMessage.getDurationMillis());
         messageProgressBar.setStringPainted(false);
-        messageProgressBar.setForeground(Color.WHITE);
-        messageProgressBar.setBackground(Color.DARK_GRAY);
+        messageProgressBar.setForeground(color(FOREGROUND));
+        messageProgressBar.setBackground(color(BACKGROUND));
         messageProgressBar.setBorderPainted(false);
         messageProgressBar.setPreferredSize(new Dimension(messageWindow.getWidth() - 10, 5));
 
@@ -731,14 +769,15 @@ public class GUIManager{
                 }
             });
 
-            updateAppWindowSize();
+            adjustWindowSize();
+            adjustMessageWindowPosition();
 
             JPanel mainPanel = new JPanel(new BorderLayout());
             mainPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
-            mainPanel.setBackground(Color.DARK_GRAY);
+            mainPanel.setBackground(color(BACKGROUND));
 
             JPanel headerPanel = new JPanel(new BorderLayout());
-            headerPanel.setBackground(Color.DARK_GRAY);
+            headerPanel.setBackground(color(BACKGROUND));
 
             constructToolBar(headerPanel);
 
@@ -746,7 +785,7 @@ public class GUIManager{
 
             queuePanel = new JPanel();
             queuePanel.setLayout(new BoxLayout(queuePanel, BoxLayout.Y_AXIS));
-            queuePanel.setBackground(Color.DARK_GRAY);
+            queuePanel.setBackground(color(BACKGROUND));
 
             new DropTarget(queuePanel, new DropTargetListener(){
                 @Override
@@ -794,8 +833,8 @@ public class GUIManager{
             queueScrollPane.getHorizontalScrollBar().setUI(new CustomScrollBarUI());
 
             queueScrollPane.setBorder(BorderFactory.createEmptyBorder());
-            queueScrollPane.setBackground(Color.DARK_GRAY);
-            //queueScrollPane.getViewport().setBackground(Color.DARK_GRAY);
+            queueScrollPane.setBackground(color(BACKGROUND));
+            //queueScrollPane.getViewport().setBackground(color(BACKGROUND));
             queueScrollPane.getVerticalScrollBar().setUnitIncrement(4);
             queueScrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
             queueScrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
@@ -817,9 +856,11 @@ public class GUIManager{
         emptyQueuePanel.setOpaque(false);
         emptyQueuePanel.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0));
 
-        JLabel messageLabel = new JLabel(get("gui.empty_queue"), SwingConstants.CENTER);
-        messageLabel.setForeground(Color.WHITE);
+        JLabel messageLabel = new JLabel("", SwingConstants.CENTER);
+        messageLabel.setForeground(color(FOREGROUND));
         emptyQueuePanel.add(messageLabel, BorderLayout.CENTER);
+
+        updateQueuePanelMessage();
 
         return emptyQueuePanel;
     }
@@ -835,8 +876,8 @@ public class GUIManager{
 
         JPanel card = new JPanel();
         card.setLayout(new GridBagLayout());
-        card.setBorder(BorderFactory.createLineBorder(Color.DARK_GRAY, 5));
-        card.setBackground(new Color(80, 80, 80));
+        card.setBorder(BorderFactory.createLineBorder(color(BACKGROUND), 5));
+        card.setBackground(color(MEDIA_CARD));
         card.setMaximumSize(new Dimension(Integer.MAX_VALUE, 130));
 
         GridBagConstraints gbc = new GridBagConstraints();
@@ -846,21 +887,21 @@ public class GUIManager{
         JPanel thumbnailPanel = new JPanel();
         thumbnailPanel.setPreferredSize(new Dimension(MediaCard.THUMBNAIL_WIDTH, MediaCard.THUMBNAIL_HEIGHT));
         thumbnailPanel.setMinimumSize(new Dimension(MediaCard.THUMBNAIL_WIDTH, MediaCard.THUMBNAIL_HEIGHT));
-        thumbnailPanel.setBackground(new Color(74, 74, 74));
+        thumbnailPanel.setBackground(color(MEDIA_CARD_THUMBNAIL));
         thumbnailPanel.setLayout(new BorderLayout());
 
         if(video){
-            ImageIcon noImageIcon = loadIcon("assets/video.png", 64);
+            ImageIcon noImageIcon = loadIcon("/assets/video.png", ICON, 64);
             JLabel imageLabel = new JLabel(noImageIcon);
             thumbnailPanel.add(imageLabel, BorderLayout.CENTER);
         }else{
-            ImageIcon noImageIcon = loadIcon("assets/winamp.png", 64);
+            ImageIcon noImageIcon = loadIcon("/assets/winamp.png", ICON, 64);
             JLabel imageLabel = new JLabel(noImageIcon);
             thumbnailPanel.add(imageLabel, BorderLayout.CENTER);
         }
 
 //        JLabel noImageLabel = new JLabel("No Image", SwingConstants.CENTER);
-//        noImageLabel.setForeground(Color.WHITE);
+//        noImageLabel.setForeground(color(FOREGROUND));
 //        thumbnailPanel.add(noImageLabel, BorderLayout.CENTER);
         gbc.gridx = 0;
         gbc.gridy = 0;
@@ -870,7 +911,7 @@ public class GUIManager{
         card.add(thumbnailPanel, gbc);
 
         JLabel mediaNameLabel = new JLabel(wrapText(50, mediaLabel));
-        mediaNameLabel.setForeground(Color.WHITE);
+        mediaNameLabel.setForeground(color(FOREGROUND));
         gbc.gridx = 1;
         gbc.gridy = 0;
         gbc.gridheight = 1;
@@ -894,8 +935,8 @@ public class GUIManager{
         card.add(progressBar, gbc);
 
         JButton closeButton = createButton(
-            loadIcon("assets/x-mark.png", 16),
-            loadIcon("assets/x-mark-alt.png", 16),
+            loadIcon("/assets/x-mark.png", ICON, 16),
+            loadIcon("/assets/x-mark.png", ICON_CLOSE, 16),
             "gui.remove_from_queue.tooltip",
             e -> removeMediaCard(id)
         );
@@ -927,12 +968,12 @@ public class GUIManager{
 
             @Override
             public void mouseEntered(MouseEvent e){
-                card.setBackground(new Color(80, 80, 80).darker());
+                card.setBackground(color(MEDIA_CARD_HOVER));
             }
 
             @Override
             public void mouseExited(MouseEvent e){
-                card.setBackground(new Color(80, 80, 80));
+                card.setBackground(color(MEDIA_CARD));
             }
         });
 
@@ -943,7 +984,6 @@ public class GUIManager{
 
         scrollToBottom(queueScrollPane);
 
-        //updateAppWindowSize();
         return mediaCard;
     }
 
@@ -961,27 +1001,24 @@ public class GUIManager{
         });
     }
 
-    private void updateAppWindowSize(){
-        SwingUtilities.invokeLater(() -> {
-            appWindow.setSize(550, 350);
+    private void adjustWindowSize(){
+        appWindow.setSize(550, 350);
+        appWindow.setMinimumSize(new Dimension(appWindow.getWidth(), 200));
 
-            Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-            Insets screenInsets = Toolkit.getDefaultToolkit().getScreenInsets(appWindow.getGraphicsConfiguration());
-            int taskbarHeight = screenInsets.bottom;
+        Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+        Insets screenInsets = Toolkit.getDefaultToolkit().getScreenInsets(appWindow.getGraphicsConfiguration());
+        int taskbarHeight = screenInsets.bottom;
 
-            int windowX = screenSize.width - appWindow.getWidth() - 10;
-            int windowY = screenSize.height - appWindow.getHeight() - taskbarHeight - 10;
+        int windowX = screenSize.width - appWindow.getWidth() - 10;
+        int windowY = screenSize.height - appWindow.getHeight() - taskbarHeight - 10;
 
-            int minHeight = screenSize.height - appWindow.getHeight() - taskbarHeight - 10;
-            if(windowY < minHeight){
-                appWindow.setSize(appWindow.getWidth(), screenSize.height - minHeight);
-                windowY = minHeight;
-            }
+        int minHeight = screenSize.height - appWindow.getHeight() - taskbarHeight - 10;
+        if(windowY < minHeight){
+            appWindow.setSize(appWindow.getWidth(), screenSize.height - minHeight);
+            windowY = minHeight;
+        }
 
-            appWindow.setLocation(windowX, windowY);
-
-            adjustMessageWindowPosition();
-        });
+        appWindow.setLocation(windowX, windowY);
     }
 
     private void adjustMessageWindowPosition(){
@@ -1020,13 +1057,6 @@ public class GUIManager{
 
             appWindow.revalidate();
             appWindow.repaint();
-
-            //updateAppWindowSize();
-//            if(mediaCards.isEmpty()){
-//                SwingUtilities.invokeLater(() -> {
-//                    closeAppWindow();
-//                });
-//            }
         }
     }
 
@@ -1042,14 +1072,63 @@ public class GUIManager{
         }
     }
 
-    public static ImageIcon loadIcon(String path){
-        return loadIcon(path, 32);
+    @Data
+    private static class ImageCacheKey{
+
+        private final String path;
+        private final Color color;
+        private final int scale;
     }
 
-    public static ImageIcon loadIcon(String path, int scale){
-        ImageIcon icon = new ImageIcon(GUIManager.class.getClassLoader().getResource(path));
-        Image image = icon.getImage().getScaledInstance(scale, scale, Image.SCALE_SMOOTH);
-        return new ImageIcon(image);
+    private final Map<ImageCacheKey, ImageIcon> _imageCache = new HashMap<>();
+
+    public ImageIcon loadIcon(String path, UIColors color){
+        return loadIcon(path, color, 32);
+    }
+
+    public ImageIcon loadIcon(String path, UIColors color, int scale){
+        Color themeColor = color(color);
+        ImageCacheKey key = new ImageCacheKey(path, themeColor, scale);
+
+        if(_imageCache.containsKey(key)){
+            return _imageCache.get(key);
+        }
+
+        try(InputStream resourceStream = GUIManager.class.getResourceAsStream(path)){
+            BufferedImage originalImage = ImageIO.read(resourceStream);
+            if(originalImage == null){
+                throw new IOException("Failed to load image: " + path);
+            }
+
+            WritableRaster raster = originalImage.getRaster();
+
+            for(int y = 0; y < originalImage.getHeight(); y++){
+                for(int x = 0; x < originalImage.getWidth(); x++){
+                    int[] pixel = raster.getPixel(x, y, (int[])null);
+
+                    int alpha = pixel[3];
+
+                    if(alpha != 0){
+                        pixel[0] = themeColor.getRed();
+                        pixel[1] = themeColor.getGreen();
+                        pixel[2] = themeColor.getBlue();
+                        pixel[3] = themeColor.getAlpha();
+
+                        raster.setPixel(x, y, pixel);
+                    }
+                }
+            }
+
+            Image image = originalImage.getScaledInstance(scale, scale, Image.SCALE_SMOOTH);
+
+            ImageIcon icon = new ImageIcon(image);
+
+            _imageCache.put(key, icon);
+
+            return icon;
+        }catch(Exception e){
+            throw new RuntimeException(e);
+        }
     }
 
     protected static String wrapText(int maxLineLength, String... lines){

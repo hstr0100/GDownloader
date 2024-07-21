@@ -18,33 +18,17 @@ package net.brlns.gdownloader.settings.enums;
 
 import lombok.Getter;
 
-import static net.brlns.gdownloader.Language.get;
-
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
 @Getter
-public enum AudioBitrateEnum implements ISettingsEnum{
-    NO_AUDIO(0, ""),
-    BITRATE_192(192, "192kbps"),
-    BITRATE_256(256, "256kbps"),
-    BITRATE_320(320, "320kbps");
+public enum ThemeEnum implements ISettingsEnum{
+    DARK("enums.theme.dark"),
+    LIGHT("enums.theme.light");
 
-    private final int value;
-    private final String displayName;
+    private final String translationKey;
 
-    private AudioBitrateEnum(int valueIn, String displayNameIn){
-        value = valueIn;
-        displayName = displayNameIn;
-    }
-
-    @Override
-    public String getDisplayName(){
-        return this == NO_AUDIO ? get("enums.audio.no_audio") : displayName;
-    }
-
-    @Override
-    public String getTranslationKey(){
-        return "";
+    private ThemeEnum(String translationKeyIn){
+        translationKey = translationKeyIn;
     }
 }

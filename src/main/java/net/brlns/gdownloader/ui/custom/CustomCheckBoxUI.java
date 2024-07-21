@@ -16,13 +16,15 @@
  */
 package net.brlns.gdownloader.ui.custom;
 
-import java.awt.Color;
 import java.awt.Component;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import javax.swing.*;
 import javax.swing.plaf.basic.BasicCheckBoxUI;
+
+import static net.brlns.gdownloader.ui.themes.ThemeProvider.*;
+import static net.brlns.gdownloader.ui.themes.UIColors.*;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -52,7 +54,7 @@ public class CustomCheckBoxUI extends BasicCheckBoxUI{
         super.paint(g2, c);
     }
 
-    private static class CustomCheckBoxIcon implements Icon{
+    private class CustomCheckBoxIcon implements Icon{
 
         private static final int SIZE = 16;
 
@@ -62,10 +64,10 @@ public class CustomCheckBoxUI extends BasicCheckBoxUI{
             ButtonModel model = button.getModel();
 
             if(model.isSelected()){
-                g.setColor(Color.WHITE);
+                g.setColor(color(SLIDER_FOREGROUND));
                 g.fillOval(x, y, SIZE, SIZE);
             }else{
-                g.setColor(UIManager.getColor("CheckBox.background"));
+                g.setColor(color(SLIDER_FOREGROUND));
                 g.drawOval(x, y, SIZE - 1, SIZE - 1);
             }
         }

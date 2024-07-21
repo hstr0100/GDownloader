@@ -25,6 +25,8 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -37,22 +39,19 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
-import javax.annotation.Nullable;
 import lombok.AccessLevel;
 import lombok.Data;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import static net.brlns.gdownloader.Language.*;
 import net.brlns.gdownloader.settings.QualitySettings;
-import net.brlns.gdownloader.settings.enums.BrowserEnum;
-import net.brlns.gdownloader.settings.enums.ISettingsEnum;
-import net.brlns.gdownloader.settings.enums.PlayListOptionEnum;
-import net.brlns.gdownloader.settings.enums.VideoContainerEnum;
-import net.brlns.gdownloader.settings.enums.WebFilterEnum;
+import net.brlns.gdownloader.settings.enums.*;
 import net.brlns.gdownloader.ui.GUIManager.DialogButton;
 import net.brlns.gdownloader.ui.MediaCard;
+import net.brlns.gdownloader.util.Nullable;
+
+import static net.brlns.gdownloader.Language.*;
 
 //TODO first clipboard copy tends to fail
 //TODO max simultaneous downloads should be independent per website
@@ -75,6 +74,17 @@ import net.brlns.gdownloader.ui.MediaCard;
 //TODO setting to download channels as playlists
 //TODO keep older versions of ytdlp and retry failed downloads against them
 //TODO open url in default browser for linux, don't try to guess it
+//TODO d&d files for conversion
+//TODO extra ytdlp args
+//TODO updater
+//TODO splash screen
+//TODO ffmpeg updater
+//TODO media converter
+//TODO right click program to exit
+//TODO rework WebP support for modular system
+//TODO prefer to NOT create the download folder until a download is happening
+//TODO output directories for media converter
+//TODO do not quit when yt-dlp fails to download
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
@@ -94,6 +104,8 @@ public class YtDlpDownloader{
     private final Queue<QueueEntry> completedDownloads = new ConcurrentLinkedQueue<>();
     private final Queue<QueueEntry> failedDownloads = new ConcurrentLinkedQueue<>();
 
+    private final AtomicBoolean downloadsBlocked = new AtomicBoolean(true);
+
     private final AtomicInteger runningDownloads = new AtomicInteger();
 
     private final AtomicInteger downloadCounter = new AtomicInteger();
@@ -108,6 +120,16 @@ public class YtDlpDownloader{
         downloadScheduler = new ThreadPoolExecutor(0, 10, 1L, TimeUnit.MINUTES, new LinkedBlockingQueue<>());
     }
 
+    public boolean isBlocked(){
+        return downloadsBlocked.get();
+    }
+
+    public void unblock(){
+        downloadsBlocked.set(false);
+
+        fireListeners();
+    }
+
     public void registerListener(Consumer<YtDlpDownloader> consumer){
         listeners.add(consumer);
     }
@@ -119,7 +141,7 @@ public class YtDlpDownloader{
     public CompletableFuture<Boolean> captureUrl(@Nullable String inputUrl, PlayListOptionEnum playlistOption){
         CompletableFuture<Boolean> future = new CompletableFuture<>();
 
-        if(inputUrl == null || inputUrl.contains("ytimg") || WebFilterEnum.isYoutubeChannel(inputUrl)){//Nope, maybe as a setting later
+        if(downloadsBlocked.get() || inputUrl == null || inputUrl.contains("ytimg") || WebFilterEnum.isYoutubeChannel(inputUrl)){//Nope, maybe as a setting later
             future.complete(false);
             return future;
         }
@@ -130,12 +152,11 @@ public class YtDlpDownloader{
                     String filteredUrl;
 
                     switch(webFilter){
-                        case YOUTUBE: {
+                        case YOUTUBE -> {
                             filteredUrl = filterVideo(inputUrl);
-                            break;
                         }
 
-                        case YOUTUBE_PLAYLIST: {
+                        case YOUTUBE_PLAYLIST -> {
                             switch(playlistOption){
                                 case DOWNLOAD_PLAYLIST: {
                                     filteredUrl = filterPlaylist(inputUrl);
@@ -199,6 +220,7 @@ public class YtDlpDownloader{
                                                 future.complete(false);
                                             });
 
+                                            //The dialog is synchronized
                                             main.getGuiManager().showConfirmDialog(
                                                 get("dialog.confirm"),
                                                 get("dialog.download_playlist") + "\n\n" + playlist,
@@ -209,6 +231,8 @@ public class YtDlpDownloader{
 
                                             return future;
                                         }else{
+                                            //TODO I'm assuming this is a wanted behavior - having subsequent links being treated as individual videos
+                                            //It's odd that you'd download a whole playlist and then an individual video from it though, maybe investigate use cases
                                             return captureUrl(filterVideo(inputUrl));
                                         }
                                     }
@@ -219,9 +243,8 @@ public class YtDlpDownloader{
                             }
                         }
 
-                        default: {
+                        default -> {
                             filteredUrl = inputUrl;
-                            break;
                         }
                     }
 
@@ -284,9 +307,11 @@ public class YtDlpDownloader{
     }
 
     public void startDownloads(){
-        downloadsRunning.set(true);
+        if(!downloadsBlocked.get()){
+            downloadsRunning.set(true);
 
-        fireListeners();
+            fireListeners();
+        }
     }
 
     public void stopDownloads(){
@@ -335,6 +360,7 @@ public class YtDlpDownloader{
         capturedLinks.clear();
         capturedPlaylists.clear();
 
+        //We deliberately keep the download processes running
         QueueEntry next;
         while((next = downloadDeque.peek()) != null){
             main.getGuiManager().removeMediaCard(next.getMediaCard().getId());
@@ -357,8 +383,6 @@ public class YtDlpDownloader{
             main.getGuiManager().removeMediaCard(next.getMediaCard().getId());
         }
 
-        //downloadDeque.clear();
-        //We deliberately keep running downloads in the queue
         fireListeners();
     }
 
@@ -394,6 +418,7 @@ public class YtDlpDownloader{
         });
     }
 
+    @SuppressWarnings("fallthrough")
     public void processQueue(){
         while(downloadsRunning.get() && !downloadDeque.isEmpty()){
             if(runningDownloads.get() >= main.getConfig().getMaxSimultaneousDownloads()){
@@ -448,44 +473,60 @@ public class YtDlpDownloader{
                         ));
                     }
 
-                    int audioQuality = 320;
-                    QualitySettings quality = main.getConfig().getQualitySettings().get(next.getWebFilter());
-                    if(quality != null){
-                        audioQuality = quality.getAudioBitrate().getValue();
+                    QualitySettings check = main.getConfig().getQualitySettings().get(next.getWebFilter());
 
-                        if(main.getConfig().isDownloadAudioOnly()){
+                    QualitySettings quality;
+                    if(check != null){
+                        quality = check;
+                    }else{
+                        quality = main.getConfig().getDefaultQualitySettings();
+                    }
+
+                    AudioBitrateEnum audioBitrate = quality.getAudioBitrate();
+                    if(main.getConfig().isDownloadAudioOnly()){
+                        if(audioBitrate != AudioBitrateEnum.NO_AUDIO){
                             args.addAll(Arrays.asList(
                                 "-f",
                                 "bestaudio"
                             ));
                         }else{
-                            args.addAll(Arrays.asList(
-                                "-f",
-                                quality.getQualitySettings()
-                            ));
+                            next.updateStatus(DownloadStatus.NO_METHOD, get("enums.download_status.no_method.audio_tip"));
+                            next.reset();
+
+                            failedDownloads.offer(next);
+
+                            log.error("{} - No audio quality selected, but was set to download audio only.", next.getWebFilter());
+
+                            if(downloadDeque.size() <= 1){
+                                stopDownloads();
+                            }
+
+                            return;
                         }
                     }else{
                         args.addAll(Arrays.asList(
                             "-f",
-                            "bestvideo*+bestaudio/best"
+                            quality.getQualitySettings()
                         ));
                     }
 
                     if(!main.getConfig().isDownloadAudioOnly()){
                         args.addAll(Arrays.asList(
                             "--merge-output-format",
-                            "mp4",
+                            quality.getContainer().getValue(),
                             "--keep-video"//This is a hack, we should run two separate commands instead
                         ));
                     }
 
-                    args.addAll(Arrays.asList(
-                        "--extract-audio",
-                        "--audio-format",
-                        "mp3",
-                        "--audio-quality",
-                        audioQuality + "k"
-                    ));
+                    if(audioBitrate != AudioBitrateEnum.NO_AUDIO){
+                        args.addAll(Arrays.asList(
+                            "--extract-audio",
+                            "--audio-format",
+                            "mp3",
+                            "--audio-quality",
+                            audioBitrate.getValue() + "k"
+                        ));
+                    }
 
                     switch(next.getWebFilter()){
                         case YOUTUBE_PLAYLIST:
@@ -498,7 +539,7 @@ public class YtDlpDownloader{
                             if(main.getConfig().isDownloadAudioOnly()){
                                 args.addAll(Arrays.asList(
                                     "-o",
-                                    tmpPath.getAbsolutePath() + "/%(title)s (" + audioQuality + "kbps).%(ext)s",
+                                    tmpPath.getAbsolutePath() + "/%(title)s (" + audioBitrate.getValue() + "kbps).%(ext)s",
                                     "--embed-thumbnail",
                                     "--embed-metadata",
                                     "--sponsorblock-mark",
@@ -596,6 +637,9 @@ public class YtDlpDownloader{
                             break;
                     }
 
+                    args.addAll(Arrays.asList(main.getConfig()
+                        .getExtraYtDlpArguments().split(" ")));
+
                     args.add(next.getUrl());
 
                     log.info("exec {}", args);
@@ -607,19 +651,27 @@ public class YtDlpDownloader{
                     BufferedReader stdInput = new BufferedReader(new InputStreamReader(process.getInputStream()));
                     BufferedReader stdError = new BufferedReader(new InputStreamReader(process.getErrorStream()));
 
+                    double lastPercentage = 0;
                     String s;
+
                     while(downloadsRunning.get() && !next.getCancelHook().get() && (s = stdInput.readLine()) != null){
                         log.info("[{}] - {}", next.getDownloadId(), s);
 
                         if(s.contains("[download]")){
-                            next.updateStatus(DownloadStatus.DOWNLOADING, s.replace("[download] ", ""));
-
                             String[] parts = s.split("\\s+");
                             for(String part : parts){
                                 if(part.endsWith("%")){
-                                    mediaCard.setPercentage(Double.parseDouble(part.replace("%", "")));
+                                    //TODO
+                                    double percent = Double.parseDouble(part.replace("%", ""));
+
+                                    if(percent > lastPercentage || percent < 5){
+                                        mediaCard.setPercentage(percent);
+                                        lastPercentage = percent;
+                                    }
                                 }
                             }
+
+                            next.updateStatus(DownloadStatus.DOWNLOADING, s.replace("[download] ", ""));
                         }else{
                             next.updateStatus(DownloadStatus.PROCESSING, s);
                         }
@@ -644,6 +696,7 @@ public class YtDlpDownloader{
 
                         if(exitCode != 0){
                             next.updateStatus(DownloadStatus.FAILED, lastError);
+                            next.reset();
 
                             failedDownloads.offer(next);
                         }else{
@@ -652,7 +705,7 @@ public class YtDlpDownloader{
                             try(Stream<Path> dirStream = Files.walk(tmpPath.toPath())){
                                 dirStream.forEach(path -> {
                                     String fileName = path.getFileName().toString().toLowerCase();
-                                    if(fileName.endsWith(").mp3") || fileName.endsWith(").mp4")){
+                                    if(fileName.endsWith(").mp3") || fileName.endsWith(")." + quality.getContainer().getValue())){
                                         Path targetPath = finalPath.toPath().resolve(path.getFileName());
 
                                         try{
@@ -700,7 +753,7 @@ public class YtDlpDownloader{
     @Nullable
     private static String filterVideo(String youtubeUrl){
         try{
-            URL url = new URL(youtubeUrl);
+            URL url = new URI(youtubeUrl).toURL();
             String host = url.getHost();
 
             if(host != null && host.contains("youtube.com")){
@@ -711,7 +764,7 @@ public class YtDlpDownloader{
             }
 
             return null;
-        }catch(MalformedURLException e){
+        }catch(MalformedURLException | URISyntaxException e){
             log.warn("Invalid url {} {}", youtubeUrl, e.getLocalizedMessage());
         }
 
@@ -721,7 +774,7 @@ public class YtDlpDownloader{
     @Nullable
     private static String filterPlaylist(String youtubeUrl){
         try{
-            URL url = new URL(youtubeUrl);
+            URL url = new URI(youtubeUrl).toURL();
             String host = url.getHost();
 
             if(host != null && host.contains("youtube.com")){
@@ -732,7 +785,7 @@ public class YtDlpDownloader{
             }
 
             return null;
-        }catch(MalformedURLException e){
+        }catch(MalformedURLException | URISyntaxException e){
             log.warn("Invalid url {} {}", youtubeUrl, e.getLocalizedMessage());
         }
 
@@ -765,11 +818,11 @@ public class YtDlpDownloader{
 
         if(main.getConfig().getBrowser() == BrowserEnum.UNSET){
             String os = System.getProperty("os.name").toLowerCase();
-            String browserName = null;
+            String browserName = "";
 
             try{
                 if(os.contains("win")){
-                    List<String> output = readOutput("reg query HKEY_CLASSES_ROOT\\http\\shell\\open\\command");
+                    List<String> output = readOutput("reg", "query", "HKEY_CLASSES_ROOT\\http\\shell\\open\\command");
 
                     log.info("Default browser: {}", output);
 
@@ -782,7 +835,7 @@ public class YtDlpDownloader{
                 }else if(os.contains("mac")){
                     browserName = "safari";//Why bother
                 }else if(os.contains("nix") || os.contains("nux")){
-                    List<String> output = readOutput("xdg-settings get default-web-browser");
+                    List<String> output = readOutput("xdg-settings", "get", "default-web-browser");
 
                     log.info("Default browser: {}", output);
 
@@ -795,6 +848,7 @@ public class YtDlpDownloader{
                 }
             }catch(Exception e){
                 log.error("{}", e.getCause());
+
             }
 
             BrowserEnum browser = BrowserEnum.getBrowserForName(browserName);
@@ -849,7 +903,8 @@ public class YtDlpDownloader{
         PROCESSING("enums.download_status.processing"),
         DOWNLOADING("enums.download_status.downloading"),
         COMPLETE("enums.download_status.complete"),
-        FAILED("enums.download_status.failed");
+        FAILED("enums.download_status.failed"),
+        NO_METHOD("enums.download_status.no_method");
 
         private final String translationKey;
 
@@ -982,6 +1037,7 @@ public class YtDlpDownloader{
                         mediaCard.setTextColor(Color.WHITE);
                         mediaCard.setColor(new Color(0, 200, 83));
                         break;
+                    case NO_METHOD:
                     case FAILED:
                         mediaCard.setPercentage(100);
                         mediaCard.setString(status.getDisplayName());

@@ -16,11 +16,7 @@
  */
 package net.brlns.gdownloader.ui.custom;
 
-import java.awt.Color;
-import java.awt.FontMetrics;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
-import java.awt.RenderingHints;
+import java.awt.*;
 import javax.swing.JProgressBar;
 import lombok.Getter;
 import lombok.Setter;
@@ -34,6 +30,8 @@ public class CustomProgressBar extends JProgressBar{
     @Setter
     private Color textColor;
 
+    private static final Font FONT = new Font("Dialog", Font.BOLD, 12);
+
     public CustomProgressBar(int min, int max, Color textColor){
         super(min, max);
 
@@ -44,8 +42,11 @@ public class CustomProgressBar extends JProgressBar{
     protected void paintComponent(Graphics g){
         super.paintComponent(g);
 
+        //TODO fix the terrible antialias
         Graphics2D g2 = (Graphics2D)g;
+        g2.setFont(FONT);
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
         String text = getString();
         if(text != null && !text.isEmpty()){
             g2.setColor(textColor);

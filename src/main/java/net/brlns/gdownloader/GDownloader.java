@@ -18,6 +18,10 @@ package net.brlns.gdownloader;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.kwhat.jnativehook.GlobalScreen;
+import com.github.kwhat.jnativehook.NativeHookException;
+import com.github.kwhat.jnativehook.keyboard.NativeKeyEvent;
+import com.github.kwhat.jnativehook.keyboard.NativeKeyListener;
 import java.awt.*;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.DataFlavor;
@@ -25,8 +29,10 @@ import java.awt.datatransfer.Transferable;
 import java.awt.datatransfer.UnsupportedFlavorException;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.geom.AffineTransform;
 import java.io.*;
-import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -46,19 +52,17 @@ import javax.swing.UIManager;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import static net.brlns.gdownloader.Language.*;
 import net.brlns.gdownloader.settings.Settings;
 import net.brlns.gdownloader.ui.GUIManager;
 import net.brlns.gdownloader.ui.GUIManager.MessageType;
-import org.jnativehook.GlobalScreen;
-import org.jnativehook.NativeHookException;
-import org.jnativehook.keyboard.NativeKeyEvent;
-import org.jnativehook.keyboard.NativeKeyListener;
+import net.brlns.gdownloader.ui.themes.ThemeProvider;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
 import org.slf4j.helpers.FormattingTuple;
 import org.slf4j.helpers.MessageFormatter;
+
+import static net.brlns.gdownloader.Language.*;
 
 /**
  * GDownloader - GUI wrapper for yt-dlp
@@ -68,7 +72,7 @@ import org.slf4j.helpers.MessageFormatter;
  * @author Gabriel / hstr0100 / vertx010
  */
 @Slf4j
-public class GDownloader{
+public final class GDownloader{
 
     /**
      * Constants and application states
@@ -98,10 +102,13 @@ public class GDownloader{
     @Getter
     private GUIManager guiManager;
 
+    @Getter
+    private boolean initialized = false;
+
     private final Clipboard clipboard;
     private final Map<FlavorType, String> lastClipboardState = new HashMap<>();
 
-    private ExecutorService clipboardExecutor = new ThreadPoolExecutor(0, 5,
+    private ExecutorService threadPool = new ThreadPoolExecutor(0, 5,
         1L, TimeUnit.MINUTES, new LinkedBlockingQueue<>());
 
     public GDownloader(){
@@ -127,10 +134,14 @@ public class GDownloader{
             //Here we'd like to have the option to toggle it on the fly
             //Hence why this is not using not log.debug
             log.info("Loaded config file");
+
+            printDebugInformation();
         }
 
         Language.initLanguage(config.getLanguage());
         log.info(Language.get("startup"));
+
+        ThemeProvider.setTheme(config.getTheme());
 
         clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
         tray = SystemTray.getSystemTray();
@@ -141,23 +152,34 @@ public class GDownloader{
             guiManager = new GUIManager(this);
 
             //Register to the system tray
-            Image image = Toolkit.getDefaultToolkit().createImage(getClass().getClassLoader().getResource(guiManager.getCurrentTrayIconPath()));
+            Image image = Toolkit.getDefaultToolkit().createImage(getClass().getResource(guiManager.getCurrentTrayIconPath()));
             trayIcon = new TrayIcon(image, REGISTRY_APP_NAME, buildPopupMenu());
             trayIcon.setImageAutoSize(true);
 
             trayIcon.addActionListener((ActionEvent e) -> {
-                guiManager.wakeUp();
+                if(initialized){
+                    guiManager.wakeUp();
+                }
             });
 
             tray.add(trayIcon);
 
             ytDlpUpdater = new YtDlpUpdater(this);
 
-            try{
-                ytDlpUpdater.init();
-            }catch(Exception e){
-                handleException(e);
-            }
+            threadPool.execute(() -> {
+                try{
+                    ytDlpUpdater.init();
+
+                    downloadManager.unblock();
+                }catch(Exception e){
+                    handleException(e);
+
+                    if(ytDlpUpdater.getYtDlpExecutablePath() == null || !ytDlpUpdater.getYtDlpExecutablePath().exists()){
+                        log.error("Failed to initialize YT-DLP");
+                        System.exit(0);
+                    }
+                }
+            });
 
             updateStartupStatus();
 
@@ -209,12 +231,14 @@ public class GDownloader{
 
             scheduler.scheduleAtFixedRate(processClipboard, 0, 50, TimeUnit.MILLISECONDS);
 
-            if(!config.isAutoStart()){
-                guiManager.wakeUp();
-            }
+            initialized = true;
         }catch(Exception e){
             handleException(e);
         }
+    }
+
+    public void initUi(){
+        guiManager.wakeUp();
     }
 
     /**
@@ -252,7 +276,7 @@ public class GDownloader{
 
     public void openUrlInBrowser(String urlIn){
         try{
-            URL url = new URL(urlIn);
+            URL url = new URI(urlIn).toURL();
 
             if(Desktop.isDesktopSupported()){
                 Desktop desktop = Desktop.getDesktop();
@@ -327,13 +351,35 @@ public class GDownloader{
     /**
      * Toggles the status of automatic startup
      */
-    //TODO rework the hacks around location of the jar file when we work on the installer
     public void updateStartupStatus(){
         try{
             boolean currentStatus = config.isAutoStart();
 
-            String jarPath = new File(GDownloader.class.getProtectionDomain().getCodeSource().getLocation()
-                .toURI()).getPath();
+            URI jarPath = GDownloader.class.getProtectionDomain().getCodeSource().getLocation().toURI();
+
+            String launchString;
+            if(jarPath.toString().endsWith(".jar")){
+                launchString = new File(jarPath).getAbsolutePath();
+
+                String extension = isWindows() ? ".bat" : ".sh";
+
+                launchString = launchString.replaceAll(Pattern.quote("build" + File.separator + "libs" + File.separator) + "GDownloader-.*\\.jar", "start" + extension);
+                launchString = launchString.replace("target" + File.separator + "GDownloader.jar", "start" + extension);
+                launchString = launchString.replace("GDownloader.jar", "start" + extension);
+                launchString = launchString.replace("classes", "start" + extension);
+            }else{
+                launchString = System.getProperty("jpackage.app-path");
+            }
+
+            if(launchString.isEmpty()){
+                log.error("Cannot locate runtime binary {}", jarPath);
+                return;
+            }
+
+            if(config.isDebugMode()){
+                log.info("Jar path {}", jarPath);
+                log.info("Launching from {}", launchString);
+            }
 
             if(isWindows()){
                 ProcessBuilder checkBuilder = new ProcessBuilder("reg", "query",
@@ -362,21 +408,13 @@ public class GDownloader{
                         }
                     }
                 }else if(checkExitValue != 0 && currentStatus){
-                    //The PATH does not seem to be evaluated at this stage
-                    String launchString = jarPath;
-                    launchString = launchString.replace("target" + File.separator + "GDownloader.jar", "start.bat");
-                    launchString = launchString.replace("GDownloader.jar", "start.bat");
-                    launchString = launchString.replace("classes", "start.bat");
-                    if(config.isDebugMode()){
-                        log.info(launchString);
-                    }
 
                     ProcessBuilder createBuilder = new ProcessBuilder(
                         "reg", "add",
                         "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run",
                         "/v", REGISTRY_APP_NAME,
                         "/t", "REG_SZ",
-                        "/d", "\\\"" + launchString + "\\\"",
+                        "/d", "\\\"" + launchString + " --no-gui\\\"",
                         "/f"
                     );
 
@@ -396,17 +434,9 @@ public class GDownloader{
 
                 File desktopFile = new File(autostartDirectory, REGISTRY_APP_NAME + ".desktop");
                 if(!desktopFile.exists() && currentStatus){
-                    String launchString = jarPath;
-                    launchString = launchString.replace("target" + File.separator + "GDownloader.jar", "start.sh");
-                    launchString = launchString.replace("GDownloader.jar", "start.sh");
-                    launchString = launchString.replace("classes", "start.sh");
-                    if(config.isDebugMode()){
-                        log.info(launchString);
-                    }
-
                     Path iconPath = getWorkDirectory().toPath().resolve("icon.png");
                     if(!iconPath.toFile().exists()){
-                        try(InputStream imageStream = getClass().getClassLoader().getResourceAsStream(guiManager.getCurrentAppIconPath())){
+                        try(InputStream imageStream = getClass().getResourceAsStream(guiManager.getCurrentAppIconPath())){
                             if(imageStream == null){
                                 throw new FileNotFoundException("Resource not found: " + guiManager.getCurrentAppIconPath());
                             }
@@ -419,7 +449,7 @@ public class GDownloader{
                         writer.write("[Desktop Entry]\n");
                         writer.write("Categories=Qt;KDE;Internet;\n");
                         writer.write("Comment=Start " + REGISTRY_APP_NAME + "\n");
-                        writer.write("Exec=" + launchString + "\n");
+                        writer.write("Exec=" + launchString + " --no-gui\n");
                         writer.write("Icon=" + iconPath + "\n");
                         writer.write("Terminal=false\n");
                         writer.write("MimeType=\n");
@@ -485,7 +515,6 @@ public class GDownloader{
 
     private File _cachedWorkDir;
 
-    //TODO move app binary to this location and run from there
     public File getWorkDirectory(){
         if(_cachedWorkDir == null){
             String os = System.getProperty("os.name").toLowerCase();
@@ -581,7 +610,7 @@ public class GDownloader{
     }
 
     private void handleClipboardInput(String data){
-        clipboardExecutor.execute(() -> {
+        threadPool.execute(() -> {
             List<CompletableFuture<Boolean>> list = new ArrayList<>();
 
             for(String url : extractUrlsFromString(data)){
@@ -594,7 +623,7 @@ public class GDownloader{
                 }
             }
 
-            CompletableFuture<Void> futures = CompletableFuture.allOf(list.toArray(new CompletableFuture[0]));
+            CompletableFuture<Void> futures = CompletableFuture.allOf(list.toArray(CompletableFuture[]::new));
 
             futures.thenRun(() -> {
                 int captured = 0;
@@ -617,17 +646,17 @@ public class GDownloader{
                         MessageType.INFO,
                         false
                     );
+
+                    guiManager.requestFocus();
                 }
             });
 
             try{
                 futures.get(1l, TimeUnit.MINUTES);
-
-                guiManager.requestFocus();
             }catch(InterruptedException | ExecutionException e){
                 handleException(e);
             }catch(TimeoutException e){
-                log.warn("Timed out waiting for futures {}", e.getLocalizedMessage());
+                log.warn("Timed out waiting for futures");
             }
         });
     }
@@ -701,6 +730,34 @@ public class GDownloader{
         return result;
     }
 
+    private void printDebugInformation(){
+        log.info("System Properties:");
+        Properties properties = System.getProperties();
+        properties.forEach((key, value) -> log.info("{}: {}", key, value));
+
+        log.info("Environment Variables:");
+        Map<String, String> env = System.getenv();
+        env.forEach((key, value) -> log.info("{}: {}", key, value));
+
+        log.info("Code Source: {}", GDownloader.class.getProtectionDomain().getCodeSource().getLocation());
+
+        try{
+            Path codeSourcePath = Paths.get(GDownloader.class.getProtectionDomain().getCodeSource().getLocation().toURI());
+            log.info("Code source path: {}", codeSourcePath);
+        }catch(URISyntaxException e){
+            e.printStackTrace();
+        }
+
+        GraphicsDevice device = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice();
+        GraphicsConfiguration config = device.getDefaultConfiguration();
+        AffineTransform transform = config.getDefaultTransform();
+        double scaleX = transform.getScaleX();
+        double scaleY = transform.getScaleY();
+
+        log.info("ScaleX: {}", scaleX);
+        log.info("ScaleY: {}", scaleY);
+    }
+
     public final void handleException(Throwable e){
         handleException(e, true);
     }
@@ -720,9 +777,9 @@ public class GDownloader{
 
     private static boolean isValidURL(String urlString){
         try{
-            new URL(urlString);
+            new URI(urlString).toURL();
             return true;
-        }catch(MalformedURLException e){
+        }catch(Exception e){
             return false;
         }
     }
@@ -765,6 +822,9 @@ public class GDownloader{
     }
 
     public static void main(String[] args){
+        System.setProperty("sun.java2d.uiScale", "1");
+        System.setProperty("sun.java2d.opengl", "true");
+
         if(SystemTray.isSupported()){
             log.info("Starting...");
 
@@ -774,10 +834,10 @@ public class GDownloader{
                 //Default to Java's look and feel
             }
 
-            System.setProperty("sun.java2d.opengl", "true");
-
+            //setUIFont(new FontUIResource("Dialog", Font.BOLD, 12));
             try{
                 GlobalScreen.registerNativeHook();
+
                 //Get the logger for "com.github.kwhat.jnativehook" and set the level to off.
                 Logger logger = Logger.getLogger(GlobalScreen.class.getPackage().getName());
                 logger.setLevel(Level.OFF);
@@ -791,12 +851,31 @@ public class GDownloader{
             }
 
             GDownloader instance = new GDownloader();
+
+            boolean noGui = false;
+
+            for(String arg : args){
+                if(arg.equalsIgnoreCase("--no-gui")){
+                    noGui = true;
+                }
+            }
+
+            if(!noGui){
+                instance.initUi();
+            }
+
             log.info("Started");
 
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                 File cachePath = new File(instance.getOrCreateDownloadsDirectory(), "cache");
 
                 deleteRecursively(cachePath.toPath());
+
+                try{
+                    GlobalScreen.unregisterNativeHook();
+                }catch(NativeHookException ex){
+                    ex.printStackTrace();
+                }
             }));
 
             Thread.setDefaultUncaughtExceptionHandler((Thread t, Throwable e) -> {
@@ -807,6 +886,16 @@ public class GDownloader{
         }
     }
 
+//    public static void setUIFont(FontUIResource fontResource){
+//        UIManager.getDefaults().keys().asIterator()
+//            .forEachRemaining(key -> {
+//                Object value = UIManager.get(key);
+//
+//                if(value instanceof FontUIResource){
+//                    UIManager.put(key, fontResource);
+//                }
+//            });
+//    }
     @Getter
     public static enum FlavorType{
         STRING(DataFlavor.stringFlavor),

@@ -17,6 +17,7 @@
 package net.brlns.gdownloader.settings.enums;
 
 import java.util.Arrays;
+
 import static net.brlns.gdownloader.Language.*;
 
 /**

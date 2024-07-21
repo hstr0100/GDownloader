@@ -4,9 +4,16 @@ nbactions.xml
 config.json
 *.log
 hs_err_pid*
+replay_pid*
 
 /target/*
-#/target/GDownloader.jar
 
-#Cannot include these because they're too large for github
+# Cannot include these because they're too large for github
 /src/main/resources/bin/*
+
+# Gradle
+.gradle
+**/build/
+!gradle-wrapper.jar
+!gradle-wrapper.properties
+

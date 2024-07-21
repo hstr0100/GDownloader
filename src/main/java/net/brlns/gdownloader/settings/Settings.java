@@ -16,6 +16,7 @@
  */
 package net.brlns.gdownloader.settings;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.HashMap;
@@ -51,6 +52,18 @@ public class Settings{
         }
     }
 
+    @JsonIgnore
+    public QualitySettings getDefaultQualitySettings(){
+        QualitySettings settings = qualitySettings.get(WebFilterEnum.DEFAULT);
+        if(settings == null){
+            settings = QualitySettings.builder().build();
+
+            qualitySettings.put(WebFilterEnum.DEFAULT, settings);
+        }
+
+        return settings;
+    }
+
     @JsonProperty("Language")
     private LanguageEnum language = LanguageEnum.ENGLISH;
 
@@ -63,8 +76,19 @@ public class Settings{
     @JsonProperty("DownloadsPath")
     private String downloadsPath = "";
 
+    //TODO
+    @JsonProperty("UIScale")
+    private double uiScale = 1.0;
+
+    @JsonProperty("Theme")
+    private ThemeEnum theme = ThemeEnum.DARK;
+
     @JsonProperty("CaptureAnyLinks")
     private boolean captureAnyLinks = false;
+
+    //TODO
+    @JsonProperty("ExtraYtDlpArguments")
+    private String extraYtDlpArguments = "";
 
     @JsonProperty("DownloadAudioOnly")
     private boolean downloadAudioOnly = false;
@@ -87,6 +111,7 @@ public class Settings{
     @JsonProperty("ExitOnClose")
     private boolean exitOnClose = false;
 
+    //TODO add more
     @JsonProperty("Play Sounds")
     private boolean playSounds = false;
 

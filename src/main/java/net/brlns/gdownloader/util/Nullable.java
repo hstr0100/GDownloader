@@ -14,37 +14,23 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package net.brlns.gdownloader.settings.enums;
+package net.brlns.gdownloader.util;
 
-import lombok.Getter;
-
-import static net.brlns.gdownloader.Language.get;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-@Getter
-public enum AudioBitrateEnum implements ISettingsEnum{
-    NO_AUDIO(0, ""),
-    BITRATE_192(192, "192kbps"),
-    BITRATE_256(256, "256kbps"),
-    BITRATE_320(320, "320kbps");
+@Retention(RetentionPolicy.RUNTIME)
+@Target({
+    ElementType.FIELD,
+    ElementType.METHOD,
+    ElementType.PARAMETER,
+    ElementType.LOCAL_VARIABLE
+})
+public @interface Nullable{
 
-    private final int value;
-    private final String displayName;
-
-    private AudioBitrateEnum(int valueIn, String displayNameIn){
-        value = valueIn;
-        displayName = displayNameIn;
-    }
-
-    @Override
-    public String getDisplayName(){
-        return this == NO_AUDIO ? get("enums.audio.no_audio") : displayName;
-    }
-
-    @Override
-    public String getTranslationKey(){
-        return "";
-    }
 }

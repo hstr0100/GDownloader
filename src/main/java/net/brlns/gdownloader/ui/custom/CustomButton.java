@@ -21,6 +21,7 @@ import java.awt.Graphics;
 import javax.swing.JButton;
 import lombok.Getter;
 import lombok.Setter;
+import net.brlns.gdownloader.util.Nullable;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -35,12 +36,13 @@ public class CustomButton extends JButton{
     @Setter
     private Color pressedBackgroundColor;
 
-    public CustomButton(){
-        this(null);
-    }
-
-    public CustomButton(String text){
+    @SuppressWarnings("this-escape")
+    public CustomButton(@Nullable String text,
+        Color hoverBackgroundColorIn, Color pressedBackgroundColorIn){
         super(text);
+
+        hoverBackgroundColor = hoverBackgroundColorIn;
+        pressedBackgroundColor = pressedBackgroundColorIn;
 
         super.setContentAreaFilled(false);
     }
