@@ -29,8 +29,6 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
@@ -49,6 +47,7 @@ import net.brlns.gdownloader.ui.custom.CustomCheckBoxUI;
 import net.brlns.gdownloader.ui.custom.CustomProgressBar;
 import net.brlns.gdownloader.ui.custom.CustomScrollBarUI;
 import net.brlns.gdownloader.ui.custom.CustomToolTip;
+import net.brlns.gdownloader.ui.themes.ThemeProvider;
 import net.brlns.gdownloader.ui.themes.UIColors;
 
 import static net.brlns.gdownloader.Language.*;
@@ -85,8 +84,6 @@ public final class GUIManager{
 
     private final GDownloader main;
 
-    private final ExecutorService threadPool;
-
     private final SettingsPanel settingsPanel;
 
     //TODO
@@ -98,7 +95,6 @@ public final class GUIManager{
 
         uiScale = Math.clamp(mainIn.getConfig().getUiScale(), 0.5, 3.0);
 
-        threadPool = Executors.newSingleThreadExecutor();
         settingsPanel = new SettingsPanel(main, this);
 
         UIManager.put("ToolTip.background", color(TOOLTIP_BACKGROUND));
@@ -115,29 +111,40 @@ public final class GUIManager{
         settingsPanel.createAndShowGUI();
     }
 
-    //TODO: only call after initialized
     public void wakeUp(){
         setUpAppWindow();
 
-        appWindow.setVisible(true);
+        SwingUtilities.invokeLater(() -> {
+            appWindow.setVisible(true);
 
-        if((appWindow.getExtendedState() & Frame.ICONIFIED) == 1){
-            appWindow.setExtendedState(JFrame.ICONIFIED);
-            appWindow.setExtendedState(JFrame.NORMAL);
-        }
+            if((appWindow.getExtendedState() & Frame.ICONIFIED) == 1){
+                appWindow.setExtendedState(JFrame.ICONIFIED);
+                appWindow.setExtendedState(JFrame.NORMAL);
+            }
+        });
     }
 
     public void requestFocus(){
-        appWindow.requestFocus();
+        SwingUtilities.invokeLater(() -> {
+            appWindow.requestFocus();
+
+            if((appWindow.getExtendedState() & Frame.ICONIFIED) != 1){
+                if(!appWindow.isVisible()){
+                    appWindow.setVisible(true);
+                }
+
+                appWindow.setExtendedState(JFrame.NORMAL);
+                appWindow.toFront();
+            }
+        });
     }
 
-    //TODO: light theme
     public String getCurrentAppIconPath(){
-        return "/assets/launcher/GDownloader.png";
+        return ThemeProvider.getTheme().getAppIconPath();
     }
 
     public String getCurrentTrayIconPath(){
-        return "/assets/tray_icon.png";
+        return ThemeProvider.getTheme().getTrayIconPath();
     }
 
     public Image getAppIcon() throws IOException{
@@ -321,17 +328,57 @@ public final class GUIManager{
     }
 
     private void updateQueuePanelMessage(){
-        JLabel label = (JLabel)getEmptyQueuePanel().getComponent(0);
+        JPanel panel = getEmptyQueuePanel();
+
+        Component firstComponent = panel.getComponent(0);
 
         if(!main.getDownloadManager().isBlocked()){
+            if(!(firstComponent instanceof JLabel)){
+                panel.removeAll();
+
+                JLabel label = new JLabel("", SwingConstants.CENTER);
+                label.setForeground(color(FOREGROUND));
+                panel.add(label, BorderLayout.CENTER);
+            }
+
+            JLabel label = (JLabel)panel.getComponent(0);
+
             if(main.isWatchClipboard()){
                 label.setText(get("gui.empty_queue"));
             }else{
                 label.setText(get("gui.empty_queue.enable_clipboard"));
             }
         }else{
-            label.setText(get("gui.checking_updates"));
+            if(!(firstComponent instanceof JPanel)){
+                panel.removeAll();
+            }
+
+            JPanel innerPanel = new JPanel(new GridBagLayout());
+            innerPanel.setOpaque(false);
+            innerPanel.setBackground(color(BACKGROUND));
+
+            GridBagConstraints gbc = new GridBagConstraints();
+            gbc.gridx = 0;
+            gbc.gridy = GridBagConstraints.RELATIVE;
+            gbc.anchor = GridBagConstraints.CENTER;
+            gbc.insets = new Insets(5, 0, 5, 0);
+
+            JLabel upperLabel = new JLabel("", SwingConstants.CENTER);
+            upperLabel.setForeground(color(FOREGROUND));
+            upperLabel.setText(get("gui.checking_updates"));
+
+            JLabel bottomLabel = new JLabel("", SwingConstants.CENTER);
+            bottomLabel.setForeground(color(FOREGROUND));
+            bottomLabel.setText(get("gui.checking_updates.please_wait"));
+
+            innerPanel.add(upperLabel, gbc);
+            innerPanel.add(bottomLabel, gbc);
+
+            panel.add(innerPanel, BorderLayout.CENTER);
         }
+
+        panel.revalidate();
+        panel.repaint();
     }
 
     private JButton createToggleButton(
@@ -389,7 +436,7 @@ public final class GUIManager{
         return button;
     }
 
-    private JButton createButton(ImageIcon icon, ImageIcon hoverIcon, String tooltipText, java.awt.event.ActionListener actionListener){
+    public JButton createButton(ImageIcon icon, ImageIcon hoverIcon, String tooltipText, java.awt.event.ActionListener actionListener){
         JButton button = new JButton(icon);
         button.setUI(new BasicButtonUI());
         button.setFocusPainted(false);
@@ -511,12 +558,12 @@ public final class GUIManager{
 
         southPanel.add(checkboxPanel, BorderLayout.NORTH);
 
-        JProgressBar dialogProgressBar = new JProgressBar(0, 100);
+        CustomProgressBar dialogProgressBar = new CustomProgressBar();
         dialogProgressBar.setValue(100);
         dialogProgressBar.setStringPainted(false);
         dialogProgressBar.setForeground(color(FOREGROUND));
         dialogProgressBar.setBackground(color(BACKGROUND));
-        dialogProgressBar.setBorderPainted(false);
+        //dialogProgressBar.setBorderPainted(false);
         dialogProgressBar.setPreferredSize(new Dimension(dialog.getWidth() - 10, 7));
 
         Timer timer = new Timer(50, new ActionListener(){
@@ -579,8 +626,6 @@ public final class GUIManager{
 
         messageWindow.setSize(350, 110);
 
-        adjustMessageWindowPosition();
-
         Color titleColor;
         Color textColor;
         switch(nextMessage.getMessageType()){
@@ -632,13 +677,34 @@ public final class GUIManager{
 
         panel.add(messagePanel, BorderLayout.CENTER);
 
-        JProgressBar messageProgressBar = new JProgressBar(0, nextMessage.getDurationMillis());
+        CustomProgressBar messageProgressBar = new CustomProgressBar();
         messageProgressBar.setValue(nextMessage.getDurationMillis());
         messageProgressBar.setStringPainted(false);
         messageProgressBar.setForeground(color(FOREGROUND));
         messageProgressBar.setBackground(color(BACKGROUND));
-        messageProgressBar.setBorderPainted(false);
+        //messageProgressBar.setBorderPainted(false);
         messageProgressBar.setPreferredSize(new Dimension(messageWindow.getWidth() - 10, 5));
+
+        Timer timer = new Timer(50, new ActionListener(){
+            int elapsed = 0;
+
+            @Override
+            public void actionPerformed(ActionEvent e){
+                elapsed += 50;
+
+                int progress = 100 - (elapsed * 100) / nextMessage.getDurationMillis();
+                messageProgressBar.setValue(progress);
+
+                if(elapsed >= nextMessage.getDurationMillis()){
+                    ((Timer)e.getSource()).stop();
+
+                    SwingUtilities.invokeLater(() -> {
+                        messageWindow.setVisible(false);
+                        displayNextMessage();
+                    });
+                }
+            }
+        });
 
         panel.add(messageProgressBar, BorderLayout.SOUTH);
 
@@ -647,7 +713,7 @@ public final class GUIManager{
         updateMessageWindowSize();
         messageWindow.setVisible(true);
 
-        startProgressUpdate(cancelHook, nextMessage.durationMillis, messageProgressBar);
+        timer.start();
 
         if(nextMessage.isPlayTone() && main.getConfig().isPlaySounds()){
             AudioEngine.playNotificationTone();
@@ -655,27 +721,25 @@ public final class GUIManager{
     }
 
     private void updateMessageWindowSize(){
-        SwingUtilities.invokeLater(() -> {
-            int newHeight = calculateMessageWindowHeight();
-            messageWindow.setSize(350, newHeight);
+        int newHeight = calculateMessageWindowHeight();
+        messageWindow.setSize(350, newHeight);
 
-            Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-            Insets screenInsets = Toolkit.getDefaultToolkit().getScreenInsets(messageWindow.getGraphicsConfiguration());
-            int taskbarHeight = screenInsets.bottom;
+        Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+        Insets screenInsets = Toolkit.getDefaultToolkit().getScreenInsets(messageWindow.getGraphicsConfiguration());
+        int taskbarHeight = screenInsets.bottom;
 
-            int windowX = screenSize.width - messageWindow.getWidth() - 10;
-            int windowY = screenSize.height - messageWindow.getHeight() - taskbarHeight - 10;
+        int windowX = screenSize.width - messageWindow.getWidth() - 10;
+        int windowY = screenSize.height - messageWindow.getHeight() - taskbarHeight - 10;
 
-            int minHeight = screenSize.height - messageWindow.getHeight() - taskbarHeight - 10;
-            if(windowY < minHeight){
-                messageWindow.setSize(messageWindow.getWidth(), screenSize.height - minHeight);
-                windowY = minHeight;
-            }
+        int minHeight = screenSize.height - messageWindow.getHeight() - taskbarHeight - 10;
+        if(windowY < minHeight){
+            messageWindow.setSize(messageWindow.getWidth(), screenSize.height - minHeight);
+            windowY = minHeight;
+        }
 
-            messageWindow.setLocation(windowX, windowY);
+        messageWindow.setLocation(windowX, windowY);
 
-            adjustMessageWindowPosition();
-        });
+        adjustMessageWindowPosition(true);
     }
 
     private int calculateMessageWindowHeight(){
@@ -689,30 +753,6 @@ public final class GUIManager{
         }
 
         return Math.min(totalHeight + 110, 220);
-    }
-
-    private void startProgressUpdate(AtomicBoolean cancelHook, int durationMillis, JProgressBar progressBar){
-        threadPool.execute(() -> {
-            for(int i = durationMillis; i > 0; i -= 50){
-                if(cancelHook.get()){
-                    break;
-                }
-
-                final int progressValue = i;
-                SwingUtilities.invokeLater(() -> progressBar.setValue(progressValue));
-
-                try{
-                    Thread.sleep(50);
-                }catch(InterruptedException e){
-                    //Ignore
-                }
-            }
-
-            SwingUtilities.invokeLater(() -> {
-                messageWindow.setVisible(false);
-                displayNextMessage();
-            });
-        });
     }
 
     public void refreshWindow(){
@@ -749,27 +789,22 @@ public final class GUIManager{
             appWindow.addWindowListener(new WindowAdapter(){
                 @Override
                 public void windowClosing(WindowEvent e){
-                    SwingUtilities.invokeLater(() -> {
-                        adjustMessageWindowPosition();
-                    });
+                    adjustMessageWindowPosition();
                 }
 
                 @Override
                 public void windowIconified(WindowEvent e){
-                    SwingUtilities.invokeLater(() -> {
-                        adjustMessageWindowPosition();
-                    });
+                    adjustMessageWindowPosition();
                 }
 
                 @Override
                 public void windowDeiconified(WindowEvent e){
-                    SwingUtilities.invokeLater(() -> {
-                        adjustMessageWindowPosition();
-                    });
+                    adjustMessageWindowPosition();
                 }
             });
 
             adjustWindowSize();
+
             adjustMessageWindowPosition();
 
             JPanel mainPanel = new JPanel(new BorderLayout());
@@ -919,13 +954,13 @@ public final class GUIManager{
         gbc.weighty = 0;
         card.add(mediaNameLabel, gbc);
 
-        CustomProgressBar progressBar = new CustomProgressBar(0, 100, Color.WHITE);
+        CustomProgressBar progressBar = new CustomProgressBar(Color.WHITE);
         progressBar.setValue(100);
         progressBar.setStringPainted(true);
         progressBar.setString(get("enums.download_status.queued"));
         progressBar.setForeground(Color.GRAY);
         progressBar.setBackground(Color.GRAY);
-        progressBar.setBorderPainted(false);
+        //progressBar.setBorderPainted(false);
         progressBar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 15));
 
         gbc.gridx = 1;
@@ -1002,44 +1037,58 @@ public final class GUIManager{
     }
 
     private void adjustWindowSize(){
-        appWindow.setSize(550, 350);
-        appWindow.setMinimumSize(new Dimension(appWindow.getWidth(), 200));
+        SwingUtilities.invokeLater(() -> {
+            appWindow.setSize(560, 350);
+            appWindow.setMinimumSize(new Dimension(appWindow.getWidth(), 220));
 
-        Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-        Insets screenInsets = Toolkit.getDefaultToolkit().getScreenInsets(appWindow.getGraphicsConfiguration());
-        int taskbarHeight = screenInsets.bottom;
+            Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+            Insets screenInsets = Toolkit.getDefaultToolkit().getScreenInsets(appWindow.getGraphicsConfiguration());
+            int taskbarHeight = screenInsets.bottom;
 
-        int windowX = screenSize.width - appWindow.getWidth() - 10;
-        int windowY = screenSize.height - appWindow.getHeight() - taskbarHeight - 10;
+            int windowX = screenSize.width - appWindow.getWidth() - 10;
+            int windowY = screenSize.height - appWindow.getHeight() - taskbarHeight - 10;
 
-        int minHeight = screenSize.height - appWindow.getHeight() - taskbarHeight - 10;
-        if(windowY < minHeight){
-            appWindow.setSize(appWindow.getWidth(), screenSize.height - minHeight);
-            windowY = minHeight;
-        }
+            int minHeight = screenSize.height - appWindow.getHeight() - taskbarHeight - 10;
+            if(windowY < minHeight){
+                appWindow.setSize(appWindow.getWidth(), screenSize.height - minHeight);
+                windowY = minHeight;
+            }
 
-        appWindow.setLocation(windowX, windowY);
+            appWindow.setLocation(windowX, windowY);
+        });
     }
 
     private void adjustMessageWindowPosition(){
-        if(messageWindow != null){
-            Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-            Insets screenInsets = Toolkit.getDefaultToolkit().getScreenInsets(messageWindow.getGraphicsConfiguration());
-            int taskbarHeight = screenInsets.bottom;
+        adjustMessageWindowPosition(false);
+    }
 
-            int newX = screenSize.width - messageWindow.getWidth() - 10;
-            int newY = screenSize.height - messageWindow.getHeight() - taskbarHeight - 10;
+    private void adjustMessageWindowPosition(boolean immediate){
+        Runnable task = () -> {
+            if(messageWindow != null){
+                Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+                Insets screenInsets = Toolkit.getDefaultToolkit().getScreenInsets(messageWindow.getGraphicsConfiguration());
+                int taskbarHeight = screenInsets.bottom;
 
-            messageWindow.setLocation(newX, newY);
+                int newX = screenSize.width - messageWindow.getWidth() - 10;
+                int newY = screenSize.height - messageWindow.getHeight() - taskbarHeight - 10;
 
-            //TODO check if the window is actually on top
-            if(appWindow != null && appWindow.isVisible() && (appWindow.getExtendedState() & Frame.ICONIFIED) != 1){
-                if(messageWindow.getBounds().intersects(appWindow.getBounds())){
-                    newY = appWindow.getY() - messageWindow.getHeight() - 10;
+                messageWindow.setLocation(newX, newY);
 
-                    messageWindow.setLocation(newX, newY);
+                //TODO check if the window is actually on top
+                if(appWindow != null && appWindow.isVisible() && (appWindow.getExtendedState() & Frame.ICONIFIED) != 1){
+                    if(messageWindow.getBounds().intersects(appWindow.getBounds())){
+                        newY = appWindow.getY() - messageWindow.getHeight() - 10;
+
+                        messageWindow.setLocation(newX, newY);
+                    }
                 }
             }
+        };
+
+        if(immediate){
+            task.run();
+        }else{
+            SwingUtilities.invokeLater(task);
         }
     }
 
@@ -1066,9 +1115,7 @@ public final class GUIManager{
 
 //          mediaCards.clear();
 //          queuePanel.removeAll();
-            SwingUtilities.invokeLater(() -> {
-                adjustMessageWindowPosition();
-            });
+            adjustMessageWindowPosition();
         }
     }
 

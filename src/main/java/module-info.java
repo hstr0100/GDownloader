@@ -24,6 +24,7 @@ module net.brlns.gdownloader {
     requires java.net.http;
     requires jdk.crypto.ec;
     requires java.logging;
+    requires java.management;
 
     requires transitive com.github.kwhat.jnativehook;
     requires transitive com.fasterxml.jackson.databind;
@@ -39,6 +40,7 @@ module net.brlns.gdownloader {
     exports net.brlns.gdownloader.ui;
     exports net.brlns.gdownloader.ui.custom;
     exports net.brlns.gdownloader.ui.themes;
+    exports net.brlns.gdownloader.updater;
     exports net.brlns.gdownloader.util;
 
 }

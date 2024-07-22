@@ -65,10 +65,6 @@ public class MediaCard{
         mediaLabel.setText(GUIManager.wrapText(50, label));
     }
 
-    public void setMaxValue(int maxValue){
-        progressBar.setMaximum(maxValue);
-    }
-
     public void setPercentage(double percentageIn){
         percentage = percentageIn;
 

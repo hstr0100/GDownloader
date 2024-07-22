@@ -18,23 +18,24 @@ package net.brlns.gdownloader;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.awt.Color;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.concurrent.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
@@ -46,12 +47,17 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.settings.QualitySettings;
-import net.brlns.gdownloader.settings.enums.*;
+import net.brlns.gdownloader.settings.enums.AudioBitrateEnum;
+import net.brlns.gdownloader.settings.enums.ISettingsEnum;
+import net.brlns.gdownloader.settings.enums.PlayListOptionEnum;
+import net.brlns.gdownloader.settings.enums.VideoContainerEnum;
+import net.brlns.gdownloader.settings.enums.WebFilterEnum;
 import net.brlns.gdownloader.ui.GUIManager.DialogButton;
 import net.brlns.gdownloader.ui.MediaCard;
 import net.brlns.gdownloader.util.Nullable;
 
 import static net.brlns.gdownloader.Language.*;
+import static net.brlns.gdownloader.util.URLUtils.*;
 
 //TODO first clipboard copy tends to fail
 //TODO max simultaneous downloads should be independent per website
@@ -61,13 +67,11 @@ import static net.brlns.gdownloader.Language.*;
 //TODO winamp icon for mp3's in disc
 //TODO add button to convert individually
 //TODO output filename settings
-//TODO delete cache folder when its location changes
 //TODO shutdown and startup hook to delete cache folder
 //TODO add custom ytdlp filename modifiers to the settings
 //TODO TEST - empty queue should delete directories too
 //TODO check if empty spaces in filenames are ok
 //TODO restart program on language change
-//TODO dark and white themes
 //TODO scale on resolution DPI
 //TODO should we move the window back up when a new card is added?
 //TODO save last window size in config
@@ -76,15 +80,15 @@ import static net.brlns.gdownloader.Language.*;
 //TODO open url in default browser for linux, don't try to guess it
 //TODO d&d files for conversion
 //TODO extra ytdlp args
-//TODO updater
-//TODO splash screen
-//TODO ffmpeg updater
+//TODO core updater
 //TODO media converter
 //TODO right click program to exit
 //TODO rework WebP support for modular system
 //TODO prefer to NOT create the download folder until a download is happening
 //TODO output directories for media converter
-//TODO do not quit when yt-dlp fails to download
+//TODO progressbar is broken on windows / @TODO 2024-07-22 test if fix worked
+//TODO generate version class
+//TODO test restarting
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
@@ -104,12 +108,10 @@ public class YtDlpDownloader{
     private final Queue<QueueEntry> completedDownloads = new ConcurrentLinkedQueue<>();
     private final Queue<QueueEntry> failedDownloads = new ConcurrentLinkedQueue<>();
 
-    private final AtomicBoolean downloadsBlocked = new AtomicBoolean(true);
-
     private final AtomicInteger runningDownloads = new AtomicInteger();
-
     private final AtomicInteger downloadCounter = new AtomicInteger();
 
+    private final AtomicBoolean downloadsBlocked = new AtomicBoolean(true);
     private final AtomicBoolean downloadsRunning = new AtomicBoolean(false);
 
     public YtDlpDownloader(GDownloader mainIn){
@@ -117,7 +119,7 @@ public class YtDlpDownloader{
 
         //I know what era of computer this will be running on, so more than 10 threads would be insanity
         //But maybe add it as a setting later
-        downloadScheduler = new ThreadPoolExecutor(0, 10, 1L, TimeUnit.MINUTES, new LinkedBlockingQueue<>());
+        downloadScheduler = Executors.newFixedThreadPool(10);
     }
 
     public boolean isBlocked(){
@@ -134,14 +136,22 @@ public class YtDlpDownloader{
         listeners.add(consumer);
     }
 
-    public CompletableFuture<Boolean> captureUrl(String inputUrl){
+    private boolean isGarbageUrl(String inputUrl){
+        return inputUrl.contains("ytimg")
+            || inputUrl.contains("ggpht")
+            || inputUrl.endsWith(".jpg")
+            || inputUrl.endsWith(".png")
+            || inputUrl.endsWith(".webp");
+    }
+
+    public CompletableFuture<Boolean> captureUrl(@Nullable String inputUrl){
         return captureUrl(inputUrl, main.getConfig().getPlaylistDownloadOption());
     }
 
     public CompletableFuture<Boolean> captureUrl(@Nullable String inputUrl, PlayListOptionEnum playlistOption){
         CompletableFuture<Boolean> future = new CompletableFuture<>();
 
-        if(downloadsBlocked.get() || inputUrl == null || inputUrl.contains("ytimg") || WebFilterEnum.isYoutubeChannel(inputUrl)){//Nope, maybe as a setting later
+        if(downloadsBlocked.get() || inputUrl == null || isGarbageUrl(inputUrl) || WebFilterEnum.isYoutubeChannel(inputUrl)){//Nope, maybe as a setting later
             future.complete(false);
             return future;
         }
@@ -398,8 +408,8 @@ public class YtDlpDownloader{
                     return;
                 }
 
-                List<String> list = readOutput(
-                    main.getYtDlpUpdater().getYtDlpExecutablePath().toString(),
+                List<String> list = GDownloader.readOutput(
+                    main.getYtDlpUpdater().getExecutablePath().toString(),
                     "--dump-json",
                     "--flat-playlist",
                     queueEntry.getUrl()
@@ -413,7 +423,9 @@ public class YtDlpDownloader{
             }catch(Exception e){
                 log.error("Failed to parse json {}", e.getLocalizedMessage());
             }finally{
-                queueEntry.updateStatus(DownloadStatus.QUEUED, get("gui.download_status.not_started"));
+                if(queueEntry.getDownloadStatus() == DownloadStatus.QUERYING){
+                    queueEntry.updateStatus(DownloadStatus.QUEUED, get("gui.download_status.not_started"));
+                }
             }
         });
     }
@@ -426,10 +438,6 @@ public class YtDlpDownloader{
             }
 
             QueueEntry next = downloadDeque.peek();
-
-            if(next.getDownloadStatus() == DownloadStatus.QUERYING){
-                break;
-            }
 
             downloadDeque.remove(next);
 
@@ -462,14 +470,14 @@ public class YtDlpDownloader{
                     List<String> args = new ArrayList<>();
 
                     args.addAll(Arrays.asList(
-                        main.getYtDlpUpdater().getYtDlpExecutablePath().toString(),
+                        main.getYtDlpUpdater().getExecutablePath().toString(),
                         "-i"
                     ));
 
-                    if(main.getYtDlpUpdater().getFfmpegExecutablePath() != null){
+                    if(main.getFfmpegUpdater().getExecutablePath() != null){
                         args.addAll(Arrays.asList(
                             "--ffmpeg-location",
-                            main.getYtDlpUpdater().getFfmpegExecutablePath().toString()
+                            main.getFfmpegUpdater().getExecutablePath().toString()
                         ));
                     }
 
@@ -528,6 +536,8 @@ public class YtDlpDownloader{
                         ));
                     }
 
+                    log.info("Browser is {}", main.getBrowserForCookies());
+
                     switch(next.getWebFilter()){
                         case YOUTUBE_PLAYLIST:
                             args.addAll(Arrays.asList(
@@ -566,7 +576,7 @@ public class YtDlpDownloader{
                                 if(main.getConfig().isReadCookies()){
                                     args.addAll(Arrays.asList(
                                         "--cookies-from-browser",
-                                        getBrowserForCookies().getName()
+                                        main.getBrowserForCookies().getName()
                                     ));
                                 }
                             }
@@ -598,7 +608,7 @@ public class YtDlpDownloader{
                             if(main.getConfig().isReadCookies()){
                                 args.addAll(Arrays.asList(
                                     "--cookies-from-browser",
-                                    getBrowserForCookies().getName()
+                                    main.getBrowserForCookies().getName()
                                 ));
                             }
 
@@ -613,11 +623,18 @@ public class YtDlpDownloader{
                                 "15"
                             ));
 
+                            if(main.getConfig().isReadCookies()){
+                                args.addAll(Arrays.asList(
+                                    "--cookies-from-browser",
+                                    main.getBrowserForCookies().getName()
+                                ));
+                            }
+
                             break;
                         case CRUNCHYROLL:
                         case DROPOUT:
                             if(!main.getConfig().isReadCookies()){
-                                log.warn("Cookies Required for this website " + next.getOriginalUrl());
+                                log.warn("Cookies Required for this website {}", next.getOriginalUrl());
                             }
 
                         //fall
@@ -630,15 +647,18 @@ public class YtDlpDownloader{
                             if(main.getConfig().isReadCookies()){
                                 args.addAll(Arrays.asList(
                                     "--cookies-from-browser",
-                                    getBrowserForCookies().getName()
+                                    main.getBrowserForCookies().getName()
                                 ));
                             }
 
                             break;
                     }
 
-                    args.addAll(Arrays.asList(main.getConfig()
-                        .getExtraYtDlpArguments().split(" ")));
+                    for(String arg : main.getConfig().getExtraYtDlpArguments().split(" ")){
+                        if(!arg.isEmpty()){
+                            args.add(arg);
+                        }
+                    }
 
                     args.add(next.getUrl());
 
@@ -672,8 +692,14 @@ public class YtDlpDownloader{
                             }
 
                             next.updateStatus(DownloadStatus.DOWNLOADING, s.replace("[download] ", ""));
-                        }else{
+                        }else if(s.contains("[Merger]")
+                            || s.contains("[ExtractAudio]")
+                            || s.contains("[Embed")
+                            || s.contains("[Metadata]")
+                            || s.contains("[Thumbnails")){
                             next.updateStatus(DownloadStatus.PROCESSING, s);
+                        }else{
+                            next.updateStatus(DownloadStatus.PREPARING, s);
                         }
                     }
 
@@ -750,142 +776,6 @@ public class YtDlpDownloader{
         }
     }
 
-    @Nullable
-    private static String filterVideo(String youtubeUrl){
-        try{
-            URL url = new URI(youtubeUrl).toURL();
-            String host = url.getHost();
-
-            if(host != null && host.contains("youtube.com")){
-                String videoId = getParameter(url, "v");
-                if(videoId != null){
-                    return "https://www.youtube.com/watch?v=" + videoId;
-                }
-            }
-
-            return null;
-        }catch(MalformedURLException | URISyntaxException e){
-            log.warn("Invalid url {} {}", youtubeUrl, e.getLocalizedMessage());
-        }
-
-        return null;
-    }
-
-    @Nullable
-    private static String filterPlaylist(String youtubeUrl){
-        try{
-            URL url = new URI(youtubeUrl).toURL();
-            String host = url.getHost();
-
-            if(host != null && host.contains("youtube.com")){
-                String videoId = getParameter(url, "list");
-                if(videoId != null){
-                    return "https://www.youtube.com/playlist?list=" + videoId;
-                }
-            }
-
-            return null;
-        }catch(MalformedURLException | URISyntaxException e){
-            log.warn("Invalid url {} {}", youtubeUrl, e.getLocalizedMessage());
-        }
-
-        return null;
-    }
-
-    @Nullable
-    private static String getParameter(URL url, String parameterName){
-        String query = url.getQuery();
-
-        if(query != null){
-            String[] params = query.split("&");
-            for(String param : params){
-                String[] keyValue = param.split("=");
-                if(keyValue.length == 2 && keyValue[0].equals(parameterName)){
-                    return keyValue[1];
-                }
-            }
-        }
-
-        return null;
-    }
-
-    private static BrowserEnum _cachedBrowser;
-
-    private BrowserEnum getBrowserForCookies(){
-        if(_cachedBrowser != null){//I realize setting changes will have no effect until a restart
-            return _cachedBrowser;
-        }
-
-        if(main.getConfig().getBrowser() == BrowserEnum.UNSET){
-            String os = System.getProperty("os.name").toLowerCase();
-            String browserName = "";
-
-            try{
-                if(os.contains("win")){
-                    List<String> output = readOutput("reg", "query", "HKEY_CLASSES_ROOT\\http\\shell\\open\\command");
-
-                    log.info("Default browser: {}", output);
-
-                    for(String line : output){
-                        if(line.contains(".exe")){
-                            browserName = line.substring(0, line.indexOf(".exe") + 4);
-                            break;
-                        }
-                    }
-                }else if(os.contains("mac")){
-                    browserName = "safari";//Why bother
-                }else if(os.contains("nix") || os.contains("nux")){
-                    List<String> output = readOutput("xdg-settings", "get", "default-web-browser");
-
-                    log.info("Default browser: {}", output);
-
-                    for(String line : output){
-                        if(!line.isEmpty()){
-                            browserName = line.trim();
-                            break;
-                        }
-                    }
-                }
-            }catch(Exception e){
-                log.error("{}", e.getCause());
-
-            }
-
-            BrowserEnum browser = BrowserEnum.getBrowserForName(browserName);
-
-            if(browser == BrowserEnum.UNSET){
-                _cachedBrowser = BrowserEnum.FIREFOX;
-            }else{
-                _cachedBrowser = browser;
-            }
-        }else{
-            _cachedBrowser = main.getConfig().getBrowser();
-        }
-
-        return _cachedBrowser;
-    }
-
-    public static List<String> readOutput(String... command) throws IOException, InterruptedException{
-        ProcessBuilder processBuilder = new ProcessBuilder(command);
-        processBuilder.redirectErrorStream(true);
-        Process process = processBuilder.start();
-
-        List<String> list = new ArrayList<>();
-        try(BufferedReader in = new BufferedReader(new InputStreamReader(process.getInputStream()))){
-            String line;
-            while((line = in.readLine()) != null){
-                list.add(line);
-            }
-        }
-
-        int exitCode = process.waitFor();
-        if(exitCode != 0){
-            log.warn("Failed command for {}", Arrays.toString(command));
-        }
-
-        return list;
-    }
-
     private static String truncate(String input, int length){
         if(input.length() > length){
             input = input.substring(0, length - 3) + "...";
@@ -900,6 +790,7 @@ public class YtDlpDownloader{
         STOPPED("enums.download_status.stopped"),
         QUEUED("enums.download_status.queued"),
         STARTING("enums.download_status.starting"),
+        PREPARING("enums.download_status.preparing"),
         PROCESSING("enums.download_status.processing"),
         DOWNLOADING("enums.download_status.downloading"),
         COMPLETE("enums.download_status.complete"),
@@ -988,8 +879,18 @@ public class YtDlpDownloader{
         public void setVideoInfo(VideoInfo videoInfoIn){
             videoInfo = videoInfoIn;
 
-            if(videoInfo.getThumbnail().startsWith("http")){
-                mediaCard.setThumbnailAndDuration(videoInfo.getThumbnail(), videoInfoIn.getDuration());
+            String thumb = videoInfo.getThumbnail();
+            //Filter out WebP for now
+            if(!thumb.startsWith("http") || !thumb.endsWith(".jpg") && !thumb.endsWith(".png")){
+                Optional<Thumbnail> thumbnail = videoInfo.getFirstSupportedThumbnail();
+
+                if(thumbnail.get() != null){
+                    thumb = thumbnail.get().getUrl();
+                }
+            }
+
+            if(thumb != null && thumb.startsWith("http")){
+                mediaCard.setThumbnailAndDuration(thumb, videoInfoIn.getDuration());
             }
         }
 
@@ -1015,6 +916,12 @@ public class YtDlpDownloader{
                         mediaCard.setString(status.getDisplayName());
                         mediaCard.setColor(Color.MAGENTA);
                         break;
+                    case PROCESSING:
+                        mediaCard.setPercentage(100);
+                        mediaCard.setString(status.getDisplayName());
+                        mediaCard.setColor(Color.ORANGE);
+                        break;
+                    case PREPARING:
                     case QUEUED:
                     case STOPPED:
                         mediaCard.setPercentage(100);
@@ -1044,11 +951,37 @@ public class YtDlpDownloader{
                         mediaCard.setColor(Color.RED);
                         break;
                     default:
+                        throw new RuntimeException("Unhandled status: " + status);
                 }
             }else if(status == DownloadStatus.DOWNLOADING){
                 mediaCard.setString(status.getDisplayName() + ": " + mediaCard.getPercentage() + "%");
             }
         }
+    }
+
+    @Data
+    @NoArgsConstructor
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public static class Thumbnail{
+
+        @JsonProperty("url")
+        private String url;
+
+        @JsonProperty("preference")
+        private int preference;
+
+        @JsonProperty("id")
+        private String id;
+
+        @JsonProperty("height")
+        private int height;
+
+        @JsonProperty("width")
+        private int width;
+
+        @JsonProperty("resolution")
+        private String resolution;
     }
 
     @Data
@@ -1064,6 +997,17 @@ public class YtDlpDownloader{
 
         @JsonProperty("thumbnail")
         private String thumbnail = "";
+
+        @JsonProperty("thumbnails")
+        private List<Thumbnail> thumbnails = new ArrayList<>();
+
+        @JsonIgnore
+        public Optional<Thumbnail> getFirstSupportedThumbnail(){
+            return thumbnails.stream()
+                .filter(thumb -> thumb.getUrl() != null
+                && (thumb.getUrl().endsWith(".jpg") || thumb.getUrl().endsWith(".png")))
+                .max(Comparator.comparingInt(Thumbnail::getPreference));
+        }
 
         @JsonProperty("description")
         private String description;

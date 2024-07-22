@@ -47,6 +47,7 @@ public class LightTheme extends AbstractTheme{
         add(BUTTON_FOREGROUND, Color.DARK_GRAY);
         add(BUTTON_BACKGROUND, Color.WHITE);
         add(BUTTON_HOVER, new Color(128, 128, 128));
+        add(SCROLL_BAR_FOREGROUND, new Color(128, 128, 128));
         add(SLIDER_FOREGROUND, new Color(100, 100, 100));
         add(SIDE_PANEL_SELECTED, new Color(218, 218, 218));
         add(TOOLTIP_BACKGROUND, new Color(230, 230, 230));
@@ -60,4 +61,13 @@ public class LightTheme extends AbstractTheme{
         add(COMBO_BOX_BUTTON_BACKGROUND, Color.WHITE);
     }
 
+    @Override
+    public String getAppIconPath(){
+        return "/assets/app_icon_light.png";
+    }
+
+    @Override
+    public String getTrayIconPath(){
+        return "/assets/tray_icon_light.png";
+    }
 }

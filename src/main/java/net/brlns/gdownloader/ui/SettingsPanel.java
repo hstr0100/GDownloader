@@ -68,6 +68,8 @@ public class SettingsPanel{
     private JPanel contentPanel;
     private CardLayout cardLayout;
 
+    private Runnable _resetAction;
+
     public SettingsPanel(GDownloader mainIn, GUIManager managerIn){
         main = mainIn;
         manager = managerIn;
@@ -91,26 +93,22 @@ public class SettingsPanel{
 
     public void createAndShowGUI(){
         if(frame != null){
-            if(!frame.isVisible()){
-                settings = GDownloader.OBJECT_MAPPER.convertValue(main.getConfig(), Settings.class);
-            }
-
-            reloadSettings();
-
-            contentPanel.revalidate();
-            contentPanel.repaint();
-
-            frame.setVisible(true);
-
-            cardLayout.show(contentPanel, String.valueOf(0));
-
-            return;
+            frame.dispose();
+            frame = null;
         }
 
         settings = GDownloader.OBJECT_MAPPER.convertValue(main.getConfig(), Settings.class);
 
-        frame = new JFrame(get("settings.title", GDownloader.REGISTRY_APP_NAME));
+        frame = new JFrame(get("settings.title", GDownloader.REGISTRY_APP_NAME)){
+            @Override
+            public void dispose(){
+                frame = null;
 
+                super.dispose();
+            }
+        };
+
+        frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         frame.setSize(800, 500);
         frame.setLayout(new BorderLayout());
         frame.setResizable(false);
@@ -184,7 +182,8 @@ public class SettingsPanel{
                 button.setBackground(color(index == 0 ? SIDE_PANEL_SELECTED : SIDE_PANEL));
 
                 button.setIcon(manager.loadIcon(entry.getIcon(), ICON, 48));
-                button.addActionListener((ActionEvent e) -> {
+
+                Runnable action = () -> {
                     cardLayout.show(contentPanel, String.valueOf(index));
                     headerLabel.setText(entry.getDisplayName());
 
@@ -194,7 +193,15 @@ public class SettingsPanel{
                     }
 
                     button.setBackground(color(SIDE_PANEL_SELECTED));
+                };
+
+                button.addActionListener((ActionEvent e) -> {
+                    action.run();
                 });
+
+                if(index == 0){
+                    _resetAction = action;
+                }
 
                 sidebarPanel.add(button, gbc);
 
@@ -208,71 +215,100 @@ public class SettingsPanel{
             mainContentPanel.add(contentPanel, BorderLayout.CENTER);
 
             {
-                JPanel bottomPanel = new JPanel();
+                JPanel bottomPanel = new JPanel(new BorderLayout());
                 bottomPanel.setBackground(color(SIDE_PANEL_SELECTED));
-                bottomPanel.setLayout(new FlowLayout(FlowLayout.RIGHT, 10, 10));
                 bottomPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-                JButton resetButton = createButton(
-                    "settings.restore_defaults",
-                    "settings.restore_defaults.tooltip",
-                    BUTTON_BACKGROUND,
-                    BUTTON_FOREGROUND,
-                    BUTTON_HOVER);
+                {
+                    JPanel leftPanel = new JPanel();
+                    leftPanel.setBackground(color(SIDE_PANEL_SELECTED));
+                    leftPanel.setLayout(new FlowLayout(FlowLayout.LEFT, 10, 10));
 
-                resetButton.setPreferredSize(new Dimension(200, 30));
-                resetButton.addActionListener((ActionEvent e) -> {
-                    settings = new Settings();
+                    leftPanel.add(manager.createButton(
+                        manager.loadIcon("/assets/shutdown.png", ICON, 24),
+                        manager.loadIcon("/assets/shutdown.png", ICON_HOVER, 24),
+                        "gui.exit.tooltip",
+                        e -> System.exit(0)
+                    ));
 
-                    reloadSettings();
+                    leftPanel.add(manager.createButton(
+                        manager.loadIcon("/assets/restart.png", ICON, 24),
+                        manager.loadIcon("/assets/restart.png", ICON_HOVER, 24),
+                        "gui.restart.tooltip",
+                        e -> main.restart()
+                    ));
 
-                    main.updateConfig(settings);
-                });
+                    bottomPanel.add(leftPanel, BorderLayout.WEST);
+                }
 
-                bottomPanel.add(resetButton);
+                {
+                    JPanel rightPanel = new JPanel();
+                    rightPanel.setBackground(color(SIDE_PANEL_SELECTED));
+                    rightPanel.setLayout(new FlowLayout(FlowLayout.RIGHT, 10, 10));
 
-                JButton saveButton = createButton(
-                    "settings.save",
-                    "settings.save.tooltip",
-                    BUTTON_BACKGROUND,
-                    BUTTON_FOREGROUND,
-                    BUTTON_HOVER);
+                    JButton resetButton = createButton(
+                        "settings.restore_defaults",
+                        "settings.restore_defaults.tooltip",
+                        BUTTON_BACKGROUND,
+                        BUTTON_FOREGROUND,
+                        BUTTON_HOVER);
 
-                saveButton.setPreferredSize(new Dimension(200, 30));
-                saveButton.addActionListener((ActionEvent e) -> {
-                    if(!settings.getDownloadsPath().isEmpty()
-                        && !main.getConfig().getDownloadsPath().equals(settings.getDownloadsPath())){
+                    resetButton.setPreferredSize(new Dimension(200, 30));
+                    resetButton.addActionListener((ActionEvent e) -> {
+                        settings = new Settings();
 
-                        File file = new File(settings.getDownloadsPath());
-                        if(file.exists() && file.canWrite()){
-                            main.setDownloadsPath(file);//We are uselessly calling on updateConfig() here, but should be no problem
-                        }else{
-                            settings.setDownloadsPath("");
+                        reloadSettings();
 
-                            main.getGuiManager().showMessage(
-                                get("gui.error_popup_title"),
-                                get("gui.error_download_path_not_writable", file.getAbsolutePath()),
-                                4000,
-                                GUIManager.MessageType.ERROR,
-                                true);
+                        main.updateConfig(settings);
+                    });
 
-                            log.error("Selected path not writable {}", file);
+                    rightPanel.add(resetButton);
+
+                    JButton saveButton = createButton(
+                        "settings.save",
+                        "settings.save.tooltip",
+                        BUTTON_BACKGROUND,
+                        BUTTON_FOREGROUND,
+                        BUTTON_HOVER);
+
+                    saveButton.setPreferredSize(new Dimension(200, 30));
+                    saveButton.addActionListener((ActionEvent e) -> {
+                        if(!settings.getDownloadsPath().isEmpty()
+                            && !main.getConfig().getDownloadsPath().equals(settings.getDownloadsPath())){
+
+                            File file = new File(settings.getDownloadsPath());
+                            if(file.exists() && file.canWrite()){
+                                main.setDownloadsPath(file);//We are uselessly calling on updateConfig() here, but should be no problem
+                            }else{
+                                settings.setDownloadsPath("");
+
+                                main.getGuiManager().showMessage(
+                                    get("gui.error_popup_title"),
+                                    get("gui.error_download_path_not_writable", file.getAbsolutePath()),
+                                    4000,
+                                    GUIManager.MessageType.ERROR,
+                                    true);
+
+                                log.error("Selected path not writable {}", file);
+                            }
                         }
-                    }
 
-                    main.updateConfig(settings);
+                        main.updateConfig(settings);
 
-                    main.getGuiManager().refreshWindow();
-                    main.updateStartupStatus();
+                        main.getGuiManager().refreshWindow();
+                        main.updateStartupStatus();
 
-                    frame.setVisible(false);
-                });
+                        frame.dispose();
+                        frame = null;
+                    });
 
-                bottomPanel.add(saveButton);
+                    rightPanel.add(saveButton);
+
+                    bottomPanel.add(rightPanel, BorderLayout.EAST);
+                }
 
                 mainContentPanel.add(bottomPanel, BorderLayout.SOUTH);
                 frame.add(mainContentPanel, BorderLayout.CENTER);
-
             }
         }
 
@@ -329,6 +365,8 @@ public class SettingsPanel{
         for(SettingsMenuEntry entry : contentPanels){
             contentPanel.add(entry.getPanel().get(), String.valueOf(i++));
         }
+
+        _resetAction.run();
     }
 
     private JPanel createGeneralSettings(){
@@ -417,6 +455,26 @@ public class SettingsPanel{
 
             checkBox.addActionListener((ActionEvent e) -> {
                 settings.setExitOnClose(checkBox.isSelected());
+            });
+
+            customizeComponent(checkBox, BACKGROUND, LIGHT_TEXT);
+
+            gbcPanel.gridx = 1;
+            generalSettingsPanel.add(checkBox, gbcPanel);
+        }
+
+        {
+            JLabel label = createLabel("settings.automatic_updates", LIGHT_TEXT);
+
+            gbcPanel.gridx = 0;
+            gbcPanel.gridy++;
+            generalSettingsPanel.add(label, gbcPanel);
+
+            JCheckBox checkBox = new JCheckBox();
+            checkBox.setSelected(settings.isAutomaticUpdates());
+
+            checkBox.addActionListener((ActionEvent e) -> {
+                settings.setAutomaticUpdates(checkBox.isSelected());
             });
 
             customizeComponent(checkBox, BACKGROUND, LIGHT_TEXT);

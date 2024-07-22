@@ -16,6 +16,7 @@
  */
 package net.brlns.gdownloader.settings.enums;
 
+import java.util.Comparator;
 import java.util.Optional;
 import java.util.stream.Stream;
 import lombok.Getter;
@@ -57,7 +58,7 @@ public enum ResolutionEnum implements ISettingsEnum{
 
         Optional<ResolutionEnum> result = Stream.of(values())
             .filter(e -> isResolutionValid(e, this))
-            .max((e1, e2) -> Integer.compare(e1.getValue(), e2.getValue()));
+            .max(Comparator.comparingInt(ResolutionEnum::getValue));
 
         return result.orElse(min);
     }
@@ -69,7 +70,7 @@ public enum ResolutionEnum implements ISettingsEnum{
 
         Optional<ResolutionEnum> result = Stream.of(values())
             .filter(e -> isResolutionValid(this, e))
-            .min((e1, e2) -> Integer.compare(e1.getValue(), e2.getValue()));
+            .min(Comparator.comparingInt(ResolutionEnum::getValue));
 
         return result.orElse(max);
     }

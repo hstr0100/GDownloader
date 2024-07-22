@@ -55,4 +55,8 @@ public abstract class AbstractTheme{
 
     protected abstract void initColors();
 
+    public abstract String getAppIconPath();
+
+    public abstract String getTrayIconPath();
+
 }

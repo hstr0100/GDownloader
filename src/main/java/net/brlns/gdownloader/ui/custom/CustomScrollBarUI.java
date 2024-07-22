@@ -36,7 +36,7 @@ public class CustomScrollBarUI extends BasicScrollBarUI{
 
     @Override
     protected void configureScrollBarColors(){
-        thumbColor = color(FOREGROUND);
+        thumbColor = color(SCROLL_BAR_FOREGROUND);
         trackColor = color(BACKGROUND);
     }
 

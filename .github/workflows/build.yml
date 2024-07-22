@@ -42,11 +42,11 @@ jobs:
       - name: Upload Shaded JAR
         uses: actions/upload-artifact@v3
         with:
-          name: shaded-jar
+          name: GDownloader.jar
           path: build/libs/*.jar
 
       - name: Upload Native Image
         uses: actions/upload-artifact@v3
         with:
-          name: native-image
+          name: GDownloader.deb
           path: build/jpackage/*

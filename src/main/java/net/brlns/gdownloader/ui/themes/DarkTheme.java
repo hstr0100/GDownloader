@@ -47,6 +47,7 @@ public class DarkTheme extends AbstractTheme{
         add(BUTTON_FOREGROUND, Color.DARK_GRAY);
         add(BUTTON_BACKGROUND, Color.WHITE);
         add(BUTTON_HOVER, new Color(128, 128, 128));
+        add(SCROLL_BAR_FOREGROUND, Color.WHITE);
         add(SLIDER_FOREGROUND, Color.WHITE);
         add(SIDE_PANEL_SELECTED, new Color(93, 93, 93));
         add(TOOLTIP_BACKGROUND, Color.DARK_GRAY);
@@ -58,6 +59,16 @@ public class DarkTheme extends AbstractTheme{
         add(SLIDER_TRACK, Color.LIGHT_GRAY);
         add(COMBO_BOX_BUTTON_FOREGROUND, Color.WHITE);
         add(COMBO_BOX_BUTTON_BACKGROUND, Color.DARK_GRAY);
+    }
+
+    @Override
+    public String getAppIconPath(){
+        return "/assets/app_icon_dark.png";
+    }
+
+    @Override
+    public String getTrayIconPath(){
+        return "/assets/tray_icon_dark.png";
     }
 
 }

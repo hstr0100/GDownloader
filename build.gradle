@@ -36,8 +36,6 @@ dependencies {
     //runtimeOnly 'com.github.usefulness:webp-imageio:0.8.0'
     //implementation 'com.twelvemonkeys.imageio:imageio-webp:3.11.0'
     implementation 'org.jsoup:jsoup:1.18.1'
-    testImplementation 'com.tngtech.archunit:archunit:1.2.1'
-
 }
 
 tasks.withType(JavaCompile) {

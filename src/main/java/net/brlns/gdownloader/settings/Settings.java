@@ -19,8 +19,8 @@ package net.brlns.gdownloader.settings;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.TreeMap;
 import lombok.Data;
 import net.brlns.gdownloader.settings.enums.*;
 
@@ -32,7 +32,7 @@ import net.brlns.gdownloader.settings.enums.*;
 public class Settings{
 
     @JsonProperty("QualitySettings")
-    private Map<WebFilterEnum, QualitySettings> qualitySettings = new HashMap<>();
+    private Map<WebFilterEnum, QualitySettings> qualitySettings = new TreeMap<>();
 
     public Settings(){
         for(WebFilterEnum filter : WebFilterEnum.values()){
@@ -63,6 +63,9 @@ public class Settings{
 
         return settings;
     }
+
+    @JsonProperty("AutomaticUpdates")
+    private boolean automaticUpdates = true;
 
     @JsonProperty("Language")
     private LanguageEnum language = LanguageEnum.ENGLISH;

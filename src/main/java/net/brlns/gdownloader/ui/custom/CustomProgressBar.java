@@ -17,43 +17,83 @@
 package net.brlns.gdownloader.ui.custom;
 
 import java.awt.*;
-import javax.swing.JProgressBar;
+import javax.swing.JPanel;
 import lombok.Getter;
 import lombok.Setter;
+import net.brlns.gdownloader.util.Nullable;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-public class CustomProgressBar extends JProgressBar{
+public class CustomProgressBar extends JPanel{
+
+    private static final Font FONT = new Font("Dialog", Font.BOLD, 14);
 
     @Getter
     @Setter
+    private boolean stringPainted;
+
+    @Getter
     private Color textColor;
 
-    private static final Font FONT = new Font("Dialog", Font.BOLD, 12);
+    @Getter
+    private String string;
 
-    public CustomProgressBar(int min, int max, Color textColor){
-        super(min, max);
+    @Getter
+    private int value = 0;
 
-        this.textColor = textColor;
+    public CustomProgressBar(){
+        this(null);
+    }
+
+    @SuppressWarnings("this-escape")
+    public CustomProgressBar(@Nullable Color textColorIn){
+        textColor = textColorIn;
+
+        setPreferredSize(new Dimension(300, 20));
+        setDoubleBuffered(true);
     }
 
     @Override
     protected void paintComponent(Graphics g){
         super.paintComponent(g);
 
-        //TODO fix the terrible antialias
-        Graphics2D g2 = (Graphics2D)g;
-        g2.setFont(FONT);
-        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        Graphics2D g2d = (Graphics2D)g;
 
-        String text = getString();
-        if(text != null && !text.isEmpty()){
-            g2.setColor(textColor);
-            FontMetrics fm = g2.getFontMetrics();
-            int x = (getWidth() - fm.stringWidth(text)) / 2;
+        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+        g2d.setColor(getBackground());
+        g2d.fillRect(0, 0, getWidth(), getHeight());
+
+        g2d.setColor(getForeground());
+        int width = (int)(getWidth() * (value / 100.0));
+        g2d.fillRect(0, 0, width, getHeight());
+
+        if(stringPainted){
+            g2d.setColor(textColor);
+            g2d.setFont(FONT);
+            FontMetrics fm = g2d.getFontMetrics();
+            int x = (getWidth() - fm.stringWidth(string)) / 2;
             int y = (getHeight() + fm.getAscent() - fm.getDescent()) / 2;
-            g2.drawString(text, x, y);
+            g2d.drawString(string, x, y);
         }
+    }
+
+    public void setValue(int valueIn){
+        value = valueIn;
+
+        repaint();
+    }
+
+    public void setString(String stringIn){
+        string = stringIn;
+
+        repaint();
+    }
+
+    public void setTextColor(Color textColorIn){
+        textColor = textColorIn;
+
+        repaint();
     }
 }
