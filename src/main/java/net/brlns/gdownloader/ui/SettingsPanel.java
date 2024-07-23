@@ -325,7 +325,7 @@ public class SettingsPanel{
 
         {
             JButton gabButton = new JButton("@hstr0100");
-            gabButton.setToolTipText("Gabriel's GitHub");
+            gabButton.setToolTipText("Gabriel's GitHub - #hireme");
             gabButton.setUI(new BasicButtonUI());
             gabButton.setForeground(color(FOREGROUND));
             gabButton.setFocusPainted(false);

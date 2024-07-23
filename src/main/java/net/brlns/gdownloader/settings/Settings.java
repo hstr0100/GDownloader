@@ -112,7 +112,7 @@ public class Settings{
     private PlayListOptionEnum playlistDownloadOption = PlayListOptionEnum.ALWAYS_ASK;
 
     @JsonProperty("DebugMode")
-    private boolean debugMode = true;
+    private boolean debugMode = false;
 
     @JsonProperty("AutoStart")
     private boolean autoStart = false;

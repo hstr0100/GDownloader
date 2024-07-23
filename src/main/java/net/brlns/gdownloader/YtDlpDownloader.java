@@ -80,6 +80,7 @@ import static net.brlns.gdownloader.util.URLUtils.*;
 //TODO generate version class
 //TODO test restarting
 //TODO verify checksums during updates
+//TODO write a component factory for GUIManager
 //jpackage.app-version
 /**
  * @author Gabriel / hstr0100 / vertx010
