@@ -18,7 +18,6 @@ package net.brlns.gdownloader.updater;
 
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
-import net.brlns.gdownloader.settings.enums.ArchVersionEnum;
 import net.brlns.gdownloader.util.Nullable;
 
 /**

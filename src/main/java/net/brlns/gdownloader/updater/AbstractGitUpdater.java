@@ -52,7 +52,7 @@ public abstract class AbstractGitUpdater{
 
     private static final HttpClient client = HttpClient.newBuilder()
         .followRedirects(HttpClient.Redirect.ALWAYS)
-        .connectTimeout(Duration.ofSeconds(5))
+        .connectTimeout(Duration.ofSeconds(10))
         .version(HttpClient.Version.HTTP_2)
         .build();
 
@@ -98,12 +98,37 @@ public abstract class AbstractGitUpdater{
             }
         }
 
+        //For included ffmpeg and yt-dlp binaries
+        //Will only optionally be available to end user builds
         fileName = getBinaryFallback();
 
         if(fileName != null){
-            executablePath = copyResource(
-                "/bin/" + fileName,
-                new File(workDir, fileName));
+            String[] resources = fileName.split(";");
+
+            if(resources.length == 1){
+                executablePath = copyResource(
+                    "/bin/" + fileName,
+                    new File(workDir, fileName));
+            }else{
+                File outFile = new File(workDir, getRuntimeBinaryName());
+                if(!outFile.exists()){
+                    outFile.mkdirs();
+                }
+
+                int successes = 0;
+                for(String resource : resources){
+                    File output = copyResource(
+                        "/bin/" + resource, new File(outFile, resource));
+
+                    if(output != null){
+                        successes++;
+                    }
+                }
+
+                if(successes != 0 && successes == resources.length){
+                    executablePath = outFile;
+                }
+            }
 
             if(executablePath != null){
                 log.info("Selected bundled binary as fallback {}", getRepo());
@@ -233,7 +258,7 @@ public abstract class AbstractGitUpdater{
 
         HttpRequest request = HttpRequest.newBuilder()
             .uri(URI.create(apiUrl))
-            .timeout(Duration.ofSeconds(5))
+            .timeout(Duration.ofSeconds(10))
             .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36")
             .build();
 
@@ -272,7 +297,6 @@ public abstract class AbstractGitUpdater{
 
         HttpRequest request = HttpRequest.newBuilder()
             .uri(URI.create(urlIn))
-            .timeout(Duration.ofSeconds(10))
             .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36")
             .build();
 

@@ -23,7 +23,6 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
-import net.brlns.gdownloader.settings.enums.ArchVersionEnum;
 import net.brlns.gdownloader.util.ArchiveUtils;
 import net.brlns.gdownloader.util.Nullable;
 
@@ -69,7 +68,7 @@ public class FFMpegUpdater extends AbstractGitUpdater{
     @Nullable
     @Override
     protected String getRuntimeBinaryName(){
-        return "ffmpeg.exe";
+        return "ffmpeg";
     }
 
     @Nullable
@@ -96,7 +95,7 @@ public class FFMpegUpdater extends AbstractGitUpdater{
 
             ArchiveUtils.inflateZip(zipPath, zipOutputPath, true);
 
-            Path sourcePath = zipOutputPath.resolve("bin").resolve(getRuntimeBinaryName());
+            Path sourcePath = zipOutputPath.resolve("bin");
             log.info("Source binary path {}", sourcePath);
 
             Files.move(sourcePath, outputFile.toPath(), StandardCopyOption.REPLACE_EXISTING);

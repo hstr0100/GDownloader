@@ -2,6 +2,7 @@ plugins {
     id 'java'
     id 'application'
     id "org.beryx.jlink" version "2.25.0"
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
 }
 
 group = 'net.brlns'
@@ -43,6 +44,8 @@ tasks.withType(JavaCompile) {
 }
 
 jar {
+    archiveBaseName.set('gdownloader-java')
+
     manifest {
         attributes (
             'Implementation-Title': project.name,
@@ -57,6 +60,12 @@ jar {
     //}
 
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+shadowJar {
+    archiveBaseName.set('gdownloader-java')
+    archiveClassifier.set('full')
+    mergeServiceFiles()
 }
 
 jlink {
@@ -85,8 +94,11 @@ jlink {
             '--app-version', version
         ]
 
+        //For now lets just assume Windows for arm is not a thing yet
+        def architecture = System.getProperty("os.arch").contains("64") ? "x64" : "x86"
+
         if (currentOs.windows) {
-            installerName = 'GDownloader-Installer'
+            installerName = "gdownloader-windows-${architecture}"
             installerType = 'msi'
             //imageOptions += ['--win-console']
             installerOptions += [
@@ -99,8 +111,8 @@ jlink {
             installerType = 'deb'
             installerOptions += [
                 '--resource-dir', 'build/jpackage/GDownloader/lib/app',
-                '--linux-package-name', 'gdownloader',
-                '--linux-app-category', 'Qt;KDE;Internet;',
+                '--linux-package-name', 'gdownloader-linux',
+                '--linux-app-category', 'Internet',
                 '--linux-menu-group', 'Qt;KDE;Internet;',
                 '--linux-deb-maintainer', 'hstr0100@brlns.net',
                 '--linux-rpm-license-type', 'GPLv3',
@@ -109,7 +121,7 @@ jlink {
         } else if (currentOs.macOsX) {
             installerType = 'dmg'
             installerOptions += [
-                '--mac-package-name', 'GDownloader'
+                '--mac-package-name', 'gdownloader-mac'
             ]
         }
     }
@@ -125,6 +137,33 @@ tasks.jpackage.doFirst {
         include "GDownloader.icns"
         include "GDownloader.ico"
         into("$buildDir/jpackage/$basePath/app")
+    }
+}
+
+tasks.processResources {
+    def currentOs = org.gradle.internal.os.OperatingSystem.current()
+
+    if (currentOs.linux || currentOs.macOsX) {
+        exclude 'bin/**'
+    }
+}
+
+task compressSources(type: Tar) {
+    destinationDirectory = file("$buildDir/archives")
+
+    archiveFileName = 'gdownloader-sources.tar.gz'
+
+    compression = Compression.GZIP
+
+    from('.') {
+        include '**/*'
+        exclude '.git/**'
+        exclude '.github/**'
+        exclude '.gitignore'
+        exclude '.gradle/**'
+        exclude 'build/**'
+        exclude 'target/**'
+        exclude 'src/main/resources/bin/**'
     }
 }
 

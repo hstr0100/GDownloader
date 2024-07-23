@@ -138,6 +138,7 @@ public class YtDlpDownloader{
     private boolean isGarbageUrl(String inputUrl){
         return inputUrl.contains("ytimg")
             || inputUrl.contains("ggpht")
+            || inputUrl.endsWith("youtube.com/")
             || inputUrl.endsWith(".jpg")
             || inputUrl.endsWith(".png")
             || inputUrl.endsWith(".webp");
@@ -423,12 +424,15 @@ public class YtDlpDownloader{
                     queueEntry.getUrl()
                 );
 
-                if(!list.isEmpty()){
-                    String json = stripGarbageFromJson(list.get(0));
+                for(String line : list){
+                    if(!line.startsWith("{")){
+                        continue;
+                    }
 
-                    VideoInfo info = GDownloader.OBJECT_MAPPER.readValue(json, VideoInfo.class);
+                    VideoInfo info = GDownloader.OBJECT_MAPPER.readValue(line, VideoInfo.class);
 
                     queueEntry.setVideoInfo(info);
+                    break;
                 }
             }catch(Exception e){
                 log.error("Failed to parse json {}", e.getLocalizedMessage());
@@ -792,12 +796,6 @@ public class YtDlpDownloader{
         }
 
         return input;
-    }
-
-    private String stripGarbageFromJson(String input){
-        int braceIndex = input.indexOf('{');
-
-        return braceIndex == -1 ? input : input.substring(braceIndex);
     }
 
     @Getter

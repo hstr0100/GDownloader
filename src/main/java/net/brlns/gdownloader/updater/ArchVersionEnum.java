@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package net.brlns.gdownloader.settings.enums;
+package net.brlns.gdownloader.updater;
 
 import lombok.Getter;
 
@@ -30,7 +30,7 @@ public enum ArchVersionEnum{
         "yt-dlp.exe",
         "yt-dlp.exe",
         "-full_build.zip",//Apache Compress does not support -mx=9 used by ffmpeg's 7zs
-        "ffmpeg.exe",
+        "ffmpeg.exe;ffprobe.exe;ffplay.exe",
         OS.WINDOWS
     ),
     LINUX_X64("yt-dlp_linux", null, null, null, OS.LINUX),//You're on your own for ffmpeg buddy

@@ -31,6 +31,66 @@ import net.brlns.gdownloader.settings.enums.*;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class Settings{
 
+    @JsonProperty("MonitorClipboardForLinks")
+    private boolean monitorClipboardForLinks = false;
+
+    @JsonProperty("AutomaticUpdates")
+    private boolean automaticUpdates = true;
+
+    @JsonProperty("Language")
+    private LanguageEnum language = LanguageEnum.ENGLISH;
+
+    @JsonProperty("ReadCookies")
+    private boolean readCookies = true;
+
+    @JsonProperty("BrowserForCookies")
+    private BrowserEnum browser = BrowserEnum.UNSET;
+
+    @JsonProperty("DownloadYoutubeChannels")
+    private boolean downloadYoutubeChannels = false;
+
+    @JsonProperty("DownloadsPath")
+    private String downloadsPath = "";
+
+    //TODO implement
+    @JsonProperty("UIScale")
+    private double uiScale = 1.0;
+
+    @JsonProperty("Theme")
+    private ThemeEnum theme = ThemeEnum.DARK;
+
+    @JsonProperty("CaptureAnyLinks")
+    private boolean captureAnyLinks = false;
+
+    //TODO expose to settings panel
+    @JsonProperty("ExtraYtDlpArguments")
+    private String extraYtDlpArguments = "";
+
+    @JsonProperty("DownloadAudioOnly")
+    private boolean downloadAudioOnly = false;
+
+    @JsonProperty("KeepWindowAlwaysOnTop")
+    private boolean keepWindowAlwaysOnTop = false;
+
+    @JsonProperty("MaximumSimultaneousDownloads")
+    private int maxSimultaneousDownloads = 3;
+
+    @JsonProperty("PlaylistDownloadOption")
+    private PlayListOptionEnum playlistDownloadOption = PlayListOptionEnum.ALWAYS_ASK;
+
+    @JsonProperty("DebugMode")
+    private boolean debugMode = false;
+
+    @JsonProperty("AutoStart")
+    private boolean autoStart = false;
+
+    @JsonProperty("ExitOnClose")
+    private boolean exitOnClose = false;
+
+    //TODO add more
+    @JsonProperty("Play Sounds")
+    private boolean playSounds = false;
+
     @JsonProperty("QualitySettings")
     private Map<WebFilterEnum, QualitySettings> qualitySettings = new TreeMap<>();
 
@@ -63,65 +123,4 @@ public class Settings{
 
         return settings;
     }
-
-    @JsonProperty("MonitorClipboardForLinks")
-    private boolean monitorClipboardForLinks = false;
-
-    @JsonProperty("AutomaticUpdates")
-    private boolean automaticUpdates = true;
-
-    @JsonProperty("Language")
-    private LanguageEnum language = LanguageEnum.ENGLISH;
-
-    @JsonProperty("ReadCookies")
-    private boolean readCookies = true;
-
-    @JsonProperty("BrowserForCookies")
-    private BrowserEnum browser = BrowserEnum.UNSET;
-
-    @JsonProperty("DownloadYoutubeChannels")
-    private boolean downloadYoutubeChannels = false;
-
-    @JsonProperty("DownloadsPath")
-    private String downloadsPath = "";
-
-    //TODO
-    @JsonProperty("UIScale")
-    private double uiScale = 1.0;
-
-    @JsonProperty("Theme")
-    private ThemeEnum theme = ThemeEnum.DARK;
-
-    @JsonProperty("CaptureAnyLinks")
-    private boolean captureAnyLinks = false;
-
-    //TODO
-    @JsonProperty("ExtraYtDlpArguments")
-    private String extraYtDlpArguments = "";
-
-    @JsonProperty("DownloadAudioOnly")
-    private boolean downloadAudioOnly = false;
-
-    @JsonProperty("KeepWindowAlwaysOnTop")
-    private boolean keepWindowAlwaysOnTop = false;
-
-    @JsonProperty("MaximumSimultaneousDownloads")
-    private int maxSimultaneousDownloads = 3;
-
-    @JsonProperty("PlaylistDownloadOption")
-    private PlayListOptionEnum playlistDownloadOption = PlayListOptionEnum.ALWAYS_ASK;
-
-    @JsonProperty("DebugMode")
-    private boolean debugMode = false;
-
-    @JsonProperty("AutoStart")
-    private boolean autoStart = false;
-
-    @JsonProperty("ExitOnClose")
-    private boolean exitOnClose = false;
-
-    //TODO add more
-    @JsonProperty("Play Sounds")
-    private boolean playSounds = false;
-
 }
