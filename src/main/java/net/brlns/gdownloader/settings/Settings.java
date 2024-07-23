@@ -32,13 +32,13 @@ import net.brlns.gdownloader.settings.enums.*;
 public class Settings{
 
     @JsonProperty("MonitorClipboardForLinks")
-    private boolean monitorClipboardForLinks = false;
+    private boolean monitorClipboardForLinks = true;
 
     @JsonProperty("AutomaticUpdates")
     private boolean automaticUpdates = true;
 
     @JsonProperty("Language")
-    private LanguageEnum language = LanguageEnum.ENGLISH;
+    private LanguageEnum language = LanguageEnum.BRAZIL_PORTUGUESE;
 
     @JsonProperty("ReadCookies")
     private boolean readCookies = true;
@@ -56,6 +56,12 @@ public class Settings{
     @JsonProperty("UIScale")
     private double uiScale = 1.0;
 
+    @JsonProperty("FontSize")
+    private int fontSize = 14;
+
+    @JsonProperty("UseSystemFont")
+    private boolean useSystemFont;
+
     @JsonProperty("Theme")
     private ThemeEnum theme = ThemeEnum.DARK;
 
@@ -70,7 +76,7 @@ public class Settings{
     private boolean downloadAudioOnly = false;
 
     @JsonProperty("KeepWindowAlwaysOnTop")
-    private boolean keepWindowAlwaysOnTop = false;
+    private boolean keepWindowAlwaysOnTop = true;
 
     @JsonProperty("MaximumSimultaneousDownloads")
     private int maxSimultaneousDownloads = 3;

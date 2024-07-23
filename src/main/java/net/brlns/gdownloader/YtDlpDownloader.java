@@ -82,6 +82,12 @@ import static net.brlns.gdownloader.util.URLUtils.*;
 //TODO verify checksums during updates
 //TODO write a component factory for GUIManager
 //jpackage.app-version
+//FEEDBACK Font too small
+//FEEDBACK Icons too small
+//FEEDBACK Should choose to download video and audio independently
+//FEEDBACK Toobar icons should make their function more obvious
+//FEEDBACK first ctrl+c is still broken
+//FEEDBACK download only audio or only video
 /**
  * @author Gabriel / hstr0100 / vertx010
  */

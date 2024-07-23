@@ -27,6 +27,7 @@ import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.Transferable;
 import java.awt.datatransfer.UnsupportedFlavorException;
+import java.awt.desktop.QuitStrategy;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.geom.AffineTransform;
@@ -150,6 +151,12 @@ public final class GDownloader{
         log.info(Language.get("startup"));
 
         ThemeProvider.setTheme(config.getTheme());
+
+        if(!config.isUseSystemFont()){
+            setUIFont(new FontUIResource("Dialog", Font.BOLD, config.getFontSize()));
+        }else{
+            setUIFontSize(config.getFontSize());
+        }
 
         clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
         tray = SystemTray.getSystemTray();
@@ -920,16 +927,16 @@ public final class GDownloader{
     }
 
     private void processClipboardData(FlavorType flavorType, String data){
-        if(!lastClipboardState.containsKey(flavorType)){ // Ignore state during startup
+        if(!lastClipboardState.containsKey(flavorType)){
             lastClipboardState.put(flavorType, data);
-        }else{
-            String last = lastClipboardState.get(flavorType);
+        }
 
-            if(!last.equals(data)){
-                lastClipboardState.put(flavorType, data);
+        String last = lastClipboardState.get(flavorType);
 
-                handleClipboardInput(data);
-            }
+        if(!last.equals(data)){
+            lastClipboardState.put(flavorType, data);
+
+            handleClipboardInput(data);
         }
     }
 
@@ -1126,7 +1133,12 @@ public final class GDownloader{
                 //Default to Java's look and feel
             }
 
-            setUIFont(new FontUIResource("Dialog", Font.BOLD, 12));
+            try{
+                Desktop.getDesktop().enableSuddenTermination();
+                Desktop.getDesktop().setQuitStrategy(QuitStrategy.CLOSE_ALL_WINDOWS);
+            }catch(Exception e){
+                //Not windows
+            }
 
             try{
                 GlobalScreen.registerNativeHook();
@@ -1186,6 +1198,19 @@ public final class GDownloader{
 
                 if(value instanceof FontUIResource){
                     UIManager.put(key, fontResource);
+                }
+            });
+    }
+
+    public static void setUIFontSize(int size){
+        UIManager.getDefaults().keys().asIterator()
+            .forEachRemaining(key -> {
+                Object value = UIManager.get(key);
+
+                if(value instanceof FontUIResource resource){
+                    Font newFont = resource.deriveFont((float)size);
+
+                    UIManager.put(key, new FontUIResource(newFont));
                 }
             });
     }

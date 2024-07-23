@@ -109,7 +109,7 @@ public class SettingsPanel{
         };
 
         frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        frame.setSize(800, 500);
+        frame.setSize(950, 600);
         frame.setLayout(new BorderLayout());
         frame.setResizable(false);
         frame.setLocationRelativeTo(null);
@@ -174,14 +174,14 @@ public class SettingsPanel{
 
                 JButton button = new JButton();
                 button.setToolTipText(entry.getDisplayName());
-                button.setPreferredSize(new Dimension(100, 100));
+                button.setPreferredSize(new Dimension(120, 120));
                 button.setBorderPainted(false);
                 button.setContentAreaFilled(false);
                 button.setOpaque(true);
                 button.setFocusPainted(false);
                 button.setBackground(color(index == 0 ? SIDE_PANEL_SELECTED : SIDE_PANEL));
 
-                button.setIcon(manager.loadIcon(entry.getIcon(), ICON, 48));
+                button.setIcon(manager.loadIcon(entry.getIcon(), ICON, 60));
 
                 Runnable action = () -> {
                     cardLayout.show(contentPanel, String.valueOf(index));
@@ -548,6 +548,55 @@ public class SettingsPanel{
 
             gbcPanel.gridx = 1;
             generalSettingsPanel.add(checkBox, gbcPanel);
+        }
+
+        {
+            JLabel label = createLabel("settings.use_system_font", LIGHT_TEXT);
+
+            gbcPanel.gridx = 0;
+            gbcPanel.gridy++;
+            generalSettingsPanel.add(label, gbcPanel);
+
+            JCheckBox checkBox = new JCheckBox();
+            checkBox.setSelected(settings.isUseSystemFont());
+            checkBox.setToolTipText(get("settings.requires_restart.tooltip"));
+
+            checkBox.addActionListener((ActionEvent e) -> {
+                settings.setUseSystemFont(checkBox.isSelected());
+            });
+
+            customizeComponent(checkBox, BACKGROUND, LIGHT_TEXT);
+
+            gbcPanel.gridx = 1;
+            generalSettingsPanel.add(checkBox, gbcPanel);
+        }
+
+        {
+            JLabel label = createLabel("settings.font_size", LIGHT_TEXT);
+
+            gbcPanel.gridx = 0;
+            gbcPanel.gridy++;
+            generalSettingsPanel.add(label, gbcPanel);
+
+            //Not a lot of fault tolerance here
+            List<String> options = new ArrayList<>();
+            for(int i = 12; i <= 20; i++){
+                options.add(String.valueOf(i));
+            }
+
+            JComboBox<String> comboBox = new JComboBox<>(options.stream().toArray(String[]::new));
+            comboBox.setToolTipText(get("settings.requires_restart.tooltip"));
+            comboBox.setSelectedIndex(options.indexOf(String.valueOf(settings.getFontSize())));
+
+            comboBox.addActionListener((ActionEvent e) -> {
+                settings.setFontSize(Integer.parseInt(options.get(comboBox.getSelectedIndex())));
+            });
+
+            customizeComboBox(comboBox);
+
+            gbcPanel.gridx = 1;
+            gbcPanel.gridwidth = 2;
+            generalSettingsPanel.add(comboBox, gbcPanel);
         }
 
         {

@@ -477,7 +477,7 @@ public final class GUIManager{
         button.setFocusPainted(false);
         button.setForeground(color(textColor));
         button.setBackground(color(backgroundColor));
-        button.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
+        button.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
         return button;
     }
@@ -499,7 +499,7 @@ public final class GUIManager{
         };
 
         dialog.setAlwaysOnTop(true);
-        dialog.setSize(400, 260);
+        dialog.setSize(500, 300);
         dialog.setResizable(false);
         dialog.setLocationRelativeTo(null);
         dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
@@ -1133,7 +1133,7 @@ public final class GUIManager{
     private final Map<ImageCacheKey, ImageIcon> _imageCache = new HashMap<>();
 
     public ImageIcon loadIcon(String path, UIColors color){
-        return loadIcon(path, color, 32);
+        return loadIcon(path, color, 36);
     }
 
     public ImageIcon loadIcon(String path, UIColors color, int scale){
