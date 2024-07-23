@@ -60,7 +60,7 @@ public class Settings{
     private int fontSize = 14;
 
     @JsonProperty("UseSystemFont")
-    private boolean useSystemFont;
+    private boolean useSystemFont = false;
 
     @JsonProperty("Theme")
     private ThemeEnum theme = ThemeEnum.DARK;

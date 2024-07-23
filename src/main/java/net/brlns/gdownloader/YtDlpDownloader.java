@@ -85,7 +85,7 @@ import static net.brlns.gdownloader.util.URLUtils.*;
 //FEEDBACK Font too small
 //FEEDBACK Icons too small
 //FEEDBACK Should choose to download video and audio independently
-//FEEDBACK Toobar icons should make their function more obvious
+//FEEDBACK Toolbar icons should make their function more obvious
 //FEEDBACK first ctrl+c is still broken
 //FEEDBACK download only audio or only video
 /**
