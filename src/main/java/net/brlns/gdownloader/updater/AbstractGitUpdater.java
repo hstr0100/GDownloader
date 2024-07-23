@@ -33,6 +33,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
+import java.time.Duration;
 import java.util.Iterator;
 import java.util.Locale;
 import java.util.Set;
@@ -51,10 +52,14 @@ public abstract class AbstractGitUpdater{
 
     private static final HttpClient client = HttpClient.newBuilder()
         .followRedirects(HttpClient.Redirect.ALWAYS)
+        .connectTimeout(Duration.ofSeconds(5))
         .version(HttpClient.Version.HTTP_2)
         .build();
 
     protected final GDownloader main;
+
+    @Getter
+    private boolean updated = false;
 
     @Getter
     protected File executablePath;
@@ -109,7 +114,8 @@ public abstract class AbstractGitUpdater{
         throw new NoFallbackAvailableException();
     }
 
-    public final void init() throws Exception{
+    public final void check() throws Exception{
+        updated = false;
         File workDir = main.getWorkDirectory();
 
         if(!main.getConfig().isAutomaticUpdates()){
@@ -174,6 +180,8 @@ public abstract class AbstractGitUpdater{
 
             createLock(lock, lockTag);
 
+            updated = true;
+
             log.info("Downloaded {}", executablePath);
         }catch(Exception e){
             log.error("Failed to update {} - {}", getRepo(), e.getCause());
@@ -225,6 +233,7 @@ public abstract class AbstractGitUpdater{
 
         HttpRequest request = HttpRequest.newBuilder()
             .uri(URI.create(apiUrl))
+            .timeout(Duration.ofSeconds(5))
             .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36")
             .build();
 
@@ -263,6 +272,7 @@ public abstract class AbstractGitUpdater{
 
         HttpRequest request = HttpRequest.newBuilder()
             .uri(URI.create(urlIn))
+            .timeout(Duration.ofSeconds(10))
             .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36")
             .build();
 

@@ -59,7 +59,6 @@ import net.brlns.gdownloader.util.Nullable;
 import static net.brlns.gdownloader.Language.*;
 import static net.brlns.gdownloader.util.URLUtils.*;
 
-//TODO first clipboard copy tends to fail
 //TODO max simultaneous downloads should be independent per website
 //TODO we should only grab clipboard AFTER the button is clicked
 //TODO expand thumbails a little when window is resized
@@ -67,28 +66,21 @@ import static net.brlns.gdownloader.util.URLUtils.*;
 //TODO winamp icon for mp3's in disc
 //TODO add button to convert individually
 //TODO output filename settings
-//TODO shutdown and startup hook to delete cache folder
 //TODO add custom ytdlp filename modifiers to the settings
 //TODO TEST - empty queue should delete directories too
-//TODO check if empty spaces in filenames are ok
-//TODO restart program on language change
 //TODO scale on resolution DPI
-//TODO should we move the window back up when a new card is added?
 //TODO save last window size in config
-//TODO setting to download channels as playlists
 //TODO keep older versions of ytdlp and retry failed downloads against them
-//TODO open url in default browser for linux, don't try to guess it
 //TODO d&d files for conversion
 //TODO extra ytdlp args
 //TODO core updater
 //TODO media converter
-//TODO right click program to exit
 //TODO rework WebP support for modular system
-//TODO prefer to NOT create the download folder until a download is happening
 //TODO output directories for media converter
-//TODO progressbar is broken on windows / @TODO 2024-07-22 test if fix worked
 //TODO generate version class
 //TODO test restarting
+//TODO verify checksums during updates
+//jpackage.app-version
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
@@ -126,6 +118,12 @@ public class YtDlpDownloader{
         return downloadsBlocked.get();
     }
 
+    public void block(){
+        downloadsBlocked.set(true);
+
+        fireListeners();
+    }
+
     public void unblock(){
         downloadsBlocked.set(false);
 
@@ -151,7 +149,8 @@ public class YtDlpDownloader{
     public CompletableFuture<Boolean> captureUrl(@Nullable String inputUrl, PlayListOptionEnum playlistOption){
         CompletableFuture<Boolean> future = new CompletableFuture<>();
 
-        if(downloadsBlocked.get() || inputUrl == null || isGarbageUrl(inputUrl) || WebFilterEnum.isYoutubeChannel(inputUrl)){//Nope, maybe as a setting later
+        if(downloadsBlocked.get() || inputUrl == null || isGarbageUrl(inputUrl)
+            || WebFilterEnum.isYoutubeChannel(inputUrl) && !main.getConfig().isDownloadYoutubeChannels()){
             future.complete(false);
             return future;
         }
@@ -316,6 +315,14 @@ public class YtDlpDownloader{
         return downloadsRunning.get();
     }
 
+    public void toggleDownloads(){
+        if(!isRunning()){
+            startDownloads();
+        }else{
+            stopDownloads();
+        }
+    }
+
     public void startDownloads(){
         if(!downloadsBlocked.get()){
             downloadsRunning.set(true);
@@ -416,7 +423,9 @@ public class YtDlpDownloader{
                 );
 
                 if(!list.isEmpty()){
-                    VideoInfo info = GDownloader.OBJECT_MAPPER.readValue(list.get(0), VideoInfo.class);
+                    String json = stripGarbageFromJson(list.get(0));
+
+                    VideoInfo info = GDownloader.OBJECT_MAPPER.readValue(json, VideoInfo.class);
 
                     queueEntry.setVideoInfo(info);
                 }
@@ -464,7 +473,7 @@ public class YtDlpDownloader{
 
                     File finalPath = main.getOrCreateDownloadsDirectory();
 
-                    File tmpPath = GDownloader.getOrCreate(finalPath, "cache", String.valueOf(next.getDownloadId()));
+                    File tmpPath = GDownloader.getOrCreate(finalPath, GDownloader.CACHE_DIRETORY_NAME, String.valueOf(next.getDownloadId()));
                     next.setTmpDirectory(tmpPath);
 
                     List<String> args = new ArrayList<>();
@@ -634,10 +643,10 @@ public class YtDlpDownloader{
                         case CRUNCHYROLL:
                         case DROPOUT:
                             if(!main.getConfig().isReadCookies()){
-                                log.warn("Cookies Required for this website {}", next.getOriginalUrl());
+                                log.warn("Cookies required for this website {}", next.getOriginalUrl());
                             }
 
-                        //fall
+                        //fall-through
                         default:
                             args.addAll(Arrays.asList(
                                 "-o",
@@ -784,6 +793,12 @@ public class YtDlpDownloader{
         return input;
     }
 
+    private String stripGarbageFromJson(String input){
+        int braceIndex = input.indexOf('{');
+
+        return braceIndex == -1 ? input : input.substring(braceIndex);
+    }
+
     @Getter
     private enum DownloadStatus implements ISettingsEnum{
         QUERYING("enums.download_status.querying"),
@@ -891,6 +906,7 @@ public class YtDlpDownloader{
 
             if(thumb != null && thumb.startsWith("http")){
                 mediaCard.setThumbnailAndDuration(thumb, videoInfoIn.getDuration());
+                mediaCard.setThumbnailTooltip(url);
             }
         }
 
@@ -906,6 +922,7 @@ public class YtDlpDownloader{
 
         public void updateStatus(DownloadStatus status, String text){
             mediaCard.setLabel(webFilter.getDisplayName(), getTitle(), truncate(text, 50));
+            mediaCard.setTooltip(text);
 
             if(status != downloadStatus){
                 downloadStatus = status;

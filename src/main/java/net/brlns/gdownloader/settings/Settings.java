@@ -64,6 +64,9 @@ public class Settings{
         return settings;
     }
 
+    @JsonProperty("MonitorClipboardForLinks")
+    private boolean monitorClipboardForLinks = false;
+
     @JsonProperty("AutomaticUpdates")
     private boolean automaticUpdates = true;
 
@@ -75,6 +78,9 @@ public class Settings{
 
     @JsonProperty("BrowserForCookies")
     private BrowserEnum browser = BrowserEnum.UNSET;
+
+    @JsonProperty("DownloadYoutubeChannels")
+    private boolean downloadYoutubeChannels = false;
 
     @JsonProperty("DownloadsPath")
     private String downloadsPath = "";

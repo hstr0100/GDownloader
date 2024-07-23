@@ -238,6 +238,13 @@ public class SettingsPanel{
                         e -> main.restart()
                     ));
 
+                    leftPanel.add(manager.createButton(
+                        manager.loadIcon("/assets/update.png", ICON, 24),
+                        manager.loadIcon("/assets/update.png", ICON_HOVER, 24),
+                        "gui.update.tooltip",
+                        e -> main.checkForUpdates()
+                    ));
+
                     bottomPanel.add(leftPanel, BorderLayout.WEST);
                 }
 
@@ -619,7 +626,7 @@ public class SettingsPanel{
             downloadSettingsPanel.add(label, gbcPanel);
 
             JTextField downloadPathField = new JTextField(20);
-            downloadPathField.setText(main.getOrCreateDownloadsDirectory().getAbsolutePath());
+            downloadPathField.setText(main.getDownloadsDirectory().getAbsolutePath());
             downloadPathField.setForeground(color(TEXT_AREA_FOREGROUND));
             downloadPathField.setBackground(color(TEXT_AREA_BACKGROUND));
             downloadPathField.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
@@ -759,6 +766,26 @@ public class SettingsPanel{
 
             gbcPanel.gridx = 1;
             downloadSettingsPanel.add(comboBox, gbcPanel);
+        }
+
+        {
+            JLabel label = createLabel("settings.download_youtube_channels", LIGHT_TEXT);
+
+            gbcPanel.gridx = 0;
+            gbcPanel.gridy++;
+            downloadSettingsPanel.add(label, gbcPanel);
+
+            JCheckBox checkBox = new JCheckBox();
+            checkBox.setSelected(settings.isDownloadYoutubeChannels());
+
+            checkBox.addActionListener((ActionEvent e) -> {
+                settings.setDownloadYoutubeChannels(checkBox.isSelected());
+            });
+
+            customizeComponent(checkBox, BACKGROUND, LIGHT_TEXT);
+
+            gbcPanel.gridx = 1;
+            downloadSettingsPanel.add(checkBox, gbcPanel);
         }
 
         {

@@ -41,7 +41,7 @@ public class URLUtils{
                 }
             }
 
-            String filtered = removeQueryParam(youtubeUrl, "list");
+            String filtered = removeParameter(youtubeUrl, "list");
             if(filtered != null){
                 log.info("FILTERED: " + filtered);
                 return filtered;
@@ -91,7 +91,7 @@ public class URLUtils{
         return null;
     }
 
-    public static String removeQueryParam(String urlString, String paramToRemove) throws Exception{
+    public static String removeParameter(String urlString, String parameterName) throws Exception{
         URL url = new URI(urlString).toURL();
         String query = url.getQuery();
 
@@ -101,7 +101,7 @@ public class URLUtils{
 
         Map<String, String> queryParams = parseQueryString(query);
 
-        queryParams.remove(paramToRemove);
+        queryParams.remove(parameterName);
 
         String newQuery = buildQueryString(queryParams);
 

@@ -239,11 +239,14 @@ public final class GUIManager{
             loadIcon("/assets/copy-link.png", ICON_HOVER),
             "gui.start_clipboard_monitor.tooltip",
             "gui.stop_clipboard_monitor.tooltip",
-            main::isWatchClipboard,
+            main.getConfig()::isMonitorClipboardForLinks,
             () -> {
-                main.setWatchClipboard(!main.isWatchClipboard());
+                main.getConfig().setMonitorClipboardForLinks(!main.getConfig().isMonitorClipboardForLinks());
 
                 updateQueuePanelMessage();
+                main.updateConfig();
+
+                main.resetClipboard();
             }
         ));
 
@@ -343,7 +346,7 @@ public final class GUIManager{
 
             JLabel label = (JLabel)panel.getComponent(0);
 
-            if(main.isWatchClipboard()){
+            if(main.getConfig().isMonitorClipboardForLinks()){
                 label.setText(get("gui.empty_queue"));
             }else{
                 label.setText(get("gui.empty_queue.enable_clipboard"));

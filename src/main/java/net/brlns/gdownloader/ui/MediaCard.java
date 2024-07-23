@@ -61,6 +61,14 @@ public class MediaCard{
         }
     }
 
+    public void setTooltip(String tooltipText){
+        mediaLabel.setToolTipText(tooltipText);
+    }
+
+    public void setThumbnailTooltip(String tooltipText){
+        thumbnailPanel.setToolTipText(tooltipText);
+    }
+
     public void setLabel(String... label){
         mediaLabel.setText(GUIManager.wrapText(50, label));
     }
@@ -128,7 +136,7 @@ public class MediaCard{
                 log.error("ImageIO.read returned null for {}", url);
             }
         }catch(IOException | URISyntaxException e){
-            log.error("ImageIO.read exception {}", e.getLocalizedMessage());
+            log.error("ImageIO.read exception {} {}", e.getLocalizedMessage(), url);
         }
     }
 }

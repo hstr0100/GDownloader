@@ -51,7 +51,6 @@ import java.util.stream.Stream;
 import javax.swing.UIManager;
 import javax.swing.plaf.FontUIResource;
 import lombok.Getter;
-import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.settings.Settings;
 import net.brlns.gdownloader.settings.enums.ArchVersionEnum;
@@ -86,6 +85,8 @@ public final class GDownloader{
      */
     public static final String REGISTRY_APP_NAME = "GDownloader";//Don't change
 
+    public static final String CACHE_DIRETORY_NAME = "gdownloader_cache";
+
     public static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     private final SystemTray tray;
@@ -95,10 +96,6 @@ public final class GDownloader{
 
     @Getter
     private Settings config;
-
-    @Getter
-    @Setter
-    private boolean watchClipboard = true;
 
     @Getter
     private YtDlpDownloader downloadManager;
@@ -175,7 +172,10 @@ public final class GDownloader{
 
             tray.add(trayIcon);
 
-            checkForUpdates();
+            ytDlpUpdater = new YtDlpUpdater(this);
+            ffmpegUpdater = new FFMpegUpdater(this);
+
+            checkForUpdates(true);
 
             updateStartupStatus();
 
@@ -228,6 +228,12 @@ public final class GDownloader{
 
             initialized = true;
             //SysTray is daemon
+
+            threadPool.execute(() -> {
+                File cachePath = new File(getDownloadsDirectory(), CACHE_DIRETORY_NAME);
+
+                deleteRecursively(cachePath.toPath());
+            });
         }catch(Exception e){
             handleException(e);
         }
@@ -237,16 +243,37 @@ public final class GDownloader{
         guiManager.wakeUp();
     }
 
-    private void checkForUpdates(){
+    public boolean checkForUpdates(){
+        return checkForUpdates(false);
+    }
+
+    public boolean checkForUpdates(boolean firstBoot){
+        if(!firstBoot){
+            if(downloadManager.isBlocked()){//This means we are already checking for updates
+                return false;
+            }
+
+            downloadManager.block();
+            downloadManager.stopDownloads();
+
+            guiManager.showMessage(
+                get("gui.update.notification_title"),
+                get("gui.update.checking"),
+                3500,
+                GUIManager.MessageType.INFO,
+                false
+            );
+        }
+
         CountDownLatch latch = new CountDownLatch(2);
 
-        ytDlpUpdater = new YtDlpUpdater(this);
         threadPool.execute(() -> {
             try{
-                ytDlpUpdater.init();
+                ytDlpUpdater.check();
             }catch(NoFallbackAvailableException e){
-                if(ytDlpUpdater.getExecutablePath() == null || !ytDlpUpdater.getExecutablePath().exists()){
-                    log.error("Unsupported OS for YT-DLP");
+                log.error("Unsupported OS for YT-DLP");
+
+                if(firstBoot){
                     System.exit(0);
                 }
             }catch(Exception e){
@@ -254,21 +281,21 @@ public final class GDownloader{
 
                 if(ytDlpUpdater.getExecutablePath() == null || !ytDlpUpdater.getExecutablePath().exists()){
                     log.error("Failed to initialize YT-DLP");
-                    System.exit(0);
+
+                    if(firstBoot){
+                        System.exit(0);
+                    }
                 }
             }finally{
                 latch.countDown();
             }
         });
 
-        ffmpegUpdater = new FFMpegUpdater(this);
         threadPool.execute(() -> {
             try{
-                ffmpegUpdater.init();
+                ffmpegUpdater.check();
             }catch(NoFallbackAvailableException e){
-                if(ffmpegUpdater.getExecutablePath() == null || !ffmpegUpdater.getExecutablePath().exists()){
-                    log.error("Unsupported OS for FFMPEG, install it manually");
-                }
+                log.error("Unsupported OS for FFMPEG, install it manually");
             }catch(Exception e){
                 handleException(e);
 
@@ -287,10 +314,24 @@ public final class GDownloader{
                 log.info("Finished checking for updates");
 
                 downloadManager.unblock();
+
+                if(!firstBoot){
+                    guiManager.showMessage(
+                        get("gui.update.notification_title"),
+                        get((ytDlpUpdater.isUpdated() || ffmpegUpdater.isUpdated()
+                            ? "gui.update.new_updates_installed"
+                            : "gui.update.updated")),
+                        2500,
+                        GUIManager.MessageType.INFO,
+                        false
+                    );
+                }
             }catch(InterruptedException e){
                 //Ignore
             }
         });
+
+        return true;
     }
 
     /**
@@ -298,6 +339,10 @@ public final class GDownloader{
      */
     private PopupMenu buildPopupMenu(){
         PopupMenu popup = new PopupMenu();
+
+        popup.add(buildMenuItem(get("gui.toggle_downloads"), (ActionEvent e) -> {
+            downloadManager.toggleDownloads();
+        }));
 
         popup.add(buildMenuItem(get("settings.sidebar_title"), (ActionEvent e) -> {
             guiManager.displaySettingsPanel();
@@ -574,7 +619,7 @@ public final class GDownloader{
         try{
             runtime.exec(new String[]{launchString});
         }catch(IOException e){
-            handleException(e);
+            log.error("Cannot restart {}", e.getLocalizedMessage());
         }
     }
 
@@ -690,6 +735,14 @@ public final class GDownloader{
     }
 
     public File getOrCreateDownloadsDirectory(){
+        return getDownloadsDirectory(true);
+    }
+
+    public File getDownloadsDirectory(){
+        return getDownloadsDirectory(false);
+    }
+
+    public File getDownloadsDirectory(boolean create){
         File file;
         if(!config.getDownloadsPath().isEmpty()){
             file = new File(config.getDownloadsPath());
@@ -697,8 +750,10 @@ public final class GDownloader{
             file = new File(getDownloadsPath(), REGISTRY_APP_NAME);
         }
 
-        if(!file.exists()){
-            file.mkdirs();
+        if(create){
+            if(!file.exists()){
+                file.mkdirs();
+            }
         }
 
         return file;
@@ -712,7 +767,7 @@ public final class GDownloader{
     }
 
     public void setDownloadsPath(File newDir){
-        File oldDir = getOrCreateDownloadsDirectory();
+        File oldDir = getDownloadsDirectory();
         if(!oldDir.equals(newDir)){
             downloadManager.stopDownloads();
 
@@ -753,16 +808,8 @@ public final class GDownloader{
         return _cachedWorkDir;
     }
 
-    private boolean resetOnce = false;
-
     //TODO refactor clipboard
-    private void resetClipboard(){
-        if(resetOnce){
-            return;
-        }
-
-        resetOnce = true;
-
+    public void resetClipboard(){
         for(FlavorType type : new HashSet<>(lastClipboardState.keySet())){
             lastClipboardState.put(type, "reset");
         }
@@ -775,7 +822,7 @@ public final class GDownloader{
     public boolean updateClipboard(Transferable transferable, boolean force){
         boolean success = false;
 
-        if(watchClipboard || force){
+        if(config.isMonitorClipboardForLinks() || force){
             if(transferable == null && !force){
                 transferable = clipboard.getContents(null);
             }
@@ -1105,7 +1152,7 @@ public final class GDownloader{
             log.info("Started");
 
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-                File cachePath = new File(instance.getOrCreateDownloadsDirectory(), "cache");
+                File cachePath = new File(instance.getDownloadsDirectory(), CACHE_DIRETORY_NAME);
 
                 deleteRecursively(cachePath.toPath());
 
