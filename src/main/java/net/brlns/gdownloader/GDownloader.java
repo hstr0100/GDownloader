@@ -74,8 +74,6 @@ import static net.brlns.gdownloader.Language.*;
 /**
  * GDownloader - GUI wrapper for yt-dlp
  *
- * As of 2024-07-17 only tested in Kubuntu
- *
  * @author Gabriel / hstr0100 / vertx010
  */
 @Slf4j
