@@ -20,6 +20,8 @@ import java.awt.Component;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import javax.swing.*;
 import javax.swing.plaf.basic.BasicCheckBoxUI;
 
@@ -43,6 +45,18 @@ public class CustomCheckBoxUI extends BasicCheckBoxUI{
         checkBox.setBorder(UIManager.getBorder("CheckBox.border"));
         checkBox.setIcon(new CustomCheckBoxIcon());
         checkBox.setSelectedIcon(new CustomCheckBoxIcon());
+
+        checkBox.addMouseListener(new MouseAdapter(){
+            @Override
+            public void mouseEntered(MouseEvent e){
+                checkBox.repaint();
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e){
+                checkBox.repaint();
+            }
+        });
     }
 
     @Override
@@ -63,11 +77,13 @@ public class CustomCheckBoxUI extends BasicCheckBoxUI{
             AbstractButton button = (AbstractButton)c;
             ButtonModel model = button.getModel();
 
+            g.setColor(button.getMousePosition() != null
+                ? color(CHECK_BOX_HOVER)
+                : color(SLIDER_FOREGROUND));
+
             if(model.isSelected()){
-                g.setColor(color(SLIDER_FOREGROUND));
                 g.fillOval(x, y, SIZE, SIZE);
             }else{
-                g.setColor(color(SLIDER_FOREGROUND));
                 g.drawOval(x, y, SIZE - 1, SIZE - 1);
             }
         }

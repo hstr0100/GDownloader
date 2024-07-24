@@ -49,6 +49,7 @@ public class LightTheme extends AbstractTheme{
         add(BUTTON_HOVER, new Color(128, 128, 128));
         add(SCROLL_BAR_FOREGROUND, new Color(128, 128, 128));
         add(SLIDER_FOREGROUND, new Color(100, 100, 100));
+        add(CHECK_BOX_HOVER, new Color(80, 80, 80));
         add(SIDE_PANEL_SELECTED, new Color(218, 218, 218));
         add(TOOLTIP_BACKGROUND, new Color(230, 230, 230));
         add(TOOLTIP_FOREGROUND, Color.DARK_GRAY);
