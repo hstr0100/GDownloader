@@ -37,8 +37,11 @@ public class Settings{
     @JsonProperty("AutomaticUpdates")
     private boolean automaticUpdates = true;
 
+    @JsonProperty("LanguageDefined")
+    private boolean languageDefined = false;
+
     @JsonProperty("Language")
-    private LanguageEnum language = LanguageEnum.BRAZIL_PORTUGUESE;
+    private LanguageEnum language = LanguageEnum.ENGLISH;
 
     @JsonProperty("ReadCookies")
     private boolean readCookies = true;

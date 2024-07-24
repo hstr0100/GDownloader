@@ -1024,7 +1024,7 @@ public final class GUIManager{
 
         MediaCard mediaCard = new MediaCard(id, card, mediaNameLabel, thumbnailPanel, progressBar);
 
-        card.addMouseListener(new MouseAdapter(){
+        MouseAdapter listener = new MouseAdapter(){
             @Override
             public void mouseClicked(MouseEvent e){
                 if(mediaCard.getOnClick() != null){
@@ -1041,7 +1041,10 @@ public final class GUIManager{
             public void mouseExited(MouseEvent e){
                 card.setBackground(color(MEDIA_CARD));
             }
-        });
+        };
+
+        card.addMouseListener(listener);
+        mediaNameLabel.addMouseListener(listener);
 
         mediaCards.put(id, mediaCard);
 

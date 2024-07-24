@@ -108,6 +108,7 @@ jlink {
                 '--win-shortcut'
             ]
         } else if (currentOs.linux) {
+            //AppImage not yet supported by jpackage
             installerType = 'deb'
             installerOptions += [
                 '--resource-dir', 'build/jpackage/GDownloader/lib/app',

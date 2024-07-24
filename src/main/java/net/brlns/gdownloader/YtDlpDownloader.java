@@ -86,6 +86,7 @@ import static net.brlns.gdownloader.util.URLUtils.*;
 //FEEDBACK Icons too small
 //FEEDBACK Should choose to download video and audio independently on each card
 //TODO maybe add notifications for each toggled option
+//TODO check updates on a timer
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
@@ -161,6 +162,7 @@ public class YtDlpDownloader{
             return future;
         }
 
+        //TODO too many nested blocks
         for(WebFilterEnum webFilter : WebFilterEnum.values()){
             if(webFilter == WebFilterEnum.DEFAULT && (main.getConfig().isCaptureAnyLinks() || force) || webFilter.getPattern().apply(inputUrl)){
                 if(!capturedLinks.contains(inputUrl)){
@@ -870,8 +872,7 @@ public class YtDlpDownloader{
 
                     //Video files get priority
                     for(VideoContainerEnum container : VideoContainerEnum.values()){
-                        if(main.getConfig().isDownloadVideo() && fileName.endsWith(")." + container.getValue())
-                            || !main.getConfig().isDownloadVideo() && fileName.endsWith(").mp3")){
+                        if(main.getConfig().isDownloadVideo() && fileName.endsWith(")." + container.getValue())){
                             main.open(file);
                             return;
                         }
