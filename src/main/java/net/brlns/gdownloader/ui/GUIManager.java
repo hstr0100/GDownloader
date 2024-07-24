@@ -26,6 +26,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
+import java.awt.KeyEventDispatcher;
+import java.awt.KeyboardFocusManager;
+import java.awt.event.KeyEvent;
+import javax.swing.JFrame;
+import javax.swing.JPanel;
+
 import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -804,6 +810,19 @@ public final class GUIManager{
                 public void windowDeiconified(WindowEvent e){
                     adjustMessageWindowPosition();
                 }
+            });
+
+            KeyboardFocusManager manager = KeyboardFocusManager.getCurrentKeyboardFocusManager();
+            manager.addKeyEventDispatcher((KeyEvent e) -> {
+                if(e.getID() == KeyEvent.KEY_PRESSED){
+                    if((e.getKeyCode() == KeyEvent.VK_V) && ((e.getModifiersEx() & KeyEvent.CTRL_DOWN_MASK) != 0)){
+                        main.resetClipboard();
+
+                        main.updateClipboard(null, true);
+                    }
+                }
+
+                return false;
             });
 
             adjustWindowSize();

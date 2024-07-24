@@ -30,7 +30,7 @@ public enum WebFilterEnum implements ISettingsEnum{
     YOUTUBE_PLAYLIST("Youtube - PLAYLIST", s -> s.contains("youtube.com") && isYoutubePlaylist(s)),
     TWITCH("Twitch", s -> s.contains("twitch.tv")),//best[height<=480]+Audio_Only
     FACEBOOK("Facebook", s -> s.contains("facebook.com")),
-    TWITTER("Twitter", s -> s.contains("twitter") || s.contains("x.com")),
+    TWITTER("X/Twitter", s -> s.contains("twitter") || s.contains("x.com")),//It was such a better name
     CRUNCHYROLL("Crunchyroll", s -> s.contains("crunchyroll.com")),
     DROPOUT("Dropout", s -> s.contains("dropout.tv")),
     DEFAULT("Download", s -> false);

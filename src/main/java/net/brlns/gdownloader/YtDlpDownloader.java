@@ -81,6 +81,7 @@ import static net.brlns.gdownloader.util.URLUtils.*;
 //TODO test restarting
 //TODO verify checksums during updates
 //TODO write a component factory for GUIManager
+//TODO git actions build
 //jpackage.app-version
 //FEEDBACK Font too small
 //FEEDBACK Icons too small
@@ -150,11 +151,11 @@ public class YtDlpDownloader{
             || inputUrl.endsWith(".webp");
     }
 
-    public CompletableFuture<Boolean> captureUrl(@Nullable String inputUrl){
-        return captureUrl(inputUrl, main.getConfig().getPlaylistDownloadOption());
+    public CompletableFuture<Boolean> captureUrl(@Nullable String inputUrl, boolean force){
+        return captureUrl(inputUrl, force, main.getConfig().getPlaylistDownloadOption());
     }
 
-    public CompletableFuture<Boolean> captureUrl(@Nullable String inputUrl, PlayListOptionEnum playlistOption){
+    public CompletableFuture<Boolean> captureUrl(@Nullable String inputUrl, boolean force, PlayListOptionEnum playlistOption){
         CompletableFuture<Boolean> future = new CompletableFuture<>();
 
         if(downloadsBlocked.get() || inputUrl == null || isGarbageUrl(inputUrl)
@@ -164,7 +165,7 @@ public class YtDlpDownloader{
         }
 
         for(WebFilterEnum webFilter : WebFilterEnum.values()){
-            if(webFilter == WebFilterEnum.DEFAULT && main.getConfig().isCaptureAnyLinks() || webFilter.getPattern().apply(inputUrl)){
+            if(webFilter == WebFilterEnum.DEFAULT && (main.getConfig().isCaptureAnyLinks() || force) || webFilter.getPattern().apply(inputUrl)){
                 if(!capturedLinks.contains(inputUrl)){
                     String filteredUrl;
 
@@ -192,7 +193,7 @@ public class YtDlpDownloader{
                                         capturedPlaylists.add(playlist);
                                     }
 
-                                    return captureUrl(filterVideo(inputUrl));
+                                    return captureUrl(filterVideo(inputUrl), force);
                                 }
 
                                 case ALWAYS_ASK:
@@ -207,7 +208,7 @@ public class YtDlpDownloader{
                                                     main.updateConfig();
                                                 }
 
-                                                captureUrl(playlist, PlayListOptionEnum.DOWNLOAD_PLAYLIST)
+                                                captureUrl(playlist, force, PlayListOptionEnum.DOWNLOAD_PLAYLIST)
                                                     .whenComplete((Boolean result, Throwable e) -> {
                                                         if(e != null){
                                                             main.handleException(e);
@@ -223,7 +224,7 @@ public class YtDlpDownloader{
                                                     main.updateConfig();
                                                 }
 
-                                                captureUrl(inputUrl, PlayListOptionEnum.DOWNLOAD_SINGLE)
+                                                captureUrl(inputUrl, force, PlayListOptionEnum.DOWNLOAD_SINGLE)
                                                     .whenComplete((Boolean result, Throwable e) -> {
                                                         if(e != null){
                                                             main.handleException(e);
@@ -250,7 +251,7 @@ public class YtDlpDownloader{
                                         }else{
                                             //TODO I'm assuming this is a wanted behavior - having subsequent links being treated as individual videos
                                             //It's odd that you'd download a whole playlist and then an individual video from it though, maybe investigate use cases
-                                            return captureUrl(filterVideo(inputUrl));
+                                            return captureUrl(filterVideo(inputUrl), force);
                                         }
                                     }
 

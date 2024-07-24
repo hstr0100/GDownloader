@@ -828,7 +828,7 @@ public final class GDownloader{
         boolean success = false;
 
         if(config.isMonitorClipboardForLinks() || force){
-            if(transferable == null && !force){
+            if(transferable == null){
                 transferable = clipboard.getContents(null);
             }
 
@@ -843,7 +843,7 @@ public final class GDownloader{
                     if(!force){
                         processClipboardData(FlavorType.STRING, data);
                     }else{
-                        handleClipboardInput(data);
+                        handleClipboardInput(data, force);
                     }
 
                     success = true;
@@ -859,7 +859,7 @@ public final class GDownloader{
                     if(!force){
                         processClipboardData(FlavorType.HTML, data);
                     }else{
-                        handleClipboardInput(data);
+                        handleClipboardInput(data, force);
                     }
 
                     success = true;
@@ -872,13 +872,13 @@ public final class GDownloader{
         return success;
     }
 
-    private void handleClipboardInput(String data){
+    private void handleClipboardInput(String data, boolean force){
         threadPool.execute(() -> {
             List<CompletableFuture<Boolean>> list = new ArrayList<>();
 
             for(String url : extractUrlsFromString(data)){
                 if(url.startsWith("http")){
-                    list.add(downloadManager.captureUrl(url));
+                    list.add(downloadManager.captureUrl(url, force));
                 }
 
                 if(url.startsWith("magnet")){
@@ -934,7 +934,7 @@ public final class GDownloader{
         if(!last.equals(data)){
             lastClipboardState.put(flavorType, data);
 
-            handleClipboardInput(data);
+            handleClipboardInput(data, false);
         }
     }
 

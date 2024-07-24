@@ -112,7 +112,7 @@ jlink {
             installerOptions += [
                 '--resource-dir', 'build/jpackage/GDownloader/lib/app',
                 '--linux-package-name', 'gdownloader-linux',
-                '--linux-app-category', 'Internet',
+                '--linux-app-category', 'Qt;KDE;Internet;',
                 '--linux-menu-group', 'Qt;KDE;Internet;',
                 '--linux-deb-maintainer', 'hstr0100@brlns.net',
                 '--linux-rpm-license-type', 'GPLv3',
