@@ -235,7 +235,11 @@ public class SettingsPanel{
                         manager.loadIcon("/assets/restart.png", ICON, 24),
                         manager.loadIcon("/assets/restart.png", ICON_HOVER, 24),
                         "gui.restart.tooltip",
-                        e -> main.restart()
+                        e -> {
+                            saveSettings();
+
+                            main.restart();
+                        }
                     ));
 
                     leftPanel.add(manager.createButton(
@@ -280,30 +284,7 @@ public class SettingsPanel{
 
                     saveButton.setPreferredSize(new Dimension(200, 30));
                     saveButton.addActionListener((ActionEvent e) -> {
-                        if(!settings.getDownloadsPath().isEmpty()
-                            && !main.getConfig().getDownloadsPath().equals(settings.getDownloadsPath())){
-
-                            File file = new File(settings.getDownloadsPath());
-                            if(file.exists() && file.canWrite()){
-                                main.setDownloadsPath(file);//We are uselessly calling on updateConfig() here, but should be no problem
-                            }else{
-                                settings.setDownloadsPath("");
-
-                                main.getGuiManager().showMessage(
-                                    get("gui.error_popup_title"),
-                                    get("gui.error_download_path_not_writable", file.getAbsolutePath()),
-                                    4000,
-                                    GUIManager.MessageType.ERROR,
-                                    true);
-
-                                log.error("Selected path not writable {}", file);
-                            }
-                        }
-
-                        main.updateConfig(settings);
-
-                        main.getGuiManager().refreshWindow();
-                        main.updateStartupStatus();
+                        saveSettings();
 
                         frame.dispose();
                         frame = null;
@@ -363,6 +344,33 @@ public class SettingsPanel{
         cardLayout.show(contentPanel, String.valueOf(0));
 
         frame.setVisible(true);
+    }
+
+    private void saveSettings(){
+        if(!settings.getDownloadsPath().isEmpty()
+            && !main.getConfig().getDownloadsPath().equals(settings.getDownloadsPath())){
+
+            File file = new File(settings.getDownloadsPath());
+            if(file.exists() && file.canWrite()){
+                main.setDownloadsPath(file);//We are uselessly calling on updateConfig() here, but should be no problem
+            }else{
+                settings.setDownloadsPath("");
+
+                main.getGuiManager().showMessage(
+                    get("gui.error_popup_title"),
+                    get("gui.error_download_path_not_writable", file.getAbsolutePath()),
+                    4000,
+                    GUIManager.MessageType.ERROR,
+                    true);
+
+                log.error("Selected path not writable {}", file);
+            }
+        }
+
+        main.updateConfig(settings);
+
+        main.getGuiManager().refreshWindow();
+        main.updateStartupStatus();
     }
 
     private void reloadSettings(){
