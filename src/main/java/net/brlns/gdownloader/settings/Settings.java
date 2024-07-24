@@ -72,8 +72,11 @@ public class Settings{
     @JsonProperty("ExtraYtDlpArguments")
     private String extraYtDlpArguments = "";
 
-    @JsonProperty("DownloadAudioOnly")
-    private boolean downloadAudioOnly = false;
+    @JsonProperty("DownloadAudio")
+    private boolean downloadAudio = true;
+
+    @JsonProperty("DownloadVideo")
+    private boolean downloadVideo = true;
 
     @JsonProperty("KeepWindowAlwaysOnTop")
     private boolean keepWindowAlwaysOnTop = true;

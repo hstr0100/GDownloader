@@ -83,12 +83,9 @@ import static net.brlns.gdownloader.util.URLUtils.*;
 //TODO write a component factory for GUIManager
 //TODO git actions build
 //jpackage.app-version
-//FEEDBACK Font too small
 //FEEDBACK Icons too small
-//FEEDBACK Should choose to download video and audio independently
-//FEEDBACK Toolbar icons should make their function more obvious
-//FEEDBACK first ctrl+c is still broken
-//FEEDBACK download only audio or only video
+//FEEDBACK Should choose to download video and audio independently on each card
+//TODO maybe add notifications for each toggled option
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
@@ -278,7 +275,7 @@ public class YtDlpDownloader{
                     if(capturedLinks.add(filteredUrl)){
                         capturedLinks.add(inputUrl);
 
-                        MediaCard mediaCard = main.getGuiManager().addMediaCard(!main.getConfig().isDownloadAudioOnly(), "");
+                        MediaCard mediaCard = main.getGuiManager().addMediaCard(main.getConfig().isDownloadVideo(), "");
 
                         int downloadId = downloadCounter.incrementAndGet();
 
@@ -512,8 +509,24 @@ public class YtDlpDownloader{
                     }
 
                     AudioBitrateEnum audioBitrate = quality.getAudioBitrate();
-                    if(main.getConfig().isDownloadAudioOnly()){
-                        if(audioBitrate != AudioBitrateEnum.NO_AUDIO){
+
+                    if(!main.getConfig().isDownloadAudio() && !main.getConfig().isDownloadVideo()){
+                        next.updateStatus(DownloadStatus.NO_METHOD, get("enums.download_status.no_method.video_tip"));
+                        next.reset();
+
+                        failedDownloads.offer(next);
+
+                        log.error("{} - No option to download.", next.getWebFilter());
+
+                        if(downloadDeque.size() <= 1){
+                            stopDownloads();
+                        }
+
+                        return;
+                    }
+
+                    if(!main.getConfig().isDownloadVideo()){
+                        if(main.getConfig().isDownloadAudio() && audioBitrate != AudioBitrateEnum.NO_AUDIO){
                             args.addAll(Arrays.asList(
                                 "-f",
                                 "bestaudio"
@@ -539,7 +552,7 @@ public class YtDlpDownloader{
                         ));
                     }
 
-                    if(!main.getConfig().isDownloadAudioOnly()){
+                    if(main.getConfig().isDownloadVideo()){
                         args.addAll(Arrays.asList(
                             "--merge-output-format",
                             quality.getContainer().getValue(),
@@ -547,7 +560,7 @@ public class YtDlpDownloader{
                         ));
                     }
 
-                    if(audioBitrate != AudioBitrateEnum.NO_AUDIO){
+                    if(main.getConfig().isDownloadAudio() && audioBitrate != AudioBitrateEnum.NO_AUDIO){
                         args.addAll(Arrays.asList(
                             "--extract-audio",
                             "--audio-format",
@@ -567,7 +580,7 @@ public class YtDlpDownloader{
 
                         //Intentional fall-through
                         case YOUTUBE:
-                            if(main.getConfig().isDownloadAudioOnly()){
+                            if(!main.getConfig().isDownloadVideo()){
                                 args.addAll(Arrays.asList(
                                     "-o",
                                     tmpPath.getAbsolutePath() + "/%(title)s (" + audioBitrate.getValue() + "kbps).%(ext)s",
@@ -612,7 +625,7 @@ public class YtDlpDownloader{
                                 "--hls-prefer-native"
                             ));
 
-                            if(!main.getConfig().isDownloadAudioOnly()){
+                            if(main.getConfig().isDownloadVideo()){
                                 args.addAll(Arrays.asList(
                                     "--parse-metadata",
                                     ":%(?P<is_live>)"
@@ -857,8 +870,8 @@ public class YtDlpDownloader{
 
                     //Video files get priority
                     for(VideoContainerEnum container : VideoContainerEnum.values()){
-                        if(!main.getConfig().isDownloadAudioOnly() && fileName.endsWith(")." + container.getValue())
-                            || main.getConfig().isDownloadAudioOnly() && fileName.endsWith(").mp3")){
+                        if(main.getConfig().isDownloadVideo() && fileName.endsWith(")." + container.getValue())
+                            || !main.getConfig().isDownloadVideo() && fileName.endsWith(").mp3")){
                             main.open(file);
                             return;
                         }
@@ -912,7 +925,6 @@ public class YtDlpDownloader{
 
             if(thumb != null && thumb.startsWith("http")){
                 mediaCard.setThumbnailAndDuration(thumb, videoInfoIn.getDuration());
-                mediaCard.setThumbnailTooltip(url);
             }
         }
 

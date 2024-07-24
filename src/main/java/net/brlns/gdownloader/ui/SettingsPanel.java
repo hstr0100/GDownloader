@@ -750,17 +750,37 @@ public class SettingsPanel{
         }
 
         {
-            JLabel label = createLabel("settings.download_audio_only", LIGHT_TEXT);
+            JLabel label = createLabel("settings.download_audio", LIGHT_TEXT);
 
             gbcPanel.gridx = 0;
             gbcPanel.gridy++;
             downloadSettingsPanel.add(label, gbcPanel);
 
             JCheckBox checkBox = new JCheckBox();
-            checkBox.setSelected(settings.isDownloadAudioOnly());
+            checkBox.setSelected(settings.isDownloadAudio());
 
             checkBox.addActionListener((ActionEvent e) -> {
-                settings.setDownloadAudioOnly(checkBox.isSelected());
+                settings.setDownloadAudio(checkBox.isSelected());
+            });
+
+            customizeComponent(checkBox, BACKGROUND, LIGHT_TEXT);
+
+            gbcPanel.gridx = 1;
+            downloadSettingsPanel.add(checkBox, gbcPanel);
+        }
+
+        {
+            JLabel label = createLabel("settings.download_video", LIGHT_TEXT);
+
+            gbcPanel.gridx = 0;
+            gbcPanel.gridy++;
+            downloadSettingsPanel.add(label, gbcPanel);
+
+            JCheckBox checkBox = new JCheckBox();
+            checkBox.setSelected(settings.isDownloadVideo());
+
+            checkBox.addActionListener((ActionEvent e) -> {
+                settings.setDownloadVideo(checkBox.isSelected());
             });
 
             customizeComponent(checkBox, BACKGROUND, LIGHT_TEXT);

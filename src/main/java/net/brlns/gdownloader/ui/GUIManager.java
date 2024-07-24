@@ -26,12 +26,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
-import java.awt.KeyEventDispatcher;
-import java.awt.KeyboardFocusManager;
-import java.awt.event.KeyEvent;
-import javax.swing.JFrame;
-import javax.swing.JPanel;
-
 import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -265,11 +259,26 @@ public final class GUIManager{
             loadIcon("/assets/mp3.png", ICON_HOVER),
             loadIcon("/assets/mp3.png", ICON),
             loadIcon("/assets/mp3.png", ICON_HOVER),
-            "gui.audio_only.tooltip",
-            "gui.audio_and_video.tooltip",
-            main.getConfig()::isDownloadAudioOnly,
+            "gui.download_audio.tooltip",
+            "gui.dont_download_audio.tooltip",
+            main.getConfig()::isDownloadAudio,
             () -> {
-                main.getConfig().setDownloadAudioOnly(!main.getConfig().isDownloadAudioOnly());
+                main.getConfig().setDownloadAudio(!main.getConfig().isDownloadAudio());
+                System.out.println(main.getConfig().isDownloadAudio());
+                main.updateConfig();
+            }
+        ));
+
+        buttonPanel.add(createToggleButton(
+            loadIcon("/assets/mp4.png", ICON_ACTIVE),
+            loadIcon("/assets/mp4.png", ICON_HOVER),
+            loadIcon("/assets/mp4.png", ICON),
+            loadIcon("/assets/mp4.png", ICON_HOVER),
+            "gui.download_video.tooltip",
+            "gui.dont_download_video.tooltip",
+            main.getConfig()::isDownloadVideo,
+            () -> {
+                main.getConfig().setDownloadVideo(!main.getConfig().isDownloadVideo());
                 main.updateConfig();
             }
         ));
@@ -935,7 +944,7 @@ public final class GUIManager{
         card.setLayout(new GridBagLayout());
         card.setBorder(BorderFactory.createLineBorder(color(BACKGROUND), 5));
         card.setBackground(color(MEDIA_CARD));
-        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, 130));
+        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, main.getConfig().getFontSize() >= 15 ? 150 : 130));
 
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(10, 10, 10, 10);
