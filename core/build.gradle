@@ -79,6 +79,16 @@ shadowJar {
     mergeServiceFiles()
 }
 
+//Workaround for https://github.com/gradle/gradle/issues/26155 and https://github.com/johnrengelman/shadow/issues/882
+tasks.named('shadowJar') { shadowJar ->
+    inputs.files(project.configurations.runtimeClasspath)
+    configurations = []
+
+    doFirst {
+        configurations = [project.configurations.runtimeClasspath]
+    }
+}
+
 jlink {
     options = ['--strip-debug', '--compress', '2', '--no-header-files', '--no-man-pages']
 
