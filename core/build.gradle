@@ -89,6 +89,21 @@ tasks.named('shadowJar') { shadowJar ->
     }
 }
 
+task zipJpackageImage(type: Zip) {
+    def architecture = System.getProperty("os.arch").contains("64") ? (os.isWindows() ? "x64" : "amd64") : (os.isWindows() ? "x86" : "i386")
+    
+    def fileName = os.isWindows() ? "gdownloader-${version}-windows_portable_${architecture}.zip" :
+                   os.isLinux() ? "gdownloader-${version}-linux_portable_${architecture}.zip" :
+                   "gdownloader-${version}-mac_portable.zip"
+
+    archiveFileName.set(fileName)
+    destinationDirectory.set(file("$buildDir/jpackage"))
+
+    from("$buildDir/jpackage/${rootProject.name}")
+}
+
+tasks.jpackage.finalizedBy zipJpackageImage
+
 jlink {
     options = ['--strip-debug', '--compress', '2', '--no-header-files', '--no-man-pages']
 
