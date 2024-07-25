@@ -1,0 +1,179 @@
+plugins {
+    id 'java'
+    id 'application'
+    id 'org.beryx.jlink' version "$beryxPluginVersion"
+    id 'com.github.johnrengelman.shadow' version "$shadowPluginVersion"
+    id 'org.gradlex.extra-java-module-info' version "$extraModuleInfoPluginVersion"
+}
+
+version = rootProject.version
+group = 'net.brlns'
+
+def author = 'Gabriel D @hstr0100'
+def installerName = 'gdownloader'
+
+def os = org.gradle.internal.os.OperatingSystem.current()
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+
+	modularity.inferModulePath = true
+}
+
+application {
+    mainClass = 'net.brlns.gdownloader.GDownloader'
+    mainModule = 'net.brlns.gdownloader'
+}
+
+dependencies {
+    implementation project(path: ":twelvemonkeys", configuration: "moduleJar")
+    implementation "com.github.kwhat:jnativehook:$jnativehookVersion"
+    implementation "org.slf4j:slf4j-api:$slf4jVersion"
+    implementation "org.slf4j:slf4j-simple:$slf4jVersion"
+    compileOnly "org.projectlombok:lombok:$lombokVersion"
+    annotationProcessor "org.projectlombok:lombok:$lombokVersion"
+    implementation "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"
+    implementation "org.jsoup:jsoup:$jsoupVersion"
+}
+
+extraJavaModuleInfo {
+    failOnMissingModuleInfo = true
+
+    module("twelvemonkeys-$twelvemonkeysVersion-all.jar", 'com.twelvemonkeys.imageio') {
+        requiresStatic 'java.desktop'
+
+        exports 'com.twelvemonkeys.imageio.stream'
+        exports 'com.twelvemonkeys.imageio.color'
+        exports 'com.twelvemonkeys.imageio.plugins.jpeg'
+        exports 'com.twelvemonkeys.imageio.plugins.webp'
+        exports 'com.twelvemonkeys.imageio.plugins.tiff'
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.compilerArgs += ['-Xlint:all,-serial,-processing,-missing-explicit-ctor']
+}
+
+jar {
+    archiveBaseName.set("${installerName}-java")
+
+    manifest {
+        attributes(
+            'Implementation-Title': rootProject.name,
+            'Implementation-Version': version,
+            'Implementation-Vendor': author,
+            'Main-Class': application.mainClass.get()
+        )
+    }
+
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+shadowJar {
+    archiveBaseName.set("${installerName}-java")
+    mergeServiceFiles()
+}
+
+jlink {
+    options = ['--strip-debug', '--compress', '2', '--no-header-files', '--no-man-pages']
+
+    launcher {
+        name = 'GDownloader'
+        jvmArgs = ['-Xmx2G']
+        noConsole = true
+    }
+
+    jpackage {
+        jvmArgs = ['-Djnativehook.lib.locator=net.brlns.gdownloader.util.CustomNativeLocator']
+
+        def imgType = os.isWindows() ? 'ico' : os.isMacOsX() ? 'icns' : 'png'
+        icon = "src/main/resources/assets/launcher/GDownloader.$imgType"
+
+        installerOptions += [
+            '--about-url', 'https://github.com/hstr0100/GDownloader',
+            '--description', 'Download Manager',
+            '--vendor', author,
+            '--copyright', "2024 ${author}",
+            '--license-file', "../LICENSE",
+            '--app-version', version
+        ]
+
+        //For now lets just assume Windows for arm is not a thing yet
+        def architecture = System.getProperty("os.arch").contains("64") ? "x64" : "x86"
+
+        if (os.isWindows()) {
+            installerName = "${installerName}-windows-${architecture}"
+            installerType = 'msi'
+            //imageOptions += ['--win-console']
+            installerOptions += [
+                '--win-per-user-install',
+                '--win-dir-chooser',
+                '--win-menu',
+                '--win-shortcut'
+            ]
+        } else if (os.isLinux()) {
+            //AppImage not yet supported by jpackage
+            installerType = 'deb'
+            installerOptions += [
+                '--resource-dir', "build/jpackage/${rootProject.name}/lib/app",
+                '--linux-package-name', "${installerName}-linux",
+                '--linux-app-category', 'Qt;KDE;Internet;',
+                '--linux-menu-group', 'Qt;KDE;Internet;',
+                '--linux-deb-maintainer', 'hstr0100@brlns.net',
+                '--linux-rpm-license-type', 'GPLv3',
+                '--linux-shortcut'
+            ]
+        } else if (os.isMacOsX()) {
+            installerType = 'dmg'
+            installerOptions += [
+                '--mac-package-name', "${installerName}-mac"
+            ]
+        }
+    }
+}
+
+tasks.jpackage.doFirst {
+    def basePath = os.isWindows() ? rootProject.name : os.isLinux() ? "${rootProject.name}/lib" : "${rootProject.name}.app/Contents"
+
+    copy {
+        from('src/main/resources/assets/launcher')
+        include "GDownloader.png"
+        include "GDownloader.icns"
+        include "GDownloader.ico"
+        into("$buildDir/jpackage/$basePath/app")
+    }
+}
+
+configurations {
+    resolvableImplementation { extendsFrom implementation }
+}
+
+tasks.jlink.doLast {
+    configurations.resolvableImplementation.files.findAll { f ->
+        f.name.contains "jnativehook"
+    }.each { nativeJar ->
+        def destDir = file("$imageDir/bin/native-libs")
+        delete(destDir)
+        mkdir(destDir)
+
+        def baseLibPath = 'com/github/kwhat/jnativehook/lib'
+        def zt = zipTree(nativeJar).matching {
+            include "$baseLibPath/**"
+        }
+
+        def expandedPath = zt.asFileTree.tree.mirror.dir.path
+        zt.files.each { f ->
+            def pathInLib = (f.path - expandedPath).substring(1)
+            pathInLib = pathInLib.replace('\\', '/')
+            pathInLib -= "$baseLibPath/"
+            def destFilePath = destDir.toPath().resolve(pathInLib)
+            mkdir(destFilePath.parent)
+            java.nio.file.Files.copy(f.toPath(), destFilePath)
+        }
+    }
+}

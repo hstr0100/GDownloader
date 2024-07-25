@@ -1,0 +1,36 @@
+plugins {
+    id 'java-library'
+    id 'com.github.johnrengelman.shadow' version "$shadowPluginVersion"
+}
+
+version = twelvemonkeysVersion
+
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(21))
+    }
+
+    modularity.inferModulePath.set(true)
+}
+
+dependencies {
+    implementation(platform("com.twelvemonkeys.bom:bom:$twelvemonkeysVersion"))
+    implementation("com.twelvemonkeys.imageio:imageio-jpeg")
+    implementation("com.twelvemonkeys.imageio:imageio-webp")
+    implementation("com.twelvemonkeys.imageio:imageio-tiff")
+}
+
+shadowJar {
+    mergeServiceFiles()
+}
+
+configurations {
+    moduleJar {
+        canBeConsumed = true
+        canBeResolved = false
+    }
+}
+
+artifacts {
+    moduleJar(tasks.shadowJar)
+}
