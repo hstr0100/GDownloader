@@ -57,7 +57,7 @@ public class QualitySettings{
 
     @Builder.Default
     @JsonProperty("FPS")
-    private FPSEnum fps = FPSEnum.FPS_30;
+    private FPSEnum fps = FPSEnum.FPS_60;
 
     @Builder.Default
     @JsonProperty("AudioBitrate")

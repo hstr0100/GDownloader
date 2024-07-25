@@ -50,7 +50,7 @@ public class MediaCard{
     private boolean closed;
 
     //TODO dynamic
-    protected static final int THUMBNAIL_WIDTH = 120;
+    protected static final int THUMBNAIL_WIDTH = 130;
     protected static final int THUMBNAIL_HEIGHT = (int)(THUMBNAIL_WIDTH / 16.0 * 9.0);
 
     public void close(){
@@ -108,7 +108,7 @@ public class MediaCard{
                     (duration % 3600) / 60,
                     duration % 60);
 
-                Font font = new Font("Arial", Font.PLAIN, 12);
+                Font font = new Font("Arial", Font.PLAIN, 14);
                 g2d.setFont(font);
                 g2d.setColor(Color.WHITE);
 

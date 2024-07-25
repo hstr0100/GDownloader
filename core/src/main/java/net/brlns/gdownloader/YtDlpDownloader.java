@@ -925,14 +925,14 @@ public class YtDlpDownloader{
             videoInfo = videoInfoIn;
 
             String thumb = videoInfo.getThumbnail();
-//            //Filter out WebP for now
-//            if(!thumb.startsWith("http") || !thumb.endsWith(".jpg") && !thumb.endsWith(".png")){
-//                Optional<Thumbnail> thumbnail = videoInfo.getFirstSupportedThumbnail();
-//
-//                if(thumbnail.get() != null){
-//                    thumb = thumbnail.get().getUrl();
-//                }
-//            }
+            //Filter out WebP for now
+            if(!thumb.startsWith("http") || !thumb.endsWith(".jpg") && !thumb.endsWith(".png")){
+                Optional<Thumbnail> thumbnail = videoInfo.getFirstSupportedThumbnail();
+
+                if(thumbnail.get() != null){
+                    thumb = thumbnail.get().getUrl();
+                }
+            }
 
             if(thumb != null && thumb.startsWith("http")){
                 mediaCard.setThumbnailAndDuration(thumb, videoInfoIn.getDuration());
