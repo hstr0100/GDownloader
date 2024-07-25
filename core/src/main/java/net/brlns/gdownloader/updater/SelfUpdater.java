@@ -18,24 +18,21 @@ package net.brlns.gdownloader.updater;
 
 import java.io.File;
 import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
-import net.brlns.gdownloader.util.ArchiveUtils;
 import net.brlns.gdownloader.util.Nullable;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
 @Slf4j
-public class FFMpegUpdater extends AbstractGitUpdater{
+public class SelfUpdater extends AbstractGitUpdater{
 
-    private static final String USER = "GyanD";
-    private static final String REPO = "codexffmpeg";
+    private static final String USER = "hstr0100";
+    private static final String REPO = "GDownloader";
 
-    public FFMpegUpdater(GDownloader mainIn){
+    public SelfUpdater(GDownloader mainIn){
         super(mainIn);
     }
 
@@ -54,27 +51,25 @@ public class FFMpegUpdater extends AbstractGitUpdater{
     public String getBinaryName(){
         ArchVersionEnum archVersion = main.getArchVersion();
 
-        return archVersion.getFfmpegBinary();
+        return archVersion.getSelfBinary();
     }
 
     @Override
     @Nullable
     public String getBinaryFallback(){
-        ArchVersionEnum archVersion = main.getArchVersion();
-
-        return archVersion.getFfmpegFallback();
+        return null;
     }
 
     @Nullable
     @Override
     protected String getRuntimeBinaryName(){
-        return "ffmpeg";
+        return "gdownloader_ota.zip";
     }
 
     @Nullable
     @Override
     protected String getLockFileName(){
-        return "ffmpeg_lock.txt";
+        return "ota_lock.txt";
     }
 
     @Override
@@ -84,28 +79,12 @@ public class FFMpegUpdater extends AbstractGitUpdater{
         File zipPath = new File(workDir, fileName);
         log.info("Zip path {}", zipPath);
 
-        Path zipOutputPath = Paths.get(workDir.getAbsolutePath(), "tmp_ffmpeg_zip");
-        log.info("Zip out path {}", zipOutputPath);
-
         File outputFile = new File(workDir, getRuntimeBinaryName());
-        log.info("Final path {}", outputFile);
+        log.info("Out path {}", outputFile);
 
-        try{
-            downloadFile(url, zipPath);
+        downloadFile(url, zipPath);
 
-            ArchiveUtils.inflateZip(zipPath, zipOutputPath, true);
-
-            Path sourcePath = zipOutputPath.resolve("bin");
-            log.info("Source binary path {}", sourcePath);
-
-            Files.move(sourcePath, outputFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-        }finally{
-            if(zipPath.exists()){
-                zipPath.delete();
-            }
-
-            GDownloader.deleteRecursively(zipOutputPath);
-        }
+        Files.move(zipPath.toPath(), outputFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
 
         return outputFile;
     }

@@ -87,6 +87,8 @@ import static net.brlns.gdownloader.util.URLUtils.*;
 //FEEDBACK Should choose to download video and audio independently on each card
 //TODO maybe add notifications for each toggled option
 //TODO check updates on a timer
+//TODO add bouncycastle, check signatures
+//TODO a+b system should work for updates
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
@@ -192,7 +194,15 @@ public class YtDlpDownloader{
                                         capturedPlaylists.add(playlist);
                                     }
 
-                                    return captureUrl(filterVideo(inputUrl), force);
+                                    String video = filterVideo(inputUrl);
+
+                                    if(video != null && video.contains("?v=")){
+                                        return captureUrl(video, force);
+                                    }else{
+                                        filteredUrl = playlist;
+                                    }
+
+                                    break;
                                 }
 
                                 case ALWAYS_ASK:
@@ -720,7 +730,7 @@ public class YtDlpDownloader{
                                     //TODO
                                     double percent = Double.parseDouble(part.replace("%", ""));
 
-                                    if(percent > lastPercentage || percent < 5){
+                                    if(percent > lastPercentage || percent < 5 || Math.abs(percent - lastPercentage) > 10){
                                         mediaCard.setPercentage(percent);
                                         lastPercentage = percent;
                                     }
@@ -915,14 +925,14 @@ public class YtDlpDownloader{
             videoInfo = videoInfoIn;
 
             String thumb = videoInfo.getThumbnail();
-            //Filter out WebP for now
-            if(!thumb.startsWith("http") || !thumb.endsWith(".jpg") && !thumb.endsWith(".png")){
-                Optional<Thumbnail> thumbnail = videoInfo.getFirstSupportedThumbnail();
-
-                if(thumbnail.get() != null){
-                    thumb = thumbnail.get().getUrl();
-                }
-            }
+//            //Filter out WebP for now
+//            if(!thumb.startsWith("http") || !thumb.endsWith(".jpg") && !thumb.endsWith(".png")){
+//                Optional<Thumbnail> thumbnail = videoInfo.getFirstSupportedThumbnail();
+//
+//                if(thumbnail.get() != null){
+//                    thumb = thumbnail.get().getUrl();
+//                }
+//            }
 
             if(thumb != null && thumb.startsWith("http")){
                 mediaCard.setThumbnailAndDuration(thumb, videoInfoIn.getDuration());

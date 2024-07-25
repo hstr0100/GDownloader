@@ -785,7 +785,9 @@ public final class GUIManager{
     private void setUpAppWindow(){
         if(appWindow == null){
             // note to self, tooltips only show up when focused
-            appWindow = new JFrame(GDownloader.REGISTRY_APP_NAME);
+            String version = System.getProperty("jpackage.app-version");
+
+            appWindow = new JFrame(GDownloader.REGISTRY_APP_NAME + (version != null ? " v" + version : ""));
             refreshWindow();
 
             //appWindow.setResizable(false);

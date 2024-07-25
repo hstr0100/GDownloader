@@ -243,6 +243,13 @@ public class SettingsPanel{
                     ));
 
                     leftPanel.add(manager.createButton(
+                        manager.loadIcon("/assets/bin.png", ICON, 24),
+                        manager.loadIcon("/assets/bin.png", ICON_HOVER, 24),
+                        "gui.clear_cache.tooltip",
+                        e -> main.clearCache(true)
+                    ));
+
+                    leftPanel.add(manager.createButton(
                         manager.loadIcon("/assets/update.png", ICON, 24),
                         manager.loadIcon("/assets/update.png", ICON_HOVER, 24),
                         "gui.update.tooltip",
@@ -592,19 +599,29 @@ public class SettingsPanel{
                 options.add(String.valueOf(i));
             }
 
-            JComboBox<String> comboBox = new JComboBox<>(options.stream().toArray(String[]::new));
-            comboBox.setToolTipText(get("settings.requires_restart.tooltip"));
-            comboBox.setSelectedIndex(options.indexOf(String.valueOf(settings.getFontSize())));
+            JSlider slider = new JSlider(0, options.size() - 1, options.indexOf(String.valueOf(settings.getFontSize())));
+            slider.setToolTipText(get("settings.requires_restart.tooltip"));
+            slider.setMajorTickSpacing(1);
+            slider.setPaintTicks(true);
+            slider.setSnapToTicks(true);
+            slider.setPaintLabels(true);
 
-            comboBox.addActionListener((ActionEvent e) -> {
-                settings.setFontSize(Integer.parseInt(options.get(comboBox.getSelectedIndex())));
+            slider.addChangeListener((ChangeEvent e) -> {
+                JSlider source = (JSlider)e.getSource();
+                if(!source.getValueIsAdjusting()){
+                    int sliderValue = source.getValue();
+
+                    settings.setFontSize(Integer.parseInt(options.get(sliderValue)));
+                    label.setFont(slider.getFont().deriveFont((float)settings.getFontSize()));
+                    label.revalidate();
+                    label.repaint();
+                }
             });
 
-            customizeComboBox(comboBox);
+            customizeSlider(slider, BACKGROUND, SLIDER_FOREGROUND);
 
             gbcPanel.gridx = 1;
-            gbcPanel.gridwidth = 2;
-            generalSettingsPanel.add(comboBox, gbcPanel);
+            generalSettingsPanel.add(slider, gbcPanel);
         }
 
         {

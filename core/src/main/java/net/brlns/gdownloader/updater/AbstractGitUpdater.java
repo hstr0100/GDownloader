@@ -19,7 +19,6 @@ package net.brlns.gdownloader.updater;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.io.BufferedOutputStream;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -28,6 +27,7 @@ import java.net.http.HttpConnectTimeoutException;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
+import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -36,7 +36,6 @@ import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.time.Duration;
 import java.util.Iterator;
-import java.util.Locale;
 import java.util.Set;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -44,6 +43,8 @@ import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.util.NoFallbackAvailableException;
 import net.brlns.gdownloader.util.Nullable;
 import net.brlns.gdownloader.util.Pair;
+
+import static net.brlns.gdownloader.util.LockUtils.*;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -140,11 +141,11 @@ public abstract class AbstractGitUpdater{
         throw new NoFallbackAvailableException();
     }
 
-    public final void check() throws Exception{
+    public final void check(boolean force) throws Exception{
         updated = false;
-        File workDir = main.getWorkDirectory();
+        File workDir = GDownloader.getWorkDirectory();
 
-        if(!main.getConfig().isAutomaticUpdates()){
+        if(!main.getConfig().isAutomaticUpdates() && !force){
             log.info("Automatic updates are disabled {}", getRepo());
 
             tryFallback(workDir);
@@ -226,7 +227,7 @@ public abstract class AbstractGitUpdater{
             }
         }finally{
             if(binaryPath.exists()){
-                makeExecutable(binaryPath.getAbsolutePath());
+                makeExecutable(binaryPath.toPath());
             }
         }
     }
@@ -254,7 +255,7 @@ public abstract class AbstractGitUpdater{
 
             Files.write(targetFile.toPath(), buffer);
 
-            makeExecutable(targetFile.getAbsolutePath());
+            makeExecutable(targetFile.toPath());
 
             return targetFile;
         }
@@ -328,39 +329,24 @@ public abstract class AbstractGitUpdater{
         }
     }
 
-    protected void makeExecutable(String filename) throws IOException{
+    public static void makeExecutable(Path path) throws IOException{
         if(!GDownloader.isWindows()){
-            Set<PosixFilePermission> permissions = PosixFilePermissions.fromString("rwxr-xr-x");
-            Files.setPosixFilePermissions(Paths.get(filename), permissions);
-        }else{
-            //No need
+            if(Files.isDirectory(path)){
+                Set<PosixFilePermission> dirPermissions = PosixFilePermissions.fromString("rwxr-xr-x");
+                Files.setPosixFilePermissions(path, dirPermissions);
+
+                try(DirectoryStream<Path> stream = Files.newDirectoryStream(path)){
+                    for(Path entry : stream){
+                        makeExecutable(entry);
+                    }
+                }
+            }else if(Files.isRegularFile(path)){
+                Set<PosixFilePermission> filePermissions = PosixFilePermissions.fromString("rwxr-xr-x");
+                Files.setPosixFilePermissions(path, filePermissions);
+            }else{
+                throw new IOException("The path provided is neither a file nor a directory.");
+            }
         }
     }
 
-    protected String getLockTag(String releaseTag){
-        String arch = System.getProperty("os.arch").toLowerCase(Locale.ENGLISH);
-        String os = System.getProperty("os.name").toLowerCase(Locale.ENGLISH);
-
-        return String.join("_", releaseTag, os, arch);
-    }
-
-    protected void createLock(File lockFile, String content) throws IOException{
-        try(FileWriter writer = new FileWriter(lockFile)){
-            writer.write(content);
-        }
-    }
-
-    protected boolean checkLock(File lockFile, String tag) throws IOException{
-        if(!lockFile.exists()){
-            return false;
-        }
-
-        String content = new String(Files.readAllBytes(lockFile.toPath()));
-
-        return content.equals(tag);
-    }
-
-    protected boolean lockExists(File lockFile) throws IOException{
-        return lockFile.exists();
-    }
 }

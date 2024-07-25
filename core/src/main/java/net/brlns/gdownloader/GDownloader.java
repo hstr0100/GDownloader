@@ -61,6 +61,8 @@ import net.brlns.gdownloader.ui.GUIManager.MessageType;
 import net.brlns.gdownloader.ui.themes.ThemeProvider;
 import net.brlns.gdownloader.updater.ArchVersionEnum;
 import net.brlns.gdownloader.updater.FFMpegUpdater;
+import net.brlns.gdownloader.updater.SelfUpdater;
+import net.brlns.gdownloader.updater.UpdaterBootstrap;
 import net.brlns.gdownloader.updater.YtDlpUpdater;
 import net.brlns.gdownloader.util.NoFallbackAvailableException;
 import net.brlns.gdownloader.util.Nullable;
@@ -99,6 +101,9 @@ public final class GDownloader{
 
     @Getter
     private YtDlpDownloader downloadManager;
+
+    @Getter
+    private SelfUpdater selfUpdater;
 
     @Getter
     private YtDlpUpdater ytDlpUpdater;
@@ -185,6 +190,7 @@ public final class GDownloader{
 
             tray.add(trayIcon);
 
+            selfUpdater = new SelfUpdater(this);
             ytDlpUpdater = new YtDlpUpdater(this);
             ffmpegUpdater = new FFMpegUpdater(this);
 
@@ -243,12 +249,32 @@ public final class GDownloader{
             //SysTray is daemon
 
             threadPool.execute(() -> {
-                File cachePath = new File(getDownloadsDirectory(), CACHE_DIRETORY_NAME);
-
-                deleteRecursively(cachePath.toPath());
+                clearCache();
             });
         }catch(Exception e){
             handleException(e);
+        }
+    }
+
+    public void clearCache(){
+        clearCache(false);
+    }
+
+    public void clearCache(boolean notify){
+        downloadManager.stopDownloads();
+
+        File cachePath = new File(getDownloadsDirectory(), CACHE_DIRETORY_NAME);
+
+        deleteRecursively(cachePath.toPath());
+
+        if(notify){
+            guiManager.showMessage(
+                get("gui.clear_cache.notification_title"),
+                get("gui.clear_cache.cleared"),
+                3500,
+                GUIManager.MessageType.INFO,
+                false
+            );
         }
     }
 
@@ -278,11 +304,23 @@ public final class GDownloader{
             );
         }
 
-        CountDownLatch latch = new CountDownLatch(2);
+        CountDownLatch latch = new CountDownLatch(3);
 
         threadPool.execute(() -> {
             try{
-                ytDlpUpdater.check();
+                selfUpdater.check(!firstBoot);
+            }catch(NoFallbackAvailableException e){
+                log.error("Unsupported OS for self updates");
+            }catch(Exception e){
+                handleException(e);
+            }finally{
+                latch.countDown();
+            }
+        });
+
+        threadPool.execute(() -> {
+            try{
+                ytDlpUpdater.check(!firstBoot);
             }catch(NoFallbackAvailableException e){
                 log.error("Unsupported OS for YT-DLP");
 
@@ -306,7 +344,7 @@ public final class GDownloader{
 
         threadPool.execute(() -> {
             try{
-                ffmpegUpdater.check();
+                ffmpegUpdater.check(!firstBoot);
             }catch(NoFallbackAvailableException e){
                 log.error("Unsupported OS for FFMPEG, install it manually");
             }catch(Exception e){
@@ -792,35 +830,6 @@ public final class GDownloader{
         updateConfig();
     }
 
-    private File _cachedWorkDir;
-
-    public File getWorkDirectory(){
-        if(_cachedWorkDir == null){
-            String os = System.getProperty("os.name").toLowerCase();
-            String userHome = System.getProperty("user.home");
-
-            Path appDir;
-
-            if(os.contains("win")){
-                String appData = System.getenv("APPDATA");
-
-                if(appData != null){
-                    appDir = Paths.get(appData, REGISTRY_APP_NAME);
-                }else{
-                    appDir = Paths.get(userHome, "AppData", "Roaming", REGISTRY_APP_NAME);
-                }
-            }else if(os.contains("mac")){
-                appDir = Paths.get(userHome, "Library", "Application Support", REGISTRY_APP_NAME);
-            }else{
-                appDir = Paths.get(userHome, "." + REGISTRY_APP_NAME.toLowerCase());
-            }
-
-            _cachedWorkDir = getOrCreate(appDir.toFile());
-        }
-
-        return _cachedWorkDir;
-    }
-
     //TODO refactor clipboard
     public void resetClipboard(){
         for(FlavorType type : new HashSet<>(lastClipboardState.keySet())){
@@ -1076,24 +1085,56 @@ public final class GDownloader{
         }
     }
 
-    public static void deleteRecursively(Path directory){
+    private static File _cachedWorkDir;
+
+    public static File getWorkDirectory(){
+        if(_cachedWorkDir == null){
+            String os = System.getProperty("os.name").toLowerCase();
+            String userHome = System.getProperty("user.home");
+
+            Path appDir;
+
+            if(os.contains("win")){
+                String appData = System.getenv("APPDATA");
+
+                if(appData != null){
+                    appDir = Paths.get(appData, REGISTRY_APP_NAME);
+                }else{
+                    appDir = Paths.get(userHome, "AppData", "Roaming", REGISTRY_APP_NAME);
+                }
+            }else if(os.contains("mac")){
+                appDir = Paths.get(userHome, "Library", "Application Support", REGISTRY_APP_NAME);
+            }else{
+                appDir = Paths.get(userHome, "." + REGISTRY_APP_NAME.toLowerCase());
+            }
+
+            _cachedWorkDir = getOrCreate(appDir.toFile());
+        }
+
+        return _cachedWorkDir;
+    }
+
+    public static boolean deleteRecursively(Path directory){
         if(!Files.exists(directory)){
-            return;
+            return true;
         }
 
         try(Stream<Path> dirStream = Files.walk(directory)){
-            dirStream
-                .sorted(Comparator.reverseOrder()) //Ensure deeper directories are deleted first
-                .forEach(file -> {
+            boolean success = dirStream
+                .sorted(Comparator.reverseOrder()) // Ensure deeper directories are deleted first
+                .allMatch(file -> {
                     try{
-                        Files.deleteIfExists(file);
+                        return Files.deleteIfExists(file);
                     }catch(IOException e){
                         log.error("Failed to delete: {} {}", file, e.getLocalizedMessage());
+                        return false;
                     }
                 });
 
+            return success;
         }catch(IOException e){
             log.error("Failed to delete: {} {}", directory, e.getLocalizedMessage());
+            return false;
         }
     }
 
@@ -1113,9 +1154,15 @@ public final class GDownloader{
         return osName.contains("windows");
     }
 
+    public static boolean isLinux(){
+        String osName = System.getProperty("os.name").toLowerCase();
+        return osName.contains("nux");
+    }
+
     public static void main(String[] args){
         boolean noGui = false;
         int uiScale = 1;
+        boolean fromOta = false;
 
         for(int i = 0; i < args.length; i++){
             if(args[i].equalsIgnoreCase("--no-gui")){
@@ -1125,7 +1172,14 @@ public final class GDownloader{
             if(args[i].equalsIgnoreCase("--force-ui-scale")){
                 uiScale = Integer.parseInt(args[++i]);//Purposefully fail on bad arguments
             }
+
+            if(args[i].equalsIgnoreCase("--from-ota")){
+                log.info("Sucessfully updated from ota");
+                fromOta = true;
+            }
         }
+
+        UpdaterBootstrap.tryOta(args, fromOta);
 
         System.setProperty("sun.java2d.uiScale", String.valueOf(uiScale));//Does not accept double
         System.setProperty("sun.java2d.opengl", "true");
@@ -1170,9 +1224,7 @@ public final class GDownloader{
             log.info("Started");
 
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-                File cachePath = new File(instance.getDownloadsDirectory(), CACHE_DIRETORY_NAME);
-
-                deleteRecursively(cachePath.toPath());
+                instance.clearCache();
 
                 try{
                     GlobalScreen.unregisterNativeHook();

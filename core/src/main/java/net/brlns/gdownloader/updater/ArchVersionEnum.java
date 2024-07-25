@@ -23,19 +23,20 @@ import lombok.Getter;
  */
 @Getter
 public enum ArchVersionEnum{
-    MAC_X86("yt-dlp_macos_legacy", null, null, null, OS.MAC),
-    MAC_X64("yt-dlp_macos", null, null, null, OS.MAC),
-    WINDOWS_X86("yt-dlp_x86.exe", null, null, null, OS.WINDOWS),
+    MAC_X86("yt-dlp_macos_legacy", null, null, null, null, OS.MAC),
+    MAC_X64("yt-dlp_macos", null, null, null, null, OS.MAC),
+    WINDOWS_X86("yt-dlp_x86.exe", null, null, null, null, OS.WINDOWS),
     WINDOWS_X64(
         "yt-dlp.exe",
         "yt-dlp.exe",
         "-full_build.zip",//Apache Compress does not support -mx=9 used by ffmpeg's 7zs
         "ffmpeg.exe;ffprobe.exe;ffplay.exe",
+        "windows_portable_x64.zip",
         OS.WINDOWS
     ),
-    LINUX_X64("yt-dlp_linux", null, null, null, OS.LINUX),//You're on your own for ffmpeg buddy
-    LINUX_ARM("yt-dlp_linux_armv7l", null, null, null, OS.LINUX),
-    LINUX_ARM64("yt-dlp_linux_aarch64", null, null, null, OS.LINUX);
+    LINUX_X64("yt-dlp_linux", null, null, null, "linux_portable_amd64.zip", OS.LINUX),//You're on your own for ffmpeg buddy
+    LINUX_ARM("yt-dlp_linux_armv7l", null, null, null, null, OS.LINUX),
+    LINUX_ARM64("yt-dlp_linux_aarch64", null, null, null, null, OS.LINUX);
 
     private final String ytDlpBinary;
     private final String ytDlpFallback;
@@ -43,14 +44,25 @@ public enum ArchVersionEnum{
     private final String ffmpegBinary;
     private final String ffmpegFallback;
 
+    private final String selfBinary;
+
     private final OS os;
 
-    private ArchVersionEnum(String ytDlpBinaryIn, String ytDlpFallbackIn, String ffmpegBinaryIn, String ffmpegFallbackIn, OS osIn){
+    private ArchVersionEnum(
+        String ytDlpBinaryIn,
+        String ytDlpFallbackIn,
+        String ffmpegBinaryIn,
+        String ffmpegFallbackIn,
+        String selfBinaryIn,
+        OS osIn){
+
         ytDlpBinary = ytDlpBinaryIn;
         ytDlpFallback = ytDlpFallbackIn;
 
         ffmpegBinary = ffmpegBinaryIn;
         ffmpegFallback = ffmpegFallbackIn;
+
+        selfBinary = selfBinaryIn;
 
         os = osIn;
     }

@@ -40,12 +40,6 @@ public class URLUtils{
                     return "https://www.youtube.com/watch?v=" + videoId;
                 }
             }
-
-            String filtered = removeParameter(youtubeUrl, "list");
-            if(filtered != null){
-                log.info("FILTERED: " + filtered);
-                return filtered;
-            }
         }catch(Exception e){
             log.warn("Invalid url {} {}", youtubeUrl, e.getLocalizedMessage());
         }
