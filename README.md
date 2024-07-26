@@ -41,7 +41,7 @@ Download the latest version for your platform from the [releases page](https://g
    
 3. Build the project using Gradle:
    ```bash
-   gradle clean jpackage
+   ./gradlew clean build jpackage
    ```
    
 ## Screenshots

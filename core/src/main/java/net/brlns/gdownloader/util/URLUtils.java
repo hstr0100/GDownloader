@@ -44,7 +44,7 @@ public class URLUtils{
             log.warn("Invalid url {} {}", youtubeUrl, e.getLocalizedMessage());
         }
 
-        return youtubeUrl;
+        return null;
     }
 
     @Nullable
