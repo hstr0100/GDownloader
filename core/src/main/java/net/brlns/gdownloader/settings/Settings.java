@@ -76,7 +76,7 @@ public class Settings{
     private String extraYtDlpArguments = "";
 
     @JsonProperty("DownloadAudio")
-    private boolean downloadAudio = true;
+    private boolean downloadAudio = false;
 
     @JsonProperty("DownloadVideo")
     private boolean downloadVideo = true;

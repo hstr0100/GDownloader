@@ -87,7 +87,6 @@ import static net.brlns.gdownloader.util.URLUtils.*;
 //TODO to front does not work on windows @TODO test
 //TODO add bouncycastle, check signatures
 //TODO add yt-dlp queries to a batch pool, execute them all in one go
-//TODO add playlists to a directory following the playlist name
 //TODO right click menu -> open in folder and delete
 //TODO tray menu -> open downloads directory
 //TODO --no-playlist when single video option is active
@@ -608,7 +607,9 @@ public class YtDlpDownloader{
                             if(!main.getConfig().isDownloadVideo()){
                                 args.addAll(Arrays.asList(
                                     "-o",
-                                    tmpPath.getAbsolutePath() + "/%(title)s (" + audioBitrate.getValue() + "kbps).%(ext)s",
+                                    tmpPath.getAbsolutePath()
+                                    + (next.getWebFilter() == WebFilterEnum.YOUTUBE_PLAYLIST ? "/%(playlist)s/" : "/")
+                                    + "%(title)s (" + audioBitrate.getValue() + "kbps).%(ext)s",
                                     "--embed-thumbnail",
                                     "--embed-metadata",
                                     "--sponsorblock-mark",
@@ -617,7 +618,9 @@ public class YtDlpDownloader{
                             }else{
                                 args.addAll(Arrays.asList(
                                     "-o",
-                                    tmpPath.getAbsolutePath() + "/%(title)s (%(uploader_id)s %(upload_date)s %(resolution)s).%(ext)s",
+                                    tmpPath.getAbsolutePath()
+                                    + (next.getWebFilter() == WebFilterEnum.YOUTUBE_PLAYLIST ? "/%(playlist)s/" : "/")
+                                    + "%(title)s (%(uploader_id)s %(upload_date)s %(resolution)s).%(ext)s",
                                     "--embed-thumbnail",
                                     "--embed-metadata",
                                     "--embed-subs",
@@ -791,14 +794,16 @@ public class YtDlpDownloader{
                                 dirStream.forEach(path -> {
                                     String fileName = path.getFileName().toString().toLowerCase();
                                     if(fileName.endsWith(").mp3") || fileName.endsWith(")." + quality.getContainer().getValue())){
-                                        Path targetPath = finalPath.toPath().resolve(path.getFileName());
+                                        Path relativePath = tmpPath.toPath().relativize(path);
+                                        Path targetPath = finalPath.toPath().resolve(relativePath);
 
                                         try{
-                                            Files.move(path, targetPath, StandardCopyOption.REPLACE_EXISTING);
+                                            Files.createDirectories(targetPath.getParent());
+                                            Files.copy(path, targetPath, StandardCopyOption.REPLACE_EXISTING);
                                             next.getFinalMediaFiles().add(targetPath.toFile());
-                                            log.info("Moved file: {}", path.getFileName());
+                                            log.info("Copied file: {}", path.getFileName());
                                         }catch(IOException e){
-                                            log.error("Failed to move file: {} {}", path.getFileName(), e.getLocalizedMessage());
+                                            log.error("Failed to copy file: {} {}", path.getFileName(), e.getLocalizedMessage());
                                         }
                                     }
                                 });
