@@ -950,7 +950,9 @@ public class YtDlpDownloader{
         }
 
         public void updateStatus(DownloadStatus status, String text){
-            mediaCard.setLabel(webFilter.getDisplayName(), getTitle(), truncate(text, 50));
+            mediaCard.setLabel(webFilter.getDisplayName(), getTitle(),
+                status != DownloadStatus.DOWNLOADING ? truncate(text, 40) : truncate(text, 51));
+
             mediaCard.setTooltip(text);
 
             if(status != downloadStatus){

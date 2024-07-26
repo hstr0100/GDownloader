@@ -42,11 +42,7 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.YtDlpDownloader;
-import net.brlns.gdownloader.ui.custom.CustomButton;
-import net.brlns.gdownloader.ui.custom.CustomCheckBoxUI;
-import net.brlns.gdownloader.ui.custom.CustomProgressBar;
-import net.brlns.gdownloader.ui.custom.CustomScrollBarUI;
-import net.brlns.gdownloader.ui.custom.CustomToolTip;
+import net.brlns.gdownloader.ui.custom.*;
 import net.brlns.gdownloader.ui.themes.ThemeProvider;
 import net.brlns.gdownloader.ui.themes.UIColors;
 
@@ -804,6 +800,8 @@ public final class GUIManager{
                 }else{
                     appWindow.setAlwaysOnTop(main.getConfig().isKeepWindowAlwaysOnTop());
                 }
+
+                adjustMediaCards();
             });
 
             appWindow.addWindowListener(new WindowAdapter(){
@@ -910,7 +908,28 @@ public final class GUIManager{
             mainPanel.add(queueScrollPane, BorderLayout.CENTER);
 
             appWindow.add(mainPanel);
+
+            appWindow.addComponentListener(new ComponentAdapter(){
+                @Override
+                public void componentResized(ComponentEvent e){
+                    adjustMediaCards();
+                }
+            });
         }
+    }
+
+    private void adjustMediaCards(){
+        double factor = 1;
+        if(appWindow.getExtendedState() == JFrame.MAXIMIZED_BOTH){
+            factor = 1.20;
+        }
+
+        for(MediaCard card : mediaCards.values()){
+            card.scaleThumbnail(factor);
+        }
+
+        queuePanel.revalidate();
+        queuePanel.repaint();
     }
 
     private JPanel emptyQueuePanel;
@@ -946,31 +965,24 @@ public final class GUIManager{
         card.setLayout(new GridBagLayout());
         card.setBorder(BorderFactory.createLineBorder(color(BACKGROUND), 5));
         card.setBackground(color(MEDIA_CARD));
-        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, main.getConfig().getFontSize() >= 15 ? 150 : 130));
+
+        int fontSize = main.getConfig().getFontSize();
+        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, fontSize >= 15 ? 150 + (fontSize - 15) * 3 : 135));
 
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(10, 10, 10, 10);
         gbc.fill = GridBagConstraints.BOTH;
 
-        JPanel thumbnailPanel = new JPanel();
+        CustomThumbnailPanel thumbnailPanel = new CustomThumbnailPanel();
         thumbnailPanel.setPreferredSize(new Dimension(MediaCard.THUMBNAIL_WIDTH, MediaCard.THUMBNAIL_HEIGHT));
         thumbnailPanel.setMinimumSize(new Dimension(MediaCard.THUMBNAIL_WIDTH, MediaCard.THUMBNAIL_HEIGHT));
         thumbnailPanel.setBackground(color(MEDIA_CARD_THUMBNAIL));
         thumbnailPanel.setLayout(new BorderLayout());
 
-        if(video){
-            ImageIcon noImageIcon = loadIcon("/assets/video.png", ICON, 64);
-            JLabel imageLabel = new JLabel(noImageIcon);
-            thumbnailPanel.add(imageLabel, BorderLayout.CENTER);
-        }else{
-            ImageIcon noImageIcon = loadIcon("/assets/winamp.png", ICON, 64);
-            JLabel imageLabel = new JLabel(noImageIcon);
-            thumbnailPanel.add(imageLabel, BorderLayout.CENTER);
-        }
+        ImageIcon noImageIcon = loadIcon(video ? "/assets/video.png" : "/assets/winamp.png", ICON, 78);
+        JLabel imageLabel = new JLabel(noImageIcon);
+        thumbnailPanel.add(imageLabel, BorderLayout.CENTER);
 
-//        JLabel noImageLabel = new JLabel("No Image", SwingConstants.CENTER);
-//        noImageLabel.setForeground(color(FOREGROUND));
-//        thumbnailPanel.add(noImageLabel, BorderLayout.CENTER);
         gbc.gridx = 0;
         gbc.gridy = 0;
         gbc.gridheight = 2;
@@ -1074,8 +1086,8 @@ public final class GUIManager{
 
     private void adjustWindowSize(){
         SwingUtilities.invokeLater(() -> {
-            appWindow.setSize(610, 370);
-            appWindow.setMinimumSize(new Dimension(appWindow.getWidth(), 220));
+            appWindow.setSize(638, 365);
+            appWindow.setMinimumSize(new Dimension(appWindow.getWidth(), 225));
 
             Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
             Insets screenInsets = Toolkit.getDefaultToolkit().getScreenInsets(appWindow.getGraphicsConfiguration());

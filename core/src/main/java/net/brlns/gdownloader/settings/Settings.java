@@ -82,7 +82,7 @@ public class Settings{
     private boolean downloadVideo = true;
 
     @JsonProperty("KeepWindowAlwaysOnTop")
-    private boolean keepWindowAlwaysOnTop = true;
+    private boolean keepWindowAlwaysOnTop = false;
 
     @JsonProperty("MaximumSimultaneousDownloads")
     private int maxSimultaneousDownloads = 3;

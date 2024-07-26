@@ -27,7 +27,7 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
-import net.brlns.gdownloader.ui.custom.CustomProgressBar;
+import net.brlns.gdownloader.ui.custom.*;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -40,7 +40,7 @@ public class MediaCard{
 
     private final JPanel panel;
     private final JLabel mediaLabel;
-    private final JPanel thumbnailPanel;
+    private final CustomThumbnailPanel thumbnailPanel;
     private final CustomProgressBar progressBar;
 
     private double percentage = 0;
@@ -49,8 +49,7 @@ public class MediaCard{
     private GUIManager.CallFunction onClose;
     private boolean closed;
 
-    //TODO dynamic
-    protected static final int THUMBNAIL_WIDTH = 130;
+    protected static final int THUMBNAIL_WIDTH = 160;
     protected static final int THUMBNAIL_HEIGHT = (int)(THUMBNAIL_WIDTH / 16.0 * 9.0);
 
     public void close(){
@@ -59,6 +58,15 @@ public class MediaCard{
         if(onClose != null){
             onClose.apply();
         }
+    }
+
+    public void scaleThumbnail(double factor){
+        Dimension dimension = new Dimension(
+            (int)(MediaCard.THUMBNAIL_WIDTH * factor),
+            (int)(MediaCard.THUMBNAIL_HEIGHT * factor));
+
+        thumbnailPanel.setPreferredSize(dimension);
+        thumbnailPanel.setMinimumSize(dimension);
     }
 
     public void setTooltip(String tooltipText){
@@ -96,42 +104,7 @@ public class MediaCard{
             BufferedImage img = ImageIO.read(new URI(url).toURL());
 
             if(img != null){
-                Image scaledImg = img.getScaledInstance(THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT, Image.SCALE_SMOOTH);
-
-                BufferedImage bufferedImage = new BufferedImage(THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT, BufferedImage.TYPE_INT_RGB);
-                Graphics2D g2d = bufferedImage.createGraphics();
-
-                g2d.drawImage(scaledImg, 0, 0, null);
-
-                String formattedDuration = String.format("%d:%02d:%02d",
-                    duration / 3600,
-                    (duration % 3600) / 60,
-                    duration % 60);
-
-                Font font = new Font("Arial", Font.PLAIN, 14);
-                g2d.setFont(font);
-                g2d.setColor(Color.WHITE);
-
-                FontMetrics fm = g2d.getFontMetrics();
-                int textWidth = fm.stringWidth(formattedDuration);
-                int textHeight = fm.getHeight();
-                int padding = 5;
-
-                g2d.setColor(new Color(0, 0, 0, 150));
-                g2d.fillRect(THUMBNAIL_WIDTH - textWidth - padding * 2, THUMBNAIL_HEIGHT - textHeight - padding * 2,
-                    textWidth + padding * 2, textHeight + padding * 2);
-
-                g2d.setColor(Color.WHITE);
-                g2d.drawString(formattedDuration, THUMBNAIL_WIDTH - textWidth - padding, THUMBNAIL_HEIGHT - padding);
-
-                g2d.dispose();
-
-                thumbnailPanel.removeAll();
-                JLabel imageLabel = new JLabel(new ImageIcon(bufferedImage));
-                thumbnailPanel.add(imageLabel, BorderLayout.CENTER);
-
-                thumbnailPanel.revalidate();
-                thumbnailPanel.repaint();
+                thumbnailPanel.setImageAndDuration(img, duration);
             }else{
                 log.error("ImageIO.read returned null for {}", url);
             }

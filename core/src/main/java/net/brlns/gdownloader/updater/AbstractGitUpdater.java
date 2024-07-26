@@ -163,8 +163,8 @@ public abstract class AbstractGitUpdater{
 
         try{
             tag = getLatestReleaseTag();
-        }catch(HttpConnectTimeoutException e){
-            log.error("Http timeout for {}", getRepo());
+        }catch(Exception e){
+            log.error("HTTP error for {}", getRepo());
         }
 
         if(tag == null){
