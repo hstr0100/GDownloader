@@ -87,6 +87,10 @@ import static net.brlns.gdownloader.util.URLUtils.*;
 //TODO to front does not work on windows @TODO test
 //TODO add bouncycastle, check signatures
 //TODO add yt-dlp queries to a batch pool, execute them all in one go
+//TODO add playlists to a directory following the playlist name
+//TODO right click menu -> open in folder and delete
+//TODO tray menu -> open downloads directory
+//TODO --no-playlist when single video option is active
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
@@ -201,10 +205,9 @@ public class YtDlpDownloader{
                                 if(video != null && video.contains("?v=") && !video.contains("list=")){
                                     return captureUrl(video, force);
                                 }else{
-                                    filteredUrl = playlist;
+                                    future.complete(false);
+                                    return future;
                                 }
-
-                                break;
                             }
 
                             case ALWAYS_ASK:
@@ -266,7 +269,16 @@ public class YtDlpDownloader{
                                 }else{
                                     //TODO I'm assuming this is a wanted behavior - having subsequent links being treated as individual videos
                                     //It's odd that you'd download a whole playlist and then an individual video from it though, maybe investigate use cases
-                                    return captureUrl(filterVideo(inputUrl), force);
+                                    String video = filterVideo(inputUrl);
+
+                                    log.info("Individual video url is {}", video);
+
+                                    if(video != null && video.contains("?v=") && !video.contains("list=")){
+                                        return captureUrl(video, force);
+                                    }else{
+                                        future.complete(false);
+                                        return future;
+                                    }
                                 }
                             }
                         }

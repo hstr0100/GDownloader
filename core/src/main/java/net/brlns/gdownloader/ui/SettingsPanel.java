@@ -678,7 +678,7 @@ public class SettingsPanel{
             downloadSettingsPanel.add(label, gbcPanel);
 
             JComboBox<String> comboBox = new JComboBox<>(ISettingsEnum.getDisplayNames(BrowserEnum.class));
-            comboBox.setToolTipText(get("settings.requires_restart.tooltip"));
+            //comboBox.setToolTipText(get("settings.requires_restart.tooltip"));
             comboBox.setSelectedIndex(settings.getBrowser().ordinal());
 
             comboBox.addActionListener((ActionEvent e) -> {
@@ -1109,8 +1109,8 @@ public class SettingsPanel{
         component.setForeground(color(textColor));
         component.setBackground(color(backgroundColor));
 
-        if(component instanceof JCheckBox){
-            ((JCheckBox)component).setUI(new CustomCheckBoxUI());
+        if(component instanceof JCheckBox jCheckBox){
+            jCheckBox.setUI(new CustomCheckBoxUI());
         }
     }
 
