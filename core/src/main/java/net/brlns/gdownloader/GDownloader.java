@@ -721,13 +721,12 @@ public final class GDownloader{
                         }
                     }
                 }else if(checkExitValue != 0 && currentStatus){
-
                     ProcessBuilder createBuilder = new ProcessBuilder(
                         "reg", "add",
                         "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run",
                         "/v", REGISTRY_APP_NAME,
                         "/t", "REG_SZ",
-                        "/d", "\\\"" + launchString + " --no-gui\\\"",
+                        "/d", "\\\"" + launchString + "\\\"", "--no-gui",
                         "/f"
                     );
 

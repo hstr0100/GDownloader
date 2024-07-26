@@ -28,6 +28,7 @@ java {
 application {
     mainClass = 'net.brlns.gdownloader.GDownloader'
     mainModule = 'net.brlns.gdownloader'
+    applicationDefaultJvmArgs = ['--add-exports=java.management/sun.management=ALL-UNNAMED']
 }
 
 dependencies {
@@ -91,7 +92,7 @@ tasks.named('shadowJar') { shadowJar ->
 
 task zipJpackageImage(type: Zip) {
     def architecture = System.getProperty("os.arch").contains("64") ? (os.isWindows() ? "x64" : "amd64") : (os.isWindows() ? "x86" : "i386")
-    
+
     def fileName = os.isWindows() ? "gdownloader-${version}-windows_portable_${architecture}.zip" :
                    os.isLinux() ? "gdownloader-${version}-linux_portable_${architecture}.zip" :
                    "gdownloader-${version}-mac_portable.zip"

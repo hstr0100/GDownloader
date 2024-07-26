@@ -61,7 +61,6 @@ import static net.brlns.gdownloader.util.URLUtils.*;
 
 //TODO max simultaneous downloads should be independent per website
 //TODO we should only grab clipboard AFTER the button is clicked
-//TODO expand thumbails a little when window is resized
 //TODO implement CD Ripper
 //TODO winamp icon for mp3's in disc
 //TODO add button to convert individually
@@ -73,22 +72,21 @@ import static net.brlns.gdownloader.util.URLUtils.*;
 //TODO keep older versions of ytdlp and retry failed downloads against them
 //TODO d&d files for conversion
 //TODO extra ytdlp args
-//TODO core updater
 //TODO media converter
-//TODO rework WebP support for modular system
+//TODO rework WebP support for modular system @TODO test again, the workaround for the gradle bug might have broken it again
 //TODO output directories for media converter
-//TODO generate version class
 //TODO test restarting
 //TODO verify checksums during updates
 //TODO write a component factory for GUIManager
-//TODO git actions build
-//jpackage.app-version
+//TODO git actions build for different platforms
 //FEEDBACK Icons too small
 //FEEDBACK Should choose to download video and audio independently on each card
 //TODO maybe add notifications for each toggled option
 //TODO check updates on a timer
+//TODO restart on core updates
+//TODO to front does not work on windows @TODO test
 //TODO add bouncycastle, check signatures
-//TODO a+b system should work for updates
+//TODO add yt-dlp queries to a batch pool, execute them all in one go
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
@@ -164,163 +162,166 @@ public class YtDlpDownloader{
             return future;
         }
 
-        //TODO too many nested blocks
         for(WebFilterEnum webFilter : WebFilterEnum.values()){
             if(webFilter == WebFilterEnum.DEFAULT && (main.getConfig().isCaptureAnyLinks() || force) || webFilter.getPattern().apply(inputUrl)){
-                if(!capturedLinks.contains(inputUrl)){
-                    String filteredUrl;
+                if(capturedLinks.contains(inputUrl)){
+                    continue;
+                }
 
-                    switch(webFilter){
-                        case YOUTUBE -> {
-                            filteredUrl = filterVideo(inputUrl);
-                        }
+                String filteredUrl;
 
-                        case YOUTUBE_PLAYLIST -> {
-                            switch(playlistOption){
-                                case DOWNLOAD_PLAYLIST: {
-                                    filteredUrl = filterPlaylist(inputUrl);
+                switch(webFilter){
+                    case YOUTUBE -> {
+                        filteredUrl = filterVideo(inputUrl);
+                    }
 
-                                    if(filteredUrl != null){
-                                        capturedPlaylists.add(filteredUrl);
-                                    }
+                    case YOUTUBE_PLAYLIST -> {
+                        switch(playlistOption){
+                            case DOWNLOAD_PLAYLIST: {
+                                filteredUrl = filterPlaylist(inputUrl);
 
-                                    break;
+                                if(filteredUrl != null){
+                                    capturedPlaylists.add(filteredUrl);
                                 }
 
-                                case DOWNLOAD_SINGLE: {
-                                    String playlist = filterPlaylist(inputUrl);
+                                break;
+                            }
 
-                                    if(playlist != null){
-                                        capturedPlaylists.add(playlist);
-                                    }
+                            case DOWNLOAD_SINGLE: {
+                                String playlist = filterPlaylist(inputUrl);
 
-                                    String video = filterVideo(inputUrl);
-
-                                    if(video != null && video.contains("?v=")){
-                                        return captureUrl(video, force);
-                                    }else{
-                                        filteredUrl = playlist;
-                                    }
-
-                                    break;
+                                if(playlist != null){
+                                    capturedPlaylists.add(playlist);
                                 }
 
-                                case ALWAYS_ASK:
-                                default: {
-                                    String playlist = filterPlaylist(inputUrl);
+                                String video = filterVideo(inputUrl);
 
-                                    if(playlist != null){
-                                        if(!capturedPlaylists.contains(playlist)){
-                                            DialogButton playlistDialogOption = new DialogButton(PlayListOptionEnum.DOWNLOAD_PLAYLIST.getDisplayName(), (boolean setDefault) -> {
-                                                if(setDefault){
-                                                    main.getConfig().setPlaylistDownloadOption(PlayListOptionEnum.DOWNLOAD_PLAYLIST);
-                                                    main.updateConfig();
-                                                }
+                                log.info("Video url is {}", video);
 
-                                                captureUrl(playlist, force, PlayListOptionEnum.DOWNLOAD_PLAYLIST)
-                                                    .whenComplete((Boolean result, Throwable e) -> {
-                                                        if(e != null){
-                                                            main.handleException(e);
-                                                        }
+                                if(video != null && video.contains("?v=") && !video.contains("list=")){
+                                    return captureUrl(video, force);
+                                }else{
+                                    filteredUrl = playlist;
+                                }
 
-                                                        future.complete(result);
-                                                    });
-                                            });
+                                break;
+                            }
 
-                                            DialogButton singleDialogOption = new DialogButton(PlayListOptionEnum.DOWNLOAD_SINGLE.getDisplayName(), (boolean setDefault) -> {
-                                                if(setDefault){
-                                                    main.getConfig().setPlaylistDownloadOption(PlayListOptionEnum.DOWNLOAD_SINGLE);
-                                                    main.updateConfig();
-                                                }
+                            case ALWAYS_ASK:
+                            default: {
+                                String playlist = filterPlaylist(inputUrl);
 
-                                                captureUrl(inputUrl, force, PlayListOptionEnum.DOWNLOAD_SINGLE)
-                                                    .whenComplete((Boolean result, Throwable e) -> {
-                                                        if(e != null){
-                                                            main.handleException(e);
-                                                        }
-
-                                                        future.complete(result);
-                                                    });
-                                            });
-
-                                            DialogButton defaultOption = new DialogButton("", (boolean setDefault) -> {
-                                                future.complete(false);
-                                            });
-
-                                            //The dialog is synchronized
-                                            main.getGuiManager().showConfirmDialog(
-                                                get("dialog.confirm"),
-                                                get("dialog.download_playlist") + "\n\n" + playlist,
-                                                30000,
-                                                defaultOption,
-                                                playlistDialogOption,
-                                                singleDialogOption);
-
-                                            return future;
-                                        }else{
-                                            //TODO I'm assuming this is a wanted behavior - having subsequent links being treated as individual videos
-                                            //It's odd that you'd download a whole playlist and then an individual video from it though, maybe investigate use cases
-                                            return captureUrl(filterVideo(inputUrl), force);
-                                        }
-                                    }
-
+                                if(playlist == null){
                                     future.complete(false);
                                     return future;
                                 }
+
+                                if(!capturedPlaylists.contains(playlist)){
+                                    DialogButton playlistDialogOption = new DialogButton(PlayListOptionEnum.DOWNLOAD_PLAYLIST.getDisplayName(), (boolean setDefault) -> {
+                                        if(setDefault){
+                                            main.getConfig().setPlaylistDownloadOption(PlayListOptionEnum.DOWNLOAD_PLAYLIST);
+                                            main.updateConfig();
+                                        }
+
+                                        captureUrl(playlist, force, PlayListOptionEnum.DOWNLOAD_PLAYLIST)
+                                            .whenComplete((Boolean result, Throwable e) -> {
+                                                if(e != null){
+                                                    main.handleException(e);
+                                                }
+
+                                                future.complete(result);
+                                            });
+                                    });
+
+                                    DialogButton singleDialogOption = new DialogButton(PlayListOptionEnum.DOWNLOAD_SINGLE.getDisplayName(), (boolean setDefault) -> {
+                                        if(setDefault){
+                                            main.getConfig().setPlaylistDownloadOption(PlayListOptionEnum.DOWNLOAD_SINGLE);
+                                            main.updateConfig();
+                                        }
+
+                                        captureUrl(inputUrl, force, PlayListOptionEnum.DOWNLOAD_SINGLE)
+                                            .whenComplete((Boolean result, Throwable e) -> {
+                                                if(e != null){
+                                                    main.handleException(e);
+                                                }
+
+                                                future.complete(result);
+                                            });
+                                    });
+
+                                    DialogButton defaultOption = new DialogButton("", (boolean setDefault) -> {
+                                        future.complete(false);
+                                    });
+
+                                    //The dialog is synchronized
+                                    main.getGuiManager().showConfirmDialog(
+                                        get("dialog.confirm"),
+                                        get("dialog.download_playlist") + "\n\n" + playlist,
+                                        30000,
+                                        defaultOption,
+                                        playlistDialogOption,
+                                        singleDialogOption);
+
+                                    return future;
+                                }else{
+                                    //TODO I'm assuming this is a wanted behavior - having subsequent links being treated as individual videos
+                                    //It's odd that you'd download a whole playlist and then an individual video from it though, maybe investigate use cases
+                                    return captureUrl(filterVideo(inputUrl), force);
+                                }
                             }
                         }
-
-                        default -> {
-                            filteredUrl = inputUrl;
-                        }
                     }
 
-                    if(filteredUrl == null){
-                        if(main.getConfig().isDebugMode()){
-                            main.handleException(new Throwable("Filtered url was null"));
-                        }
+                    default -> {
+                        filteredUrl = inputUrl;
+                    }
+                }
 
-                        future.complete(false);
-                        return future;
+                if(filteredUrl == null){
+                    if(main.getConfig().isDebugMode()){
+                        main.handleException(new Throwable("Filtered url was null"));
                     }
 
-                    if(capturedLinks.add(filteredUrl)){
-                        capturedLinks.add(inputUrl);
+                    future.complete(false);
+                    return future;
+                }
 
-                        MediaCard mediaCard = main.getGuiManager().addMediaCard(main.getConfig().isDownloadVideo(), "");
+                if(capturedLinks.add(filteredUrl)){
+                    capturedLinks.add(inputUrl);
 
-                        int downloadId = downloadCounter.incrementAndGet();
+                    MediaCard mediaCard = main.getGuiManager().addMediaCard(main.getConfig().isDownloadVideo(), "");
 
-                        QueueEntry queueEntry = new QueueEntry(mediaCard, webFilter, inputUrl, filteredUrl, downloadId);
-                        queueEntry.updateStatus(DownloadStatus.QUERYING, get("gui.download_status.querying"));
+                    int downloadId = downloadCounter.incrementAndGet();
 
-                        String filtered = filteredUrl;
-                        mediaCard.setOnClose(() -> {
-                            queueEntry.close();
+                    QueueEntry queueEntry = new QueueEntry(mediaCard, webFilter, inputUrl, filteredUrl, downloadId);
+                    queueEntry.updateStatus(DownloadStatus.QUERYING, get("gui.download_status.querying"));
 
-                            capturedPlaylists.remove(inputUrl);
-                            capturedLinks.remove(inputUrl);
-                            capturedLinks.remove(filtered);
+                    String filtered = filteredUrl;
+                    mediaCard.setOnClose(() -> {
+                        queueEntry.close();
 
-                            downloadDeque.remove(queueEntry);
-                            failedDownloads.remove(queueEntry);
-                            completedDownloads.remove(queueEntry);
+                        capturedPlaylists.remove(inputUrl);
+                        capturedLinks.remove(inputUrl);
+                        capturedLinks.remove(filtered);
 
-                            fireListeners();
-                        });
+                        downloadDeque.remove(queueEntry);
+                        failedDownloads.remove(queueEntry);
+                        completedDownloads.remove(queueEntry);
 
-                        mediaCard.setOnClick(() -> {
-                            queueEntry.launch(main);
-                        });
-
-                        queryVideo(queueEntry);
-
-                        downloadDeque.offerLast(queueEntry);
                         fireListeners();
+                    });
 
-                        future.complete(true);
-                        return future;
-                    }
+                    mediaCard.setOnClick(() -> {
+                        queueEntry.launch(main);
+                    });
+
+                    queryVideo(queueEntry);
+
+                    downloadDeque.offerLast(queueEntry);
+                    fireListeners();
+
+                    future.complete(true);
+                    return future;
                 }
             }
         }
@@ -729,7 +730,7 @@ public class YtDlpDownloader{
                                 if(part.endsWith("%")){
                                     //TODO
                                     double percent = Double.parseDouble(part.replace("%", ""));
-                                    
+
                                     if(percent > lastPercentage || percent < 5 || Math.abs(percent - lastPercentage) > 10){
                                         mediaCard.setPercentage(percent);
                                         lastPercentage = percent;

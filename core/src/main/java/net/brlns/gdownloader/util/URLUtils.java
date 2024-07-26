@@ -29,7 +29,7 @@ import lombok.extern.slf4j.Slf4j;
 public class URLUtils{
 
     @Nullable
-    public static String filterVideo(String youtubeUrl){
+    public static String getVideoId(String youtubeUrl){
         try{
             URL url = new URI(youtubeUrl).toURL();
             String host = url.getHost();
@@ -37,11 +37,21 @@ public class URLUtils{
             if(host != null && host.contains("youtube.com")){
                 String videoId = getParameter(url, "v");
                 if(videoId != null){
-                    return "https://www.youtube.com/watch?v=" + videoId;
+                    return videoId;
                 }
             }
         }catch(Exception e){
             log.warn("Invalid url {} {}", youtubeUrl, e.getLocalizedMessage());
+        }
+
+        return youtubeUrl;
+    }
+
+    @Nullable
+    public static String filterVideo(String youtubeUrl){
+        String videoId = getVideoId(youtubeUrl);
+        if(videoId != null){
+            return "https://www.youtube.com/watch?v=" + videoId;
         }
 
         return youtubeUrl;
@@ -85,12 +95,11 @@ public class URLUtils{
         return null;
     }
 
-    public static String removeParameter(String urlString, String parameterName) throws Exception{
-        URL url = new URI(urlString).toURL();
+    public static String removeParameter(URL url, String parameterName) throws Exception{
         String query = url.getQuery();
 
         if(query == null || query.isEmpty()){
-            return urlString;
+            return url.toString();
         }
 
         Map<String, String> queryParams = parseQueryString(query);
@@ -99,7 +108,7 @@ public class URLUtils{
 
         String newQuery = buildQueryString(queryParams);
 
-        String baseUrl = urlString.split("\\?")[0];
+        String baseUrl = url.toString().split("\\?")[0];
         return baseUrl + (newQuery.isEmpty() ? "" : "?" + newQuery);
     }
 
