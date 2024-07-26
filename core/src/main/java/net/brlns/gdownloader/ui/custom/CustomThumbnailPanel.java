@@ -17,21 +17,8 @@
 package net.brlns.gdownloader.ui.custom;
 
 import java.awt.*;
-import java.util.Dictionary;
-import javax.swing.JComponent;
-import javax.swing.JLabel;
-import javax.swing.*;
-import lombok.*;
-import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.IOException;
-import javax.imageio.ImageIO;
-import javax.swing.JSlider;
-import javax.swing.plaf.basic.BasicSliderUI;
-
-import static net.brlns.gdownloader.ui.themes.ThemeProvider.*;
-import static net.brlns.gdownloader.ui.themes.UIColors.*;
+import javax.swing.JPanel;
 
 /**
  * @author Gabriel / hstr0100 / vertx010

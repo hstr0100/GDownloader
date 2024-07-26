@@ -10,7 +10,7 @@ version = rootProject.version
 group = 'net.brlns'
 
 def author = 'Gabriel D @hstr0100'
-def installerName = 'gdownloader'
+def lowercaseName = 'gdownloader'
 
 def os = org.gradle.internal.os.OperatingSystem.current()
 
@@ -60,7 +60,7 @@ tasks.withType(JavaCompile).configureEach {
 }
 
 jar {
-    archiveBaseName.set("${installerName}-java")
+    archiveBaseName.set("${lowercaseName}-java")
 
     manifest {
         attributes(
@@ -75,7 +75,7 @@ jar {
 }
 
 shadowJar {
-    archiveBaseName.set("${installerName}-java")
+    archiveBaseName.set("${lowercaseName}-java")
     mergeServiceFiles()
 }
 
@@ -132,7 +132,7 @@ jlink {
         def architecture = System.getProperty("os.arch").contains("64") ? "x64" : "x86"
 
         if (os.isWindows()) {
-            installerName = "${installerName}-windows-${architecture}"
+            installerName = "${lowercaseName}-windows-${architecture}"
             installerType = 'msi'
             //imageOptions += ['--win-console']
             installerOptions += [
@@ -146,7 +146,7 @@ jlink {
             installerType = 'deb'
             installerOptions += [
                 '--resource-dir', "build/jpackage/${rootProject.name}/lib/app",
-                '--linux-package-name', "${installerName}-linux",
+                '--linux-package-name', "${lowercaseName}-linux",
                 '--linux-app-category', 'Qt;KDE;Internet;',
                 '--linux-menu-group', 'Qt;KDE;Internet;',
                 '--linux-deb-maintainer', 'hstr0100@brlns.net',
@@ -156,7 +156,7 @@ jlink {
         } else if (os.isMacOsX()) {
             installerType = 'dmg'
             installerOptions += [
-                '--mac-package-name', "${installerName}-mac"
+                '--mac-package-name', "${lowercaseName}-mac"
             ]
         }
     }

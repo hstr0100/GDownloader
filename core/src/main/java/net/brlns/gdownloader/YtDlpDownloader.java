@@ -723,13 +723,13 @@ public class YtDlpDownloader{
                     while(downloadsRunning.get() && !next.getCancelHook().get() && (s = stdInput.readLine()) != null){
                         log.info("[{}] - {}", next.getDownloadId(), s);
 
-                        if(s.contains("[download]")){
+                        if(s.contains("[download]") && !s.contains("Destination:")){
                             String[] parts = s.split("\\s+");
                             for(String part : parts){
                                 if(part.endsWith("%")){
                                     //TODO
                                     double percent = Double.parseDouble(part.replace("%", ""));
-
+                                    
                                     if(percent > lastPercentage || percent < 5 || Math.abs(percent - lastPercentage) > 10){
                                         mediaCard.setPercentage(percent);
                                         lastPercentage = percent;

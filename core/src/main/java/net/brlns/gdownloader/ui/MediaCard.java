@@ -16,18 +16,19 @@
  */
 package net.brlns.gdownloader.ui;
 
-import java.awt.*;
+import java.awt.Color;
+import java.awt.Dimension;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import javax.imageio.ImageIO;
-import javax.swing.ImageIcon;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
-import net.brlns.gdownloader.ui.custom.*;
+import net.brlns.gdownloader.ui.custom.CustomProgressBar;
+import net.brlns.gdownloader.ui.custom.CustomThumbnailPanel;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -78,7 +79,7 @@ public class MediaCard{
     }
 
     public void setLabel(String... label){
-        mediaLabel.setText(GUIManager.wrapText(50, label));
+        mediaLabel.setText(GUIManager.wrapText(51, label));
     }
 
     public void setPercentage(double percentageIn){

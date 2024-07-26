@@ -1086,7 +1086,7 @@ public final class GUIManager{
 
     private void adjustWindowSize(){
         SwingUtilities.invokeLater(() -> {
-            appWindow.setSize(638, 365);
+            appWindow.setSize(638, 370);
             appWindow.setMinimumSize(new Dimension(appWindow.getWidth(), 225));
 
             Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
