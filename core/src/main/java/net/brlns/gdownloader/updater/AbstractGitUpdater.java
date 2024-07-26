@@ -185,18 +185,21 @@ public abstract class AbstractGitUpdater{
         File binaryPath = new File(workDir, getRuntimeBinaryName());
 
         String lockTag = getLockTag(tag.getKey());
+        log.info("{} current tag is", lockTag);
 
         File lock = new File(workDir, getLockFileName());
 
-        Path tmpDir = null;
-        if(binaryPath.exists()){
+        if(binaryPath.exists() || this instanceof SelfUpdater){
             if(checkLock(lock, lockTag)){
                 executablePath = binaryPath;
 
                 log.info("{} is up to date", getRepo());
                 return;
             }
+        }
 
+        Path tmpDir = null;
+        if(binaryPath.exists()){
             tmpDir = Paths.get(workDir.getAbsolutePath(), "old");
 
             if(!Files.exists(tmpDir)){
