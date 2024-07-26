@@ -91,6 +91,8 @@ public final class GDownloader{
 
     public static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
+    private static String launcher;
+
     private final SystemTray tray;
     private TrayIcon trayIcon = null;
 
@@ -630,6 +632,10 @@ public final class GDownloader{
             }
         }catch(URISyntaxException e){
             //Ignore
+        }
+
+        if(launchString == null){
+            launchString = launcher;
         }
 
         if(launchString == null){
@@ -1176,6 +1182,10 @@ public final class GDownloader{
             if(args[i].equalsIgnoreCase("--from-ota")){
                 log.info("Sucessfully updated from ota");
                 fromOta = true;
+            }
+
+            if(args[i].equalsIgnoreCase("--launcher")){
+                launcher = args[++i];
             }
         }
 

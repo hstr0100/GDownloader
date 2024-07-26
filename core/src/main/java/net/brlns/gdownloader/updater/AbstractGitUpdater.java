@@ -185,7 +185,7 @@ public abstract class AbstractGitUpdater{
         File binaryPath = new File(workDir, getRuntimeBinaryName());
 
         String lockTag = getLockTag(tag.getKey());
-        log.info("{} current tag is", lockTag);
+        log.info("current tag is {}", lockTag);
 
         File lock = new File(workDir, getLockFileName());
 

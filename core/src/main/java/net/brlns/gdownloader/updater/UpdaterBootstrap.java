@@ -59,7 +59,9 @@ public class UpdaterBootstrap{
         if(!Files.exists(path)){
             Path runtimePath = getNewestEntry(workDir);
 
-            if(fromOta){
+            String launchCommand = getLaunchCommand();
+
+            if(fromOta || launchCommand != null && launchCommand.contains(PREFIX)){
                 log.error("Current running image is from ota {} v{}", runtimePath, version);
                 return;
             }else{
@@ -81,6 +83,12 @@ public class UpdaterBootstrap{
             List<String> arguments = new ArrayList<>();
             arguments.add(binary.getAbsolutePath());
             arguments.add("--from-ota");
+
+            if(launchCommand != null){
+                arguments.add("--launcher");
+                arguments.add(launchCommand);
+            }
+
             arguments.addAll(Arrays.asList(args));
 
             log.info("Launching {}", arguments);
@@ -134,6 +142,11 @@ public class UpdaterBootstrap{
     @Nullable
     private static String getVersion(){
         return System.getProperty("jpackage.app-version");
+    }
+
+    @Nullable
+    private static String getLaunchCommand(){
+        return System.getProperty("jpackage.app-path");
     }
 
     @Nullable
