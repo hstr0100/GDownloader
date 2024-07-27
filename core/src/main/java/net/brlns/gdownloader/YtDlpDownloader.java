@@ -76,9 +76,9 @@ import static net.brlns.gdownloader.util.URLUtils.*;
 //TODO save last window size in config
 //TODO keep older versions of ytdlp and retry failed downloads against them
 //TODO d&d files for conversion
-//TODO extra ytdlp args
+//TODO extra ytdlp args @TODO bad arguments could break downloads, leave as is? users can edit the config.json directly to add things like proxy arguments
 //TODO media converter
-//TODO rework WebP support for modular system @TODO test again, the workaround for the gradle bug might have broken it again
+//TODO rework WebP support for modular system @TODO test again, the workaround for the gradle bug might have broken it again @TODO it in fact did @TODO cannot fix
 //TODO output directories for media converter
 //TODO test restarting
 //TODO verify checksums during updates
@@ -88,12 +88,10 @@ import static net.brlns.gdownloader.util.URLUtils.*;
 //FEEDBACK Should choose to download video and audio independently on each card
 //TODO maybe add notifications for each toggled option
 //TODO check updates on a timer
-//TODO to front does not work on windows @TODO test
 //TODO add bouncycastle, check signatures
-//TODO add yt-dlp queries to a batch pool, execute them all in one go
 //TODO individual retry button
 //TODO --no-playlist when single video option is active
-//TODO re-test download cancel logic
+//TODO Artifacting seems to be happening on the scroll pane with AMD video cards
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
@@ -308,7 +306,7 @@ public class YtDlpDownloader{
 
                     int downloadId = downloadCounter.incrementAndGet();
 
-                    QueueEntry queueEntry = new QueueEntry(mediaCard, webFilter, inputUrl, filteredUrl, downloadId);
+                    QueueEntry queueEntry = new QueueEntry(main, mediaCard, webFilter, inputUrl, filteredUrl, downloadId);
                     queueEntry.updateStatus(DownloadStatus.QUERYING, get("gui.download_status.querying"));
 
                     String filtered = filteredUrl;
@@ -327,7 +325,7 @@ public class YtDlpDownloader{
                     });
 
                     mediaCard.setOnLeftClick(() -> {
-                        queueEntry.launch(main);
+                        main.openDownloadsDirectory();
                     });
 
                     mediaCard.getRightClickMenu().put(
@@ -335,12 +333,12 @@ public class YtDlpDownloader{
                         () -> main.openDownloadsDirectory());
 
                     mediaCard.getRightClickMenu().put(
-                        get("gui.copy_url"),
-                        () -> queueEntry.copyUrlToClipboard(main));
+                        get("gui.open_in_browser"),
+                        () -> queueEntry.openUrl());
 
                     mediaCard.getRightClickMenu().put(
-                        get("gui.delete_files"),
-                        () -> queueEntry.deleteMediaFiles(main));
+                        get("gui.copy_url"),
+                        () -> queueEntry.copyUrlToClipboard());
 
                     queryVideo(queueEntry);
 
@@ -711,6 +709,7 @@ public class YtDlpDownloader{
                             "-f",
                             quality.getQualitySettings(),
                             "--postprocessor-args",
+                            //Opus is not supported by some native video players
                             "ffmpeg:-c:a aac -b:a " + audioBitrate.getValue() + "k",
                             "--merge-output-format",
                             quality.getContainer().getValue()
@@ -780,12 +779,15 @@ public class YtDlpDownloader{
                                 stopDownloads();
                             }
                         }else{
-                            next.updateStatus(DownloadStatus.COMPLETE, get("gui.download_status.finished"));
-
                             try(Stream<Path> dirStream = Files.walk(tmpPath.toPath())){
                                 dirStream.forEach(path -> {
                                     String fileName = path.getFileName().toString().toLowerCase();
-                                    if(fileName.endsWith(").mp3") || fileName.endsWith(")." + quality.getContainer().getValue())){
+
+                                    //TODO audio output format
+                                    boolean isAudio = fileName.endsWith(").mp3");
+                                    boolean isVideo = fileName.endsWith(")." + quality.getContainer().getValue());
+
+                                    if(isAudio || isVideo){
                                         Path relativePath = tmpPath.toPath().relativize(path);
                                         Path targetPath = finalPath.toPath().resolve(relativePath);
 
@@ -793,6 +795,19 @@ public class YtDlpDownloader{
                                             Files.createDirectories(targetPath.getParent());
                                             Files.copy(path, targetPath, StandardCopyOption.REPLACE_EXISTING);
                                             next.getFinalMediaFiles().add(targetPath.toFile());
+
+                                            if(isVideo){
+                                                mediaCard.getRightClickMenu().put(
+                                                    get("gui.play_video"),
+                                                    () -> next.play(true));
+                                            }
+
+                                            if(isAudio){
+                                                mediaCard.getRightClickMenu().put(
+                                                    get("gui.play_audio"),
+                                                    () -> next.play(false));
+                                            }
+
                                             log.info("Copied file: {}", path.getFileName());
                                         }catch(IOException e){
                                             log.error("Failed to copy file: {} {}", path.getFileName(), e.getLocalizedMessage());
@@ -804,6 +819,12 @@ public class YtDlpDownloader{
                             }
 
                             GDownloader.deleteRecursively(tmpPath.toPath());
+
+                            next.updateStatus(DownloadStatus.COMPLETE, get("gui.download_status.finished"));
+
+                            mediaCard.getRightClickMenu().put(
+                                get("gui.delete_files"),
+                                () -> next.deleteMediaFiles());
 
                             completedDownloads.offer(next);
                         }
@@ -928,6 +949,8 @@ public class YtDlpDownloader{
     @Data
     private static class QueueEntry{
 
+        private final GDownloader main;
+
         private final MediaCard mediaCard;
         private final WebFilterEnum webFilter;
         private final String originalUrl;
@@ -946,7 +969,11 @@ public class YtDlpDownloader{
 
         private Process process;
 
-        public void launch(GDownloader main){
+        public void openUrl(){
+            main.openUrlInBrowser(originalUrl);
+        }
+
+        public void play(boolean video){
             if(!finalMediaFiles.isEmpty()){
                 for(File file : finalMediaFiles){
                     if(!file.exists()){
@@ -955,23 +982,19 @@ public class YtDlpDownloader{
 
                     String fileName = file.getAbsolutePath().toLowerCase();
 
-                    //Video files get priority
                     for(VideoContainerEnum container : VideoContainerEnum.values()){
-                        if(main.getConfig().isDownloadVideo() && fileName.endsWith(")." + container.getValue())){
+                        if(fileName.endsWith(")." + (video ? container.getValue() : "mp3"))){
                             main.open(file);
                             return;
                         }
                     }
-
-                    main.open(file);
-                    return;
                 }
             }
 
-            main.openUrlInBrowser(originalUrl);
+            main.openDownloadsDirectory();
         }
 
-        public void copyUrlToClipboard(GDownloader main){
+        public void copyUrlToClipboard(){
             StringSelection stringSelection = new StringSelection(originalUrl);
             Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
             clipboard.setContents(stringSelection, null);
@@ -985,7 +1008,7 @@ public class YtDlpDownloader{
             );
         }
 
-        public void deleteMediaFiles(GDownloader main){
+        public void deleteMediaFiles(){
             boolean success = false;
 
             for(File file : finalMediaFiles){

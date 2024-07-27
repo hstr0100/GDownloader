@@ -1111,10 +1111,27 @@ public final class GUIManager{
 
         popupWindow.setVisible(true);
 
-        popupWindow.addMouseListener(new MouseAdapter(){
+        AWTEventListener globalMouseListener = new AWTEventListener(){
             @Override
-            public void mouseClicked(MouseEvent e){
-                popupWindow.dispose();
+            public void eventDispatched(AWTEvent event){
+                if(event.getID() == MouseEvent.MOUSE_CLICKED){
+                    MouseEvent me = (MouseEvent)event;
+                    Component component = SwingUtilities.getDeepestComponentAt(me.getComponent(), me.getX(), me.getY());
+
+                    if(component == null || !SwingUtilities.isDescendingFrom(component, popupWindow)){
+                        popupWindow.dispose();
+                        Toolkit.getDefaultToolkit().removeAWTEventListener(this);
+                    }
+                }
+            }
+        };
+
+        Toolkit.getDefaultToolkit().addAWTEventListener(globalMouseListener, AWTEvent.MOUSE_EVENT_MASK);
+
+        popupWindow.addWindowListener(new WindowAdapter(){
+            @Override
+            public void windowClosed(WindowEvent e){
+                Toolkit.getDefaultToolkit().removeAWTEventListener(globalMouseListener);
             }
         });
     }
@@ -1163,11 +1180,11 @@ public final class GUIManager{
         Runnable task = () -> {
             if(messageWindow != null){
                 Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-                Insets screenInsets = Toolkit.getDefaultToolkit().getScreenInsets(messageWindow.getGraphicsConfiguration());
-                int taskbarHeight = screenInsets.bottom;
+                //Insets screenInsets = Toolkit.getDefaultToolkit().getScreenInsets(messageWindow.getGraphicsConfiguration());
+                //int taskbarHeight = screenInsets.bottom;
 
                 int newX = screenSize.width - messageWindow.getWidth() - 10;
-                int newY = screenSize.height - messageWindow.getHeight() - taskbarHeight - 10;
+                int newY = /*screenSize.height - messageWindow.getHeight() - taskbarHeight -*/ 10;
 
                 messageWindow.setLocation(newX, newY);
 
