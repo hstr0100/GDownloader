@@ -592,33 +592,31 @@ public class YtDlpDownloader{
 
                         //Intentional fall-through
                         case YOUTUBE:
-                            if(!main.getConfig().isDownloadVideo()){
-                                genericArgs.addAll(Arrays.asList(
-                                    "-o",
-                                    tmpPath.getAbsolutePath()
-                                    + (next.getWebFilter() == WebFilterEnum.YOUTUBE_PLAYLIST ? "/%(playlist)s/" : "/")
-                                    + "%(title)s (" + audioBitrate.getValue() + "kbps).%(ext)s",
-                                    "--embed-thumbnail",
-                                    "--embed-metadata",
-                                    "--sponsorblock-mark",
-                                    "sponsor,intro,outro,selfpromo,interaction,music_offtopic"
-                                ));
-                            }else{
-                                genericArgs.addAll(Arrays.asList(
-                                    "-o",
-                                    tmpPath.getAbsolutePath()
-                                    + (next.getWebFilter() == WebFilterEnum.YOUTUBE_PLAYLIST ? "/%(playlist)s/" : "/")
-                                    + "%(title)s (%(uploader_id)s %(upload_date)s %(resolution)s).%(ext)s",
-                                    "--embed-thumbnail",
-                                    "--embed-metadata",
-                                    "--embed-subs",
-                                    "--sub-langs",
-                                    "all,-live_chat",
-                                    "--parse-metadata",
-                                    "description:(?s)(?P<meta_comment>.+)",
-                                    "--embed-chapters"
-                                ));
-                            }
+                            audioArgs.addAll(Arrays.asList(
+                                "-o",
+                                tmpPath.getAbsolutePath()
+                                + (next.getWebFilter() == WebFilterEnum.YOUTUBE_PLAYLIST ? "/%(playlist)s/" : "/")
+                                + "%(title)s (" + audioBitrate.getValue() + "kbps).%(ext)s",
+                                "--embed-thumbnail",
+                                "--embed-metadata",
+                                "--sponsorblock-mark",
+                                "sponsor,intro,outro,selfpromo,interaction,music_offtopic"
+                            ));
+
+                            videoArgs.addAll(Arrays.asList(
+                                "-o",
+                                tmpPath.getAbsolutePath()
+                                + (next.getWebFilter() == WebFilterEnum.YOUTUBE_PLAYLIST ? "/%(playlist)s/" : "/")
+                                + "%(title)s (%(uploader_id)s %(upload_date)s %(resolution)s).%(ext)s",
+                                "--embed-thumbnail",
+                                "--embed-metadata",
+                                "--embed-subs",
+                                "--sub-langs",
+                                "all,-live_chat",
+                                "--parse-metadata",
+                                "description:(?s)(?P<meta_comment>.+)",
+                                "--embed-chapters"
+                            ));
 
                             if(next.getUrl().contains("liked") || next.getUrl().contains("list=LL") || next.getUrl().contains("list=WL")){
                                 if(main.getConfig().isReadCookies()){
