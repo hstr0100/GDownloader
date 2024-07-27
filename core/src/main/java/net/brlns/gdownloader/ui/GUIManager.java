@@ -1085,14 +1085,20 @@ public final class GUIManager{
         popupPanel.setBorder(BorderFactory.createLineBorder(Color.GRAY));
         popupPanel.setOpaque(true);
 
+        JWindow popupWindow = new JWindow();
+        popupWindow.setLayout(new BorderLayout());
+
         for(Map.Entry<String, Runnable> entry : actions.entrySet()){
             JButton button = new CustomMenuButton(entry.getKey());
-            button.addActionListener(e -> entry.getValue().run());
+
+            button.addActionListener(e -> {
+                entry.getValue().run();
+                popupWindow.dispose();
+            });
+
             popupPanel.add(button);
         }
 
-        JWindow popupWindow = new JWindow();
-        popupWindow.setLayout(new BorderLayout());
         popupWindow.add(popupPanel, BorderLayout.CENTER);
         popupWindow.pack();
 
