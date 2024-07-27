@@ -23,7 +23,6 @@ import java.util.Map;
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-//TODO fonts
 public abstract class AbstractTheme{
 
     private final Map<UIColors, Color> colors = new HashMap<>();

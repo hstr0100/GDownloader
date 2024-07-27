@@ -21,6 +21,9 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.awt.Color;
+import java.awt.Toolkit;
+import java.awt.datatransfer.Clipboard;
+import java.awt.datatransfer.StringSelection;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
@@ -52,9 +55,11 @@ import net.brlns.gdownloader.settings.enums.ISettingsEnum;
 import net.brlns.gdownloader.settings.enums.PlayListOptionEnum;
 import net.brlns.gdownloader.settings.enums.VideoContainerEnum;
 import net.brlns.gdownloader.settings.enums.WebFilterEnum;
+import net.brlns.gdownloader.ui.GUIManager;
 import net.brlns.gdownloader.ui.GUIManager.DialogButton;
 import net.brlns.gdownloader.ui.MediaCard;
 import net.brlns.gdownloader.util.Nullable;
+import net.brlns.gdownloader.util.Pair;
 
 import static net.brlns.gdownloader.Language.*;
 import static net.brlns.gdownloader.util.URLUtils.*;
@@ -83,12 +88,10 @@ import static net.brlns.gdownloader.util.URLUtils.*;
 //FEEDBACK Should choose to download video and audio independently on each card
 //TODO maybe add notifications for each toggled option
 //TODO check updates on a timer
-//TODO restart on core updates
 //TODO to front does not work on windows @TODO test
 //TODO add bouncycastle, check signatures
 //TODO add yt-dlp queries to a batch pool, execute them all in one go
-//TODO right click menu -> open in folder and delete
-//TODO tray menu -> open downloads directory
+//TODO individual retry button
 //TODO --no-playlist when single video option is active
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -322,9 +325,21 @@ public class YtDlpDownloader{
                         fireListeners();
                     });
 
-                    mediaCard.setOnClick(() -> {
+                    mediaCard.setOnLeftClick(() -> {
                         queueEntry.launch(main);
                     });
+
+                    mediaCard.getRightClickMenu().put(
+                        get("gui.open_downloads_directory"),
+                        () -> main.openDownloadsDirectory());
+
+                    mediaCard.getRightClickMenu().put(
+                        get("gui.copy_url"),
+                        () -> queueEntry.copyUrlToClipboard(main));
+
+                    mediaCard.getRightClickMenu().put(
+                        get("gui.delete_files"),
+                        () -> queueEntry.deleteMediaFiles(main));
 
                     queryVideo(queueEntry);
 
@@ -501,39 +516,6 @@ public class YtDlpDownloader{
                 }
 
                 try{
-                    next.getRunning().set(true);
-                    next.updateStatus(DownloadStatus.STARTING, get("gui.download_status.starting"));
-
-                    File finalPath = main.getOrCreateDownloadsDirectory();
-
-                    File tmpPath = GDownloader.getOrCreate(finalPath, GDownloader.CACHE_DIRETORY_NAME, String.valueOf(next.getDownloadId()));
-                    next.setTmpDirectory(tmpPath);
-
-                    List<String> args = new ArrayList<>();
-
-                    args.addAll(Arrays.asList(
-                        main.getYtDlpUpdater().getExecutablePath().toString(),
-                        "-i"
-                    ));
-
-                    if(main.getFfmpegUpdater().getExecutablePath() != null){
-                        args.addAll(Arrays.asList(
-                            "--ffmpeg-location",
-                            main.getFfmpegUpdater().getExecutablePath().toString()
-                        ));
-                    }
-
-                    QualitySettings check = main.getConfig().getQualitySettings().get(next.getWebFilter());
-
-                    QualitySettings quality;
-                    if(check != null){
-                        quality = check;
-                    }else{
-                        quality = main.getConfig().getDefaultQualitySettings();
-                    }
-
-                    AudioBitrateEnum audioBitrate = quality.getAudioBitrate();
-
                     if(!main.getConfig().isDownloadAudio() && !main.getConfig().isDownloadVideo()){
                         next.updateStatus(DownloadStatus.NO_METHOD, get("enums.download_status.no_method.video_tip"));
                         next.reset();
@@ -549,48 +531,53 @@ public class YtDlpDownloader{
                         return;
                     }
 
-                    if(!main.getConfig().isDownloadVideo()){
-                        if(main.getConfig().isDownloadAudio() && audioBitrate != AudioBitrateEnum.NO_AUDIO){
-                            args.addAll(Arrays.asList(
-                                "-f",
-                                "bestaudio"
-                            ));
-                        }else{
-                            next.updateStatus(DownloadStatus.NO_METHOD, get("enums.download_status.no_method.audio_tip"));
-                            next.reset();
+                    QualitySettings needle = main.getConfig().getQualitySettings().get(next.getWebFilter());
 
-                            failedDownloads.offer(next);
-
-                            log.error("{} - No audio quality selected, but was set to download audio only.", next.getWebFilter());
-
-                            if(downloadDeque.size() <= 1){
-                                stopDownloads();
-                            }
-
-                            return;
-                        }
+                    QualitySettings quality;
+                    if(needle != null){
+                        quality = needle;
                     }else{
-                        args.addAll(Arrays.asList(
-                            "-f",
-                            quality.getQualitySettings()
-                        ));
+                        quality = main.getConfig().getDefaultQualitySettings();
                     }
 
-                    if(main.getConfig().isDownloadVideo()){
-                        args.addAll(Arrays.asList(
-                            "--merge-output-format",
-                            quality.getContainer().getValue(),
-                            "--keep-video"//This is a hack, we should run two separate commands instead
-                        ));
+                    AudioBitrateEnum audioBitrate = quality.getAudioBitrate();
+
+                    if(!main.getConfig().isDownloadVideo() && main.getConfig().isDownloadAudio() && audioBitrate == AudioBitrateEnum.NO_AUDIO){
+                        next.updateStatus(DownloadStatus.NO_METHOD, get("enums.download_status.no_method.audio_tip"));
+                        next.reset();
+
+                        failedDownloads.offer(next);
+
+                        log.error("{} - No audio quality selected, but was set to download audio only.", next.getWebFilter());
+
+                        if(downloadDeque.size() <= 1){
+                            stopDownloads();
+                        }
+
+                        return;
                     }
 
-                    if(main.getConfig().isDownloadAudio() && audioBitrate != AudioBitrateEnum.NO_AUDIO){
-                        args.addAll(Arrays.asList(
-                            "--extract-audio",
-                            "--audio-format",
-                            "mp3",
-                            "--audio-quality",
-                            audioBitrate.getValue() + "k"
+                    next.getRunning().set(true);
+                    next.updateStatus(DownloadStatus.STARTING, get("gui.download_status.starting"));
+
+                    File finalPath = main.getOrCreateDownloadsDirectory();
+
+                    File tmpPath = GDownloader.getOrCreate(finalPath, GDownloader.CACHE_DIRETORY_NAME, String.valueOf(next.getDownloadId()));
+                    next.setTmpDirectory(tmpPath);
+
+                    List<String> genericArgs = new ArrayList<>();
+                    List<String> audioArgs = new ArrayList<>();
+                    List<String> videoArgs = new ArrayList<>();
+
+                    genericArgs.addAll(Arrays.asList(
+                        main.getYtDlpUpdater().getExecutablePath().toString(),
+                        "-i"
+                    ));
+
+                    if(main.getFfmpegUpdater().getExecutablePath() != null){
+                        genericArgs.addAll(Arrays.asList(
+                            "--ffmpeg-location",
+                            main.getFfmpegUpdater().getExecutablePath().toString()
                         ));
                     }
 
@@ -598,14 +585,14 @@ public class YtDlpDownloader{
 
                     switch(next.getWebFilter()){
                         case YOUTUBE_PLAYLIST:
-                            args.addAll(Arrays.asList(
+                            genericArgs.addAll(Arrays.asList(
                                 "--yes-playlist"
                             ));
 
                         //Intentional fall-through
                         case YOUTUBE:
                             if(!main.getConfig().isDownloadVideo()){
-                                args.addAll(Arrays.asList(
+                                genericArgs.addAll(Arrays.asList(
                                     "-o",
                                     tmpPath.getAbsolutePath()
                                     + (next.getWebFilter() == WebFilterEnum.YOUTUBE_PLAYLIST ? "/%(playlist)s/" : "/")
@@ -616,7 +603,7 @@ public class YtDlpDownloader{
                                     "sponsor,intro,outro,selfpromo,interaction,music_offtopic"
                                 ));
                             }else{
-                                args.addAll(Arrays.asList(
+                                genericArgs.addAll(Arrays.asList(
                                     "-o",
                                     tmpPath.getAbsolutePath()
                                     + (next.getWebFilter() == WebFilterEnum.YOUTUBE_PLAYLIST ? "/%(playlist)s/" : "/")
@@ -628,15 +615,13 @@ public class YtDlpDownloader{
                                     "all,-live_chat",
                                     "--parse-metadata",
                                     "description:(?s)(?P<meta_comment>.+)",
-                                    "--embed-chapters",
-                                    "--sponsorblock-mark",
-                                    "sponsor,intro,outro,selfpromo,interaction,music_offtopic"
+                                    "--embed-chapters"
                                 ));
                             }
 
                             if(next.getUrl().contains("liked") || next.getUrl().contains("list=LL") || next.getUrl().contains("list=WL")){
                                 if(main.getConfig().isReadCookies()){
-                                    args.addAll(Arrays.asList(
+                                    genericArgs.addAll(Arrays.asList(
                                         "--cookies-from-browser",
                                         main.getBrowserForCookies().getName()
                                     ));
@@ -645,7 +630,7 @@ public class YtDlpDownloader{
 
                             break;
                         case TWITCH:
-                            args.addAll(Arrays.asList(
+                            genericArgs.addAll(Arrays.asList(
                                 "-o",
                                 tmpPath.getAbsolutePath() + "/%(title)s (%(uploader_id)s %(upload_date)s %(resolution)s).%(ext)s",
                                 "--verbose",
@@ -653,22 +638,20 @@ public class YtDlpDownloader{
                                 "--hls-prefer-native"
                             ));
 
-                            if(main.getConfig().isDownloadVideo()){
-                                args.addAll(Arrays.asList(
-                                    "--parse-metadata",
-                                    ":%(?P<is_live>)"
-                                ));
-                            }
+                            videoArgs.addAll(Arrays.asList(
+                                "--parse-metadata",
+                                ":%(?P<is_live>)"
+                            ));
 
                             break;
                         case TWITTER:
-                            args.addAll(Arrays.asList(
+                            genericArgs.addAll(Arrays.asList(
                                 "-o",
                                 tmpPath.getAbsolutePath() + "/%(title)s (%(uploader_id)s %(upload_date)s %(resolution)s).%(ext)s"
                             ));
 
                             if(main.getConfig().isReadCookies()){
-                                args.addAll(Arrays.asList(
+                                genericArgs.addAll(Arrays.asList(
                                     "--cookies-from-browser",
                                     main.getBrowserForCookies().getName()
                                 ));
@@ -676,7 +659,7 @@ public class YtDlpDownloader{
 
                             break;
                         case FACEBOOK:
-                            args.addAll(Arrays.asList(
+                            genericArgs.addAll(Arrays.asList(
                                 "-o",
                                 tmpPath.getAbsolutePath() + "/%(title)s (%(upload_date)s %(resolution)s).%(ext)s",
                                 "--max-sleep-interval",
@@ -686,7 +669,7 @@ public class YtDlpDownloader{
                             ));
 
                             if(main.getConfig().isReadCookies()){
-                                args.addAll(Arrays.asList(
+                                genericArgs.addAll(Arrays.asList(
                                     "--cookies-from-browser",
                                     main.getBrowserForCookies().getName()
                                 ));
@@ -701,13 +684,13 @@ public class YtDlpDownloader{
 
                         //fall-through
                         default:
-                            args.addAll(Arrays.asList(
+                            genericArgs.addAll(Arrays.asList(
                                 "-o",
                                 tmpPath.getAbsolutePath() + "/%(title)s (%(resolution)s).%(ext)s"
                             ));
 
                             if(main.getConfig().isReadCookies()){
-                                args.addAll(Arrays.asList(
+                                genericArgs.addAll(Arrays.asList(
                                     "--cookies-from-browser",
                                     main.getBrowserForCookies().getName()
                                 ));
@@ -718,59 +701,59 @@ public class YtDlpDownloader{
 
                     for(String arg : main.getConfig().getExtraYtDlpArguments().split(" ")){
                         if(!arg.isEmpty()){
-                            args.add(arg);
+                            genericArgs.add(arg);
                         }
                     }
 
-                    args.add(next.getUrl());
+                    boolean success = false;
 
-                    log.info("exec {}", args);
+                    if(main.getConfig().isDownloadVideo()){
+                        videoArgs.addAll(Arrays.asList(
+                            "-f",
+                            quality.getQualitySettings(),
+                            "--postprocessor-args",
+                            "ffmpeg:-c:a aac -b:a " + audioBitrate.getValue() + "k",
+                            "--merge-output-format",
+                            quality.getContainer().getValue()
+                        ));
 
-                    Process process = Runtime.getRuntime().exec(args.stream().toArray(String[]::new));
+                        Pair<Integer, String> result = processDownload(next, genericArgs, videoArgs);
 
-                    next.setProcess(process);
+                        if(result.getKey() != 0){
+                            next.updateStatus(DownloadStatus.FAILED, result.getValue());
+                            next.reset();
 
-                    BufferedReader stdInput = new BufferedReader(new InputStreamReader(process.getInputStream()));
-                    BufferedReader stdError = new BufferedReader(new InputStreamReader(process.getErrorStream()));
-
-                    double lastPercentage = 0;
-                    String s;
-
-                    while(downloadsRunning.get() && !next.getCancelHook().get() && (s = stdInput.readLine()) != null){
-                        log.info("[{}] - {}", next.getDownloadId(), s);
-
-                        if(s.contains("[download]") && !s.contains("Destination:")){
-                            String[] parts = s.split("\\s+");
-                            for(String part : parts){
-                                if(part.endsWith("%")){
-                                    //TODO
-                                    double percent = Double.parseDouble(part.replace("%", ""));
-
-                                    if(percent > lastPercentage || percent < 5 || Math.abs(percent - lastPercentage) > 10){
-                                        mediaCard.setPercentage(percent);
-                                        lastPercentage = percent;
-                                    }
-                                }
-                            }
-
-                            next.updateStatus(DownloadStatus.DOWNLOADING, s.replace("[download] ", ""));
-                        }else if(s.contains("[Merger]")
-                            || s.contains("[ExtractAudio]")
-                            || s.contains("[Embed")
-                            || s.contains("[Metadata]")
-                            || s.contains("[Thumbnails")){
-                            next.updateStatus(DownloadStatus.PROCESSING, s);
-                        }else{
-                            next.updateStatus(DownloadStatus.PREPARING, s);
+                            failedDownloads.offer(next);
+                            fireListeners();
+                            return;
                         }
+
+                        success = true;
                     }
 
-                    String lastError = "- -";
+                    if(main.getConfig().isDownloadAudio() && audioBitrate != AudioBitrateEnum.NO_AUDIO){
+                        audioArgs.addAll(Arrays.asList(
+                            "-f",
+                            "bestaudio",
+                            "--extract-audio",
+                            "--audio-format",
+                            "mp3",
+                            "--audio-quality",
+                            audioBitrate.getValue() + "k"
+                        ));
 
-                    while(downloadsRunning.get() && !next.getCancelHook().get() && (s = stdError.readLine()) != null){
-                        log.error("[{}] - {}", next.getDownloadId(), s);
+                        Pair<Integer, String> result = processDownload(next, genericArgs, audioArgs);
 
-                        lastError = s;
+                        if(result.getKey() != 0){
+                            next.updateStatus(DownloadStatus.FAILED, result.getValue());
+                            next.reset();
+
+                            failedDownloads.offer(next);
+                            fireListeners();
+                            return;
+                        }
+
+                        success = true;
                     }
 
                     if(!downloadsRunning.get()){
@@ -780,13 +763,19 @@ public class YtDlpDownloader{
                         downloadDeque.offerFirst(next);
                         fireListeners();
                     }else if(!next.getCancelHook().get()){
-                        int exitCode = process.waitFor();
-
-                        if(exitCode != 0){
-                            next.updateStatus(DownloadStatus.FAILED, lastError);
+                        if(!success){//Could happen, we are dynamically calling for the config state on each step
+                            next.updateStatus(DownloadStatus.NO_METHOD, get("enums.download_status.no_method.video_tip"));
                             next.reset();
 
                             failedDownloads.offer(next);
+
+                            log.error("{} - Option changed unexpectedly.", next.getWebFilter());
+
+                            if(downloadDeque.size() <= 1){
+                                stopDownloads();
+                            }
+
+                            return;
                         }else{
                             next.updateStatus(DownloadStatus.COMPLETE, get("gui.download_status.finished"));
 
@@ -838,6 +827,71 @@ public class YtDlpDownloader{
         if(downloadsRunning.get() && runningDownloads.get() == 0){
             stopDownloads();
         }
+    }
+
+    private Pair<Integer, String> processDownload(QueueEntry next,
+        List<String> genericArgs, List<String> specificArgs) throws Exception{
+
+        List<String> finalArgs = new ArrayList<>(genericArgs);
+        finalArgs.addAll(specificArgs);
+        finalArgs.add(next.getUrl());
+
+        log.info("exec {}", finalArgs);
+
+        Process process = Runtime.getRuntime().exec(finalArgs.stream().toArray(String[]::new));
+
+        next.setProcess(process);
+
+        BufferedReader stdInput = new BufferedReader(new InputStreamReader(process.getInputStream()));
+        BufferedReader stdError = new BufferedReader(new InputStreamReader(process.getErrorStream()));
+
+        double lastPercentage = 0;
+        String s;
+
+        while(downloadsRunning.get() && !next.getCancelHook().get() && (s = stdInput.readLine()) != null){
+            log.info("[{}] - {}", next.getDownloadId(), s);
+
+            if(s.contains("[download]") && !s.contains("Destination:")){
+                String[] parts = s.split("\\s+");
+                for(String part : parts){
+                    if(part.endsWith("%")){
+                        //TODO
+                        double percent = Double.parseDouble(part.replace("%", ""));
+
+                        if(percent > lastPercentage || percent < 5 || Math.abs(percent - lastPercentage) > 10){
+                            next.getMediaCard().setPercentage(percent);
+                            lastPercentage = percent;
+                        }
+                    }
+                }
+
+                next.updateStatus(DownloadStatus.DOWNLOADING, s.replace("[download] ", ""));
+            }else if(s.contains("[Merger]")
+                || s.contains("[ExtractAudio]")
+                || s.contains("[Embed")
+                || s.contains("[Metadata]")
+                || s.contains("[Thumbnails")){
+                next.updateStatus(DownloadStatus.PROCESSING, s);
+            }else{
+                next.updateStatus(DownloadStatus.PREPARING, s);
+            }
+        }
+
+        String lastError = "- -";
+
+        while(downloadsRunning.get() && !next.getCancelHook().get() && (s = stdError.readLine()) != null){
+            log.error("[{}] - {}", next.getDownloadId(), s);
+
+            lastError = s;
+        }
+
+        long i = System.currentTimeMillis();
+
+        int exitCode = process.waitFor();
+
+        log.info("Waited for {}ms", (System.currentTimeMillis() - i));
+
+        return new Pair<>(exitCode, lastError);
     }
 
     private static String truncate(String input, int length){
@@ -912,6 +966,52 @@ public class YtDlpDownloader{
             }
 
             main.openUrlInBrowser(originalUrl);
+        }
+
+        public void copyUrlToClipboard(GDownloader main){
+            StringSelection stringSelection = new StringSelection(originalUrl);
+            Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+            clipboard.setContents(stringSelection, null);
+
+            main.getGuiManager().showMessage(
+                get("gui.copy_url.notification_title"),
+                get("gui.copy_url.copied"),
+                3500,
+                GUIManager.MessageType.INFO,
+                false
+            );
+        }
+
+        public void deleteMediaFiles(GDownloader main){
+            boolean success = false;
+
+            for(File file : finalMediaFiles){
+                try{
+                    if(Files.deleteIfExists(file.toPath())){
+                        success = true;
+                    }
+                }catch(IOException e){
+                    main.handleException(e);
+                }
+            }
+
+            if(success){
+                main.getGuiManager().showMessage(
+                    get("gui.delete_files.notification_title"),
+                    get("gui.delete_files.deleted"),
+                    3500,
+                    GUIManager.MessageType.INFO,
+                    false
+                );
+            }else{
+                main.getGuiManager().showMessage(
+                    get("gui.delete_files.notification_title"),
+                    get("gui.delete_files.no_files"),
+                    3500,
+                    GUIManager.MessageType.INFO,
+                    false
+                );
+            }
         }
 
         public boolean isRunning(){

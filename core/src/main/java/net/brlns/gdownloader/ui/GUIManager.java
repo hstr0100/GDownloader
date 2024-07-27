@@ -1041,8 +1041,12 @@ public final class GUIManager{
         MouseAdapter listener = new MouseAdapter(){
             @Override
             public void mouseClicked(MouseEvent e){
-                if(mediaCard.getOnClick() != null){
-                    mediaCard.getOnClick().apply();
+                if(SwingUtilities.isLeftMouseButton(e)){
+                    if(mediaCard.getOnLeftClick() != null){
+                        mediaCard.getOnLeftClick().run();
+                    }
+                }else if(SwingUtilities.isRightMouseButton(e)){
+                    showPopupPanel(card, mediaCard.getRightClickMenu(), e.getX(), e.getY());
                 }
             }
 
@@ -1068,6 +1072,41 @@ public final class GUIManager{
         scrollToBottom(queueScrollPane);
 
         return mediaCard;
+    }
+
+    private void showPopupPanel(JPanel parentPanel, Map<String, Runnable> actions, int x, int y){
+        if(actions.isEmpty()){
+            return;
+        }
+
+        JPanel popupPanel = new JPanel();
+        popupPanel.setLayout(new GridLayout(actions.size(), 1));
+        popupPanel.setBackground(Color.DARK_GRAY);
+        popupPanel.setBorder(BorderFactory.createLineBorder(Color.GRAY));
+        popupPanel.setOpaque(true);
+
+        for(Map.Entry<String, Runnable> entry : actions.entrySet()){
+            JButton button = new CustomMenuButton(entry.getKey());
+            button.addActionListener(e -> entry.getValue().run());
+            popupPanel.add(button);
+        }
+
+        JWindow popupWindow = new JWindow();
+        popupWindow.setLayout(new BorderLayout());
+        popupWindow.add(popupPanel, BorderLayout.CENTER);
+        popupWindow.pack();
+
+        Point locationOnScreen = parentPanel.getLocationOnScreen();
+        popupWindow.setLocation(locationOnScreen.x + x, locationOnScreen.y + y);
+
+        popupWindow.setVisible(true);
+
+        popupWindow.addMouseListener(new MouseAdapter(){
+            @Override
+            public void mouseClicked(MouseEvent e){
+                popupWindow.dispose();
+            }
+        });
     }
 
     //https://stackoverflow.com/questions/5147768/scroll-jscrollpane-to-bottom
@@ -1294,12 +1333,6 @@ public final class GUIManager{
         private final MessageType messageType;
         private final boolean playTone;
 
-    }
-
-    @FunctionalInterface
-    public interface CallFunction{
-
-        void apply();
     }
 
     @FunctionalInterface

@@ -371,13 +371,17 @@ public final class GDownloader{
                 if(!firstBoot){
                     guiManager.showMessage(
                         get("gui.update.notification_title"),
-                        get((ytDlpUpdater.isUpdated() || ffmpegUpdater.isUpdated()
+                        get((ytDlpUpdater.isUpdated() || ffmpegUpdater.isUpdated() || selfUpdater.isUpdated()
                             ? "gui.update.new_updates_installed"
                             : "gui.update.updated")),
                         2500,
                         GUIManager.MessageType.INFO,
                         false
                     );
+                }
+
+                if(selfUpdater.isUpdated()){
+                    restart();
                 }
             }catch(InterruptedException e){
                 //Ignore
@@ -397,6 +401,10 @@ public final class GDownloader{
             downloadManager.toggleDownloads();
         }));
 
+        popup.add(buildMenuItem(get("gui.open_downloads_directory"), (ActionEvent e) -> {
+            openDownloadsDirectory();
+        }));
+
         popup.add(buildMenuItem(get("settings.sidebar_title"), (ActionEvent e) -> {
             guiManager.displaySettingsPanel();
         }));
@@ -412,6 +420,10 @@ public final class GDownloader{
         }));
 
         return popup;
+    }
+
+    public void openDownloadsDirectory(){
+        open(getOrCreateDownloadsDirectory());
     }
 
     public void open(File file){

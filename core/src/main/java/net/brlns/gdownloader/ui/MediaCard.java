@@ -22,6 +22,8 @@ import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.HashMap;
+import java.util.Map;
 import javax.imageio.ImageIO;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -46,8 +48,9 @@ public class MediaCard{
 
     private double percentage = 0;
 
-    private GUIManager.CallFunction onClick;
-    private GUIManager.CallFunction onClose;
+    private Runnable onLeftClick;
+    private Map<String, Runnable> rightClickMenu = new HashMap<>();
+    private Runnable onClose;
     private boolean closed;
 
     protected static final int THUMBNAIL_WIDTH = 160;
@@ -57,7 +60,7 @@ public class MediaCard{
         closed = true;
 
         if(onClose != null){
-            onClose.apply();
+            onClose.run();
         }
     }
 

@@ -60,6 +60,8 @@ public class DarkTheme extends AbstractTheme{
         add(SLIDER_TRACK, Color.LIGHT_GRAY);
         add(COMBO_BOX_BUTTON_FOREGROUND, Color.WHITE);
         add(COMBO_BOX_BUTTON_BACKGROUND, Color.DARK_GRAY);
+        add(MENU_ITEM_ARMED, Color.GRAY);
+        add(MENU_ITEM_PRESSED, Color.LIGHT_GRAY);
     }
 
     @Override

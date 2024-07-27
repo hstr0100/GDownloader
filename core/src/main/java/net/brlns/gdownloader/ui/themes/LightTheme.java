@@ -60,6 +60,8 @@ public class LightTheme extends AbstractTheme{
         add(SLIDER_TRACK, Color.LIGHT_GRAY);
         add(COMBO_BOX_BUTTON_FOREGROUND, Color.LIGHT_GRAY);
         add(COMBO_BOX_BUTTON_BACKGROUND, Color.WHITE);
+        add(MENU_ITEM_ARMED, Color.LIGHT_GRAY);
+        add(MENU_ITEM_PRESSED, Color.GRAY);
     }
 
     @Override
