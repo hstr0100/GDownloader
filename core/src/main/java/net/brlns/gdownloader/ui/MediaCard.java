@@ -22,7 +22,7 @@ import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import javax.imageio.ImageIO;
 import javax.swing.JLabel;
@@ -49,7 +49,7 @@ public class MediaCard{
     private double percentage = 0;
 
     private Runnable onLeftClick;
-    private Map<String, Runnable> rightClickMenu = new HashMap<>();
+    private Map<String, Runnable> rightClickMenu = new LinkedHashMap<>();
     private Runnable onClose;
     private boolean closed;
 

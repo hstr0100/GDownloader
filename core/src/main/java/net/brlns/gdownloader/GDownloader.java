@@ -960,7 +960,7 @@ public final class GDownloader{
 
     private void processClipboardData(FlavorType flavorType, String data){
         if(!lastClipboardState.containsKey(flavorType)){
-            lastClipboardState.put(flavorType, data);
+            lastClipboardState.put(flavorType, "");
         }
 
         String last = lastClipboardState.get(flavorType);

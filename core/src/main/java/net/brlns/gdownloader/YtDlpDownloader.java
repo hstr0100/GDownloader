@@ -93,6 +93,7 @@ import static net.brlns.gdownloader.util.URLUtils.*;
 //TODO add yt-dlp queries to a batch pool, execute them all in one go
 //TODO individual retry button
 //TODO --no-playlist when single video option is active
+//TODO re-test download cancel logic
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
@@ -720,10 +721,13 @@ public class YtDlpDownloader{
                         Pair<Integer, String> result = processDownload(next, genericArgs, videoArgs);
 
                         if(result.getKey() != 0){
-                            next.updateStatus(DownloadStatus.FAILED, result.getValue());
-                            next.reset();
+                            if(!next.getCancelHook().get()){
+                                next.updateStatus(DownloadStatus.FAILED, result.getValue());
+                                next.reset();
 
-                            failedDownloads.offer(next);
+                                failedDownloads.offer(next);
+                            }
+
                             fireListeners();
                             return;
                         }
@@ -745,10 +749,13 @@ public class YtDlpDownloader{
                         Pair<Integer, String> result = processDownload(next, genericArgs, audioArgs);
 
                         if(result.getKey() != 0){
-                            next.updateStatus(DownloadStatus.FAILED, result.getValue());
-                            next.reset();
+                            if(!next.getCancelHook().get()){
+                                next.updateStatus(DownloadStatus.FAILED, result.getValue());
+                                next.reset();
 
-                            failedDownloads.offer(next);
+                                failedDownloads.offer(next);
+                            }
+
                             fireListeners();
                             return;
                         }
@@ -774,8 +781,6 @@ public class YtDlpDownloader{
                             if(downloadDeque.size() <= 1){
                                 stopDownloads();
                             }
-
-                            return;
                         }else{
                             next.updateStatus(DownloadStatus.COMPLETE, get("gui.download_status.finished"));
 

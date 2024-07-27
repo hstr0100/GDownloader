@@ -1039,11 +1039,15 @@ public final class GUIManager{
         MediaCard mediaCard = new MediaCard(id, card, mediaNameLabel, thumbnailPanel, progressBar);
 
         MouseAdapter listener = new MouseAdapter(){
+            private long lastClick = System.currentTimeMillis();
+
             @Override
             public void mouseClicked(MouseEvent e){
                 if(SwingUtilities.isLeftMouseButton(e)){
-                    if(mediaCard.getOnLeftClick() != null){
+                    if(mediaCard.getOnLeftClick() != null && (System.currentTimeMillis() - lastClick) > 50){
                         mediaCard.getOnLeftClick().run();
+
+                        lastClick = System.currentTimeMillis();
                     }
                 }else if(SwingUtilities.isRightMouseButton(e)){
                     showPopupPanel(card, mediaCard.getRightClickMenu(), e.getX(), e.getY());
