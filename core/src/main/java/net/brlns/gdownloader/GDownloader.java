@@ -990,8 +990,8 @@ public final class GDownloader{
         }
     }
 
-    private ArrayList<String> extractUrlsFromString(String content){
-        ArrayList<String> result = new ArrayList<>();
+    private Set<String> extractUrlsFromString(String content){
+        Set<String> result = new HashSet<>();
 
         Document doc = Jsoup.parse(content);
 

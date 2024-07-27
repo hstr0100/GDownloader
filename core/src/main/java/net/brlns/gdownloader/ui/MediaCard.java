@@ -19,12 +19,8 @@ package net.brlns.gdownloader.ui;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.image.BufferedImage;
-import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import javax.imageio.ImageIO;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import lombok.Data;
@@ -103,17 +99,7 @@ public class MediaCard{
         progressBar.setTextColor(color);
     }
 
-    public void setThumbnailAndDuration(String url, long duration){
-        try{
-            BufferedImage img = ImageIO.read(new URI(url).toURL());
-
-            if(img != null){
-                thumbnailPanel.setImageAndDuration(img, duration);
-            }else{
-                log.error("ImageIO.read returned null for {}", url);
-            }
-        }catch(IOException | URISyntaxException e){
-            log.error("ImageIO.read exception {} {}", e.getLocalizedMessage(), url);
-        }
+    public void setThumbnailAndDuration(BufferedImage img, long duration){
+        thumbnailPanel.setImageAndDuration(img, duration);
     }
 }

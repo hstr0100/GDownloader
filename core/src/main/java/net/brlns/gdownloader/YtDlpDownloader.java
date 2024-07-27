@@ -24,10 +24,13 @@ import java.awt.Color;
 import java.awt.Toolkit;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.StringSelection;
+import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -43,6 +46,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
+import javax.imageio.ImageIO;
 import lombok.AccessLevel;
 import lombok.Data;
 import lombok.Getter;
@@ -65,7 +69,6 @@ import static net.brlns.gdownloader.util.URLUtils.*;
 //TODO d&d files for conversion to different formats, we already have ffmpeg anyway
 //
 //TODO max simultaneous downloads should be independent per website
-//TODO audio output settings
 //TODO silence debug messages
 //TODO investigate adding AppImage build
 //TODO we should only grab clipboard AFTER the button is clicked
@@ -154,7 +157,7 @@ public class YtDlpDownloader{
     public CompletableFuture<Boolean> captureUrl(@Nullable String inputUrl, boolean force, PlayListOptionEnum playlistOption){
         CompletableFuture<Boolean> future = new CompletableFuture<>();
 
-        if(downloadsBlocked.get() || inputUrl == null || isGarbageUrl(inputUrl)
+        if(downloadsBlocked.get() || inputUrl == null || isGarbageUrl(inputUrl) || capturedLinks.contains(inputUrl)
             || WebFilterEnum.isYoutubeChannel(inputUrl) && !main.getConfig().isDownloadYoutubeChannels()){
             future.complete(false);
             return future;
@@ -295,6 +298,8 @@ public class YtDlpDownloader{
                 if(capturedLinks.add(filteredUrl)){
                     capturedLinks.add(inputUrl);
 
+                    log.info("Captured {}", inputUrl);
+
                     MediaCard mediaCard = main.getGuiManager().addMediaCard(main.getConfig().isDownloadVideo(), "");
 
                     int downloadId = downloadCounter.incrementAndGet();
@@ -321,17 +326,14 @@ public class YtDlpDownloader{
                         main.openDownloadsDirectory();
                     });
 
-                    mediaCard.getRightClickMenu().put(
+                    mediaCard.getRightClickMenu().putAll(Map.of(
                         get("gui.open_downloads_directory"),
-                        () -> main.openDownloadsDirectory());
-
-                    mediaCard.getRightClickMenu().put(
+                        () -> main.openDownloadsDirectory(),
                         get("gui.open_in_browser"),
-                        () -> queueEntry.openUrl());
-
-                    mediaCard.getRightClickMenu().put(
+                        () -> queueEntry.openUrl(),
                         get("gui.copy_url"),
-                        () -> queueEntry.copyUrlToClipboard());
+                        () -> queueEntry.copyUrlToClipboard()
+                    ));
 
                     queryVideo(queueEntry);
 
@@ -1068,19 +1070,33 @@ public class YtDlpDownloader{
         public void setVideoInfo(VideoInfo videoInfoIn){
             videoInfo = videoInfoIn;
 
-            String thumb = videoInfo.getThumbnail();
-            //Filter out WebP for now
-            if(!thumb.startsWith("http") || !thumb.endsWith(".jpg") && !thumb.endsWith(".png")){
-                Optional<Thumbnail> thumbnail = videoInfo.getFirstSupportedThumbnail();
+            Optional<BufferedImage> optional = videoInfo.supportedThumbnails()
+                .limit(3)
+                .map(urlIn -> tryLoadThumbnail(urlIn))
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .findFirst();
 
-                if(thumbnail.get() != null){
-                    thumb = thumbnail.get().getUrl();
+            optional.ifPresentOrElse(
+                img -> mediaCard.setThumbnailAndDuration(img, videoInfoIn.getDuration()),
+                () -> log.error("Failed to load a valid thumbnail")
+            );
+        }
+
+        private Optional<BufferedImage> tryLoadThumbnail(String url){
+            try{
+                BufferedImage img = ImageIO.read(new URI(url).toURL());
+
+                if(img != null){
+                    return Optional.of(img);
+                }else{
+                    log.error("ImageIO.read returned null for {}", url);
                 }
+            }catch(IOException | URISyntaxException e){
+                log.error("ImageIO.read exception {} {}", e.getLocalizedMessage(), url);
             }
 
-            if(thumb != null && thumb.startsWith("http")){
-                mediaCard.setThumbnailAndDuration(thumb, videoInfoIn.getDuration());
-            }
+            return Optional.empty();
         }
 
         private String getTitle(){
@@ -1194,11 +1210,21 @@ public class YtDlpDownloader{
         private List<Thumbnail> thumbnails = new ArrayList<>();
 
         @JsonIgnore
-        public Optional<Thumbnail> getFirstSupportedThumbnail(){
-            return thumbnails.stream()
+        private Stream<String> supportedThumbnails(){
+            Stream.Builder<String> builder = Stream.builder();
+
+            if(thumbnail != null && !thumbnail.endsWith(".webp")){
+                builder.add(thumbnail);
+            }
+
+            thumbnails.stream()
                 .filter(thumb -> thumb.getUrl() != null
                 && (thumb.getUrl().endsWith(".jpg") || thumb.getUrl().endsWith(".png")))
-                .max(Comparator.comparingInt(Thumbnail::getPreference));
+                .sorted(Comparator.comparingInt(Thumbnail::getPreference).reversed())
+                .map(Thumbnail::getUrl)
+                .forEach(builder::add);
+
+            return builder.build();
         }
 
         @JsonProperty("description")
