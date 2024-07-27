@@ -106,7 +106,7 @@ public class UpdaterBootstrap{
             try{
                 File lock = new File(workDir.toString(), "ota_lock.txt");
 
-                if(lockExists(lock)){
+                if(lockExists(lock)){//TODO check if the lock confirms the version on disk is actually newer
                     Path zipOutputPath = Paths.get(workDir.toString(), "tmp_ota_zip");
                     log.info("Zip out path {}", zipOutputPath);
 

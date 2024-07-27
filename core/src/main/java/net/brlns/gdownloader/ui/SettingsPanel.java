@@ -883,6 +883,26 @@ public class SettingsPanel{
         }
 
         {
+            JLabel label = createLabel("settings.use_sponsor_block", LIGHT_TEXT);
+
+            gbcPanel.gridx = 0;
+            gbcPanel.gridy++;
+            downloadSettingsPanel.add(label, gbcPanel);
+
+            JCheckBox checkBox = new JCheckBox();
+            checkBox.setSelected(settings.isUseSponsorBlock());
+
+            checkBox.addActionListener((ActionEvent e) -> {
+                settings.setUseSponsorBlock(checkBox.isSelected());
+            });
+
+            customizeComponent(checkBox, BACKGROUND, LIGHT_TEXT);
+
+            gbcPanel.gridx = 1;
+            downloadSettingsPanel.add(checkBox, gbcPanel);
+        }
+
+        {
             gbcPanel.gridx = 0;
             gbcPanel.gridy++;
             gbcPanel.weightx = 1;
@@ -985,10 +1005,10 @@ public class SettingsPanel{
                 itemPanel.add(label, gbcItem);
 
                 JComboBox<String> comboBox = new JComboBox<>(ISettingsEnum.getDisplayNames(VideoContainerEnum.class));
-                comboBox.setSelectedIndex(qualitySettings.getContainer().ordinal());
+                comboBox.setSelectedIndex(qualitySettings.getVideoContainer().ordinal());
 
                 comboBox.addActionListener((ActionEvent e) -> {
-                    qualitySettings.setContainer(ISettingsEnum.getEnumByIndex(VideoContainerEnum.class, comboBox.getSelectedIndex()));
+                    qualitySettings.setVideoContainer(ISettingsEnum.getEnumByIndex(VideoContainerEnum.class, comboBox.getSelectedIndex()));
                 });
 
                 customizeComboBox(comboBox);
@@ -1031,6 +1051,26 @@ public class SettingsPanel{
 
                 comboBox.addActionListener((ActionEvent e) -> {
                     qualitySettings.setFps(ISettingsEnum.getEnumByIndex(FPSEnum.class, comboBox.getSelectedIndex()));
+                });
+
+                customizeComboBox(comboBox);
+
+                gbcItem.gridx = 1;
+                itemPanel.add(comboBox, gbcItem);
+            }
+
+            {
+                JLabel label = createLabel("settings.audio_container", LIGHT_TEXT);
+
+                gbcItem.gridx = 0;
+                gbcItem.gridy++;
+                itemPanel.add(label, gbcItem);
+
+                JComboBox<String> comboBox = new JComboBox<>(ISettingsEnum.getDisplayNames(AudioContainerEnum.class));
+                comboBox.setSelectedIndex(qualitySettings.getAudioContainer().ordinal());
+
+                comboBox.addActionListener((ActionEvent e) -> {
+                    qualitySettings.setAudioContainer(ISettingsEnum.getEnumByIndex(AudioContainerEnum.class, comboBox.getSelectedIndex()));
                 });
 
                 customizeComboBox(comboBox);

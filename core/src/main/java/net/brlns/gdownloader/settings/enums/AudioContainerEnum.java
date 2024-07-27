@@ -16,36 +16,30 @@
  */
 package net.brlns.gdownloader.settings.enums;
 
-import lombok.Getter;
-
-import static net.brlns.gdownloader.Language.get;
-
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-@Getter
-public enum AudioBitrateEnum implements ISettingsEnum{
-    //TODO some containers can go way higher, account for that
-    NO_AUDIO(0, ""),
-    BITRATE_192(192, "192kbps"),
-    BITRATE_256(256, "256kbps"),
-    BITRATE_320(320, "320kbps");
+public enum AudioContainerEnum implements ISettingsEnum{
+    MP3,
+    AAC,
+    WAV,
+    FLAC,
+    ALAC,
+    M4A,
+    OPUS,
+    VORBIS;
 
-    private final int value;
-    private final String displayName;
-
-    private AudioBitrateEnum(int valueIn, String displayNameIn){
-        value = valueIn;
-        displayName = displayNameIn;
-    }
-
-    @Override
-    public String getDisplayName(){
-        return this == NO_AUDIO ? get("enums.audio.no_audio") : displayName;
+    public String getValue(){
+        return name().toLowerCase();
     }
 
     @Override
     public String getTranslationKey(){
         return "";
+    }
+
+    @Override
+    public String getDisplayName(){
+        return name().toLowerCase();
     }
 }

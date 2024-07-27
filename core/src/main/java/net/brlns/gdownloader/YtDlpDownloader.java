@@ -50,11 +50,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.settings.QualitySettings;
-import net.brlns.gdownloader.settings.enums.AudioBitrateEnum;
-import net.brlns.gdownloader.settings.enums.ISettingsEnum;
-import net.brlns.gdownloader.settings.enums.PlayListOptionEnum;
-import net.brlns.gdownloader.settings.enums.VideoContainerEnum;
-import net.brlns.gdownloader.settings.enums.WebFilterEnum;
+import net.brlns.gdownloader.settings.enums.*;
 import net.brlns.gdownloader.ui.GUIManager;
 import net.brlns.gdownloader.ui.GUIManager.DialogButton;
 import net.brlns.gdownloader.ui.MediaCard;
@@ -64,32 +60,29 @@ import net.brlns.gdownloader.util.Pair;
 import static net.brlns.gdownloader.Language.*;
 import static net.brlns.gdownloader.util.URLUtils.*;
 
-//TODO max simultaneous downloads should be independent per website
-//TODO we should only grab clipboard AFTER the button is clicked
+//TODO media converter
 //TODO implement CD Ripper
-//TODO winamp icon for mp3's in disc
-//TODO add button to convert individually
-//TODO output filename settings
+//TODO d&d files for conversion to different formats, we already have ffmpeg anyway
+//
+//TODO max simultaneous downloads should be independent per website
+//TODO audio output settings
+//TODO silence debug messages
+//TODO investigate adding AppImage build
+//TODO we should only grab clipboard AFTER the button is clicked
 //TODO add custom ytdlp filename modifiers to the settings
-//TODO TEST - empty queue should delete directories too
 //TODO scale on resolution DPI
 //TODO save last window size in config
 //TODO keep older versions of ytdlp and retry failed downloads against them
-//TODO d&d files for conversion
 //TODO extra ytdlp args @TODO bad arguments could break downloads, leave as is? users can edit the config.json directly to add things like proxy arguments
-//TODO media converter
 //TODO rework WebP support for modular system @TODO test again, the workaround for the gradle bug might have broken it again @TODO it in fact did @TODO cannot fix
-//TODO output directories for media converter
-//TODO test restarting
-//TODO verify checksums during updates
+//TODO verify checksums during updates, add bouncycastle, check signatures
 //TODO write a component factory for GUIManager
 //TODO git actions build for different platforms
 //FEEDBACK Icons too small
 //FEEDBACK Should choose to download video and audio independently on each card
-//TODO maybe add notifications for each toggled option
-//TODO check updates on a timer
-//TODO add bouncycastle, check signatures
-//TODO individual retry button
+//TODO maybe add notifications for each toggled toolbar option
+//TODO check updates on a timer, but do not ever restart when anything is in the queue.
+//TODO individual 'retry failed download' button
 //TODO --no-playlist when single video option is active
 //TODO Artifacting seems to be happening on the scroll pane with AMD video cards
 /**
@@ -515,7 +508,10 @@ public class YtDlpDownloader{
                 }
 
                 try{
-                    if(!main.getConfig().isDownloadAudio() && !main.getConfig().isDownloadVideo()){
+                    boolean downloadAudio = main.getConfig().isDownloadAudio();
+                    boolean downloadVideo = main.getConfig().isDownloadVideo();
+
+                    if(!downloadAudio && !downloadVideo){
                         next.updateStatus(DownloadStatus.NO_METHOD, get("enums.download_status.no_method.video_tip"));
                         next.reset();
 
@@ -541,7 +537,7 @@ public class YtDlpDownloader{
 
                     AudioBitrateEnum audioBitrate = quality.getAudioBitrate();
 
-                    if(!main.getConfig().isDownloadVideo() && main.getConfig().isDownloadAudio() && audioBitrate == AudioBitrateEnum.NO_AUDIO){
+                    if(!downloadVideo && downloadAudio && audioBitrate == AudioBitrateEnum.NO_AUDIO){
                         next.updateStatus(DownloadStatus.NO_METHOD, get("enums.download_status.no_method.audio_tip"));
                         next.reset();
 
@@ -590,15 +586,20 @@ public class YtDlpDownloader{
 
                         //Intentional fall-through
                         case YOUTUBE:
+                            if(main.getConfig().isUseSponsorBlock()){
+                                genericArgs.addAll(Arrays.asList(
+                                    "--sponsorblock-mark",
+                                    "sponsor,intro,outro,selfpromo,interaction,music_offtopic"
+                                ));
+                            }
+
                             audioArgs.addAll(Arrays.asList(
                                 "-o",
                                 tmpPath.getAbsolutePath()
                                 + (next.getWebFilter() == WebFilterEnum.YOUTUBE_PLAYLIST ? "/%(playlist)s/" : "/")
                                 + "%(title)s (" + audioBitrate.getValue() + "kbps).%(ext)s",
                                 "--embed-thumbnail",
-                                "--embed-metadata",
-                                "--sponsorblock-mark",
-                                "sponsor,intro,outro,selfpromo,interaction,music_offtopic"
+                                "--embed-metadata"
                             ));
 
                             videoArgs.addAll(Arrays.asList(
@@ -704,7 +705,7 @@ public class YtDlpDownloader{
 
                     boolean success = false;
 
-                    if(main.getConfig().isDownloadVideo()){
+                    if(downloadVideo){
                         videoArgs.addAll(Arrays.asList(
                             "-f",
                             quality.getQualitySettings(),
@@ -712,7 +713,7 @@ public class YtDlpDownloader{
                             //Opus is not supported by some native video players
                             "ffmpeg:-c:a aac -b:a " + audioBitrate.getValue() + "k",
                             "--merge-output-format",
-                            quality.getContainer().getValue()
+                            quality.getVideoContainer().getValue()
                         ));
 
                         Pair<Integer, String> result = processDownload(next, genericArgs, videoArgs);
@@ -732,13 +733,14 @@ public class YtDlpDownloader{
                         success = true;
                     }
 
+                    //isDownloadAudio() might have changed at this point, do a fresh check just to be sure
                     if(main.getConfig().isDownloadAudio() && audioBitrate != AudioBitrateEnum.NO_AUDIO){
                         audioArgs.addAll(Arrays.asList(
                             "-f",
                             "bestaudio",
                             "--extract-audio",
                             "--audio-format",
-                            "mp3",
+                            quality.getAudioContainer().getValue(),
                             "--audio-quality",
                             audioBitrate.getValue() + "k"
                         ));
@@ -766,81 +768,70 @@ public class YtDlpDownloader{
 
                         downloadDeque.offerFirst(next);
                         fireListeners();
-                    }else if(!next.getCancelHook().get()){
-                        if(!success){//Could happen, we are dynamically calling for the config state on each step
-                            next.updateStatus(DownloadStatus.NO_METHOD, get("enums.download_status.no_method.video_tip"));
-                            next.reset();
+                    }else if(!next.getCancelHook().get() && success){
+                        try(Stream<Path> dirStream = Files.walk(tmpPath.toPath())){
+                            dirStream.forEach(path -> {
+                                String fileName = path.getFileName().toString().toLowerCase();
 
-                            failedDownloads.offer(next);
+                                //TODO audio output format
+                                boolean isAudio = fileName.endsWith(")." + quality.getAudioContainer().getValue());
+                                boolean isVideo = fileName.endsWith(")." + quality.getVideoContainer().getValue());
 
-                            log.error("{} - Option changed unexpectedly.", next.getWebFilter());
+                                if(isAudio || isVideo){
+                                    Path relativePath = tmpPath.toPath().relativize(path);
+                                    Path targetPath = finalPath.toPath().resolve(relativePath);
 
-                            if(downloadDeque.size() <= 1){
-                                stopDownloads();
-                            }
-                        }else{
-                            try(Stream<Path> dirStream = Files.walk(tmpPath.toPath())){
-                                dirStream.forEach(path -> {
-                                    String fileName = path.getFileName().toString().toLowerCase();
+                                    try{
+                                        Files.createDirectories(targetPath.getParent());
+                                        Files.copy(path, targetPath, StandardCopyOption.REPLACE_EXISTING);
+                                        next.getFinalMediaFiles().add(targetPath.toFile());
 
-                                    //TODO audio output format
-                                    boolean isAudio = fileName.endsWith(").mp3");
-                                    boolean isVideo = fileName.endsWith(")." + quality.getContainer().getValue());
-
-                                    if(isAudio || isVideo){
-                                        Path relativePath = tmpPath.toPath().relativize(path);
-                                        Path targetPath = finalPath.toPath().resolve(relativePath);
-
-                                        try{
-                                            Files.createDirectories(targetPath.getParent());
-                                            Files.copy(path, targetPath, StandardCopyOption.REPLACE_EXISTING);
-                                            next.getFinalMediaFiles().add(targetPath.toFile());
-
-                                            if(isVideo){
-                                                mediaCard.getRightClickMenu().put(
-                                                    get("gui.play_video"),
-                                                    () -> next.play(true));
-                                            }
-
-                                            if(isAudio){
-                                                mediaCard.getRightClickMenu().put(
-                                                    get("gui.play_audio"),
-                                                    () -> next.play(false));
-                                            }
-
-                                            log.info("Copied file: {}", path.getFileName());
-                                        }catch(IOException e){
-                                            log.error("Failed to copy file: {} {}", path.getFileName(), e.getLocalizedMessage());
+                                        if(isVideo){
+                                            mediaCard.getRightClickMenu().put(
+                                                get("gui.play_video"),
+                                                () -> next.play(true));
                                         }
+
+                                        if(isAudio){
+                                            mediaCard.getRightClickMenu().put(
+                                                get("gui.play_audio"),
+                                                () -> next.play(false));
+                                        }
+
+                                        log.info("Copied file: {}", path.getFileName());
+                                    }catch(IOException e){
+                                        log.error("Failed to copy file: {} {}", path.getFileName(), e.getLocalizedMessage());
                                     }
-                                });
-                            }catch(IOException e){
-                                log.error("Failed to list files {}", e.getLocalizedMessage());
-                            }
-
-                            GDownloader.deleteRecursively(tmpPath.toPath());
-
-                            next.updateStatus(DownloadStatus.COMPLETE, get("gui.download_status.finished"));
-
-                            mediaCard.getRightClickMenu().put(
-                                get("gui.restart_download"),
-                                () -> {
-                                    next.updateStatus(DownloadStatus.QUEUED, get("gui.download_status.not_started"));
-                                    next.reset();
-
-                                    completedDownloads.remove(next);
-                                    downloadDeque.offerLast(next);
-                                    fireListeners();
-                                });
-
-                            mediaCard.getRightClickMenu().put(
-                                get("gui.delete_files"),
-                                () -> next.deleteMediaFiles());
-
-                            completedDownloads.offer(next);
+                                }
+                            });
+                        }catch(IOException e){
+                            log.error("Failed to list files {}", e.getLocalizedMessage());
                         }
 
+                        GDownloader.deleteRecursively(tmpPath.toPath());
+
+                        next.updateStatus(DownloadStatus.COMPLETE, get("gui.download_status.finished"));
+
+                        mediaCard.getRightClickMenu().put(
+                            get("gui.restart_download"),
+                            () -> {
+                                next.updateStatus(DownloadStatus.QUEUED, get("gui.download_status.not_started"));
+                                next.reset();
+
+                                completedDownloads.remove(next);
+                                downloadDeque.offerLast(next);
+                                fireListeners();
+                            });
+
+                        mediaCard.getRightClickMenu().put(
+                            get("gui.delete_files"),
+                            () -> next.deleteMediaFiles());
+
+                        completedDownloads.offer(next);
+
                         fireListeners();
+                    }else{
+                        log.error("Unexpected download state");
                     }
                 }catch(Exception e){
                     next.updateStatus(DownloadStatus.FAILED, e.getLocalizedMessage());
@@ -866,6 +857,7 @@ public class YtDlpDownloader{
 
     private Pair<Integer, String> processDownload(QueueEntry next,
         List<String> genericArgs, List<String> specificArgs) throws Exception{
+        long start = System.currentTimeMillis();
 
         List<String> finalArgs = new ArrayList<>(genericArgs);
         finalArgs.addAll(specificArgs);
@@ -920,11 +912,9 @@ public class YtDlpDownloader{
             lastError = s;
         }
 
-        long i = System.currentTimeMillis();
-
         int exitCode = process.waitFor();
 
-        log.info("Waited for {}ms", (System.currentTimeMillis() - i));
+        log.info("Download took {}ms", (System.currentTimeMillis() - start));
 
         return new Pair<>(exitCode, lastError);
     }
@@ -993,10 +983,19 @@ public class YtDlpDownloader{
 
                     String fileName = file.getAbsolutePath().toLowerCase();
 
-                    for(VideoContainerEnum container : VideoContainerEnum.values()){
-                        if(fileName.endsWith(")." + (video ? container.getValue() : "mp3"))){
-                            main.open(file);
-                            return;
+                    if(video){
+                        for(VideoContainerEnum container : VideoContainerEnum.values()){
+                            if(fileName.endsWith(")." + container.getValue())){
+                                main.open(file);
+                                return;
+                            }
+                        }
+                    }else{
+                        for(AudioContainerEnum container : AudioContainerEnum.values()){
+                            if(fileName.endsWith(")." + container.getValue())){
+                                main.open(file);
+                                return;
+                            }
                         }
                     }
                 }
@@ -1032,23 +1031,13 @@ public class YtDlpDownloader{
                 }
             }
 
-            if(success){
-                main.getGuiManager().showMessage(
-                    get("gui.delete_files.notification_title"),
-                    get("gui.delete_files.deleted"),
-                    3500,
-                    GUIManager.MessageType.INFO,
-                    false
-                );
-            }else{
-                main.getGuiManager().showMessage(
-                    get("gui.delete_files.notification_title"),
-                    get("gui.delete_files.no_files"),
-                    3500,
-                    GUIManager.MessageType.INFO,
-                    false
-                );
-            }
+            main.getGuiManager().showMessage(
+                get("gui.delete_files.notification_title"),
+                success ? get("gui.delete_files.deleted") : get("gui.delete_files.no_files"),
+                3500,
+                GUIManager.MessageType.INFO,
+                false
+            );
         }
 
         public boolean isRunning(){

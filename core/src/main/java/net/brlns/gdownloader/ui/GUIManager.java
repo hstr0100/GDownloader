@@ -157,53 +157,21 @@ public final class GUIManager{
         JPanel statusPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 0));
         statusPanel.setOpaque(false);
 
-        {
-            JLabel statusLabel = new JLabel("");
-            statusLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 5));
-            statusLabel.setForeground(color(LIGHT_TEXT));
-            statusLabel.setHorizontalAlignment(SwingConstants.LEFT);
-            statusLabel.setVerticalAlignment(SwingConstants.CENTER);
+        addStatusLabel(statusPanel, LIGHT_TEXT, (downloadManager) -> {
+            return "<html>"
+                + downloadManager.getDownloadsRunning() + " " + get("gui.statusbar.running")
+                + "<br>"
+                + downloadManager.getCompletedDownloads() + " " + get("gui.statusbar.completed")
+                + "</html>";
+        });
 
-            Consumer<YtDlpDownloader> consumer = (YtDlpDownloader downloadManager) -> {
-                statusLabel.setText(
-                    "<html>"
-                    + downloadManager.getDownloadsRunning() + " " + get("gui.statusbar.running")
-                    + "<br>"
-                    + downloadManager.getCompletedDownloads() + " " + get("gui.statusbar.completed")
-                    + "</html>"
-                );
-            };
-
-            consumer.accept(main.getDownloadManager());
-
-            main.getDownloadManager().registerListener(consumer);
-
-            statusPanel.add(statusLabel);
-        }
-
-        {
-            JLabel statusLabel = new JLabel("");
-            statusLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 5));
-            statusLabel.setForeground(color(LIGHT_TEXT));
-            statusLabel.setHorizontalAlignment(SwingConstants.LEFT);
-            statusLabel.setVerticalAlignment(SwingConstants.CENTER);
-
-            Consumer<YtDlpDownloader> consumer = (YtDlpDownloader downloadManager) -> {
-                statusLabel.setText(
-                    "<html>"
-                    + downloadManager.getQueueSize() + " " + get("gui.statusbar.queued")
-                    + "<br>"
-                    + downloadManager.getFailedDownloads() + " " + get("gui.statusbar.failed")
-                    + "</html>"
-                );
-            };
-
-            consumer.accept(main.getDownloadManager());
-
-            main.getDownloadManager().registerListener(consumer);
-
-            statusPanel.add(statusLabel);
-        }
+        addStatusLabel(statusPanel, LIGHT_TEXT, (downloadManager) -> {
+            return "<html>"
+                + downloadManager.getQueueSize() + " " + get("gui.statusbar.queued")
+                + "<br>"
+                + downloadManager.getFailedDownloads() + " " + get("gui.statusbar.failed")
+                + "</html>";
+        });
 
         GridBagConstraints gbcLabel = new GridBagConstraints();
         gbcLabel.gridx = 0;
@@ -341,6 +309,22 @@ public final class GUIManager{
         return button;
     }
 
+    public void addStatusLabel(JPanel statusPanel, UIColors textColor, StatusLabelUpdater updater){
+        JLabel statusLabel = new JLabel("");
+        statusLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 5));
+        statusLabel.setForeground(color(textColor));
+        statusLabel.setHorizontalAlignment(SwingConstants.LEFT);
+        statusLabel.setVerticalAlignment(SwingConstants.CENTER);
+
+        Consumer<YtDlpDownloader> consumer = (downloadManager) -> {
+            statusLabel.setText(updater.updateText(downloadManager));
+        };
+
+        consumer.accept(main.getDownloadManager());
+        main.getDownloadManager().registerListener(consumer);
+        statusPanel.add(statusLabel);
+    }
+
     private void updateQueuePanelMessage(){
         JPanel panel = getEmptyQueuePanel();
 
@@ -356,12 +340,9 @@ public final class GUIManager{
             }
 
             JLabel label = (JLabel)panel.getComponent(0);
-
-            if(main.getConfig().isMonitorClipboardForLinks()){
-                label.setText(get("gui.empty_queue"));
-            }else{
-                label.setText(get("gui.empty_queue.enable_clipboard"));
-            }
+            label.setText(main.getConfig().isMonitorClipboardForLinks()
+                ? get("gui.empty_queue")
+                : get("gui.empty_queue.enable_clipboard"));
         }else{
             if(!(firstComponent instanceof JPanel)){
                 panel.removeAll();
@@ -521,8 +502,7 @@ public final class GUIManager{
             main.handleException(e);
         }
 
-        JPanel panel = new JPanel();
-        panel.setLayout(new BorderLayout());
+        JPanel panel = new JPanel(new BorderLayout());
         panel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
         panel.setBackground(color(BACKGROUND));
 
@@ -566,10 +546,8 @@ public final class GUIManager{
             buttonPanel.add(button);
         }
 
-        JPanel southPanel = new JPanel();
-        southPanel.setLayout(new BorderLayout());
+        JPanel southPanel = new JPanel(new BorderLayout());
         southPanel.setOpaque(false);
-
         southPanel.add(checkboxPanel, BorderLayout.NORTH);
 
         CustomProgressBar dialogProgressBar = new CustomProgressBar();
@@ -605,7 +583,6 @@ public final class GUIManager{
         });
 
         southPanel.add(dialogProgressBar, BorderLayout.CENTER);
-
         southPanel.add(buttonPanel, BorderLayout.SOUTH);
 
         panel.add(southPanel, BorderLayout.SOUTH);
@@ -657,8 +634,7 @@ public final class GUIManager{
             }
         }
 
-        JPanel panel = new JPanel();
-        panel.setLayout(new BorderLayout());
+        JPanel panel = new JPanel(new BorderLayout());
         panel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
         panel.setBackground(color(BACKGROUND));
 
@@ -1310,8 +1286,8 @@ public final class GUIManager{
                     for(int i = 0; i < line.length(); i++){
                         char c = line.charAt(i);
                         wrappedText.append(c);
-                        count++;
-                        if(count == maxLineLength){
+
+                        if(++count == maxLineLength){
                             wrappedText.append("<br>");
                             count = 0;
                         }
@@ -1366,6 +1342,12 @@ public final class GUIManager{
     public interface ButtonFunction{
 
         void accept(boolean selected);
+    }
+
+    @FunctionalInterface
+    public interface StatusLabelUpdater{
+
+        String updateText(YtDlpDownloader downloadManager);
     }
 
     @Data

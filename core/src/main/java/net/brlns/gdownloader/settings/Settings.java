@@ -81,6 +81,9 @@ public class Settings{
     @JsonProperty("DownloadVideo")
     private boolean downloadVideo = true;
 
+    @JsonProperty("UseSponsorBlock")
+    private boolean useSponsorBlock = false;
+
     @JsonProperty("KeepWindowAlwaysOnTop")
     private boolean keepWindowAlwaysOnTop = false;
 

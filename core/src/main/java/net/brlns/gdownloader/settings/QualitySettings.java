@@ -16,6 +16,7 @@
  */
 package net.brlns.gdownloader.settings;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -23,11 +24,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import net.brlns.gdownloader.settings.enums.AudioBitrateEnum;
-import net.brlns.gdownloader.settings.enums.FPSEnum;
-import net.brlns.gdownloader.settings.enums.QualitySelectorEnum;
-import net.brlns.gdownloader.settings.enums.ResolutionEnum;
-import net.brlns.gdownloader.settings.enums.VideoContainerEnum;
+import net.brlns.gdownloader.settings.enums.*;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -44,8 +41,9 @@ public class QualitySettings{
     private QualitySelectorEnum selector = QualitySelectorEnum.BEST_VIDEO;
 
     @Builder.Default
-    @JsonProperty("Container")
-    private VideoContainerEnum container = VideoContainerEnum.MP4;
+    @JsonAlias({"Container"})
+    @JsonProperty("VideoContainer")
+    private VideoContainerEnum videoContainer = VideoContainerEnum.MP4;
 
     @Builder.Default
     @JsonProperty("MinHeight")
@@ -60,14 +58,19 @@ public class QualitySettings{
     private FPSEnum fps = FPSEnum.FPS_60;
 
     @Builder.Default
+    @JsonProperty("AudioContainer")
+    private AudioContainerEnum audioContainer = AudioContainerEnum.MP3;
+
+    @Builder.Default
     @JsonProperty("AudioBitrate")
     private AudioBitrateEnum audioBitrate = AudioBitrateEnum.BITRATE_320;
 
+    //TODO this needs some work
     @JsonIgnore
     public String getQualitySettings(){
-        return "(" + selector.getValue() + "[height>=" + minHeight.getValue() + "][height<=" + maxHeight.getValue() + "][ext=" + container.getValue() + "][fps=" + fps.getValue() + "]+bestaudio/"
-            + selector.getValue() + "[height>=" + minHeight.getValue() + "][height<=" + maxHeight.getValue() + "][ext=" + container.getValue() + "]+bestaudio/"
-            + selector.getValue() + "[ext=" + container.getValue() + "]+bestaudio/"
+        return "(" + selector.getValue() + "[height>=" + minHeight.getValue() + "][height<=" + maxHeight.getValue() + "][ext=" + videoContainer.getValue() + "][fps=" + fps.getValue() + "]+bestaudio/"
+            + selector.getValue() + "[height>=" + minHeight.getValue() + "][height<=" + maxHeight.getValue() + "][ext=" + videoContainer.getValue() + "]+bestaudio/"
+            + selector.getValue() + "[ext=" + videoContainer.getValue() + "]+bestaudio/"
             + selector.getValue() + "+bestaudio/best)";
     }
 
