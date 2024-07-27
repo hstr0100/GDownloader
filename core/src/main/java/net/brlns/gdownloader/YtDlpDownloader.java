@@ -823,6 +823,17 @@ public class YtDlpDownloader{
                             next.updateStatus(DownloadStatus.COMPLETE, get("gui.download_status.finished"));
 
                             mediaCard.getRightClickMenu().put(
+                                get("gui.restart_download"),
+                                () -> {
+                                    next.updateStatus(DownloadStatus.QUEUED, get("gui.download_status.not_started"));
+                                    next.reset();
+
+                                    completedDownloads.remove(next);
+                                    downloadDeque.offerLast(next);
+                                    fireListeners();
+                                });
+
+                            mediaCard.getRightClickMenu().put(
                                 get("gui.delete_files"),
                                 () -> next.deleteMediaFiles());
 
