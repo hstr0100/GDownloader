@@ -775,7 +775,6 @@ public class YtDlpDownloader{
                             dirStream.forEach(path -> {
                                 String fileName = path.getFileName().toString().toLowerCase();
 
-                                //TODO audio output format
                                 boolean isAudio = fileName.endsWith(")." + quality.getAudioContainer().getValue());
                                 boolean isVideo = fileName.endsWith(")." + quality.getVideoContainer().getValue());
 
@@ -884,7 +883,6 @@ public class YtDlpDownloader{
                 String[] parts = s.split("\\s+");
                 for(String part : parts){
                     if(part.endsWith("%")){
-                        //TODO
                         double percent = Double.parseDouble(part.replace("%", ""));
 
                         if(percent > lastPercentage || percent < 5 || Math.abs(percent - lastPercentage) > 10){
@@ -1213,7 +1211,7 @@ public class YtDlpDownloader{
         private Stream<String> supportedThumbnails(){
             Stream.Builder<String> builder = Stream.builder();
 
-            if(thumbnail != null && !thumbnail.endsWith(".webp")){
+            if(thumbnail != null && thumbnail.startsWith("http") && !thumbnail.endsWith(".webp")){
                 builder.add(thumbnail);
             }
 

@@ -102,7 +102,7 @@ public class Settings{
     @JsonProperty("ExitOnClose")
     private boolean exitOnClose = false;
 
-    //TODO add more
+    //TODO add more sounds
     @JsonProperty("Play Sounds")
     private boolean playSounds = false;
 

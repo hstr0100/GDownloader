@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
@@ -391,6 +392,99 @@ public class SettingsPanel{
         _resetAction.run();
     }
 
+    public <T extends Enum<T> & ISettingsEnum> void addComboBox(JPanel panel,
+        GridBagConstraints gbcPanel, String labelString, Class<T> enumClass,
+        Supplier<T> getter, Consumer<T> setter, boolean requiresRestart){
+
+        JLabel label = createLabel(labelString, LIGHT_TEXT);
+
+        gbcPanel.gridx = 0;
+        gbcPanel.gridy++;
+        gbcPanel.weightx = 0.5;
+        gbcPanel.gridwidth = 1;
+        panel.add(label, gbcPanel);
+
+        JComboBox<String> comboBox = new JComboBox<>(ISettingsEnum.getDisplayNames(enumClass));
+        if(requiresRestart){
+            comboBox.setToolTipText(get("settings.requires_restart.tooltip"));
+        }
+
+        comboBox.setSelectedIndex(getter.get().ordinal());
+
+        comboBox.addActionListener((ActionEvent e) -> {
+            setter.accept(ISettingsEnum.getEnumByIndex(enumClass, comboBox.getSelectedIndex()));
+        });
+
+        customizeComboBox(comboBox);
+
+        gbcPanel.gridx = 1;
+        gbcPanel.weightx = 1;
+        gbcPanel.gridwidth = GridBagConstraints.REMAINDER;
+        panel.add(comboBox, gbcPanel);
+    }
+
+    public void addCheckBox(JPanel panel, GridBagConstraints gbcPanel, String labelString,
+        Supplier<Boolean> getter, Consumer<Boolean> setter, boolean requiresRestart){
+
+        JLabel label = createLabel(labelString, LIGHT_TEXT);
+
+        gbcPanel.gridx = 0;
+        gbcPanel.gridy++;
+        gbcPanel.weightx = 0.5;
+        gbcPanel.gridwidth = 1;
+        panel.add(label, gbcPanel);
+
+        JCheckBox checkBox = new JCheckBox();
+        checkBox.setSelected(getter.get());
+        if(requiresRestart){
+            checkBox.setToolTipText(get("settings.requires_restart.tooltip"));
+        }
+
+        checkBox.addActionListener((ActionEvent e) -> {
+            setter.accept(checkBox.isSelected());
+        });
+
+        customizeComponent(checkBox, BACKGROUND, LIGHT_TEXT);
+
+        gbcPanel.gridx = 1;
+        gbcPanel.weightx = 1;
+        gbcPanel.gridwidth = GridBagConstraints.REMAINDER;
+        panel.add(checkBox, gbcPanel);
+    }
+
+    public void addSlider(JPanel panel, GridBagConstraints gbcPanel, String labelString,
+        int min, int max, Supplier<Integer> getter, Consumer<Integer> setter){
+
+        JLabel label = createLabel(labelString, LIGHT_TEXT);
+
+        gbcPanel.gridx = 0;
+        gbcPanel.gridy++;
+        gbcPanel.weightx = 0.5;
+        gbcPanel.gridwidth = 1;
+        panel.add(label, gbcPanel);
+
+        JSlider slider = new JSlider(min, max, getter.get());
+        slider.setMajorTickSpacing(1);
+        slider.setPaintTicks(true);
+        slider.setSnapToTicks(true);
+        slider.setPaintLabels(true);
+
+        slider.addChangeListener((ChangeEvent e) -> {
+            JSlider source = (JSlider)e.getSource();
+            if(!source.getValueIsAdjusting()){
+                int sliderValue = source.getValue();
+                setter.accept(sliderValue);
+            }
+        });
+
+        customizeSlider(slider, BACKGROUND, SLIDER_FOREGROUND);
+
+        gbcPanel.gridx = 1;
+        gbcPanel.weightx = 1;
+        gbcPanel.gridwidth = GridBagConstraints.REMAINDER;
+        panel.add(slider, gbcPanel);
+    }
+
     private JPanel createGeneralSettings(){
         JPanel generalSettingsPanel = new JPanel(new GridBagLayout());
         generalSettingsPanel.setBackground(color(BACKGROUND));
@@ -400,197 +494,79 @@ public class SettingsPanel{
         gbcPanel.insets = new Insets(5, 5, 5, 5);
         gbcPanel.anchor = GridBagConstraints.WEST;
         gbcPanel.fill = GridBagConstraints.HORIZONTAL;
-        gbcPanel.weightx = 1;
+        //gbcPanel.weightx = 1;
 
-        {
-            JLabel label = createLabel("settings.language", LIGHT_TEXT);
+        addComboBox(generalSettingsPanel, gbcPanel,
+            "settings.language",
+            LanguageEnum.class,
+            settings::getLanguage,
+            settings::setLanguage,
+            true
+        );
 
-            gbcPanel.gridx = 0;
-            gbcPanel.gridy++;
-            generalSettingsPanel.add(label, gbcPanel);
+        addComboBox(generalSettingsPanel, gbcPanel,
+            "settings.theme",
+            ThemeEnum.class,
+            settings::getTheme,
+            settings::setTheme,
+            true
+        );
 
-            JComboBox<String> comboBox = new JComboBox<>(ISettingsEnum.getDisplayNames(LanguageEnum.class));
-            comboBox.setToolTipText(get("settings.requires_restart.tooltip"));
-            comboBox.setSelectedIndex(settings.getLanguage().ordinal());
+        addCheckBox(generalSettingsPanel, gbcPanel,
+            "settings.always_on_top",
+            settings::isKeepWindowAlwaysOnTop,
+            settings::setKeepWindowAlwaysOnTop,
+            false
+        );
 
-            comboBox.addActionListener((ActionEvent e) -> {
-                settings.setLanguage(ISettingsEnum.getEnumByIndex(LanguageEnum.class, comboBox.getSelectedIndex()));
-            });
+        addCheckBox(generalSettingsPanel, gbcPanel,
+            "settings.exit_on_close",
+            settings::isExitOnClose,
+            settings::setExitOnClose,
+            false
+        );
 
-            customizeComboBox(comboBox);
+        addCheckBox(generalSettingsPanel, gbcPanel,
+            "settings.automatic_updates",
+            settings::isAutomaticUpdates,
+            settings::setAutomaticUpdates,
+            false
+        );
 
-            gbcPanel.gridx = 1;
-            generalSettingsPanel.add(comboBox, gbcPanel);
-        }
+        addCheckBox(generalSettingsPanel, gbcPanel,
+            "settings.debug_mode",
+            settings::isDebugMode,
+            settings::setDebugMode,
+            false
+        );
 
-        {
-            JLabel label = createLabel("settings.theme", LIGHT_TEXT);
+        addCheckBox(generalSettingsPanel, gbcPanel,
+            "settings.start_on_system_startup",
+            settings::isAutoStart,
+            settings::setAutoStart,
+            false
+        );
 
-            gbcPanel.gridx = 0;
-            gbcPanel.gridy++;
-            generalSettingsPanel.add(label, gbcPanel);
+        addCheckBox(generalSettingsPanel, gbcPanel,
+            "settings.play_sounds",
+            settings::isPlaySounds,
+            settings::setPlaySounds,
+            false
+        );
 
-            JComboBox<String> comboBox = new JComboBox<>(ISettingsEnum.getDisplayNames(ThemeEnum.class));
-            comboBox.setToolTipText(get("settings.requires_restart.tooltip"));
-            comboBox.setSelectedIndex(settings.getTheme().ordinal());
-
-            comboBox.addActionListener((ActionEvent e) -> {
-                settings.setTheme(ISettingsEnum.getEnumByIndex(ThemeEnum.class, comboBox.getSelectedIndex()));
-            });
-
-            customizeComboBox(comboBox);
-
-            gbcPanel.gridx = 1;
-            gbcPanel.gridwidth = 2;
-            generalSettingsPanel.add(comboBox, gbcPanel);
-        }
-
-        {
-            JLabel label = createLabel("settings.always_on_top", LIGHT_TEXT);
-
-            gbcPanel.gridx = 0;
-            gbcPanel.gridy++;
-            generalSettingsPanel.add(label, gbcPanel);
-
-            JCheckBox checkBox = new JCheckBox();
-            checkBox.setSelected(settings.isKeepWindowAlwaysOnTop());
-
-            checkBox.addActionListener((ActionEvent e) -> {
-                settings.setKeepWindowAlwaysOnTop(checkBox.isSelected());
-            });
-
-            customizeComponent(checkBox, BACKGROUND, LIGHT_TEXT);
-
-            gbcPanel.gridx = 1;
-            generalSettingsPanel.add(checkBox, gbcPanel);
-        }
-
-        {
-            JLabel label = createLabel("settings.exit_on_close", LIGHT_TEXT);
-
-            gbcPanel.gridx = 0;
-            gbcPanel.gridy++;
-            generalSettingsPanel.add(label, gbcPanel);
-
-            JCheckBox checkBox = new JCheckBox();
-            checkBox.setSelected(settings.isExitOnClose());
-
-            checkBox.addActionListener((ActionEvent e) -> {
-                settings.setExitOnClose(checkBox.isSelected());
-            });
-
-            customizeComponent(checkBox, BACKGROUND, LIGHT_TEXT);
-
-            gbcPanel.gridx = 1;
-            generalSettingsPanel.add(checkBox, gbcPanel);
-        }
-
-        {
-            JLabel label = createLabel("settings.automatic_updates", LIGHT_TEXT);
-
-            gbcPanel.gridx = 0;
-            gbcPanel.gridy++;
-            generalSettingsPanel.add(label, gbcPanel);
-
-            JCheckBox checkBox = new JCheckBox();
-            checkBox.setSelected(settings.isAutomaticUpdates());
-
-            checkBox.addActionListener((ActionEvent e) -> {
-                settings.setAutomaticUpdates(checkBox.isSelected());
-            });
-
-            customizeComponent(checkBox, BACKGROUND, LIGHT_TEXT);
-
-            gbcPanel.gridx = 1;
-            generalSettingsPanel.add(checkBox, gbcPanel);
-        }
-
-        {
-            JLabel label = createLabel("settings.debug_mode", LIGHT_TEXT);
-
-            gbcPanel.gridx = 0;
-            gbcPanel.gridy++;
-            generalSettingsPanel.add(label, gbcPanel);
-
-            JCheckBox checkBox = new JCheckBox();
-            checkBox.setSelected(settings.isDebugMode());
-
-            checkBox.addActionListener((ActionEvent e) -> {
-                settings.setDebugMode(checkBox.isSelected());
-            });
-
-            customizeComponent(checkBox, BACKGROUND, LIGHT_TEXT);
-
-            gbcPanel.gridx = 1;
-            generalSettingsPanel.add(checkBox, gbcPanel);
-        }
-
-        {
-            JLabel label = createLabel("settings.start_on_system_startup", LIGHT_TEXT);
-
-            gbcPanel.gridx = 0;
-            gbcPanel.gridy++;
-            generalSettingsPanel.add(label, gbcPanel);
-
-            JCheckBox checkBox = new JCheckBox();
-            checkBox.setSelected(settings.isAutoStart());
-
-            checkBox.addActionListener((ActionEvent e) -> {
-                settings.setAutoStart(checkBox.isSelected());
-            });
-
-            customizeComponent(checkBox, BACKGROUND, LIGHT_TEXT);
-
-            gbcPanel.gridx = 1;
-            generalSettingsPanel.add(checkBox, gbcPanel);
-        }
-
-        {
-            JLabel label = createLabel("settings.play_sounds", LIGHT_TEXT);
-
-            gbcPanel.gridx = 0;
-            gbcPanel.gridy++;
-            generalSettingsPanel.add(label, gbcPanel);
-
-            JCheckBox checkBox = new JCheckBox();
-            checkBox.setSelected(settings.isPlaySounds());
-
-            checkBox.addActionListener((ActionEvent e) -> {
-                settings.setPlaySounds(checkBox.isSelected());
-            });
-
-            customizeComponent(checkBox, BACKGROUND, LIGHT_TEXT);
-
-            gbcPanel.gridx = 1;
-            generalSettingsPanel.add(checkBox, gbcPanel);
-        }
-
-        {
-            JLabel label = createLabel("settings.use_system_font", LIGHT_TEXT);
-
-            gbcPanel.gridx = 0;
-            gbcPanel.gridy++;
-            generalSettingsPanel.add(label, gbcPanel);
-
-            JCheckBox checkBox = new JCheckBox();
-            checkBox.setSelected(settings.isUseSystemFont());
-            checkBox.setToolTipText(get("settings.requires_restart.tooltip"));
-
-            checkBox.addActionListener((ActionEvent e) -> {
-                settings.setUseSystemFont(checkBox.isSelected());
-            });
-
-            customizeComponent(checkBox, BACKGROUND, LIGHT_TEXT);
-
-            gbcPanel.gridx = 1;
-            generalSettingsPanel.add(checkBox, gbcPanel);
-        }
+        addCheckBox(generalSettingsPanel, gbcPanel,
+            "settings.use_system_font",
+            settings::isUseSystemFont,
+            settings::setUseSystemFont,
+            true
+        );
 
         {
             JLabel label = createLabel("settings.font_size", LIGHT_TEXT);
 
             gbcPanel.gridx = 0;
             gbcPanel.gridy++;
+            gbcPanel.weightx = 0.5;
             generalSettingsPanel.add(label, gbcPanel);
 
             //Not a lot of fault tolerance here
@@ -621,6 +597,7 @@ public class SettingsPanel{
             customizeSlider(slider, BACKGROUND, SLIDER_FOREGROUND);
 
             gbcPanel.gridx = 1;
+            gbcPanel.weightx = 1;
             generalSettingsPanel.add(slider, gbcPanel);
         }
 
@@ -629,7 +606,7 @@ public class SettingsPanel{
             gbcPanel.gridy++;
             gbcPanel.weightx = 1;
             gbcPanel.weighty = 1;
-            gbcPanel.gridwidth = 1;
+            gbcPanel.gridwidth = GridBagConstraints.REMAINDER;
             gbcPanel.fill = GridBagConstraints.BOTH;
             JPanel filler = new JPanel();
             filler.setBackground(color(BACKGROUND));
@@ -648,49 +625,22 @@ public class SettingsPanel{
         gbcPanel.insets = new Insets(5, 5, 5, 5);
         gbcPanel.anchor = GridBagConstraints.WEST;
         gbcPanel.fill = GridBagConstraints.HORIZONTAL;
-        gbcPanel.weightx = 1;
+        //gbcPanel.weightx = 1;
 
-        {
-            JLabel label = createLabel("settings.read_cookies", LIGHT_TEXT);
+        addCheckBox(downloadSettingsPanel, gbcPanel,
+            "settings.read_cookies",
+            settings::isReadCookies,
+            settings::setReadCookies,
+            false
+        );
 
-            gbcPanel.gridx = 0;
-            gbcPanel.gridy++;
-            downloadSettingsPanel.add(label, gbcPanel);
-
-            JCheckBox checkBox = new JCheckBox();
-            checkBox.setSelected(settings.isReadCookies());
-
-            checkBox.addActionListener((ActionEvent e) -> {
-                settings.setReadCookies(checkBox.isSelected());
-            });
-
-            customizeComponent(checkBox, BACKGROUND, LIGHT_TEXT);
-
-            gbcPanel.gridx = 1;
-            downloadSettingsPanel.add(checkBox, gbcPanel);
-        }
-
-        {
-            JLabel label = createLabel("settings.browser_for_cookies", LIGHT_TEXT);
-
-            gbcPanel.gridx = 0;
-            gbcPanel.gridy++;
-            downloadSettingsPanel.add(label, gbcPanel);
-
-            JComboBox<String> comboBox = new JComboBox<>(ISettingsEnum.getDisplayNames(BrowserEnum.class));
-            //comboBox.setToolTipText(get("settings.requires_restart.tooltip"));
-            comboBox.setSelectedIndex(settings.getBrowser().ordinal());
-
-            comboBox.addActionListener((ActionEvent e) -> {
-                settings.setBrowser(ISettingsEnum.getEnumByIndex(BrowserEnum.class, comboBox.getSelectedIndex()));
-            });
-
-            customizeComboBox(comboBox);
-
-            gbcPanel.gridx = 1;
-            gbcPanel.gridwidth = 2;
-            downloadSettingsPanel.add(comboBox, gbcPanel);
-        }
+        addComboBox(downloadSettingsPanel, gbcPanel,
+            "settings.browser_for_cookies",
+            BrowserEnum.class,
+            settings::getBrowser,
+            settings::setBrowser,
+            false
+        );
 
         {
             JLabel label = createLabel("settings.downloads_path", LIGHT_TEXT);
@@ -751,163 +701,62 @@ public class SettingsPanel{
             downloadSettingsPanel.add(selectButton, gbcPanel);
         }
 
-        {
-            JLabel label = createLabel("settings.capture_any_clipboard_link", LIGHT_TEXT);
+        addCheckBox(downloadSettingsPanel, gbcPanel,
+            "settings.capture_any_clipboard_link",
+            settings::isCaptureAnyLinks,
+            settings::setCaptureAnyLinks,
+            false
+        );
 
-            gbcPanel.gridx = 0;
-            gbcPanel.gridy++;
-            gbcPanel.weightx = 0;
-            downloadSettingsPanel.add(label, gbcPanel);
+        addCheckBox(downloadSettingsPanel, gbcPanel,
+            "settings.download_audio",
+            settings::isDownloadAudio,
+            settings::setDownloadAudio,
+            false
+        );
 
-            JCheckBox checkBox = new JCheckBox();
-            checkBox.setSelected(settings.isCaptureAnyLinks());
+        addCheckBox(downloadSettingsPanel, gbcPanel,
+            "settings.download_video",
+            settings::isDownloadVideo,
+            settings::setDownloadVideo,
+            false
+        );
 
-            checkBox.addActionListener((ActionEvent e) -> {
-                settings.setCaptureAnyLinks(checkBox.isSelected());
-            });
+        addSlider(downloadSettingsPanel, gbcPanel,
+            "settings.maximum_simultaneous_downloads",
+            1, 10,
+            settings::getMaxSimultaneousDownloads,
+            settings::setMaxSimultaneousDownloads
+        );
 
-            customizeComponent(checkBox, BACKGROUND, LIGHT_TEXT);
+        addComboBox(downloadSettingsPanel, gbcPanel,
+            "settings.playlist_download_option",
+            PlayListOptionEnum.class,
+            settings::getPlaylistDownloadOption,
+            settings::setPlaylistDownloadOption,
+            false
+        );
 
-            gbcPanel.gridx = 1;
-            gbcPanel.gridwidth = 2;
-            gbcPanel.weightx = 1;
-            downloadSettingsPanel.add(checkBox, gbcPanel);
-        }
+        addCheckBox(downloadSettingsPanel, gbcPanel,
+            "settings.download_youtube_channels",
+            settings::isDownloadYoutubeChannels,
+            settings::setDownloadYoutubeChannels,
+            false
+        );
 
-        {
-            JLabel label = createLabel("settings.download_audio", LIGHT_TEXT);
-
-            gbcPanel.gridx = 0;
-            gbcPanel.gridy++;
-            downloadSettingsPanel.add(label, gbcPanel);
-
-            JCheckBox checkBox = new JCheckBox();
-            checkBox.setSelected(settings.isDownloadAudio());
-
-            checkBox.addActionListener((ActionEvent e) -> {
-                settings.setDownloadAudio(checkBox.isSelected());
-            });
-
-            customizeComponent(checkBox, BACKGROUND, LIGHT_TEXT);
-
-            gbcPanel.gridx = 1;
-            downloadSettingsPanel.add(checkBox, gbcPanel);
-        }
-
-        {
-            JLabel label = createLabel("settings.download_video", LIGHT_TEXT);
-
-            gbcPanel.gridx = 0;
-            gbcPanel.gridy++;
-            downloadSettingsPanel.add(label, gbcPanel);
-
-            JCheckBox checkBox = new JCheckBox();
-            checkBox.setSelected(settings.isDownloadVideo());
-
-            checkBox.addActionListener((ActionEvent e) -> {
-                settings.setDownloadVideo(checkBox.isSelected());
-            });
-
-            customizeComponent(checkBox, BACKGROUND, LIGHT_TEXT);
-
-            gbcPanel.gridx = 1;
-            downloadSettingsPanel.add(checkBox, gbcPanel);
-        }
-
-        {
-            JLabel label = createLabel("settings.maximum_simultaneous_downloads", LIGHT_TEXT);
-
-            gbcPanel.gridx = 0;
-            gbcPanel.gridy++;
-            downloadSettingsPanel.add(label, gbcPanel);
-
-            JSlider slider = new JSlider(1, 10, settings.getMaxSimultaneousDownloads());
-            slider.setMajorTickSpacing(1);
-            slider.setPaintTicks(true);
-            slider.setSnapToTicks(true);
-            slider.setPaintLabels(true);
-
-            slider.addChangeListener((ChangeEvent e) -> {
-                JSlider source = (JSlider)e.getSource();
-                if(!source.getValueIsAdjusting()){
-                    int sliderValue = source.getValue();
-
-                    settings.setMaxSimultaneousDownloads(sliderValue);
-                }
-            });
-
-            customizeSlider(slider, BACKGROUND, SLIDER_FOREGROUND);
-
-            gbcPanel.gridx = 1;
-            downloadSettingsPanel.add(slider, gbcPanel);
-        }
-
-        {
-            JLabel label = createLabel("settings.playlist_download_option", LIGHT_TEXT);
-
-            gbcPanel.gridx = 0;
-            gbcPanel.gridy++;
-            downloadSettingsPanel.add(label, gbcPanel);
-
-            JComboBox<String> comboBox = new JComboBox<>(ISettingsEnum.getDisplayNames(PlayListOptionEnum.class));
-            comboBox.setSelectedIndex(settings.getPlaylistDownloadOption().ordinal());
-
-            comboBox.addActionListener((ActionEvent e) -> {
-                settings.setPlaylistDownloadOption(ISettingsEnum.getEnumByIndex(PlayListOptionEnum.class, comboBox.getSelectedIndex()));
-            });
-
-            customizeComboBox(comboBox);
-
-            gbcPanel.gridx = 1;
-            downloadSettingsPanel.add(comboBox, gbcPanel);
-        }
-
-        {
-            JLabel label = createLabel("settings.download_youtube_channels", LIGHT_TEXT);
-
-            gbcPanel.gridx = 0;
-            gbcPanel.gridy++;
-            downloadSettingsPanel.add(label, gbcPanel);
-
-            JCheckBox checkBox = new JCheckBox();
-            checkBox.setSelected(settings.isDownloadYoutubeChannels());
-
-            checkBox.addActionListener((ActionEvent e) -> {
-                settings.setDownloadYoutubeChannels(checkBox.isSelected());
-            });
-
-            customizeComponent(checkBox, BACKGROUND, LIGHT_TEXT);
-
-            gbcPanel.gridx = 1;
-            downloadSettingsPanel.add(checkBox, gbcPanel);
-        }
-
-        {
-            JLabel label = createLabel("settings.use_sponsor_block", LIGHT_TEXT);
-
-            gbcPanel.gridx = 0;
-            gbcPanel.gridy++;
-            downloadSettingsPanel.add(label, gbcPanel);
-
-            JCheckBox checkBox = new JCheckBox();
-            checkBox.setSelected(settings.isUseSponsorBlock());
-
-            checkBox.addActionListener((ActionEvent e) -> {
-                settings.setUseSponsorBlock(checkBox.isSelected());
-            });
-
-            customizeComponent(checkBox, BACKGROUND, LIGHT_TEXT);
-
-            gbcPanel.gridx = 1;
-            downloadSettingsPanel.add(checkBox, gbcPanel);
-        }
+        addCheckBox(downloadSettingsPanel, gbcPanel,
+            "settings.use_sponsor_block",
+            settings::isUseSponsorBlock,
+            settings::setUseSponsorBlock,
+            false
+        );
 
         {
             gbcPanel.gridx = 0;
             gbcPanel.gridy++;
             gbcPanel.weightx = 1;
             gbcPanel.weighty = 1;
-            gbcPanel.gridwidth = 1;
+            gbcPanel.gridwidth = GridBagConstraints.REMAINDER;
             gbcPanel.fill = GridBagConstraints.BOTH;
             JPanel filler = new JPanel();
             filler.setBackground(color(BACKGROUND));
@@ -939,28 +788,17 @@ public class SettingsPanel{
             gbcItem.insets = new Insets(5, 10, 5, 10);
             gbcItem.anchor = GridBagConstraints.WEST;
             gbcItem.fill = GridBagConstraints.HORIZONTAL;
-            gbcItem.weightx = 1;
+            //gbcItem.weightx = 1;
 
             gbcItem.gridy = 1;
 
-            {
-                JLabel label = createLabel("settings.quality_selector", LIGHT_TEXT);
-
-                gbcItem.gridy++;
-                itemPanel.add(label, gbcItem);
-
-                JComboBox<String> comboBox = new JComboBox<>(ISettingsEnum.getDisplayNames(QualitySelectorEnum.class));
-                comboBox.setSelectedIndex(qualitySettings.getSelector().ordinal());
-
-                comboBox.addActionListener((ActionEvent e) -> {
-                    qualitySettings.setSelector(ISettingsEnum.getEnumByIndex(QualitySelectorEnum.class, comboBox.getSelectedIndex()));
-                });
-
-                customizeComboBox(comboBox);
-
-                gbcItem.gridx = 1;
-                itemPanel.add(comboBox, gbcItem);
-            }
+            addComboBox(itemPanel, gbcItem,
+                "settings.quality_selector",
+                QualitySelectorEnum.class,
+                qualitySettings::getSelector,
+                qualitySettings::setSelector,
+                false
+            );
 
             JComboBox<String> minHeightComboBox;
             JComboBox<String> maxHeightComboBox;
@@ -969,6 +807,8 @@ public class SettingsPanel{
                 JLabel label = createLabel("settings.minimum_quality", LIGHT_TEXT);
 
                 gbcItem.gridx = 0;
+                gbcItem.weightx = 0.8;
+                gbcItem.gridwidth = 1;
                 gbcItem.gridy++;
                 itemPanel.add(label, gbcItem);
 
@@ -978,6 +818,8 @@ public class SettingsPanel{
                 customizeComboBox(minHeightComboBox);
 
                 gbcItem.gridx = 1;
+                gbcItem.weightx = 1;
+                gbcItem.gridwidth = GridBagConstraints.REMAINDER;
                 itemPanel.add(minHeightComboBox, gbcItem);
             }
 
@@ -985,6 +827,8 @@ public class SettingsPanel{
                 JLabel label = createLabel("settings.maximum_quality", LIGHT_TEXT);
 
                 gbcItem.gridx = 0;
+                gbcItem.weightx = 0.8;
+                gbcItem.gridwidth = 1;
                 gbcItem.gridy++;
                 itemPanel.add(label, gbcItem);
 
@@ -994,27 +838,9 @@ public class SettingsPanel{
                 customizeComboBox(maxHeightComboBox);
 
                 gbcItem.gridx = 1;
+                gbcItem.weightx = 1;
+                gbcItem.gridwidth = GridBagConstraints.REMAINDER;
                 itemPanel.add(maxHeightComboBox, gbcItem);
-            }
-
-            {
-                JLabel label = createLabel("settings.video_container", LIGHT_TEXT);
-
-                gbcItem.gridx = 0;
-                gbcItem.gridy++;
-                itemPanel.add(label, gbcItem);
-
-                JComboBox<String> comboBox = new JComboBox<>(ISettingsEnum.getDisplayNames(VideoContainerEnum.class));
-                comboBox.setSelectedIndex(qualitySettings.getVideoContainer().ordinal());
-
-                comboBox.addActionListener((ActionEvent e) -> {
-                    qualitySettings.setVideoContainer(ISettingsEnum.getEnumByIndex(VideoContainerEnum.class, comboBox.getSelectedIndex()));
-                });
-
-                customizeComboBox(comboBox);
-
-                gbcItem.gridx = 1;
-                itemPanel.add(comboBox, gbcItem);
             }
 
             {
@@ -1039,65 +865,37 @@ public class SettingsPanel{
                 });
             }
 
-            {
-                JLabel label = createLabel("settings.fps", LIGHT_TEXT);
+            addComboBox(itemPanel, gbcItem,
+                "settings.video_container",
+                VideoContainerEnum.class,
+                qualitySettings::getVideoContainer,
+                qualitySettings::setVideoContainer,
+                false
+            );
 
-                gbcItem.gridx = 0;
-                gbcItem.gridy++;
-                itemPanel.add(label, gbcItem);
+            addComboBox(itemPanel, gbcItem,
+                "settings.fps",
+                FPSEnum.class,
+                qualitySettings::getFps,
+                qualitySettings::setFps,
+                false
+            );
 
-                JComboBox<String> comboBox = new JComboBox<>(ISettingsEnum.getDisplayNames(FPSEnum.class));
-                comboBox.setSelectedIndex(qualitySettings.getFps().ordinal());
+            addComboBox(itemPanel, gbcItem,
+                "settings.audio_container",
+                AudioContainerEnum.class,
+                qualitySettings::getAudioContainer,
+                qualitySettings::setAudioContainer,
+                false
+            );
 
-                comboBox.addActionListener((ActionEvent e) -> {
-                    qualitySettings.setFps(ISettingsEnum.getEnumByIndex(FPSEnum.class, comboBox.getSelectedIndex()));
-                });
-
-                customizeComboBox(comboBox);
-
-                gbcItem.gridx = 1;
-                itemPanel.add(comboBox, gbcItem);
-            }
-
-            {
-                JLabel label = createLabel("settings.audio_container", LIGHT_TEXT);
-
-                gbcItem.gridx = 0;
-                gbcItem.gridy++;
-                itemPanel.add(label, gbcItem);
-
-                JComboBox<String> comboBox = new JComboBox<>(ISettingsEnum.getDisplayNames(AudioContainerEnum.class));
-                comboBox.setSelectedIndex(qualitySettings.getAudioContainer().ordinal());
-
-                comboBox.addActionListener((ActionEvent e) -> {
-                    qualitySettings.setAudioContainer(ISettingsEnum.getEnumByIndex(AudioContainerEnum.class, comboBox.getSelectedIndex()));
-                });
-
-                customizeComboBox(comboBox);
-
-                gbcItem.gridx = 1;
-                itemPanel.add(comboBox, gbcItem);
-            }
-
-            {
-                JLabel label = createLabel("settings.audio_bitrate", LIGHT_TEXT);
-
-                gbcItem.gridx = 0;
-                gbcItem.gridy++;
-                itemPanel.add(label, gbcItem);
-
-                JComboBox<String> comboBox = new JComboBox<>(ISettingsEnum.getDisplayNames(AudioBitrateEnum.class));
-                comboBox.setSelectedIndex(qualitySettings.getAudioBitrate().ordinal());
-
-                comboBox.addActionListener((ActionEvent e) -> {
-                    qualitySettings.setAudioBitrate(ISettingsEnum.getEnumByIndex(AudioBitrateEnum.class, comboBox.getSelectedIndex()));
-                });
-
-                customizeComboBox(comboBox);
-
-                gbcItem.gridx = 1;
-                itemPanel.add(comboBox, gbcItem);
-            }
+            addComboBox(itemPanel, gbcItem,
+                "settings.audio_bitrate",
+                AudioBitrateEnum.class,
+                qualitySettings::getAudioBitrate,
+                qualitySettings::setAudioBitrate,
+                false
+            );
 
             resolutionPanel.add(itemPanel);
         }
