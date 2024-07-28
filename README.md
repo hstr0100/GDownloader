@@ -11,6 +11,7 @@ It supports various platforms such as Crunchyroll, Twitch, X/Twitter, and all ot
 
 - Batch download videos and playlists
 - Supports multiple video platforms
+- Embeds thumbnails and subtitles in the resulting videos, when available
 - Automatic FFMPEG setup for Windows upon first boot
 - Keeps yt-dlp always updated and ready go
 - Multiple customizable settings to best suit your usage style

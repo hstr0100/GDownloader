@@ -19,28 +19,8 @@ package net.brlns.gdownloader.settings.enums;
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-public enum AudioContainerEnum implements ISettingsEnum, IContainerEnum{
-    MP3,
-    AAC,
-    WAV,
-    FLAC,
-    ALAC,
-    M4A,
-    OPUS,
-    VORBIS;
+public interface IContainerEnum{
 
-    @Override
-    public String getValue(){
-        return name().toLowerCase();
-    }
+    String getValue();
 
-    @Override
-    public String getTranslationKey(){
-        return "";
-    }
-
-    @Override
-    public String getDisplayName(){
-        return name().toLowerCase();
-    }
 }

@@ -19,7 +19,7 @@ package net.brlns.gdownloader.settings.enums;
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-public enum VideoContainerEnum implements ISettingsEnum{
+public enum VideoContainerEnum implements ISettingsEnum, IContainerEnum{
     MP4,
     MKV,
     WEBM,
@@ -28,6 +28,7 @@ public enum VideoContainerEnum implements ISettingsEnum{
     MOV,
     GIF;
 
+    @Override
     public String getValue(){
         return name().toLowerCase();
     }

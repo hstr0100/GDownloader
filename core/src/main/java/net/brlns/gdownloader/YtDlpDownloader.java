@@ -983,19 +983,12 @@ public class YtDlpDownloader{
 
                     String fileName = file.getAbsolutePath().toLowerCase();
 
-                    if(video){
-                        for(VideoContainerEnum container : VideoContainerEnum.values()){
-                            if(fileName.endsWith(")." + container.getValue())){
-                                main.open(file);
-                                return;
-                            }
-                        }
-                    }else{
-                        for(AudioContainerEnum container : AudioContainerEnum.values()){
-                            if(fileName.endsWith(")." + container.getValue())){
-                                main.open(file);
-                                return;
-                            }
+                    IContainerEnum[] values = video ? VideoContainerEnum.values() : AudioContainerEnum.values();
+
+                    for(IContainerEnum container : values){
+                        if(fileName.endsWith(")." + container.getValue())){
+                            main.open(file);
+                            return;
                         }
                     }
                 }
