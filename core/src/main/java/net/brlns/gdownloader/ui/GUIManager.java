@@ -294,7 +294,8 @@ public final class GUIManager{
         String activeTooltip, String inactiveTooltip,
         Supplier<Boolean> watch, Runnable toggler){
 
-        JButton button = createToggleButton(activeIcon, activeIconHover, inactiveIcon, inactiveIconHover, activeTooltip, inactiveTooltip, watch, toggler);
+        JButton button = createToggleButton(activeIcon, activeIconHover, inactiveIcon,
+            inactiveIconHover, activeTooltip, inactiveTooltip, watch, toggler);
 
         main.getDownloadManager().registerListener((YtDlpDownloader downloadManager) -> {
             if(downloadManager.isRunning()){
@@ -461,7 +462,8 @@ public final class GUIManager{
         return button;
     }
 
-    private JButton createDialogButton(String text, UIColors backgroundColor, UIColors textColor, UIColors hoverColor){
+    private JButton createDialogButton(String text, UIColors backgroundColor,
+        UIColors textColor, UIColors hoverColor){
         CustomButton button = new CustomButton(text,
             color(hoverColor),
             color(hoverColor).brighter());
@@ -474,7 +476,8 @@ public final class GUIManager{
         return button;
     }
 
-    public void showConfirmDialog(String title, String message, int timeoutMs, DialogButton onClose, DialogButton... buttons){
+    public void showConfirmDialog(String title, String message, int timeoutMs,
+        DialogButton onClose, DialogButton... buttons){
         JDialog dialog = new JDialog(appWindow, title, Dialog.ModalityType.APPLICATION_MODAL){
             private boolean actionPerformed = false;
 

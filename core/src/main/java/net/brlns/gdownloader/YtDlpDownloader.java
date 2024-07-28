@@ -876,6 +876,8 @@ public class YtDlpDownloader{
         double lastPercentage = 0;
         String s;
 
+        boolean downloadStarted = false;
+
         while(downloadsRunning.get() && !next.getCancelHook().get() && (s = stdInput.readLine()) != null){
             log.info("[{}] - {}", next.getDownloadId(), s);
 
@@ -893,11 +895,9 @@ public class YtDlpDownloader{
                 }
 
                 next.updateStatus(DownloadStatus.DOWNLOADING, s.replace("[download] ", ""));
-            }else if(s.contains("[Merger]")
-                || s.contains("[ExtractAudio]")
-                || s.contains("[Embed")
-                || s.contains("[Metadata]")
-                || s.contains("[Thumbnails")){
+
+                downloadStarted = true;
+            }else if(downloadStarted){
                 next.updateStatus(DownloadStatus.PROCESSING, s);
             }else{
                 next.updateStatus(DownloadStatus.PREPARING, s);

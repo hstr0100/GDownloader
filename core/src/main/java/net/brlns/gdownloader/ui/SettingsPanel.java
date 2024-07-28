@@ -400,7 +400,7 @@ public class SettingsPanel{
 
         gbcPanel.gridx = 0;
         gbcPanel.gridy++;
-        gbcPanel.weightx = 0.5;
+        gbcPanel.weightx = 0.6;
         gbcPanel.gridwidth = 1;
         panel.add(label, gbcPanel);
 
@@ -430,7 +430,7 @@ public class SettingsPanel{
 
         gbcPanel.gridx = 0;
         gbcPanel.gridy++;
-        gbcPanel.weightx = 0.5;
+        gbcPanel.weightx = 0.6;
         gbcPanel.gridwidth = 1;
         panel.add(label, gbcPanel);
 
@@ -459,7 +459,7 @@ public class SettingsPanel{
 
         gbcPanel.gridx = 0;
         gbcPanel.gridy++;
-        gbcPanel.weightx = 0.5;
+        gbcPanel.weightx = 0.6;
         gbcPanel.gridwidth = 1;
         panel.add(label, gbcPanel);
 
