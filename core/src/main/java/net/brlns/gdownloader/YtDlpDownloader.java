@@ -91,6 +91,7 @@ import static net.brlns.gdownloader.util.URLUtils.*;
 //TODO open a window asking which videos in a playlist to download or not
 //TODO RearrangeableDeque's offerLast should be linked to the cards in the UI
 //TODO Better visual eye candy for when dragging cards
+//Off to a bootcamp, project on pause
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
