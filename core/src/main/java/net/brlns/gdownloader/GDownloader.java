@@ -180,7 +180,9 @@ public final class GDownloader{
             guiManager = new GUIManager(this);
 
             //Register to the system tray
-            Image image = Toolkit.getDefaultToolkit().createImage(getClass().getResource(guiManager.getCurrentTrayIconPath()));
+            Image image = Toolkit.getDefaultToolkit().createImage(
+                getClass().getResource(guiManager.getCurrentTrayIconPath()));
+
             trayIcon = new TrayIcon(image, REGISTRY_APP_NAME, buildPopupMenu());
             trayIcon.setImageAutoSize(true);
 

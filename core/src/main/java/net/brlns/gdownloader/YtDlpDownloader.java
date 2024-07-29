@@ -88,6 +88,7 @@ import static net.brlns.gdownloader.util.URLUtils.*;
 //TODO individual 'retry failed download' button
 //TODO --no-playlist when single video option is active
 //TODO Artifacting seems to be happening on the scroll pane with AMD video cards
+//TODO open a window asking which videos in a playlist to download or not
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
@@ -454,12 +455,24 @@ public class YtDlpDownloader{
                     return;
                 }
 
+                long start = System.currentTimeMillis();
+
                 List<String> list = GDownloader.readOutput(
                     main.getYtDlpUpdater().getExecutablePath().toString(),
                     "--dump-json",
                     "--flat-playlist",
+                    "--extractor-args", "youtube:player_skip=webpage,configs,js;player_client=android,web",
                     queueEntry.getUrl()
                 );
+
+                if(main.getConfig().isDebugMode()){
+                    long what = System.currentTimeMillis() - start;
+                    double on = 1000L * 365.25 * 24 * 60 * 60 * 1000;
+                    double earth = (what / on) * 100;
+
+                    log.info("The slow as molasses thing took {}ms, jesus man! that's about {}% of a millenium",
+                        what, String.format("%.12f", earth));
+                }
 
                 for(String line : list){
                     if(!line.startsWith("{")){
@@ -1209,8 +1222,7 @@ public class YtDlpDownloader{
             }
 
             thumbnails.stream()
-                .filter(thumb -> thumb.getUrl() != null
-                && (thumb.getUrl().endsWith(".jpg") || thumb.getUrl().endsWith(".png")))
+                .filter(thumb -> thumb.getUrl() != null && (thumb.getUrl().endsWith(".jpg") || thumb.getUrl().endsWith(".png")))
                 .sorted(Comparator.comparingInt(Thumbnail::getPreference).reversed())
                 .map(Thumbnail::getUrl)
                 .forEach(builder::add);
