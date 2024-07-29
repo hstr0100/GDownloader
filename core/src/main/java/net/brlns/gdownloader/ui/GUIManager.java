@@ -17,7 +17,9 @@
 package net.brlns.gdownloader.ui;
 
 import java.awt.*;
+import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.Transferable;
+import java.awt.datatransfer.UnsupportedFlavorException;
 import java.awt.dnd.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
@@ -46,6 +48,7 @@ import net.brlns.gdownloader.ui.custom.*;
 import net.brlns.gdownloader.ui.themes.ThemeProvider;
 import net.brlns.gdownloader.ui.themes.UIColors;
 
+import static javax.swing.TransferHandler.MOVE;
 import static net.brlns.gdownloader.Language.*;
 import static net.brlns.gdownloader.ui.themes.ThemeProvider.*;
 import static net.brlns.gdownloader.ui.themes.UIColors.*;
@@ -62,6 +65,8 @@ public final class GUIManager{
         ToolTipManager.sharedInstance().setDismissDelay(5000);
         ToolTipManager.sharedInstance().setEnabled(true);
     }
+
+    private static final DataFlavor MEDIA_CARD_FLAVOR = new DataFlavor(MediaCard.class, "MediaCard");
 
     private JWindow messageWindow;
     private JPanel messagePanel;
@@ -831,44 +836,7 @@ public final class GUIManager{
             queuePanel.setLayout(new BoxLayout(queuePanel, BoxLayout.Y_AXIS));
             queuePanel.setBackground(color(BACKGROUND));
 
-            new DropTarget(queuePanel, new DropTargetListener(){
-                @Override
-                public void dragEnter(DropTargetDragEvent dtde){
-                    //Not implemented
-                }
-
-                @Override
-                public void dragOver(DropTargetDragEvent dtde){
-                    //Not implemented
-                }
-
-                @Override
-                public void dropActionChanged(DropTargetDragEvent dtde){
-                    //Not implemented
-                }
-
-                @Override
-                public void dragExit(DropTargetEvent dte){
-                    //Not implemented
-                }
-
-                @Override
-                public void drop(DropTargetDropEvent dtde){
-                    try{
-                        dtde.acceptDrop(DnDConstants.ACTION_COPY_OR_MOVE);
-
-                        Transferable transferable = dtde.getTransferable();
-
-                        boolean result = main.updateClipboard(transferable, true);
-
-                        dtde.dropComplete(result);
-                    }catch(Exception e){
-                        main.handleException(e);
-
-                        dtde.dropComplete(false);
-                    }
-                }
-            });
+            new DropTarget(appWindow, new PanelDropTargetListener());
 
             queuePanel.add(getEmptyQueuePanel(), BorderLayout.CENTER);
 
@@ -951,6 +919,26 @@ public final class GUIManager{
         gbc.insets = new Insets(10, 10, 10, 10);
         gbc.fill = GridBagConstraints.BOTH;
 
+        //Dragidy-draggy-nub-thingy
+        JPanel dragPanel = new JPanel(new BorderLayout());
+        dragPanel.setPreferredSize(new Dimension(24, 24));
+        dragPanel.setMinimumSize(new Dimension(24, 24));
+        dragPanel.setMaximumSize(new Dimension(24, 24));
+        dragPanel.setBackground(new Color(0, 0, 0, 0));
+
+        ImageIcon dragIcon = loadIcon("/assets/drag.png", ICON, 24);
+        JLabel dragLabel = new JLabel(dragIcon);
+        dragLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        dragPanel.add(dragLabel, BorderLayout.CENTER);
+
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.gridheight = 2;
+        gbc.weightx = 0;
+        gbc.weighty = 0;
+        card.add(dragPanel, gbc);
+
+        //Thumbnail
         CustomThumbnailPanel thumbnailPanel = new CustomThumbnailPanel();
         thumbnailPanel.setPreferredSize(new Dimension(MediaCard.THUMBNAIL_WIDTH, MediaCard.THUMBNAIL_HEIGHT));
         thumbnailPanel.setMinimumSize(new Dimension(MediaCard.THUMBNAIL_WIDTH, MediaCard.THUMBNAIL_HEIGHT));
@@ -961,7 +949,8 @@ public final class GUIManager{
         JLabel imageLabel = new JLabel(noImageIcon);
         thumbnailPanel.add(imageLabel, BorderLayout.CENTER);
 
-        gbc.gridx = 0;
+        gbc.insets = new Insets(10, 0, 10, 0);
+        gbc.gridx = 1;
         gbc.gridy = 0;
         gbc.gridheight = 2;
         gbc.weightx = 0;
@@ -970,7 +959,8 @@ public final class GUIManager{
 
         JLabel mediaNameLabel = new JLabel(wrapText(50, mediaLabel));
         mediaNameLabel.setForeground(color(FOREGROUND));
-        gbc.gridx = 1;
+        gbc.insets = new Insets(10, 10, 10, 10);
+        gbc.gridx = 2;
         gbc.gridy = 0;
         gbc.gridheight = 1;
         gbc.weightx = 1;
@@ -986,7 +976,7 @@ public final class GUIManager{
         //progressBar.setBorderPainted(false);
         progressBar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 15));
 
-        gbc.gridx = 1;
+        gbc.gridx = 2;
         gbc.gridy = 1;
         gbc.weightx = 1;
         gbc.weighty = 0;
@@ -1000,7 +990,7 @@ public final class GUIManager{
         );
         closeButton.setPreferredSize(new Dimension(16, 16));
 
-        gbc.gridx = 2;
+        gbc.gridx = 3;
         gbc.gridy = 0;
         gbc.gridheight = 2;
         gbc.weightx = 0;
@@ -1016,8 +1006,23 @@ public final class GUIManager{
 
         MediaCard mediaCard = new MediaCard(id, card, mediaNameLabel, thumbnailPanel, progressBar);
 
+        card.setTransferHandler(new PanelTransferHandler());
+
         MouseAdapter listener = new MouseAdapter(){
             private long lastClick = System.currentTimeMillis();
+
+            @Override
+            public void mousePressed(MouseEvent e){
+                Component component = e.getComponent();
+
+                if(component.equals(dragLabel)){
+                    TransferHandler handler = card.getTransferHandler();
+
+                    if(handler != null){//peace of mind
+                        handler.exportAsDrag(card, e, TransferHandler.MOVE);
+                    }
+                }
+            }
 
             @Override
             public void mouseClicked(MouseEvent e){
@@ -1044,7 +1049,10 @@ public final class GUIManager{
         };
 
         card.addMouseListener(listener);
+        dragLabel.addMouseListener(listener);
         mediaNameLabel.addMouseListener(listener);
+
+        card.putClientProperty("MEDIA_CARD", mediaCard);
 
         mediaCards.put(id, mediaCard);
 
@@ -1130,7 +1138,7 @@ public final class GUIManager{
 
     private void adjustWindowSize(){
         SwingUtilities.invokeLater(() -> {
-            appWindow.setSize(638, 370);
+            appWindow.setSize(658, 370);
             appWindow.setMinimumSize(new Dimension(appWindow.getWidth(), 225));
 
             Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
@@ -1359,4 +1367,207 @@ public final class GUIManager{
         private final ButtonFunction action;
     }
 
+    private boolean tryHandleDrop(Transferable transferable){
+        return main.updateClipboard(transferable, true);
+    }
+
+    private class PanelDropTargetListener implements DropTargetListener{
+
+        private final Timer scrollTimer = new Timer(50, (ActionEvent e) -> {
+            Point mouseLocation = MouseInfo.getPointerInfo().getLocation();
+            SwingUtilities.convertPointFromScreen(mouseLocation, queueScrollPane.getViewport());
+
+            Rectangle rect = queueScrollPane.getViewport().getViewRect();
+            int tolerance = 100;
+
+            if(mouseLocation.y < tolerance && rect.y > 0){
+                queueScrollPane.getVerticalScrollBar().setValue(
+                    queueScrollPane.getVerticalScrollBar().getValue() - 30);
+            }else if(mouseLocation.y > rect.height - tolerance
+                && rect.y + rect.height < queueScrollPane.getViewport().getView().getHeight()){
+                queueScrollPane.getVerticalScrollBar().setValue(
+                    queueScrollPane.getVerticalScrollBar().getValue() + 30);
+            }
+        });
+
+        @Override
+        public void dragEnter(DropTargetDragEvent dtde){
+            scrollTimer.start();
+        }
+
+        @Override
+        public void dragOver(DropTargetDragEvent dtde){
+            //Not implemented
+        }
+
+        @Override
+        public void dropActionChanged(DropTargetDragEvent dtde){
+            //Not implemented
+        }
+
+        @Override
+        public void dragExit(DropTargetEvent dte){
+            scrollTimer.stop();
+        }
+
+        @Override
+        public void drop(DropTargetDropEvent dtde){
+            scrollTimer.stop();
+
+            try{
+                dtde.acceptDrop(DnDConstants.ACTION_COPY_OR_MOVE);
+
+                Transferable transferable = dtde.getTransferable();
+
+                boolean result = tryHandleDrop(transferable);
+
+                dtde.dropComplete(result);
+            }catch(Exception e){
+                main.handleException(e);
+
+                dtde.dropComplete(false);
+            }
+        }
+    }
+
+    private class PanelTransferHandler extends TransferHandler{
+
+        @Override
+        public int getSourceActions(JComponent c){
+            return MOVE;
+        }
+
+        @Override
+        protected Transferable createTransferable(JComponent c){
+            JPanel panel = (JPanel)c;
+            MediaCard card = (MediaCard)panel.getClientProperty("MEDIA_CARD");
+
+            if(card != null){
+                return new MediaCardTransferable(card);
+            }
+
+            return null;
+        }
+
+        @Override
+        public boolean canImport(TransferHandler.TransferSupport support){
+            return support.isDataFlavorSupported(MEDIA_CARD_FLAVOR) || support.isDataFlavorSupported(DataFlavor.stringFlavor);
+        }
+
+        @Override
+        public boolean importData(TransferHandler.TransferSupport support){
+            if(!canImport(support)){
+                return false;
+            }
+
+            try{
+                Transferable transferable = support.getTransferable();
+
+                if(transferable.isDataFlavorSupported(DataFlavor.stringFlavor)){
+                    return tryHandleDrop(transferable);
+                }
+
+                if(transferable.isDataFlavorSupported(MEDIA_CARD_FLAVOR)){
+                    MediaCard card = (MediaCard)transferable.getTransferData(MEDIA_CARD_FLAVOR);
+
+                    JPanel sourcePanel = card.getPanel();
+
+                    if(sourcePanel != null){
+                        Component dropTarget = support.getComponent();
+
+                        Rectangle windowBounds = appWindow.getBounds();
+                        Point dropLocation = dropTarget.getLocationOnScreen();
+
+                        if(windowBounds.contains(dropLocation) && dropTarget instanceof JPanel jPanel){
+                            int targetIndex = getComponentIndex(jPanel);
+
+                            if(main.getConfig().isDebugMode()){
+                                log.info("Drop target index is {}", targetIndex);
+                            }
+
+                            if(card.getOnDrag() != null){
+                                int validIndex = getValidComponentIndex(jPanel);
+
+                                if(main.getConfig().isDebugMode()){
+                                    log.info("Valid target index is {}", validIndex);
+                                }
+
+                                card.getOnDrag().accept(validIndex);
+                            }
+
+                            queuePanel.remove(sourcePanel);
+                            queuePanel.add(sourcePanel, targetIndex);
+                            queuePanel.revalidate();
+                            queuePanel.repaint();
+
+                            return true;
+                        }
+                    }
+                }
+            }catch(Exception e){
+                main.handleException(e, false);
+            }
+
+            return false;
+        }
+
+        private int getComponentIndex(JPanel component){
+            Component[] components = queuePanel.getComponents();
+            for(int i = 0; i < components.length; i++){
+                if(components[i] == component){
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
+        private int getValidComponentIndex(JPanel componentIn){
+            int index = 0;
+            for(Component component : queuePanel.getComponents()){
+                MediaCard card = (MediaCard)((JPanel)component).getClientProperty("MEDIA_CARD");
+                if(card == null){
+                    throw new IllegalStateException("Media card not defined for " + component.getName());
+                }
+
+                if(component == componentIn){
+                    return index;
+                }
+
+                if(card.getValidateDropTarget().get()){
+                    index++;
+                }
+            }
+
+            return -1;
+        }
+
+        private static class MediaCardTransferable implements Transferable{
+
+            private final MediaCard card;
+
+            public MediaCardTransferable(MediaCard card){
+                this.card = card;
+            }
+
+            @Override
+            public DataFlavor[] getTransferDataFlavors(){
+                return new DataFlavor[]{MEDIA_CARD_FLAVOR};
+            }
+
+            @Override
+            public boolean isDataFlavorSupported(DataFlavor flavor){
+                return MEDIA_CARD_FLAVOR.equals(flavor);
+            }
+
+            @Override
+            public Object getTransferData(DataFlavor flavor) throws UnsupportedFlavorException, IOException{
+                if(!MEDIA_CARD_FLAVOR.equals(flavor)){
+                    throw new UnsupportedFlavorException(flavor);
+                }
+
+                return card;
+            }
+        }
+    }
 }

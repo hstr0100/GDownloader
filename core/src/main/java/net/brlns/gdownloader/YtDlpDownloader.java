@@ -89,8 +89,8 @@ import static net.brlns.gdownloader.util.URLUtils.*;
 //TODO --no-playlist when single video option is active
 //TODO Artifacting seems to be happening on the scroll pane with AMD video cards
 //TODO open a window asking which videos in a playlist to download or not
-//TODO Write a rearrangeable download deque, allow cards to be moved around by dragging
-//TODO pausing downloads does not always immediately destroy processes
+//TODO RearrangeableDeque's offerLast should be linked to the cards in the UI
+//TODO Better visual eye candy for when dragging cards
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
@@ -106,7 +106,9 @@ public class YtDlpDownloader{
     private final Set<String> capturedLinks = Collections.synchronizedSet(new HashSet<>());
     private final Set<String> capturedPlaylists = Collections.synchronizedSet(new HashSet<>());
 
-    private final Deque<QueueEntry> downloadDeque = new ConcurrentRearrangeableDeque<>();
+    private final ConcurrentRearrangeableDeque<QueueEntry> downloadDeque
+        = new ConcurrentRearrangeableDeque<>();
+
     private final Queue<QueueEntry> completedDownloads = new ConcurrentLinkedQueue<>();
     private final Queue<QueueEntry> failedDownloads = new ConcurrentLinkedQueue<>();
 
@@ -337,6 +339,21 @@ public class YtDlpDownloader{
                         get("gui.copy_url"),
                         () -> queueEntry.copyUrlToClipboard()
                     ));
+
+                    mediaCard.setOnDrag((targetIndex) -> {
+                        if(downloadDeque.contains(queueEntry)){
+                            try{
+                                downloadDeque.moveToPosition(queueEntry,
+                                    Math.clamp(targetIndex, 0, downloadDeque.size() - 1));
+                            }catch(Exception e){
+                                main.handleException(e, false);
+                            }
+                        }
+                    });
+
+                    mediaCard.setValidateDropTarget(() -> {
+                        return downloadDeque.contains(queueEntry);
+                    });
 
                     queryVideo(queueEntry);
 
@@ -720,6 +737,8 @@ public class YtDlpDownloader{
                         }
                     }
 
+                    boolean wasStopped = false;
+
                     if(downloadVideo){
                         videoArgs.addAll(Arrays.asList(
                             "-f",
@@ -733,16 +752,20 @@ public class YtDlpDownloader{
 
                         Pair<Integer, String> result = processDownload(next, genericArgs, videoArgs);
 
-                        if(result != null && result.getKey() != 0){
-                            if(!next.getCancelHook().get()){
-                                next.updateStatus(DownloadStatus.FAILED, result.getValue());
-                                next.reset();
+                        if(result != null){
+                            if(result.getKey() != 0){
+                                if(!next.getCancelHook().get()){
+                                    next.updateStatus(DownloadStatus.FAILED, result.getValue());
+                                    next.reset();
 
-                                failedDownloads.offer(next);
+                                    failedDownloads.offer(next);
+                                }
+
+                                fireListeners();
+                                return;
                             }
-
-                            fireListeners();
-                            return;
+                        }else{
+                            wasStopped = true;
                         }
                     }
 
@@ -760,20 +783,24 @@ public class YtDlpDownloader{
 
                         Pair<Integer, String> result = processDownload(next, genericArgs, audioArgs);
 
-                        if(result != null && result.getKey() != 0){
-                            if(!next.getCancelHook().get()){
-                                next.updateStatus(DownloadStatus.FAILED, result.getValue());
-                                next.reset();
+                        if(result != null){
+                            if(result.getKey() != 0){
+                                if(!next.getCancelHook().get()){
+                                    next.updateStatus(DownloadStatus.FAILED, result.getValue());
+                                    next.reset();
 
-                                failedDownloads.offer(next);
+                                    failedDownloads.offer(next);
+                                }
+
+                                fireListeners();
+                                return;
                             }
-
-                            fireListeners();
-                            return;
+                        }else{
+                            wasStopped = true;
                         }
                     }
 
-                    if(!downloadsRunning.get()){
+                    if(!downloadsRunning.get() || wasStopped){
                         next.updateStatus(DownloadStatus.STOPPED, get("gui.download_status.not_started"));
                         next.reset();
 
@@ -874,7 +901,7 @@ public class YtDlpDownloader{
         finalArgs.addAll(specificArgs);
         finalArgs.add(next.getUrl());
 
-        log.info("exec {}", finalArgs);
+        log.info("Arguments {}", finalArgs);
 
         Process process = Runtime.getRuntime().exec(finalArgs.stream().toArray(String[]::new));
 
@@ -922,14 +949,18 @@ public class YtDlpDownloader{
             lastError = s;
         }
 
+        long stopped = (System.currentTimeMillis() - start);
+
         if(!downloadsRunning.get() || next.getCancelHook().get()){
             process.destroy();
+
+            log.info("Download process halted after {}ms", stopped);
 
             return null;
         }else{
             int exitCode = process.waitFor();
 
-            log.info("Download took {}ms", (System.currentTimeMillis() - start));
+            log.info("Download process took {}ms", stopped);
 
             return new Pair<>(exitCode, lastError);
         }

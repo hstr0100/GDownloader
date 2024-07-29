@@ -21,6 +21,8 @@ import java.awt.Dimension;
 import java.awt.image.BufferedImage;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import lombok.Data;
@@ -47,9 +49,12 @@ public class MediaCard{
     private Runnable onLeftClick;
     private Map<String, Runnable> rightClickMenu = new LinkedHashMap<>();
     private Runnable onClose;
+    private Consumer<Integer> onDrag;
     private boolean closed;
 
-    protected static final int THUMBNAIL_WIDTH = 160;
+    private Supplier<Boolean> validateDropTarget;
+
+    protected static final int THUMBNAIL_WIDTH = 170;
     protected static final int THUMBNAIL_HEIGHT = (int)(THUMBNAIL_WIDTH / 16.0 * 9.0);
 
     public void close(){

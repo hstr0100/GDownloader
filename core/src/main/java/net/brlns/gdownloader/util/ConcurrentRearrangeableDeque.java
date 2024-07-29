@@ -23,7 +23,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-//TODO rearrageable cards
 public class ConcurrentRearrangeableDeque<T> extends ArrayDeque<T>{
 
     private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
@@ -169,4 +168,17 @@ public class ConcurrentRearrangeableDeque<T> extends ArrayDeque<T>{
             lock.readLock().unlock();
         }
     }
+
+    @Override
+    public boolean contains(Object obj){
+        lock.readLock().lock();
+
+        try{
+            return super.contains(obj);
+        }finally{
+            lock.readLock().unlock();
+        }
+    }
+
+    //TODO UnsupportedOperationException for the rest
 }
