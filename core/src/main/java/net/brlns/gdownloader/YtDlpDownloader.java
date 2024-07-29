@@ -922,7 +922,7 @@ public class YtDlpDownloader{
             lastError = s;
         }
 
-        if(!downloadsRunning.get() || !next.getCancelHook().get()){
+        if(!downloadsRunning.get() || next.getCancelHook().get()){
             process.destroy();
 
             return null;

@@ -57,7 +57,7 @@ public class PriorityThreadPoolExecutor extends ThreadPoolExecutor{
         return submitWithPriority(task, null, priority);
     }
 
-    public class PriorityTask<V> extends FutureTask<V> implements Comparable<PriorityTask<V>>{
+    private class PriorityTask<V> extends FutureTask<V> implements Comparable<PriorityTask<V>>{
 
         private final int priority;
 
