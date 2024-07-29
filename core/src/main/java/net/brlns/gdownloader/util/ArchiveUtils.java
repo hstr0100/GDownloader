@@ -76,7 +76,11 @@ public class ArchiveUtils{
     private static void extractEntry(InputStream zipIn, String entryName, Path outputDir) throws IOException{
         entryName = entryName.replace("\\", "/");
 
-        Path outFile = outputDir.resolve(entryName);
+        Path outFile = outputDir.resolve(entryName).normalize();
+        if(!outFile.startsWith(outputDir)){
+            throw new IOException("Zip entry is outside of the output dir: " + entryName);
+        }
+
         if(entryName.endsWith("/")){
             Files.createDirectories(outFile);
         }else{

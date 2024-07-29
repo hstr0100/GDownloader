@@ -228,7 +228,6 @@ public final class GUIManager{
             main.getConfig()::isDownloadAudio,
             () -> {
                 main.getConfig().setDownloadAudio(!main.getConfig().isDownloadAudio());
-                System.out.println(main.getConfig().isDownloadAudio());
                 main.updateConfig();
             }
         ));

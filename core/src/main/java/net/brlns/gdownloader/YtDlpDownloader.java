@@ -39,9 +39,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
@@ -58,8 +56,10 @@ import net.brlns.gdownloader.settings.enums.*;
 import net.brlns.gdownloader.ui.GUIManager;
 import net.brlns.gdownloader.ui.GUIManager.DialogButton;
 import net.brlns.gdownloader.ui.MediaCard;
+import net.brlns.gdownloader.util.ConcurrentRearrangeableDeque;
 import net.brlns.gdownloader.util.Nullable;
 import net.brlns.gdownloader.util.Pair;
+import net.brlns.gdownloader.util.PriorityThreadPoolExecutor;
 
 import static net.brlns.gdownloader.Language.*;
 import static net.brlns.gdownloader.util.URLUtils.*;
@@ -89,6 +89,8 @@ import static net.brlns.gdownloader.util.URLUtils.*;
 //TODO --no-playlist when single video option is active
 //TODO Artifacting seems to be happening on the scroll pane with AMD video cards
 //TODO open a window asking which videos in a playlist to download or not
+//TODO Write a rearrangeable download deque, allow cards to be moved around by dragging
+//TODO pausing downloads does not always immediately destroy processes
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
@@ -97,14 +99,14 @@ public class YtDlpDownloader{
 
     private final GDownloader main;
 
-    private final ExecutorService downloadScheduler;
+    private final PriorityThreadPoolExecutor downloadScheduler;
 
     private final List<Consumer<YtDlpDownloader>> listeners = new ArrayList<>();
 
     private final Set<String> capturedLinks = Collections.synchronizedSet(new HashSet<>());
     private final Set<String> capturedPlaylists = Collections.synchronizedSet(new HashSet<>());
 
-    private final Deque<QueueEntry> downloadDeque = new LinkedBlockingDeque<>();
+    private final Deque<QueueEntry> downloadDeque = new ConcurrentRearrangeableDeque<>();
     private final Queue<QueueEntry> completedDownloads = new ConcurrentLinkedQueue<>();
     private final Queue<QueueEntry> failedDownloads = new ConcurrentLinkedQueue<>();
 
@@ -119,7 +121,7 @@ public class YtDlpDownloader{
 
         //I know what era of computer this will be running on, so more than 10 threads would be insanity
         //But maybe add it as a setting later
-        downloadScheduler = Executors.newFixedThreadPool(10);
+        downloadScheduler = new PriorityThreadPoolExecutor(10, 10, 0L, TimeUnit.MILLISECONDS);
     }
 
     public boolean isBlocked(){
@@ -419,9 +421,9 @@ public class YtDlpDownloader{
 
         //We deliberately keep the download processes running
         QueueEntry next;
-        while((next = downloadDeque.peek()) != null){
+        while((next = downloadDeque.poll()) != null){
             main.getGuiManager().removeMediaCard(next.getMediaCard().getId());
-            downloadDeque.remove(next);
+            //downloadDeque.remove(next);
 
             if(!next.isRunning()){
                 next.clean();
@@ -449,7 +451,7 @@ public class YtDlpDownloader{
             return;
         }
 
-        downloadScheduler.execute(() -> {
+        downloadScheduler.submitWithPriority(() -> {
             try{
                 if(queueEntry.getCancelHook().get()){
                     return;
@@ -461,7 +463,8 @@ public class YtDlpDownloader{
                     main.getYtDlpUpdater().getExecutablePath().toString(),
                     "--dump-json",
                     "--flat-playlist",
-                    "--extractor-args", "youtube:player_skip=webpage,configs,js;player_client=android,web",
+                    "--extractor-args",
+                    "youtube:player_skip=webpage,configs,js;player_client=android,web",
                     queueEntry.getUrl()
                 );
 
@@ -491,7 +494,7 @@ public class YtDlpDownloader{
                     queueEntry.updateStatus(DownloadStatus.QUEUED, get("gui.download_status.not_started"));
                 }
             }
-        });
+        }, 1);
     }
 
     @SuppressWarnings("fallthrough")
@@ -501,9 +504,8 @@ public class YtDlpDownloader{
                 break;
             }
 
-            QueueEntry next = downloadDeque.peek();
-
-            downloadDeque.remove(next);
+            QueueEntry next = downloadDeque.poll();
+            //downloadDeque.remove(next);
 
             MediaCard mediaCard = next.getMediaCard();
             if(mediaCard.isClosed()){
@@ -513,7 +515,7 @@ public class YtDlpDownloader{
             runningDownloads.incrementAndGet();
             fireListeners();
 
-            downloadScheduler.execute(() -> {
+            downloadScheduler.submitWithPriority(() -> {
                 if(!downloadsRunning.get()){
                     downloadDeque.offerFirst(next);
 
@@ -718,8 +720,6 @@ public class YtDlpDownloader{
                         }
                     }
 
-                    boolean success = false;
-
                     if(downloadVideo){
                         videoArgs.addAll(Arrays.asList(
                             "-f",
@@ -733,7 +733,7 @@ public class YtDlpDownloader{
 
                         Pair<Integer, String> result = processDownload(next, genericArgs, videoArgs);
 
-                        if(result.getKey() != 0){
+                        if(result != null && result.getKey() != 0){
                             if(!next.getCancelHook().get()){
                                 next.updateStatus(DownloadStatus.FAILED, result.getValue());
                                 next.reset();
@@ -744,8 +744,6 @@ public class YtDlpDownloader{
                             fireListeners();
                             return;
                         }
-
-                        success = true;
                     }
 
                     //isDownloadAudio() might have changed at this point, do a fresh check just to be sure
@@ -762,7 +760,7 @@ public class YtDlpDownloader{
 
                         Pair<Integer, String> result = processDownload(next, genericArgs, audioArgs);
 
-                        if(result.getKey() != 0){
+                        if(result != null && result.getKey() != 0){
                             if(!next.getCancelHook().get()){
                                 next.updateStatus(DownloadStatus.FAILED, result.getValue());
                                 next.reset();
@@ -773,8 +771,6 @@ public class YtDlpDownloader{
                             fireListeners();
                             return;
                         }
-
-                        success = true;
                     }
 
                     if(!downloadsRunning.get()){
@@ -783,7 +779,7 @@ public class YtDlpDownloader{
 
                         downloadDeque.offerFirst(next);
                         fireListeners();
-                    }else if(!next.getCancelHook().get() && success){
+                    }else if(!next.getCancelHook().get()){
                         try(Stream<Path> dirStream = Files.walk(tmpPath.toPath())){
                             dirStream.forEach(path -> {
                                 String fileName = path.getFileName().toString().toLowerCase();
@@ -861,7 +857,7 @@ public class YtDlpDownloader{
                     runningDownloads.decrementAndGet();
                     fireListeners();
                 }
-            });
+            }, 10);
         }
 
         if(downloadsRunning.get() && runningDownloads.get() == 0){
@@ -869,6 +865,7 @@ public class YtDlpDownloader{
         }
     }
 
+    @Nullable
     private Pair<Integer, String> processDownload(QueueEntry next,
         List<String> genericArgs, List<String> specificArgs) throws Exception{
         long start = System.currentTimeMillis();
@@ -925,11 +922,18 @@ public class YtDlpDownloader{
             lastError = s;
         }
 
-        int exitCode = process.waitFor();
+        if(!downloadsRunning.get() || !next.getCancelHook().get()){
+            process.destroy();
 
-        log.info("Download took {}ms", (System.currentTimeMillis() - start));
+            return null;
+        }else{
+            int exitCode = process.waitFor();
 
-        return new Pair<>(exitCode, lastError);
+            log.info("Download took {}ms", (System.currentTimeMillis() - start));
+
+            return new Pair<>(exitCode, lastError);
+        }
+
     }
 
     private static String truncate(String input, int length){
