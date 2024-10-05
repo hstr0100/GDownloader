@@ -91,6 +91,16 @@ import static net.brlns.gdownloader.util.URLUtils.*;
 //TODO open a window asking which videos in a playlist to download or not
 //TODO RearrangeableDeque's offerLast should be linked to the cards in the UI
 //TODO Better visual eye candy for when dragging cards
+//TODO Add setting to disable audio transcoding from Opus to AAC, or allow the user to manually specify the target codec
+//TODO Debug intermittent DNS lookup errors being thrown by urllib3 on linux. Attempt automatic retries after a few seconds.
+//TODO Add 'Clear Completed Downloads' button.
+//TODO Refactor Quality Settings. We should find a way to avoid hardcoding them. Allow the user the flexibility to add their own filters or ditch them altogether for less maintenance.
+//TODO Attempt fetching thumbnail and metadata for any website. Let yt-dlp attempt to handle them.
+//TODO Javadoc, a whole lot of it.
+//TODO Refactor this very class. Separate some logic into different methods.
+//TODO Twitch settings purposefully default to suboptimal quality due to huge file sizes. Maybe consider adding a warning about this in the GUI.
+//TODO Split GUI into a different subproject from core logic.
+//TODO Avoid checking file extensions for thumbnails. Instead rely on mime type if available.
 //Off to a bootcamp, project on pause
 /**
  * @author Gabriel / hstr0100 / vertx010
