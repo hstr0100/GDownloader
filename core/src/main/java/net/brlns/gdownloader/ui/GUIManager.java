@@ -36,6 +36,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import javax.imageio.ImageIO;
+import javax.swing.TransferHandler.TransferSupport;
 import javax.swing.*;
 import javax.swing.plaf.ColorUIResource;
 import javax.swing.plaf.basic.BasicButtonUI;
@@ -1019,7 +1020,7 @@ public final class GUIManager{
                     TransferHandler handler = card.getTransferHandler();
 
                     if(handler != null){//peace of mind
-                        handler.exportAsDrag(card, e, TransferHandler.MOVE);
+                        handler.exportAsDrag(card, e, MOVE);
                     }
                 }
             }
@@ -1450,12 +1451,12 @@ public final class GUIManager{
         }
 
         @Override
-        public boolean canImport(TransferHandler.TransferSupport support){
+        public boolean canImport(TransferSupport support){
             return support.isDataFlavorSupported(MEDIA_CARD_FLAVOR) || support.isDataFlavorSupported(DataFlavor.stringFlavor);
         }
 
         @Override
-        public boolean importData(TransferHandler.TransferSupport support){
+        public boolean importData(TransferSupport support){
             if(!canImport(support)){
                 return false;
             }

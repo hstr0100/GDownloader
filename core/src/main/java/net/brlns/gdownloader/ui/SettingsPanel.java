@@ -751,6 +751,13 @@ public class SettingsPanel{
             false
         );
 
+        addCheckBox(downloadSettingsPanel, gbcPanel,
+            "settings.transcode_audio_to_aac",
+            settings::isTranscodeAudioToAAC,
+            settings::setTranscodeAudioToAAC,
+            false
+        );
+
         {
             gbcPanel.gridx = 0;
             gbcPanel.gridy++;

@@ -91,7 +91,7 @@ import static net.brlns.gdownloader.util.URLUtils.*;
 //TODO open a window asking which videos in a playlist to download or not
 //TODO RearrangeableDeque's offerLast should be linked to the cards in the UI
 //TODO Better visual eye candy for when dragging cards
-//TODO Add setting to disable audio transcoding from Opus to AAC, or allow the user to manually specify the target codec
+//TODO Add setting to allow the user to manually specify the target codec
 //TODO Debug intermittent DNS lookup errors being thrown by urllib3 on linux. Attempt automatic retries after a few seconds.
 //TODO Add 'Clear Completed Downloads' button.
 //TODO Refactor Quality Settings. We should find a way to avoid hardcoding them. Allow the user the flexibility to add their own filters or ditch them altogether for less maintenance.
@@ -754,12 +754,17 @@ public class YtDlpDownloader{
                         videoArgs.addAll(Arrays.asList(
                             "-f",
                             quality.getQualitySettings(),
-                            "--postprocessor-args",
-                            //Opus is not supported by some native video players
-                            "ffmpeg:-c:a aac -b:a " + audioBitrate.getValue() + "k",
                             "--merge-output-format",
                             quality.getVideoContainer().getValue()
                         ));
+
+                        if(main.getConfig().isTranscodeAudioToAAC()){
+                            videoArgs.addAll(Arrays.asList(
+                                "--postprocessor-args",
+                                //Opus is not supported by some native video players
+                                "ffmpeg:-c:a aac -b:a " + audioBitrate.getValue() + "k"
+                            ));
+                        }
 
                         Pair<Integer, String> result = processDownload(next, genericArgs, videoArgs);
 

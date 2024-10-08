@@ -102,6 +102,9 @@ public class Settings{
     @JsonProperty("ExitOnClose")
     private boolean exitOnClose = false;
 
+    @JsonProperty("TranscodeAudioToAAC")
+    private boolean transcodeAudioToAAC = true;
+
     //TODO add more sounds
     @JsonProperty("PlaySounds")
     private boolean playSounds = false;
