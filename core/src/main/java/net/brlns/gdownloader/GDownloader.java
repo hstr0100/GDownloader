@@ -77,6 +77,8 @@ import static net.brlns.gdownloader.Language.*;
 /**
  * GDownloader - GUI wrapper for yt-dlp
  *
+ * Icons sourced from https://www.iconsdb.com/white-icons/ with size 128x128
+ *
  * @author Gabriel / hstr0100 / vertx010
  */
 @Slf4j
