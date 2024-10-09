@@ -56,6 +56,6 @@ We welcome any feedback you may have to improve the user experience.
 
 ## Atributions
 
-Icons by [IconsDB.com](https://www.iconsdb.com)
-FFMpeg builds by [GyanD](https://github.com/GyanD/codexffmpeg)
-YT-DLP builds by [YT-DLP](https://github.com/yt-dlp/yt-dlp)
+- Icons by [IconsDB.com](https://www.iconsdb.com)
+- FFMpeg builds by [GyanD](https://github.com/GyanD/codexffmpeg)
+- YT-DLP builds by [YT-DLP](https://github.com/yt-dlp/yt-dlp)
