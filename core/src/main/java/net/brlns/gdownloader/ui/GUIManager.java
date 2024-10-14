@@ -34,6 +34,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import javax.imageio.ImageIO;
 import javax.swing.TransferHandler.TransferSupport;
@@ -203,12 +204,10 @@ public final class GUIManager{
         });
 
         buttonPanel.add(createToggleButton(
-            loadIcon("/assets/copy-link.png", ICON_ACTIVE),
-            loadIcon("/assets/copy-link.png", ICON_HOVER),
-            loadIcon("/assets/copy-link.png", ICON),
-            loadIcon("/assets/copy-link.png", ICON_HOVER),
-            "gui.start_clipboard_monitor.tooltip",
-            "gui.stop_clipboard_monitor.tooltip",
+            (state) -> loadIcon("/assets/copy-link.png", state ? ICON_ACTIVE : ICON),
+            (state) -> loadIcon("/assets/copy-link.png", ICON_HOVER),
+            (state) -> state ? "gui.stop_clipboard_monitor.tooltip"
+                : "gui.start_clipboard_monitor.tooltip",
             main.getConfig()::isMonitorClipboardForLinks,
             () -> {
                 main.getConfig().setMonitorClipboardForLinks(!main.getConfig().isMonitorClipboardForLinks());
@@ -225,12 +224,10 @@ public final class GUIManager{
         });
 
         buttonPanel.add(createToggleButton(
-            loadIcon("/assets/mp3.png", ICON_ACTIVE),
-            loadIcon("/assets/mp3.png", ICON_HOVER),
-            loadIcon("/assets/mp3.png", ICON),
-            loadIcon("/assets/mp3.png", ICON_HOVER),
-            "gui.download_audio.tooltip",
-            "gui.dont_download_audio.tooltip",
+            (state) -> loadIcon("/assets/mp3.png", state ? ICON_ACTIVE : ICON),
+            (state) -> loadIcon("/assets/mp3.png", ICON_HOVER),
+            (state) -> state ? "gui.dont_download_audio.tooltip"
+                : "gui.download_audio.tooltip",
             main.getConfig()::isDownloadAudio,
             () -> {
                 main.getConfig().setDownloadAudio(!main.getConfig().isDownloadAudio());
@@ -239,12 +236,10 @@ public final class GUIManager{
         ));
 
         buttonPanel.add(createToggleButton(
-            loadIcon("/assets/mp4.png", ICON_ACTIVE),
-            loadIcon("/assets/mp4.png", ICON_HOVER),
-            loadIcon("/assets/mp4.png", ICON),
-            loadIcon("/assets/mp4.png", ICON_HOVER),
-            "gui.download_video.tooltip",
-            "gui.dont_download_video.tooltip",
+            (state) -> loadIcon("/assets/mp4.png", state ? ICON_ACTIVE : ICON),
+            (state) -> loadIcon("/assets/mp4.png", ICON_HOVER),
+            (state) -> state ? "gui.dont_download_video.tooltip"
+                : "gui.download_video.tooltip",
             main.getConfig()::isDownloadVideo,
             () -> {
                 main.getConfig().setDownloadVideo(!main.getConfig().isDownloadVideo());
@@ -253,19 +248,29 @@ public final class GUIManager{
         ));
 
         buttonPanel.add(createToggleDownloadsButton(
-            loadIcon("/assets/pause.png", ICON),
-            loadIcon("/assets/pause.png", ICON_HOVER),
-            loadIcon("/assets/play.png", ICON),
-            loadIcon("/assets/play.png", ICON_HOVER),
-            "gui.start_downloads.tooltip",
-            "gui.stop_downloads.tooltip",
+            (state) -> {
+                if(state){
+                    return loadIcon("/assets/pause.png", ICON);
+                }else{
+                    if(main.getDownloadManager().getQueueSize() > 0){
+                        return loadIcon("/assets/play.png", QUEUE_ACTIVE_ICON);
+                    }else{
+                        return loadIcon("/assets/play.png", ICON);
+                    }
+                }
+            },
+            (state) -> {
+                if(state){
+                    return loadIcon("/assets/pause.png", ICON_HOVER);
+                }else{
+                    return loadIcon("/assets/play.png", ICON_HOVER);
+                }
+            },
+            (state) -> state ? "gui.stop_downloads.tooltip"
+                : "gui.start_downloads.tooltip",
             main.getDownloadManager()::isRunning,
             () -> {
-                if(main.getDownloadManager().isRunning()){
-                    main.getDownloadManager().stopDownloads();
-                }else{
-                    main.getDownloadManager().startDownloads();
-                }
+                main.getDownloadManager().toggleDownloads();
             }
         ));
 
@@ -293,23 +298,19 @@ public final class GUIManager{
         mainPanel.add(topPanel, BorderLayout.SOUTH);
     }
 
-    private JButton createToggleDownloadsButton(
-        ImageIcon activeIcon, ImageIcon activeIconHover,
-        ImageIcon inactiveIcon, ImageIcon inactiveIconHover,
-        String activeTooltip, String inactiveTooltip,
+    private JButton createToggleDownloadsButton(//TODO too many parameters.
+        Function<Boolean, ImageIcon> icon,
+        Function<Boolean, ImageIcon> hoverIcon,
+        Function<Boolean, String> tooltip,
         Supplier<Boolean> watch, Runnable toggler){
 
-        JButton button = createToggleButton(activeIcon, activeIconHover, inactiveIcon,
-            inactiveIconHover, activeTooltip, inactiveTooltip, watch, toggler);
+        JButton button = createToggleButton(icon, hoverIcon, tooltip, watch, toggler);
 
         main.getDownloadManager().registerListener((YtDlpDownloader downloadManager) -> {
-            if(downloadManager.isRunning()){
-                button.setIcon(activeIcon);
-                button.setToolTipText(get(activeTooltip));
-            }else{
-                button.setIcon(inactiveIcon);
-                button.setToolTipText(get(inactiveTooltip));
-            }
+            boolean state = downloadManager.isRunning();
+
+            button.setIcon(icon.apply(state));
+            button.setToolTipText(get(tooltip.apply(state)));
         });
 
         return button;
@@ -383,12 +384,12 @@ public final class GUIManager{
     }
 
     private JButton createToggleButton(
-        ImageIcon activeIcon, ImageIcon activeIconHover,
-        ImageIcon inactiveIcon, ImageIcon inactiveIconHover,
-        String activeTooltip, String inactiveTooltip,
-        Supplier<Boolean> watch, Runnable toggler){
+        Function<Boolean, ImageIcon> icon,
+        Function<Boolean, ImageIcon> hoverIcon,
+        Function<Boolean, String> tooltip,
+        Supplier<Boolean> watch, Runnable toggler){//TODO too many parameters, clean this up
 
-        JButton button = new JButton(watch.get() ? activeIcon : inactiveIcon);
+        JButton button = new JButton(icon.apply(watch.get()));
         button.setUI(new BasicButtonUI());
         button.setFocusPainted(false);
         button.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
@@ -397,42 +398,33 @@ public final class GUIManager{
         button.addMouseListener(new MouseAdapter(){
             @Override
             public void mouseEntered(MouseEvent e){
-                if(watch.get()){
-                    button.setIcon(activeIconHover);
-                    button.setToolTipText(get(inactiveTooltip));
-                }else{
-                    button.setIcon(inactiveIconHover);
-                    button.setToolTipText(get(activeTooltip));
-                }
+                boolean state = watch.get();
+
+                button.setIcon(hoverIcon.apply(state));
+                button.setToolTipText(get(tooltip.apply(state)));
             }
 
             @Override
             public void mouseExited(MouseEvent e){
-                if(watch.get()){
-                    button.setIcon(activeIcon);
-                    button.setToolTipText(get(inactiveTooltip));
-                }else{
-                    button.setIcon(inactiveIcon);
-                    button.setToolTipText(get(activeTooltip));
-                }
+                boolean state = watch.get();
+
+                button.setIcon(icon.apply(state));
+                button.setToolTipText(get(tooltip.apply(state)));
             }
         });
 
         button.addActionListener(e -> {
             toggler.run();
 
-            if(watch.get()){
-                button.setIcon(activeIcon);
-                button.setToolTipText(get(inactiveTooltip));
-            }else{
-                button.setIcon(inactiveIcon);
-                button.setToolTipText(get(activeTooltip));
-            }
+            boolean state = watch.get();
+
+            button.setIcon(icon.apply(state));
+            button.setToolTipText(get(tooltip.apply(state)));
         });
 
         CustomToolTip ui = new CustomToolTip();
         ui.setComponent(button);
-        ui.setToolTipText(get(watch.get() ? inactiveTooltip : activeTooltip));
+        ui.setToolTipText(get(tooltip.apply(watch.get())));
 
         return button;
     }

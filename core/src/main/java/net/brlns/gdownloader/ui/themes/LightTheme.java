@@ -62,6 +62,7 @@ public class LightTheme extends AbstractTheme{
         add(COMBO_BOX_BUTTON_BACKGROUND, Color.WHITE);
         add(MENU_ITEM_ARMED, Color.LIGHT_GRAY);
         add(MENU_ITEM_PRESSED, Color.GRAY);
+        add(QUEUE_ACTIVE_ICON, new Color(255, 138, 101));
     }
 
     @Override

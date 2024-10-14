@@ -101,6 +101,15 @@ import static net.brlns.gdownloader.util.URLUtils.*;
 //TODO Twitch settings purposefully default to suboptimal quality due to huge file sizes. Maybe consider adding a warning about this in the GUI.
 //TODO Split GUI into a different subproject from core logic.
 //TODO Avoid checking file extensions for thumbnails. Instead rely on mime type if available.
+//TODO Investigate screen reader support (https://www.nvaccess.org/download/)
+//TODO Add setting to automatically start downloads
+//TODO Send notifications when a NO_METHOD is triggered, explaining why it was triggered.
+//TODO Test downloading sections of a livestream (currently it gets stuck on status PREPARING)
+//TODO Setting to save subtitles and thumbnails separately
+//TODO When checking updates, display to the user what is currently happening in the background. with progress updates.
+//TODO The portable version should be confined to its own folder
+//TODO The program should not download updates if the currently installed version is already the latest. run it as is.
+//TODO Add a console access or a way to view or save log files for troubleshooting.
 //Off to a bootcamp, project on pause
 /**
  * @author Gabriel / hstr0100 / vertx010
