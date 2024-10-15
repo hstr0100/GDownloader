@@ -42,7 +42,7 @@ public abstract class AbstractTheme{
         }
     }
 
-    protected void add(UIColors key, Color color){
+    protected void put(UIColors key, Color color){
         assert !colors.containsKey(key);
 
         colors.put(key, color);

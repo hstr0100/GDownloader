@@ -31,7 +31,7 @@ public class Language{
 
     private static ResourceBundle LANGUAGE_BUNDLE;
 
-    public static String get(String key, Object... args){
+    public static String l10n(String key, Object... args){
         if(LANGUAGE_BUNDLE == null){
             throw new RuntimeException("Language was not initialized");
         }

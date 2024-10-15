@@ -36,7 +36,7 @@ public enum FPSEnum implements ISettingsEnum{
 
     @Override
     public String getDisplayName(){
-        return get("enums.fps", value);
+        return l10n("enums.fps", value);
     }
 
     @Override

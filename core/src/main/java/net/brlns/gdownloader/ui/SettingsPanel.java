@@ -100,7 +100,7 @@ public class SettingsPanel{
 
         settings = GDownloader.OBJECT_MAPPER.convertValue(main.getConfig(), Settings.class);
 
-        frame = new JFrame(get("settings.title", GDownloader.REGISTRY_APP_NAME)){
+        frame = new JFrame(l10n("settings.title", GDownloader.REGISTRY_APP_NAME)){
             @Override
             public void dispose(){
                 frame = null;
@@ -139,7 +139,7 @@ public class SettingsPanel{
             JPanel headerPanel = new JPanel();
             headerPanel.setBackground(color(SIDE_PANEL));
 
-            JLabel headerLabel = new JLabel(get("settings.sidebar_title"));
+            JLabel headerLabel = new JLabel(l10n("settings.sidebar_title"));
             headerLabel.setForeground(color(FOREGROUND));
             headerLabel.setHorizontalAlignment(SwingConstants.CENTER);
             headerPanel.setLayout(new BorderLayout());
@@ -365,8 +365,8 @@ public class SettingsPanel{
                 settings.setDownloadsPath("");
 
                 main.getGuiManager().showMessage(
-                    get("gui.error_popup_title"),
-                    get("gui.error_download_path_not_writable", file.getAbsolutePath()),
+                    l10n("gui.error_popup_title"),
+                    l10n("gui.error_download_path_not_writable", file.getAbsolutePath()),
                     4000,
                     GUIManager.MessageType.ERROR,
                     true);
@@ -406,7 +406,7 @@ public class SettingsPanel{
 
         JComboBox<String> comboBox = new JComboBox<>(ISettingsEnum.getDisplayNames(enumClass));
         if(requiresRestart){
-            comboBox.setToolTipText(get("settings.requires_restart.tooltip"));
+            comboBox.setToolTipText(l10n("settings.requires_restart.tooltip"));
         }
 
         comboBox.setSelectedIndex(getter.get().ordinal());
@@ -437,7 +437,7 @@ public class SettingsPanel{
         JCheckBox checkBox = new JCheckBox();
         checkBox.setSelected(getter.get());
         if(requiresRestart){
-            checkBox.setToolTipText(get("settings.requires_restart.tooltip"));
+            checkBox.setToolTipText(l10n("settings.requires_restart.tooltip"));
         }
 
         checkBox.addActionListener((ActionEvent e) -> {
@@ -576,7 +576,7 @@ public class SettingsPanel{
             }
 
             JSlider slider = new JSlider(0, options.size() - 1, options.indexOf(String.valueOf(settings.getFontSize())));
-            slider.setToolTipText(get("settings.requires_restart.tooltip"));
+            slider.setToolTipText(l10n("settings.requires_restart.tooltip"));
             slider.setMajorTickSpacing(1);
             slider.setPaintTicks(true);
             slider.setSnapToTicks(true);
@@ -925,18 +925,18 @@ public class SettingsPanel{
     }
 
     private JLabel createLabel(String text, UIColors uiColor){
-        JLabel label = new JLabel(get(text));
+        JLabel label = new JLabel(l10n(text));
         label.setForeground(color(uiColor));
 
         return label;
     }
 
     private JButton createButton(String text, String tooltipText, UIColors backgroundColor, UIColors textColor, UIColors hoverColor){
-        CustomButton button = new CustomButton(get(text),
+        CustomButton button = new CustomButton(l10n(text),
             color(hoverColor),
             color(hoverColor).brighter());
 
-        button.setToolTipText(get(tooltipText));
+        button.setToolTipText(l10n(tooltipText));
 
         button.setFocusPainted(false);
         button.setForeground(color(textColor));
@@ -975,7 +975,7 @@ public class SettingsPanel{
         private final Supplier<JPanel> panel;
 
         public SettingsMenuEntry(String translationKey, String iconIn, Supplier<JPanel> panelIn){
-            displayName = get(translationKey);
+            displayName = l10n(translationKey);
             icon = iconIn;
             panel = panelIn;
         }

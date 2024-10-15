@@ -18,7 +18,7 @@ package net.brlns.gdownloader.settings.enums;
 
 import lombok.Getter;
 
-import static net.brlns.gdownloader.Language.get;
+import static net.brlns.gdownloader.Language.*;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -41,7 +41,7 @@ public enum AudioBitrateEnum implements ISettingsEnum{
 
     @Override
     public String getDisplayName(){
-        return this == NO_AUDIO ? get("enums.audio.no_audio") : displayName;
+        return this == NO_AUDIO ? l10n("enums.audio.no_audio") : displayName;
     }
 
     @Override

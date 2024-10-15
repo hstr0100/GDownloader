@@ -110,6 +110,9 @@ import static net.brlns.gdownloader.util.URLUtils.*;
 //TODO The portable version should be confined to its own folder
 //TODO The program should not download updates if the currently installed version is already the latest. run it as is.
 //TODO Add a console access or a way to view or save log files for troubleshooting.
+//TODO Setting to disable notification popups. they are not always desirable.
+//TODO Fix notification popup close button - it's not working.
+//TODO Add rate limiting settings, with some default options that should work for most use cases.
 //Off to a bootcamp, project on pause
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -280,8 +283,8 @@ public class YtDlpDownloader{
 
                                     //The dialog is synchronized
                                     main.getGuiManager().showConfirmDialog(
-                                        get("dialog.confirm"),
-                                        get("dialog.download_playlist") + "\n\n" + playlist,
+                                        l10n("dialog.confirm"),
+                                        l10n("dialog.download_playlist") + "\n\n" + playlist,
                                         30000,
                                         defaultOption,
                                         playlistDialogOption,
@@ -330,7 +333,7 @@ public class YtDlpDownloader{
                     int downloadId = downloadCounter.incrementAndGet();
 
                     QueueEntry queueEntry = new QueueEntry(main, mediaCard, webFilter, inputUrl, filteredUrl, downloadId);
-                    queueEntry.updateStatus(DownloadStatus.QUERYING, get("gui.download_status.querying"));
+                    queueEntry.updateStatus(DownloadStatus.QUERYING, l10n("gui.download_status.querying"));
 
                     String filtered = filteredUrl;
                     mediaCard.setOnClose(() -> {
@@ -352,11 +355,11 @@ public class YtDlpDownloader{
                     });
 
                     mediaCard.getRightClickMenu().putAll(Map.of(
-                        get("gui.open_downloads_directory"),
+                        l10n("gui.open_downloads_directory"),
                         () -> main.openDownloadsDirectory(),
-                        get("gui.open_in_browser"),
+                        l10n("gui.open_in_browser"),
                         () -> queueEntry.openUrl(),
-                        get("gui.copy_url"),
+                        l10n("gui.copy_url"),
                         () -> queueEntry.copyUrlToClipboard()
                     ));
 
@@ -441,7 +444,7 @@ public class YtDlpDownloader{
     public void retryFailedDownloads(){
         QueueEntry next;
         while((next = failedDownloads.poll()) != null){
-            next.updateStatus(DownloadStatus.QUEUED, get("gui.download_status.not_started"));
+            next.updateStatus(DownloadStatus.QUEUED, l10n("gui.download_status.not_started"));
             next.reset();
 
             downloadDeque.offerLast(next);
@@ -484,7 +487,7 @@ public class YtDlpDownloader{
 
     private void queryVideo(QueueEntry queueEntry){
         if(queueEntry.getWebFilter() == WebFilterEnum.DEFAULT){
-            queueEntry.updateStatus(DownloadStatus.QUEUED, get("gui.download_status.not_started"));
+            queueEntry.updateStatus(DownloadStatus.QUEUED, l10n("gui.download_status.not_started"));
             return;
         }
 
@@ -528,7 +531,7 @@ public class YtDlpDownloader{
                 log.error("Failed to parse json {}", e.getLocalizedMessage());
             }finally{
                 if(queueEntry.getDownloadStatus() == DownloadStatus.QUERYING){
-                    queueEntry.updateStatus(DownloadStatus.QUEUED, get("gui.download_status.not_started"));
+                    queueEntry.updateStatus(DownloadStatus.QUEUED, l10n("gui.download_status.not_started"));
                 }
             }
         }, 1);
@@ -566,7 +569,7 @@ public class YtDlpDownloader{
                     boolean downloadVideo = main.getConfig().isDownloadVideo();
 
                     if(!downloadAudio && !downloadVideo){
-                        next.updateStatus(DownloadStatus.NO_METHOD, get("enums.download_status.no_method.video_tip"));
+                        next.updateStatus(DownloadStatus.NO_METHOD, l10n("enums.download_status.no_method.video_tip"));
                         next.reset();
 
                         failedDownloads.offer(next);
@@ -592,7 +595,7 @@ public class YtDlpDownloader{
                     AudioBitrateEnum audioBitrate = quality.getAudioBitrate();
 
                     if(!downloadVideo && downloadAudio && audioBitrate == AudioBitrateEnum.NO_AUDIO){
-                        next.updateStatus(DownloadStatus.NO_METHOD, get("enums.download_status.no_method.audio_tip"));
+                        next.updateStatus(DownloadStatus.NO_METHOD, l10n("enums.download_status.no_method.audio_tip"));
                         next.reset();
 
                         failedDownloads.offer(next);
@@ -607,7 +610,7 @@ public class YtDlpDownloader{
                     }
 
                     next.getRunning().set(true);
-                    next.updateStatus(DownloadStatus.STARTING, get("gui.download_status.starting"));
+                    next.updateStatus(DownloadStatus.STARTING, l10n("gui.download_status.starting"));
 
                     File finalPath = main.getOrCreateDownloadsDirectory();
 
@@ -826,7 +829,7 @@ public class YtDlpDownloader{
                     }
 
                     if(!downloadsRunning.get() || wasStopped){
-                        next.updateStatus(DownloadStatus.STOPPED, get("gui.download_status.not_started"));
+                        next.updateStatus(DownloadStatus.STOPPED, l10n("gui.download_status.not_started"));
                         next.reset();
 
                         downloadDeque.offerFirst(next);
@@ -850,13 +853,13 @@ public class YtDlpDownloader{
 
                                         if(isVideo){
                                             mediaCard.getRightClickMenu().put(
-                                                get("gui.play_video"),
+                                                l10n("gui.play_video"),
                                                 () -> next.play(true));
                                         }
 
                                         if(isAudio){
                                             mediaCard.getRightClickMenu().put(
-                                                get("gui.play_audio"),
+                                                l10n("gui.play_audio"),
                                                 () -> next.play(false));
                                         }
 
@@ -872,12 +875,12 @@ public class YtDlpDownloader{
 
                         GDownloader.deleteRecursively(tmpPath.toPath());
 
-                        next.updateStatus(DownloadStatus.COMPLETE, get("gui.download_status.finished"));
+                        next.updateStatus(DownloadStatus.COMPLETE, l10n("gui.download_status.finished"));
 
                         mediaCard.getRightClickMenu().put(
-                            get("gui.restart_download"),
+                            l10n("gui.restart_download"),
                             () -> {
-                                next.updateStatus(DownloadStatus.QUEUED, get("gui.download_status.not_started"));
+                                next.updateStatus(DownloadStatus.QUEUED, l10n("gui.download_status.not_started"));
                                 next.reset();
 
                                 completedDownloads.remove(next);
@@ -886,7 +889,7 @@ public class YtDlpDownloader{
                             });
 
                         mediaCard.getRightClickMenu().put(
-                            get("gui.delete_files"),
+                            l10n("gui.delete_files"),
                             () -> next.deleteMediaFiles());
 
                         completedDownloads.offer(next);
@@ -1076,8 +1079,8 @@ public class YtDlpDownloader{
             clipboard.setContents(stringSelection, null);
 
             main.getGuiManager().showMessage(
-                get("gui.copy_url.notification_title"),
-                get("gui.copy_url.copied"),
+                l10n("gui.copy_url.notification_title"),
+                l10n("gui.copy_url.copied"),
                 3500,
                 GUIManager.MessageType.INFO,
                 false
@@ -1098,8 +1101,8 @@ public class YtDlpDownloader{
             }
 
             main.getGuiManager().showMessage(
-                get("gui.delete_files.notification_title"),
-                success ? get("gui.delete_files.deleted") : get("gui.delete_files.no_files"),
+                l10n("gui.delete_files.notification_title"),
+                success ? l10n("gui.delete_files.deleted") : l10n("gui.delete_files.no_files"),
                 3500,
                 GUIManager.MessageType.INFO,
                 false

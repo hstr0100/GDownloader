@@ -46,7 +46,7 @@ public enum WebFilterEnum implements ISettingsEnum{
 
     @Override
     public String getDisplayName(){
-        return this == DEFAULT ? get("enums.web_filter.default") : displayName;
+        return this == DEFAULT ? l10n("enums.web_filter.default") : displayName;
     }
 
     @Override

@@ -28,7 +28,7 @@ public interface ISettingsEnum{
     String getTranslationKey();
 
     default String getDisplayName(){
-        return get(getTranslationKey());
+        return l10n(getTranslationKey());
     }
 
     public static <T extends Enum<T> & ISettingsEnum> T getEnumByIndex(Class<T> enumClass, int index){

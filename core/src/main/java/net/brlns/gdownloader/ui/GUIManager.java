@@ -166,17 +166,17 @@ public final class GUIManager{
 
         addStatusLabel(statusPanel, LIGHT_TEXT, (downloadManager) -> {
             return "<html>"
-                + downloadManager.getDownloadsRunning() + " " + get("gui.statusbar.running")
+                + downloadManager.getDownloadsRunning() + " " + l10n("gui.statusbar.running")
                 + "<br>"
-                + downloadManager.getCompletedDownloads() + " " + get("gui.statusbar.completed")
+                + downloadManager.getCompletedDownloads() + " " + l10n("gui.statusbar.completed")
                 + "</html>";
         });
 
         addStatusLabel(statusPanel, LIGHT_TEXT, (downloadManager) -> {
             return "<html>"
-                + downloadManager.getQueueSize() + " " + get("gui.statusbar.queued")
+                + downloadManager.getQueueSize() + " " + l10n("gui.statusbar.queued")
                 + "<br>"
-                + downloadManager.getFailedDownloads() + " " + get("gui.statusbar.failed")
+                + downloadManager.getFailedDownloads() + " " + l10n("gui.statusbar.failed")
                 + "</html>";
         });
 
@@ -298,7 +298,7 @@ public final class GUIManager{
         mainPanel.add(topPanel, BorderLayout.SOUTH);
     }
 
-    private JButton createToggleDownloadsButton(//TODO too many parameters.
+    private JButton createToggleDownloadsButton(
         Function<Boolean, ImageIcon> icon,
         Function<Boolean, ImageIcon> hoverIcon,
         Function<Boolean, String> tooltip,
@@ -310,7 +310,7 @@ public final class GUIManager{
             boolean state = downloadManager.isRunning();
 
             button.setIcon(icon.apply(state));
-            button.setToolTipText(get(tooltip.apply(state)));
+            button.setToolTipText(l10n(tooltip.apply(state)));
         });
 
         return button;
@@ -348,8 +348,8 @@ public final class GUIManager{
 
             JLabel label = (JLabel)panel.getComponent(0);
             label.setText(main.getConfig().isMonitorClipboardForLinks()
-                ? get("gui.empty_queue")
-                : get("gui.empty_queue.enable_clipboard"));
+                ? l10n("gui.empty_queue")
+                : l10n("gui.empty_queue.enable_clipboard"));
         }else{
             if(!(firstComponent instanceof JPanel)){
                 panel.removeAll();
@@ -367,11 +367,11 @@ public final class GUIManager{
 
             JLabel upperLabel = new JLabel("", SwingConstants.CENTER);
             upperLabel.setForeground(color(FOREGROUND));
-            upperLabel.setText(get("gui.checking_updates"));
+            upperLabel.setText(l10n("gui.checking_updates"));
 
             JLabel bottomLabel = new JLabel("", SwingConstants.CENTER);
             bottomLabel.setForeground(color(FOREGROUND));
-            bottomLabel.setText(get("gui.checking_updates.please_wait"));
+            bottomLabel.setText(l10n("gui.checking_updates.please_wait"));
 
             innerPanel.add(upperLabel, gbc);
             innerPanel.add(bottomLabel, gbc);
@@ -387,7 +387,7 @@ public final class GUIManager{
         Function<Boolean, ImageIcon> icon,
         Function<Boolean, ImageIcon> hoverIcon,
         Function<Boolean, String> tooltip,
-        Supplier<Boolean> watch, Runnable toggler){//TODO too many parameters, clean this up
+        Supplier<Boolean> watch, Runnable toggler){
 
         JButton button = new JButton(icon.apply(watch.get()));
         button.setUI(new BasicButtonUI());
@@ -401,7 +401,7 @@ public final class GUIManager{
                 boolean state = watch.get();
 
                 button.setIcon(hoverIcon.apply(state));
-                button.setToolTipText(get(tooltip.apply(state)));
+                button.setToolTipText(l10n(tooltip.apply(state)));
             }
 
             @Override
@@ -409,7 +409,7 @@ public final class GUIManager{
                 boolean state = watch.get();
 
                 button.setIcon(icon.apply(state));
-                button.setToolTipText(get(tooltip.apply(state)));
+                button.setToolTipText(l10n(tooltip.apply(state)));
             }
         });
 
@@ -419,12 +419,12 @@ public final class GUIManager{
             boolean state = watch.get();
 
             button.setIcon(icon.apply(state));
-            button.setToolTipText(get(tooltip.apply(state)));
+            button.setToolTipText(l10n(tooltip.apply(state)));
         });
 
         CustomToolTip ui = new CustomToolTip();
         ui.setComponent(button);
-        ui.setToolTipText(get(tooltip.apply(watch.get())));
+        ui.setToolTipText(l10n(tooltip.apply(watch.get())));
 
         return button;
     }
@@ -440,13 +440,13 @@ public final class GUIManager{
             @Override
             public void mouseEntered(MouseEvent e){
                 button.setIcon(hoverIcon);
-                button.setToolTipText(get(tooltipText));
+                button.setToolTipText(l10n(tooltipText));
             }
 
             @Override
             public void mouseExited(MouseEvent e){
                 button.setIcon(icon);
-                button.setToolTipText(get(tooltipText));
+                button.setToolTipText(l10n(tooltipText));
             }
         });
 
@@ -454,7 +454,7 @@ public final class GUIManager{
 
         CustomToolTip ui = new CustomToolTip();
         ui.setComponent(button);
-        ui.setToolTipText(get(tooltipText));
+        ui.setToolTipText(l10n(tooltipText));
 
         return button;
     }
@@ -520,7 +520,7 @@ public final class GUIManager{
         checkboxPanel.setOpaque(false);
         checkboxPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0));
 
-        JCheckBox rememberCheckBox = new JCheckBox(get("gui.remember_choice"));
+        JCheckBox rememberCheckBox = new JCheckBox(l10n("gui.remember_choice"));
         rememberCheckBox.setUI(new CustomCheckBoxUI());
         rememberCheckBox.setBackground(color(BACKGROUND));
         rememberCheckBox.setForeground(color(FOREGROUND));
@@ -963,7 +963,7 @@ public final class GUIManager{
         CustomProgressBar progressBar = new CustomProgressBar(Color.WHITE);
         progressBar.setValue(100);
         progressBar.setStringPainted(true);
-        progressBar.setString(get("enums.download_status.queued"));
+        progressBar.setString(l10n("enums.download_status.queued"));
         progressBar.setForeground(Color.GRAY);
         progressBar.setBackground(Color.GRAY);
         //progressBar.setBorderPainted(false);

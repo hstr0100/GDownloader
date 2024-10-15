@@ -31,38 +31,38 @@ public class LightTheme extends AbstractTheme{
 
     @Override
     protected void initColors(){
-        add(ICON, new Color(128, 128, 128));
-        add(ICON_ACTIVE, new Color(56, 192, 251));
-        add(ICON_HOVER, new Color(80, 80, 80));
-        add(ICON_CLOSE, new Color(224, 64, 6));
-        add(BACKGROUND, Color.WHITE);
-        add(TEXT_AREA_BACKGROUND, new Color(242, 242, 242));
-        add(TEXT_AREA_FOREGROUND, Color.DARK_GRAY);
-        add(FOREGROUND, Color.DARK_GRAY);
-        add(SIDE_PANEL, new Color(242, 242, 242));
-        add(MEDIA_CARD_HOVER, new Color(218, 218, 218));
-        add(MEDIA_CARD, new Color(242, 242, 242));
-        add(MEDIA_CARD_THUMBNAIL, new Color(180, 180, 180));
-        add(LIGHT_TEXT, new Color(102, 102, 102));
-        add(BUTTON_FOREGROUND, Color.DARK_GRAY);
-        add(BUTTON_BACKGROUND, Color.WHITE);
-        add(BUTTON_HOVER, new Color(128, 128, 128));
-        add(SCROLL_BAR_FOREGROUND, new Color(128, 128, 128));
-        add(SLIDER_FOREGROUND, new Color(100, 100, 100));
-        add(CHECK_BOX_HOVER, new Color(80, 80, 80));
-        add(SIDE_PANEL_SELECTED, new Color(218, 218, 218));
-        add(TOOLTIP_BACKGROUND, new Color(230, 230, 230));
-        add(TOOLTIP_FOREGROUND, Color.DARK_GRAY);
-        add(COMBO_BOX_BACKGROUND, new Color(242, 242, 242));
-        add(COMBO_BOX_FOREGROUND, Color.DARK_GRAY);
-        add(COMBO_BOX_SELECTION_BACKGROUND, Color.LIGHT_GRAY);
-        add(COMBO_BOX_SELECTION_FOREGROUND, Color.WHITE);
-        add(SLIDER_TRACK, Color.LIGHT_GRAY);
-        add(COMBO_BOX_BUTTON_FOREGROUND, Color.LIGHT_GRAY);
-        add(COMBO_BOX_BUTTON_BACKGROUND, Color.WHITE);
-        add(MENU_ITEM_ARMED, Color.LIGHT_GRAY);
-        add(MENU_ITEM_PRESSED, Color.GRAY);
-        add(QUEUE_ACTIVE_ICON, new Color(255, 138, 101));
+        put(ICON, new Color(128, 128, 128));
+        put(ICON_ACTIVE, new Color(56, 192, 251));
+        put(ICON_HOVER, new Color(80, 80, 80));
+        put(ICON_CLOSE, new Color(224, 64, 6));
+        put(BACKGROUND, Color.WHITE);
+        put(TEXT_AREA_BACKGROUND, new Color(242, 242, 242));
+        put(TEXT_AREA_FOREGROUND, Color.DARK_GRAY);
+        put(FOREGROUND, Color.DARK_GRAY);
+        put(SIDE_PANEL, new Color(242, 242, 242));
+        put(MEDIA_CARD_HOVER, new Color(218, 218, 218));
+        put(MEDIA_CARD, new Color(242, 242, 242));
+        put(MEDIA_CARD_THUMBNAIL, new Color(180, 180, 180));
+        put(LIGHT_TEXT, new Color(102, 102, 102));
+        put(BUTTON_FOREGROUND, Color.DARK_GRAY);
+        put(BUTTON_BACKGROUND, Color.WHITE);
+        put(BUTTON_HOVER, new Color(128, 128, 128));
+        put(SCROLL_BAR_FOREGROUND, new Color(128, 128, 128));
+        put(SLIDER_FOREGROUND, new Color(100, 100, 100));
+        put(CHECK_BOX_HOVER, new Color(80, 80, 80));
+        put(SIDE_PANEL_SELECTED, new Color(218, 218, 218));
+        put(TOOLTIP_BACKGROUND, new Color(230, 230, 230));
+        put(TOOLTIP_FOREGROUND, Color.DARK_GRAY);
+        put(COMBO_BOX_BACKGROUND, new Color(242, 242, 242));
+        put(COMBO_BOX_FOREGROUND, Color.DARK_GRAY);
+        put(COMBO_BOX_SELECTION_BACKGROUND, Color.LIGHT_GRAY);
+        put(COMBO_BOX_SELECTION_FOREGROUND, Color.WHITE);
+        put(SLIDER_TRACK, Color.LIGHT_GRAY);
+        put(COMBO_BOX_BUTTON_FOREGROUND, Color.LIGHT_GRAY);
+        put(COMBO_BOX_BUTTON_BACKGROUND, Color.WHITE);
+        put(MENU_ITEM_ARMED, Color.LIGHT_GRAY);
+        put(MENU_ITEM_PRESSED, Color.GRAY);
+        put(QUEUE_ACTIVE_ICON, new Color(255, 138, 101));
     }
 
     @Override

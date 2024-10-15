@@ -163,7 +163,7 @@ public final class GDownloader{
         }
 
         Language.initLanguage(config.getLanguage());
-        log.info(Language.get("startup"));
+        log.info(l10n("startup"));
 
         ThemeProvider.setTheme(config.getTheme());
 
@@ -275,8 +275,8 @@ public final class GDownloader{
 
         if(notify){
             guiManager.showMessage(
-                get("gui.clear_cache.notification_title"),
-                get("gui.clear_cache.cleared"),
+                l10n("gui.clear_cache.notification_title"),
+                l10n("gui.clear_cache.cleared"),
                 3500,
                 GUIManager.MessageType.INFO,
                 false
@@ -302,8 +302,8 @@ public final class GDownloader{
             downloadManager.stopDownloads();
 
             guiManager.showMessage(
-                get("gui.update.notification_title"),
-                get("gui.update.checking"),
+                l10n("gui.update.notification_title"),
+                l10n("gui.update.checking"),
                 3500,
                 GUIManager.MessageType.INFO,
                 false
@@ -374,8 +374,8 @@ public final class GDownloader{
 
                 if(!firstBoot){
                     guiManager.showMessage(
-                        get("gui.update.notification_title"),
-                        get((ytDlpUpdater.isUpdated() || ffmpegUpdater.isUpdated() || selfUpdater.isUpdated()
+                        l10n("gui.update.notification_title"),
+                        l10n((ytDlpUpdater.isUpdated() || ffmpegUpdater.isUpdated() || selfUpdater.isUpdated()
                             ? "gui.update.new_updates_installed"
                             : "gui.update.updated")),
                         2500,
@@ -401,23 +401,23 @@ public final class GDownloader{
     private PopupMenu buildPopupMenu(){
         PopupMenu popup = new PopupMenu();
 
-        popup.add(buildMenuItem(get("gui.toggle_downloads"), (ActionEvent e) -> {
+        popup.add(buildMenuItem(l10n("gui.toggle_downloads"), (ActionEvent e) -> {
             downloadManager.toggleDownloads();
         }));
 
-        popup.add(buildMenuItem(get("gui.open_downloads_directory"), (ActionEvent e) -> {
+        popup.add(buildMenuItem(l10n("gui.open_downloads_directory"), (ActionEvent e) -> {
             openDownloadsDirectory();
         }));
 
-        popup.add(buildMenuItem(get("settings.sidebar_title"), (ActionEvent e) -> {
+        popup.add(buildMenuItem(l10n("settings.sidebar_title"), (ActionEvent e) -> {
             guiManager.displaySettingsPanel();
         }));
 
-        popup.add(buildMenuItem(get("gui.restart"), (ActionEvent e) -> {
+        popup.add(buildMenuItem(l10n("gui.restart"), (ActionEvent e) -> {
             restart();
         }));
 
-        popup.add(buildMenuItem(get("gui.exit"), (ActionEvent e) -> {
+        popup.add(buildMenuItem(l10n("gui.exit"), (ActionEvent e) -> {
             log.info("Exiting....");
 
             System.exit(0);
@@ -941,8 +941,8 @@ public final class GDownloader{
 
                 if(captured > 0){
                     guiManager.showMessage(
-                        get("gui.clipboard_monitor.captured_title"),
-                        get("gui.clipboard_monitor.captured", captured),
+                        l10n("gui.clipboard_monitor.captured_title"),
+                        l10n("gui.clipboard_monitor.captured", captured),
                         2500,
                         MessageType.INFO,
                         false
@@ -1068,8 +1068,8 @@ public final class GDownloader{
 
         if(displayToUser){
             guiManager.showMessage(
-                get("gui.error_popup_title"),
-                get("gui.error_popup", e.getLocalizedMessage()),
+                l10n("gui.error_popup_title"),
+                l10n("gui.error_popup", e.getLocalizedMessage()),
                 4000,
                 MessageType.ERROR,
                 true);

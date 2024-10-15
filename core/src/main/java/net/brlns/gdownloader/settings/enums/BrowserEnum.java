@@ -46,7 +46,7 @@ public enum BrowserEnum implements ISettingsEnum{
 
     @Override
     public String getDisplayName(){
-        return this == UNSET ? get("enums.browser.default_browser") : displayName;
+        return this == UNSET ? l10n("enums.browser.default_browser") : displayName;
     }
 
     @Override
