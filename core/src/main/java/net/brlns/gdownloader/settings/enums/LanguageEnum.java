@@ -25,7 +25,8 @@ import lombok.Getter;
 @Getter
 public enum LanguageEnum implements ISettingsEnum{
     ENGLISH(Locale.ENGLISH),
-    BRAZIL_PORTUGUESE(Locale.of("pt", "BR"));
+    BRAZIL_PORTUGUESE(Locale.of("pt", "BR")),
+    MEXICAN_SPANISH(Locale.of("es", "MX"));
 
     private final Locale locale;
 
@@ -41,5 +42,15 @@ public enum LanguageEnum implements ISettingsEnum{
     @Override
     public String getDisplayName(){
         return locale.getDisplayName(Locale.getDefault());
+    }
+
+    public static LanguageEnum getLanguageEnumForLocale(Locale locale){
+        for(LanguageEnum languageEnum : LanguageEnum.values()){
+            if(languageEnum.getLocale().equals(locale)){
+                return languageEnum;
+            }
+        }
+
+        return LanguageEnum.ENGLISH;
     }
 }

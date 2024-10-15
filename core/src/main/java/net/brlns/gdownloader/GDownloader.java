@@ -55,7 +55,6 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.settings.Settings;
 import net.brlns.gdownloader.settings.enums.BrowserEnum;
-import net.brlns.gdownloader.settings.enums.LanguageEnum;
 import net.brlns.gdownloader.ui.GUIManager;
 import net.brlns.gdownloader.ui.GUIManager.MessageType;
 import net.brlns.gdownloader.ui.themes.ThemeProvider;
@@ -155,21 +154,9 @@ public final class GDownloader{
             printDebugInformation();
         }
 
-        if(!config.isLanguageDefined()){
-            switch(System.getProperty("user.country").toLowerCase()){
-                case "br" -> {
-                    config.setLanguage(LanguageEnum.BRAZIL_PORTUGUESE);
-                    config.setLanguageDefined(true);
-                    updateConfig();
-                }
+        Language.initLanguage(config);
+        updateConfig();
 
-                default -> {
-                    //Default to english
-                }
-            }
-        }
-
-        Language.initLanguage(config.getLanguage());
         log.info(l10n("startup"));
 
         ThemeProvider.setTheme(config.getTheme());
@@ -611,6 +598,7 @@ public final class GDownloader{
         return menuItem;
     }
 
+    //TODO: this could be moved to the settings class itself.
     public void updateConfig(){
         updateConfig(config);
     }

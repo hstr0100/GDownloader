@@ -19,6 +19,8 @@ package net.brlns.gdownloader;
 import java.text.MessageFormat;
 import java.util.Locale;
 import java.util.ResourceBundle;
+import lombok.extern.slf4j.Slf4j;
+import net.brlns.gdownloader.settings.Settings;
 import net.brlns.gdownloader.settings.enums.LanguageEnum;
 
 /**
@@ -27,6 +29,7 @@ import net.brlns.gdownloader.settings.enums.LanguageEnum;
  *
  * @author Gabriel / hstr0100 / vertx010
  */
+@Slf4j
 public class Language{
 
     private static ResourceBundle LANGUAGE_BUNDLE;
@@ -44,8 +47,21 @@ public class Language{
         return MessageFormat.format(pattern, args);
     }
 
-    public static void initLanguage(LanguageEnum language){
-        Locale.setDefault(language.getLocale());
+    protected static void initLanguage(Settings config){
+        if(!config.isLanguageDefined()){
+            Locale defaultLocale = Locale.getDefault();
+            log.info("Detected system language: {}", defaultLocale);
+
+            LanguageEnum languageEnum
+                = LanguageEnum.getLanguageEnumForLocale(defaultLocale);
+
+            config.setLanguage(languageEnum);
+            config.setLanguageDefined(true);
+
+            log.info("Initial language set to {}", languageEnum);
+        }
+
+        Locale.setDefault(config.getLanguage().getLocale());
 
         LANGUAGE_BUNDLE = ResourceBundle.getBundle("lang/language");
     }
