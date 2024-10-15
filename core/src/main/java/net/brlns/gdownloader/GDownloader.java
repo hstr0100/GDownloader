@@ -155,11 +155,18 @@ public final class GDownloader{
             printDebugInformation();
         }
 
-        if(!config.isLanguageDefined() && System.getProperty("user.country")
-            .toLowerCase().equals("br")){//Temporary, very temporary, don't worry about it, too much
-            config.setLanguage(LanguageEnum.BRAZIL_PORTUGUESE);
-            config.setLanguageDefined(true);
-            //No need to save the config yet for these settings
+        if(!config.isLanguageDefined()){
+            switch(System.getProperty("user.country").toLowerCase()){
+                case "br" -> {
+                    config.setLanguage(LanguageEnum.BRAZIL_PORTUGUESE);
+                    config.setLanguageDefined(true);
+                    updateConfig();
+                }
+
+                default -> {
+                    //Default to english
+                }
+            }
         }
 
         Language.initLanguage(config.getLanguage());
@@ -940,14 +947,18 @@ public final class GDownloader{
                 }
 
                 if(captured > 0){
-                    guiManager.showMessage(
-                        l10n("gui.clipboard_monitor.captured_title"),
-                        l10n("gui.clipboard_monitor.captured", captured),
-                        2500,
-                        MessageType.INFO,
-                        false
-                    );
+                    if(config.isDisplayLinkCaptureNotifications()){
+                        guiManager.showMessage(
+                            l10n("gui.clipboard_monitor.captured_title"),
+                            l10n("gui.clipboard_monitor.captured", captured),
+                            2500,
+                            MessageType.INFO,
+                            false
+                        );
+                    }
 
+                    //If notications are off, requesting focus could probably also be an undesired behavior,
+                    //However, I think we should keep at least this one visual cue.
                     guiManager.requestFocus();
                 }
             });

@@ -110,9 +110,8 @@ import static net.brlns.gdownloader.util.URLUtils.*;
 //TODO The portable version should be confined to its own folder
 //TODO The program should not download updates if the currently installed version is already the latest. run it as is.
 //TODO Add a console access or a way to view or save log files for troubleshooting.
-//TODO Setting to disable notification popups. they are not always desirable.
-//TODO Fix notification popup close button - it's not working.
 //TODO Add rate limiting settings, with some default options that should work for most use cases.
+//TODO Notify the user whenever a setting that requires restart was changed.
 //Off to a bootcamp, project on pause
 /**
  * @author Gabriel / hstr0100 / vertx010

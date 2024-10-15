@@ -592,6 +592,8 @@ public final class GUIManager{
     }
 
     public void showMessage(String title, String message, int durationMillis, MessageType messageType, boolean playTone){
+        log.info("Popup {}: {} - {}", messageType, title, message);
+
         messageQueue.add(new Message(title, message, durationMillis, messageType, playTone));
 
         if(!isShowingMessage){
@@ -685,7 +687,7 @@ public final class GUIManager{
                 int progress = 100 - (elapsed * 100) / nextMessage.getDurationMillis();
                 messageProgressBar.setValue(progress);
 
-                if(elapsed >= nextMessage.getDurationMillis()){
+                if(elapsed >= nextMessage.getDurationMillis() || cancelHook.get()){
                     ((Timer)e.getSource()).stop();
 
                     SwingUtilities.invokeLater(() -> {

@@ -555,6 +555,13 @@ public class SettingsPanel{
         );
 
         addCheckBox(generalSettingsPanel, gbcPanel,
+            "settings.display_link_capture_notifications",
+            settings::isDisplayLinkCaptureNotifications,
+            settings::setDisplayLinkCaptureNotifications,
+            false
+        );
+
+        addCheckBox(generalSettingsPanel, gbcPanel,
             "settings.use_system_font",
             settings::isUseSystemFont,
             settings::setUseSystemFont,
