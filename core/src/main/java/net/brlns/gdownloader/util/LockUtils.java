@@ -40,12 +40,20 @@ public class LockUtils{
         }
     }
 
+    public static String readLock(File lockFile) throws IOException{
+        if(!lockFile.exists()){
+            throw new IOException("Lock file " + lockFile + " does not exist");
+        }
+
+        return new String(Files.readAllBytes(lockFile.toPath()));
+    }
+
     public static boolean checkLock(File lockFile, String tag) throws IOException{
         if(!lockFile.exists()){
             return false;
         }
 
-        String content = new String(Files.readAllBytes(lockFile.toPath()));
+        String content = readLock(lockFile);
 
         return content.equals(tag);
     }

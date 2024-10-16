@@ -16,8 +16,10 @@
  */
 package net.brlns.gdownloader.updater;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -34,12 +36,18 @@ import net.brlns.gdownloader.util.Nullable;
 import static net.brlns.gdownloader.util.LockUtils.*;
 
 /**
+ * Modifications to this class should be made with caution, as it may affect compatibility with clients running older versions.
+ *
+ * If addressing update-related issues is necessary, please consider handling them through the {@link net.brlns.gdownloader.updater.SelfUpdater} class
+ * whenever possible, rather than modifying this class directly. For example, you can modify and reconstruct the update ZIP
+ * to ensure it remains compatible with this updater.
+ *
  * @author Gabriel / hstr0100 / vertx010
  */
 @Slf4j
 public class UpdaterBootstrap{
 
-    private static final String PREFIX = "gdownloader_ota_runtime_";
+    public static final String PREFIX = "gdownloader_ota_runtime_";
 
     public static void tryOta(String[] args, boolean fromOta){
         Path workDir = GDownloader.getWorkDirectory().toPath();
@@ -62,14 +70,20 @@ public class UpdaterBootstrap{
             String launchCommand = getLaunchCommand();
 
             if(fromOta || launchCommand != null && launchCommand.contains(PREFIX)){
-                log.error("Current running image is from ota {} v{}", runtimePath, version);
+                log.info("Current running image is from ota {} v{}", runtimePath, version);
                 return;
             }else{
-                log.error("No ota file found, trying to locate current runtime");
+                log.info("No ota file found, trying to locate current runtime");
             }
 
             if(!Files.exists(runtimePath)){
-                log.error("Current installed version is the latest");
+                log.info("No ota runtimes found, running current version.");
+                return;
+            }
+
+            //This is a backwards-compatible check
+            if(!diskLockExistsAndIsNewer(workDir, version)){
+                log.info("Ota runtime on disk is not newer, running current version. (v{})", version);
                 return;
             }
 
@@ -89,24 +103,48 @@ public class UpdaterBootstrap{
                 arguments.add(launchCommand);
             }
 
-            arguments.addAll(Arrays.asList(args));
+            //Older portable versions already have a broken updater,
+            //so introducing this change should not affect anything.
+            if(GDownloader.isPortable()){
+                arguments.add("--portable");
+            }
 
+            arguments.addAll(Arrays.asList(args));
             log.info("Launching {}", arguments);
 
-            try{//Hand it off to the new version
-                ProcessBuilder processBuilder = new ProcessBuilder(arguments.stream().toArray(String[]::new));
-                processBuilder.start();
+            try{//Attempt to hand it off to the new version
+                ProcessBuilder processBuilder = new ProcessBuilder(arguments);
+                processBuilder.redirectErrorStream(true);//TODO: low-prio: look into why all of the output is coming from the error stream.
 
-                log.info("Launched successfully, handing off");
-                System.exit(0);
-            }catch(IOException e){
+                //It took quite some brain cycles to figure out why the portable versions were failing to launch updates.
+                //Turns out we need to get rid of this conflicting env variable.
+                processBuilder.environment().remove("_JPACKAGE_LAUNCHER");
+
+                Process process = processBuilder.start();
+
+                try(BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(process.getInputStream()))){
+                    String line;
+                    while((line = reader.readLine()) != null){
+                        log.info("Output: {}", line);
+
+                        if(line.contains("Starting...")){
+                            log.info("Launched successfully, handing off");
+                            System.exit(0);
+                        }
+                    }
+                }catch(Exception e){
+                    log.error("Input stream exception {}", e.getMessage());
+                }
+
+                int exitCode = process.waitFor();
+                log.error("Cannot restart for update, process exited with code: {}", exitCode);
+            }catch(IOException | InterruptedException e){
                 log.error("Cannot restart for update {}", e.getLocalizedMessage());
             }
         }else{
             try{
-                File lock = new File(workDir.toString(), "ota_lock.txt");
-
-                if(lockExists(lock)){//TODO check if the lock confirms the version on disk is actually newer
+                if(diskLockExistsAndIsNewer(workDir, version)){
                     Path zipOutputPath = Paths.get(workDir.toString(), "tmp_ota_zip");
                     log.info("Zip out path {}", zipOutputPath);
 
@@ -131,7 +169,8 @@ public class UpdaterBootstrap{
                     log.info("Ota complete, restarting");
                     tryOta(args, false);
                 }else{
-                    log.error("Lock file does not exist, we are up to date");
+                    log.error("Disk version is older or the same, deleting ota update and remaining in the current version (v{}).", version);
+                    Files.delete(path);
                 }
             }catch(IOException e){
                 log.error("Cannot procceed, IO error with ota file {} {}", path, e.getMessage());
@@ -140,12 +179,12 @@ public class UpdaterBootstrap{
     }
 
     @Nullable
-    private static String getVersion(){
+    protected static String getVersion(){
         return System.getProperty("jpackage.app-version");
     }
 
     @Nullable
-    private static String getLaunchCommand(){
+    protected static String getLaunchCommand(){
         return System.getProperty("jpackage.app-path");
     }
 
@@ -217,8 +256,58 @@ public class UpdaterBootstrap{
         return directoryNames;
     }
 
+    private static boolean diskLockExistsAndIsNewer(Path workDir, String version){
+        try{
+            File lock = new File(workDir.toString(), "ota_lock.txt");
+
+            if(lockExists(lock)){
+                String diskVersion = readLock(lock).split("_")[0];
+                diskVersion = diskVersion.replace("v", "");
+                log.info("Lock {} version: {}", workDir, diskVersion);
+
+                if(isVersionNewer(version, diskVersion)){
+                    log.info("{} is newer than: {}", diskVersion, version);
+                    return true;
+                }
+            }
+        }catch(IOException e){
+            log.error("IOException trying to verify ota lock file {}", e.getMessage());
+        }
+
+        return false;
+    }
+
     private static int extractNumber(String directoryName){
         return Integer.parseInt(directoryName.replaceAll("\\D+", ""));
+    }
+
+    public static boolean isVersionNewer(String currentVersion, String diskVersion){
+        String[] currentParts = normalizeVersion(currentVersion).split("\\.");
+        String[] diskParts = normalizeVersion(diskVersion).split("\\.");
+
+        int length = Math.max(currentParts.length, diskParts.length);
+
+        for(int i = 0; i < length; i++){
+            int currentPart = i < currentParts.length ? parseVersionPart(currentParts[i]) : 0;
+            int diskPart = i < diskParts.length ? parseVersionPart(diskParts[i]) : 0;
+
+            if(currentPart < diskPart){
+                return true;//newer
+            }else if(currentPart > diskPart){
+                return false;//older
+            }
+        }
+
+        return false;//equal
+    }
+
+    private static int parseVersionPart(String part){
+        String numericPart = part.split("[^\\d]")[0];
+        return numericPart.matches("\\d+") ? Integer.parseInt(numericPart) : 0;
+    }
+
+    private static String normalizeVersion(String version){
+        return version.replaceAll("[^0-9.]", "");
     }
 
 }

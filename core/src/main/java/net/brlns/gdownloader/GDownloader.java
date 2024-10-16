@@ -94,6 +94,9 @@ public final class GDownloader{
 
     private static String launcher;
 
+    @Getter
+    private static boolean portable;
+
     private final SystemTray tray;
     private TrayIcon trayIcon = null;
 
@@ -308,7 +311,11 @@ public final class GDownloader{
 
         threadPool.execute(() -> {
             try{
-                selfUpdater.check(!firstBoot);
+                if(!isFromJar()){
+                    selfUpdater.check(!firstBoot);
+                }else{
+                    log.info("Program updates are not yet available when running from .jar.");
+                }
             }catch(NoFallbackAvailableException e){
                 log.error("Unsupported OS for self updates");
             }catch(Exception e){
@@ -379,6 +386,7 @@ public final class GDownloader{
                 }
 
                 if(selfUpdater.isUpdated()){
+                    log.info("Restarting to apply updates.");
                     restart();
                 }
             }catch(InterruptedException e){
@@ -625,32 +633,38 @@ public final class GDownloader{
     }
 
     @Nullable
-    private String getLaunchCommand(){
-        String launchString = null;
+    private List<String> getLaunchCommand(){
+        List<String> launchString = null;
 
-        try{
-            URI jarPath = GDownloader.class.getProtectionDomain().getCodeSource().getLocation().toURI();
+        String jarLocation = getJarLocation();
+        if(jarLocation != null){
+            String javaHome = System.getenv("JAVA_HOME");
 
-            if(jarPath.toString().endsWith(".jar")){
-                launchString = new File(jarPath).getAbsolutePath();
+            if(javaHome != null && !javaHome.isEmpty()){
+                String javaPath;
+                String os = System.getProperty("os.name").toLowerCase();
+                if(os.contains("win")){
+                    javaPath = javaHome + File.separator + "bin" + File.separator + "javaw.exe";
+                }else{
+                    javaPath = javaHome + File.separator + "bin" + File.separator + "java";
+                }
 
-                String extension = isWindows() ? ".bat" : ".sh";
+                String jarString = new File(jarLocation).getAbsolutePath();
 
-                launchString = launchString.replaceAll(Pattern.quote("build" + File.separator + "libs" + File.separator) + "GDownloader-.*\\.jar", "start" + extension);
-                launchString = launchString.replace("target" + File.separator + "GDownloader.jar", "start" + extension);
-                launchString = launchString.replace("GDownloader.jar", "start" + extension);
-                launchString = launchString.replace("classes", "start" + extension);
+                launchString = List.of(javaPath, "-jar", jarString);
+            }else{
+                log.error("Runtime type is .jar but JAVA_HOME is not set. Cannot restart program if necessary.");
             }
-        }catch(URISyntaxException e){
-            //Ignore
         }
 
-        if(launchString == null){
-            launchString = launcher;
+        if(launchString == null && launcher != null){
+            launchString = List.of(launcher);
         }
 
-        if(launchString == null){
-            launchString = System.getProperty("jpackage.app-path");
+        String jpackageVersion = System.getProperty("jpackage.app-path");
+
+        if(launchString == null && jpackageVersion != null){
+            launchString = List.of(jpackageVersion);
         }
 
         if(launchString == null || launchString.isEmpty()){
@@ -675,17 +689,21 @@ public final class GDownloader{
     }
 
     public void launchNewInstance(){
-        String launchString = getLaunchCommand();
+        List<String> launchString = getLaunchCommand();
 
-        if(launchString == null){
+        if(launchString == null || launchString.isEmpty()){
             log.error("Cannot restart, binary location is unknown.");
             return;
         }
 
-        Runtime runtime = Runtime.getRuntime();
+        log.info("Next instance launch command: " + launchString);
+
+        ProcessBuilder processBuilder = new ProcessBuilder(launchString);
+        processBuilder.environment().remove("_JPACKAGE_LAUNCHER");
 
         try{
-            runtime.exec(new String[]{launchString});
+            processBuilder.start();
+            log.info("New instance launched with command: {}", launchString);
         }catch(IOException e){
             log.error("Cannot restart {}", e.getLocalizedMessage());
         }
@@ -698,9 +716,13 @@ public final class GDownloader{
         try{
             boolean currentStatus = config.isAutoStart();
 
-            String launchString = getLaunchCommand();
+            List<String> launchString = getLaunchCommand();
 
-            if(launchString == null){
+            if(config.isDebugMode()){
+                log.info("Launch command is: {}", launchString);
+            }
+
+            if(launchString == null || launchString.isEmpty()){
                 log.error("Cannot locate runtime binary.");
                 return;
             }
@@ -714,6 +736,10 @@ public final class GDownloader{
                 checkProcess.waitFor();
 
                 int checkExitValue = checkProcess.exitValue();
+
+                if(config.isDebugMode()){
+                    log.info("Check startup status: {}", checkExitValue);
+                }
 
                 if(checkExitValue == 0 && !currentStatus){
                     ProcessBuilder deleteBuilder = new ProcessBuilder("reg", "delete",
@@ -732,23 +758,48 @@ public final class GDownloader{
                         }
                     }
                 }else if(checkExitValue != 0 && currentStatus){
-                    ProcessBuilder createBuilder = new ProcessBuilder(
-                        "reg", "add",
+                    List<String> regArgs = new ArrayList<>(List.of("reg", "add",
                         "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run",
                         "/v", REGISTRY_APP_NAME,
                         "/t", "REG_SZ",
-                        "/d", "\\\"" + launchString + "\\\"", "--no-gui",
-                        "/f"
-                    );
+                        "/d"));
+
+                    List<String> programArgs = new ArrayList<>(launchString);
+                    programArgs.add("--no-gui");
+
+                    StringBuilder builder = new StringBuilder();
+                    builder.append("\"");
+
+                    for(String arg : programArgs){
+                        if(arg.contains(File.separator)){
+                            builder.append("\\\"").append(arg).append("\\\"").append(" ");
+                        }else{
+                            builder.append(arg).append(" ");
+                        }
+                    }
+
+                    if(builder.charAt(builder.length() - 1) == ' '){
+                        builder.deleteCharAt(builder.length() - 1);
+                    }
+
+                    builder.append("\"");
+
+                    regArgs.add(builder.toString());
+                    regArgs.add("/f");
+
+                    ProcessBuilder createBuilder = new ProcessBuilder(regArgs);
 
                     Process process = createBuilder.start();
                     int exitCode = process.waitFor();
 
                     if(config.isDebugMode()){
+                        log.info("Program args: {}", programArgs);
+                        log.info("Startup command args: {}", regArgs);
+
                         if(exitCode == 0){
                             log.info("Registry entry added successfully.");
                         }else{
-                            log.error("Failed to add registry entry. Exit code: " + exitCode);
+                            log.error("Failed to add registry entry. Exit code: {} Command list: {}", exitCode, createBuilder.command());
                         }
                     }
                 }
@@ -770,9 +821,9 @@ public final class GDownloader{
 
                     try(FileWriter writer = new FileWriter(desktopFile)){
                         writer.write("[Desktop Entry]\n");
-                        writer.write("Categories=Qt;KDE;Internet;\n");
+                        writer.write("Categories=Network;\n");
                         writer.write("Comment=Start " + REGISTRY_APP_NAME + "\n");
-                        writer.write("Exec=" + launchString + " --no-gui\n");
+                        writer.write("Exec=" + String.join(" ", launchString) + " --no-gui\n");
                         writer.write("Icon=" + iconPath + "\n");
                         writer.write("Terminal=false\n");
                         writer.write("MimeType=\n");
@@ -830,7 +881,13 @@ public final class GDownloader{
      * Returns the Downloads path used as default save location.
      */
     private String getDownloadsPath(){
-        return System.getProperty("user.home") + File.separator + "Downloads";
+        if(isPortable()){
+            File portableDirectory = getPortableRuntimeDirectory();
+
+            return portableDirectory.toPath() + File.separator + "Downloads";
+        }else{
+            return System.getProperty("user.home") + File.separator + "Downloads";
+        }
     }
 
     public void setDownloadsPath(File newDir){
@@ -1105,27 +1162,75 @@ public final class GDownloader{
         }
     }
 
+    public static boolean isFromJar(){
+        return getJarLocation() != null;
+    }
+
+    @Nullable
+    private static String getJarLocation(){
+        try{
+            URI jarPath = GDownloader.class.getProtectionDomain().getCodeSource().getLocation().toURI();
+
+            if(jarPath.toString().endsWith(".jar")){
+                return new File(jarPath).getAbsolutePath();
+            }
+        }catch(URISyntaxException e){
+            //Ignore
+        }
+
+        return null;
+    }
+
+    private static File getPortableRuntimeDirectory(){
+        assert isPortable() : "Call not supported when not in portable mode";
+
+        String appPath = launcher;
+
+        //Give preference to the main executable's path; otherwise, fallback to its own.
+        if(appPath == null){
+            appPath = System.getProperty("jpackage.app-path");
+        }
+
+        if(appPath != null){
+            File appFile = new File(appPath);
+            File parentDir = appFile.getParentFile();
+
+            if(parentDir != null){
+                log.info("Portable runtime directory: {}", parentDir.getAbsolutePath());
+                return parentDir;
+            }
+        }
+
+        throw new IllegalStateException("Program is in portable mode, but work directory could not be determined.");
+    }
+
     private static File _cachedWorkDir;
 
     public static File getWorkDirectory(){
         if(_cachedWorkDir == null){
-            String os = System.getProperty("os.name").toLowerCase();
-            String userHome = System.getProperty("user.home");
-
             Path appDir;
 
-            if(os.contains("win")){
-                String appData = System.getenv("APPDATA");
+            if(isPortable()){
+                File portableDirectory = getPortableRuntimeDirectory();
 
-                if(appData != null){
-                    appDir = Paths.get(appData, REGISTRY_APP_NAME);
-                }else{
-                    appDir = Paths.get(userHome, "AppData", "Roaming", REGISTRY_APP_NAME);
-                }
-            }else if(os.contains("mac")){
-                appDir = Paths.get(userHome, "Library", "Application Support", REGISTRY_APP_NAME);
+                appDir = Paths.get(portableDirectory.getAbsolutePath(), "Internal");
             }else{
-                appDir = Paths.get(userHome, "." + REGISTRY_APP_NAME.toLowerCase());
+                String os = System.getProperty("os.name").toLowerCase();
+                String userHome = System.getProperty("user.home");
+
+                if(os.contains("win")){
+                    String appData = System.getenv("APPDATA");
+
+                    if(appData != null){
+                        appDir = Paths.get(appData, REGISTRY_APP_NAME);
+                    }else{
+                        appDir = Paths.get(userHome, "AppData", "Roaming", REGISTRY_APP_NAME);
+                    }
+                }else if(os.contains("mac")){
+                    appDir = Paths.get(userHome, "Library", "Application Support", REGISTRY_APP_NAME);
+                }else{
+                    appDir = Paths.get(userHome, "." + REGISTRY_APP_NAME.toLowerCase());
+                }
             }
 
             _cachedWorkDir = getOrCreate(appDir.toFile());
@@ -1179,6 +1284,21 @@ public final class GDownloader{
         return osName.contains("nux");
     }
 
+    public static File getPortableLockFilePath(){
+        return new File(System.getProperty("java.home"), "portable.lock");
+    }
+
+    public static boolean isFlaggedAsPortable(){
+        String appPath = System.getProperty("jpackage.app-path");
+
+        //Updates download portable versions, but we don't want those run in portable mode
+        if(appPath != null && appPath.contains(UpdaterBootstrap.PREFIX)){
+            return false;
+        }
+
+        return getPortableLockFilePath().exists();
+    }
+
     public static void main(String[] args){
         boolean noGui = false;
         int uiScale = 1;
@@ -1200,6 +1320,19 @@ public final class GDownloader{
 
             if(args[i].equalsIgnoreCase("--launcher")){
                 launcher = args[++i];
+            }
+
+            if(args[i].equalsIgnoreCase("--portable")){
+                portable = true;
+                log.info("Running in portable mode. (Found --portable argument)");
+            }
+        }
+
+        if(!portable){
+            portable = isFlaggedAsPortable();
+
+            if(portable){
+                log.info("Running in portable mode. (Found lock file)");
             }
         }
 

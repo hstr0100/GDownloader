@@ -62,7 +62,7 @@ public class DarkTheme extends AbstractTheme{
         put(COMBO_BOX_BUTTON_BACKGROUND, Color.DARK_GRAY);
         put(MENU_ITEM_ARMED, Color.GRAY);
         put(MENU_ITEM_PRESSED, Color.LIGHT_GRAY);
-        put(QUEUE_ACTIVE_ICON, new Color(255, 138, 101));
+        put(QUEUE_ACTIVE_ICON, new Color(29, 233, 182));
     }
 
     @Override

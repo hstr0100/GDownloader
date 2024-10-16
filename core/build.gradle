@@ -40,6 +40,11 @@ dependencies {
     annotationProcessor "org.projectlombok:lombok:$lombokVersion"
     implementation "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"
     implementation "org.jsoup:jsoup:$jsoupVersion"
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.11.2'
+}
+
+test {
+    useJUnitPlatform()
 }
 
 extraJavaModuleInfo {
@@ -100,6 +105,16 @@ task zipJpackageImage(type: Zip) {
     archiveFileName.set(fileName)
     destinationDirectory.set(file("$buildDir/jpackage"))
 
+    //A less-than-stellar but functional way to detect that the program is running in portable mode.
+    doFirst {
+        def basePath = os.isWindows() ? "$buildDir/jpackage/${rootProject.name}" :
+                       os.isLinux() ? "$buildDir/jpackage/${rootProject.name}/lib" :
+                       "$buildDir/jpackage/${rootProject.name}.app/Contents"
+
+        def portableLockFile = file("$basePath/runtime/portable.lock")
+        portableLockFile.text = "This file ensures that the program will run in portable mode.\nDeleting it when the program is not installed is not recommended."
+    }
+
     from("$buildDir/jpackage/${rootProject.name}")
 }
 
@@ -140,6 +155,7 @@ jlink {
                 '--win-per-user-install',
                 '--win-dir-chooser',
                 '--win-menu',
+                '--win-menu-group', "${rootProject.name}",
                 '--win-shortcut'
             ]
         } else if (os.isLinux()) {
@@ -148,9 +164,9 @@ jlink {
             installerOptions += [
                 '--resource-dir', "build/jpackage/${rootProject.name}/lib/app",
                 '--linux-package-name', "${lowercaseName}-linux",
-                '--linux-app-category', 'Qt;KDE;Internet;',
-                '--linux-menu-group', 'Qt;KDE;Internet;',
-                '--linux-deb-maintainer', 'hstr0100@brlns.net',
+                '--linux-app-category', 'web',
+                '--linux-menu-group', 'Network;',
+                '--linux-deb-maintainer', 'brokenlensllc@gmail.com',
                 '--linux-rpm-license-type', 'GPLv3',
                 '--linux-shortcut'
             ]

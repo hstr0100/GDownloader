@@ -107,8 +107,6 @@ import static net.brlns.gdownloader.util.URLUtils.*;
 //TODO Test downloading sections of a livestream (currently it gets stuck on status PREPARING)
 //TODO Setting to save subtitles and thumbnails separately
 //TODO When checking updates, display to the user what is currently happening in the background. with progress updates.
-//TODO The portable version should be confined to its own folder
-//TODO The program should not download updates if the currently installed version is already the latest. run it as is.
 //TODO Add a console access or a way to view or save log files for troubleshooting.
 //TODO Add rate limiting settings, with some default options that should work for most use cases.
 //TODO Notify the user whenever a setting that requires restart was changed.

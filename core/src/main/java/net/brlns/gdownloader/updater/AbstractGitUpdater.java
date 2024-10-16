@@ -189,6 +189,14 @@ public abstract class AbstractGitUpdater{
 
         File lock = new File(workDir, getLockFileName());
 
+        if(!lock.exists() && this instanceof SelfUpdater){
+            String version = UpdaterBootstrap.getVersion();
+
+            if(version != null){
+                createLock(lock, getLockTag("v" + version));
+            }
+        }
+
         if(binaryPath.exists() || this instanceof SelfUpdater){
             if(checkLock(lock, lockTag)){
                 executablePath = binaryPath;
