@@ -638,15 +638,23 @@ public final class GDownloader{
 
         String jarLocation = getJarLocation();
         if(jarLocation != null){
-            String javaHome = System.getenv("JAVA_HOME");
+            String javaHome = System.getProperty("java.home");
+
+            if(javaHome == null || javaHome.isEmpty()){
+                javaHome = System.getenv("JAVA_HOME");
+            }
 
             if(javaHome != null && !javaHome.isEmpty()){
+                if(!javaHome.endsWith(File.separator)){
+                    javaHome = javaHome + File.separator;
+                }
+
                 String javaPath;
                 String os = System.getProperty("os.name").toLowerCase();
                 if(os.contains("win")){
-                    javaPath = javaHome + File.separator + "bin" + File.separator + "javaw.exe";
+                    javaPath = javaHome + "bin" + File.separator + "javaw.exe";
                 }else{
-                    javaPath = javaHome + File.separator + "bin" + File.separator + "java";
+                    javaPath = javaHome + "bin" + File.separator + "java";
                 }
 
                 String jarString = new File(jarLocation).getAbsolutePath();
@@ -819,11 +827,29 @@ public final class GDownloader{
                         }
                     }
 
+                    //We almost give no thoughts to whitespaces on linux, but they can happen.
+                    List<String> programArgs = new ArrayList<>(launchString);
+                    programArgs.add("--no-gui");
+
+                    StringBuilder builder = new StringBuilder();
+
+                    for(String arg : programArgs){
+                        if(arg.contains(" ")){
+                            builder.append("\"").append(arg).append("\"").append(" ");
+                        }else{
+                            builder.append(arg).append(" ");
+                        }
+                    }
+
+                    if(builder.charAt(builder.length() - 1) == ' '){
+                        builder.deleteCharAt(builder.length() - 1);
+                    }
+
                     try(FileWriter writer = new FileWriter(desktopFile)){
                         writer.write("[Desktop Entry]\n");
                         writer.write("Categories=Network;\n");
                         writer.write("Comment=Start " + REGISTRY_APP_NAME + "\n");
-                        writer.write("Exec=" + String.join(" ", launchString) + " --no-gui\n");
+                        writer.write("Exec=" + builder.toString() + "\n");
                         writer.write("Icon=" + iconPath + "\n");
                         writer.write("Terminal=false\n");
                         writer.write("MimeType=\n");
@@ -1291,7 +1317,7 @@ public final class GDownloader{
     public static boolean isFlaggedAsPortable(){
         String appPath = System.getProperty("jpackage.app-path");
 
-        //Updates download portable versions, but we don't want those run in portable mode
+        //Updates are portable versions, but we don't want those to run in portable mode unless explicity determined by the --portable flag.
         if(appPath != null && appPath.contains(UpdaterBootstrap.PREFIX)){
             return false;
         }

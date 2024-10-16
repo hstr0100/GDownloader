@@ -40,7 +40,7 @@ dependencies {
     annotationProcessor "org.projectlombok:lombok:$lombokVersion"
     implementation "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"
     implementation "org.jsoup:jsoup:$jsoupVersion"
-    testImplementation 'org.junit.jupiter:junit-jupiter:5.11.2'
+    testImplementation "org.junit.jupiter:junit-jupiter:$jupiterVersion"
 }
 
 test {
