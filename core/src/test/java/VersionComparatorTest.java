@@ -12,6 +12,7 @@ public class VersionComparatorTest{
         assertTrue(UpdaterBootstrap.isVersionNewer("1.0.12", "1.0.13"));
         assertTrue(UpdaterBootstrap.isVersionNewer("1.2.1", "1.2.222"));
         assertTrue(UpdaterBootstrap.isVersionNewer("10.0.2", "10.1.0"));
+        assertTrue(UpdaterBootstrap.isVersionNewer("1.0.11", "1.1.0"));
         assertTrue(UpdaterBootstrap.isVersionNewer("10.0.2", "10.1.2-dev"));
 
         for(int i = 11; i < 30; i++){

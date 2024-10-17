@@ -16,21 +16,26 @@
  */
 package net.brlns.gdownloader.settings.enums;
 
-import java.util.Arrays;
-
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-public interface IContainerEnum{
+public enum ThumbnailContainerEnum implements ISettingsEnum, IContainerEnum{
+    JPG,
+    PNG,
+    WEBP;
 
-    String getValue();
-
-    public static <T extends Enum<T> & IContainerEnum> String[] getContainerValues(Class<T> enumClass){
-        T[] values = enumClass.getEnumConstants();
-
-        return Arrays.stream(values)
-            .map(T::getValue)
-            .toArray(String[]::new);
+    @Override
+    public String getValue(){
+        return name().toLowerCase();
     }
 
+    @Override
+    public String getTranslationKey(){
+        return "";
+    }
+
+    @Override
+    public String getDisplayName(){
+        return name().toLowerCase();
+    }
 }

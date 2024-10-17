@@ -65,6 +65,14 @@ public class QualitySettings{
     @JsonProperty("AudioBitrate")
     private AudioBitrateEnum audioBitrate = AudioBitrateEnum.BITRATE_320;
 
+    @Builder.Default
+    @JsonProperty("SubtitleContainer")
+    private SubtitleContainerEnum subtitleContainer = SubtitleContainerEnum.SRT;
+
+    @Builder.Default
+    @JsonProperty("ThumbnailContainer")
+    private ThumbnailContainerEnum thumbnailContainer = ThumbnailContainerEnum.PNG;
+
     //TODO this needs some work
     @JsonIgnore
     public String getQualitySettings(){
