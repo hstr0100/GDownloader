@@ -104,9 +104,10 @@ import static net.brlns.gdownloader.util.URLUtils.*;
 //TODO Investigate screen reader support (https://www.nvaccess.org/download/)
 //TODO Send notifications when a NO_METHOD is triggered, explaining why it was triggered.
 //TODO Test downloading sections of a livestream (currently it gets stuck on status PREPARING)
-//TODO Add a console access or a way to view or save log files for troubleshooting.
+//TODO Add a viewer for log files.
 //TODO Add rate limiting settings, with some default options that should work for most use cases.
 //TODO Notify the user whenever a setting that requires restart was changed.
+//TODO Sanitize file names for windows. Paths larger than >256/260 chars are failing spectacularly. Seems related to yt-dlp itself.
 //Off to a bootcamp, project on pause
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -672,6 +673,8 @@ public class YtDlpDownloader{
                             String videoNameFormat = tmpPath.getAbsolutePath()
                                 + (next.getWebFilter() == WebFilterEnum.YOUTUBE_PLAYLIST ? "/%(playlist)s/" : "/")
                                 + "%(title)s (%(uploader_id)s %(upload_date)s %(resolution)s).%(ext)s";
+
+                            log.debug("Video name format length: {}", videoNameFormat.length());
 
                             videoArgs.addAll(Arrays.asList(
                                 "-o",

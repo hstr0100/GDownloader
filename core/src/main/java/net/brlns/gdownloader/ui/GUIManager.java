@@ -581,7 +581,7 @@ public final class GUIManager{
             }
         };
 
-        dialog.setAlwaysOnTop(true);
+        dialog.setAlwaysOnTop(true);//TODO: We might wanna consider just bringing this to top but not pinning it there. Java doesn't directly support this but there are workarounds.
         dialog.setSize(500, 300);
         dialog.setResizable(false);
         dialog.setLocationRelativeTo(null);
@@ -1567,16 +1567,12 @@ public final class GUIManager{
                         if(windowBounds.contains(dropLocation) && dropTarget instanceof JPanel jPanel){
                             int targetIndex = getComponentIndex(jPanel);
 
-                            if(main.getConfig().isDebugMode()){
-                                log.info("Drop target index is {}", targetIndex);
-                            }
+                            log.debug("Drop target index is {}", targetIndex);
 
                             if(card.getOnDrag() != null){
                                 int validIndex = getValidComponentIndex(jPanel);
 
-                                if(main.getConfig().isDebugMode()){
-                                    log.info("Valid target index is {}", validIndex);
-                                }
+                                log.debug("Valid target index is {}", validIndex);
 
                                 card.getOnDrag().accept(validIndex);
                             }

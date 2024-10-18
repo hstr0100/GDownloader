@@ -59,6 +59,7 @@ import net.brlns.gdownloader.ui.GUIManager;
 import net.brlns.gdownloader.ui.GUIManager.MessageType;
 import net.brlns.gdownloader.ui.themes.ThemeProvider;
 import net.brlns.gdownloader.updater.*;
+import net.brlns.gdownloader.util.LoggerUtils;
 import net.brlns.gdownloader.util.NoFallbackAvailableException;
 import net.brlns.gdownloader.util.Nullable;
 import org.jsoup.Jsoup;
@@ -122,7 +123,22 @@ public final class GDownloader{
 
     public GDownloader(){
         //Initialize the config file
-        configFile = new File(getWorkDirectory(), "config.json");
+        File workDir = getWorkDirectory();
+        configFile = new File(workDir, "config.json");
+
+        //TODO: rotate logs
+        File logFile = new File(workDir, "gdownloader_log.txt");
+        File previousLogFile = new File(workDir, "gdownloader_log_previous.txt");
+
+        if(logFile.exists()){
+            if(previousLogFile.exists()){
+                previousLogFile.delete();
+            }
+
+            logFile.renameTo(previousLogFile);
+        }
+
+        LoggerUtils.setLogFile(logFile);
 
         if(!configFile.exists()){
             config = new Settings();
@@ -138,12 +154,9 @@ public final class GDownloader{
             handleException(e);
         }
 
-        if(config.isDebugMode()){
-            //Slf4j in particular does not allow switching log level during runtime
-            //Here we'd like to have the option to toggle it on the fly
-            //Hence why this is not using not log.debug
-            log.info("Loaded config file");
+        log.info("Loaded config file");
 
+        if(config.isDebugMode()){
             printDebugInformation();
         }
 
@@ -610,6 +623,8 @@ public final class GDownloader{
 
                 log.info("Browser changed to {}", configIn.getBrowser());
             }
+
+            LoggerUtils.setDebugLogLevel(config.isDebugMode());
         }catch(IOException e){
             handleException(e);
         }
@@ -662,9 +677,7 @@ public final class GDownloader{
             return null;
         }
 
-        if(config.isDebugMode()){
-            log.info("Launching from {}", launchString);
-        }
+        log.debug("Launching from {}", launchString);
 
         return launchString;
     }
@@ -709,9 +722,7 @@ public final class GDownloader{
 
             List<String> launchString = getLaunchCommand();
 
-            if(config.isDebugMode()){
-                log.info("Launch command is: {}", launchString);
-            }
+            log.debug("Launch command is: {}", launchString);
 
             if(launchString == null || launchString.isEmpty()){
                 log.error("Cannot locate runtime binary.");
@@ -728,9 +739,7 @@ public final class GDownloader{
 
                 int checkExitValue = checkProcess.exitValue();
 
-                if(config.isDebugMode()){
-                    log.info("Check startup status: {}", checkExitValue);
-                }
+                log.debug("Check startup status: {}", checkExitValue);
 
                 if(checkExitValue == 0 && !currentStatus){
                     ProcessBuilder deleteBuilder = new ProcessBuilder("reg", "delete",
@@ -1071,9 +1080,7 @@ public final class GDownloader{
         Elements links = doc.select("a[href]");
         Elements media = doc.select("[src]");
 
-        if(config.isDebugMode()){
-            log.info("Found {} Links and {} Media", links.size(), media.size());
-        }
+        log.debug("Found {} Links and {} Media", links.size(), media.size());
 
         if(links.isEmpty() && media.isEmpty()){
             String regex = "(http[^\\s]*|magnet:[^\\s]*)(?=\\s|$|http|magnet:)";

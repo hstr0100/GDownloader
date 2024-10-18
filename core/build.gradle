@@ -35,11 +35,11 @@ dependencies {
     implementation project(path: ":twelvemonkeys", configuration: "moduleJar")
     implementation "com.github.kwhat:jnativehook:$jnativehookVersion"
     implementation "org.slf4j:slf4j-api:$slf4jVersion"
-    implementation "org.slf4j:slf4j-simple:$slf4jVersion"
     compileOnly "org.projectlombok:lombok:$lombokVersion"
     annotationProcessor "org.projectlombok:lombok:$lombokVersion"
     implementation "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"
     implementation "org.jsoup:jsoup:$jsoupVersion"
+    implementation "ch.qos.logback:logback-classic:$logbackVersion"
     testImplementation "org.junit.jupiter:junit-jupiter:$jupiterVersion"
 }
 

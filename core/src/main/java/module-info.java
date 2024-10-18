@@ -32,7 +32,8 @@ module net.brlns.gdownloader {
     requires com.fasterxml.jackson.core;
     requires org.jsoup;
     requires org.slf4j;
-    requires org.slf4j.simple;
+    requires ch.qos.logback.classic;
+    requires ch.qos.logback.core;
 
     exports net.brlns.gdownloader;
     exports net.brlns.gdownloader.settings;
