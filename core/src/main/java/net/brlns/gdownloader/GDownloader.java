@@ -499,18 +499,25 @@ public final class GDownloader{
 
             try{
                 if(os.contains("win")){
-                    List<String> output = readOutput("reg", "query", "HKEY_CLASSES_ROOT\\http\\shell\\open\\command");
+                    List<String> output = readOutput("reg", "query", "HKCU\\Software\\Microsoft\\Windows\\Shell\\Associations\\UrlAssociations\\http\\UserChoice", "/v", "Progid");
 
                     log.info("Default browser: {}", output);
 
                     for(String line : output){
-                        if(line.contains(".exe")){
-                            browserName = line.substring(0, line.indexOf(".exe") + 4);
+                        if(line.isEmpty() || !line.contains("REG_SZ")){
+                            continue;
+                        }
+
+                        BrowserEnum browserEnum = BrowserEnum.getBrowserForName(line);
+
+                        if(browserEnum != BrowserEnum.UNSET){
+                            log.debug("Selected: {}", browserEnum);
+                            browserName = browserEnum.getName();
                             break;
                         }
                     }
                 }else if(os.contains("mac")){
-                    browserName = "safari";//Why bother
+                    browserName = "safari";//hstr0100 does not have a mac to figure out how to implement this.
                 }else if(os.contains("nix") || os.contains("nux")){
                     List<String> output = readOutput("xdg-settings", "get", "default-web-browser");
 
@@ -882,7 +889,11 @@ public final class GDownloader{
         if(!config.getDownloadsPath().isEmpty()){
             file = new File(config.getDownloadsPath());
         }else{
-            file = new File(getDownloadsPath(), REGISTRY_APP_NAME);
+            if(isPortable()){
+                file = new File(getDownloadsPath());
+            }else{
+                file = new File(getDownloadsPath(), REGISTRY_APP_NAME);
+            }
         }
 
         if(create){

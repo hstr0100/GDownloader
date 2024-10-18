@@ -55,13 +55,20 @@ public enum BrowserEnum implements ISettingsEnum{
     }
 
     public static BrowserEnum getBrowserForName(String name){
+        name = name.toLowerCase();
+
         for(BrowserEnum browser : BrowserEnum.values()){
-            if(name.contains(browser.getName())){
+            if(browser == BrowserEnum.UNSET){
+                continue;
+            }
+
+            if(name.contains(browser.getName())
+                || browser.getName().contains(name)){
                 return browser;
             }
 
             for(String alias : browser.getAliases()){
-                if(name.contains(alias)){
+                if(name.contains(alias) || alias.contains(name)){
                     return browser;
                 }
             }
@@ -69,4 +76,5 @@ public enum BrowserEnum implements ISettingsEnum{
 
         return BrowserEnum.UNSET;
     }
+
 }
