@@ -16,6 +16,7 @@
  */
 package net.brlns.gdownloader.updater;
 
+import java.io.File;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.util.Nullable;
@@ -69,6 +70,21 @@ public class YtDlpUpdater extends AbstractGitUpdater{
     @Override
     protected String getLockFileName(){
         return "ytdlp_lock.txt";
+    }
+
+    @Override
+    public boolean isSupported(){
+        return true;
+    }
+
+    @Override
+    protected void setExecutablePath(File executablePath){
+        main.getDownloadManager().setYtDlpPath(executablePath);
+    }
+
+    @Override
+    public String getName(){
+        return "YT-DLP";
     }
 
 }

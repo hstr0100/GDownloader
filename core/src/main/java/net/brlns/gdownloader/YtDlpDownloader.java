@@ -104,7 +104,6 @@ import static net.brlns.gdownloader.util.URLUtils.*;
 //TODO Investigate screen reader support (https://www.nvaccess.org/download/)
 //TODO Send notifications when a NO_METHOD is triggered, explaining why it was triggered.
 //TODO Test downloading sections of a livestream (currently it gets stuck on status PREPARING)
-//TODO When checking updates, display to the user what is currently happening in the background. with progress updates.
 //TODO Add a console access or a way to view or save log files for troubleshooting.
 //TODO Add rate limiting settings, with some default options that should work for most use cases.
 //TODO Notify the user whenever a setting that requires restart was changed.
@@ -135,6 +134,14 @@ public class YtDlpDownloader{
 
     private final AtomicBoolean downloadsBlocked = new AtomicBoolean(true);
     private final AtomicBoolean downloadsRunning = new AtomicBoolean(false);
+
+    @Getter
+    @Setter
+    private File ytDlpPath = null;
+
+    @Getter
+    @Setter
+    private File ffmpegPath = null;
 
     public YtDlpDownloader(GDownloader mainIn){
         main = mainIn;
@@ -180,7 +187,7 @@ public class YtDlpDownloader{
     public CompletableFuture<Boolean> captureUrl(@Nullable String inputUrl, boolean force, PlayListOptionEnum playlistOption){
         CompletableFuture<Boolean> future = new CompletableFuture<>();
 
-        if(downloadsBlocked.get() || inputUrl == null || isGarbageUrl(inputUrl) || capturedLinks.contains(inputUrl)
+        if(downloadsBlocked.get() || ytDlpPath == null || inputUrl == null || isGarbageUrl(inputUrl) || capturedLinks.contains(inputUrl)
             || WebFilterEnum.isYoutubeChannel(inputUrl) && !main.getConfig().isDownloadYoutubeChannels()){
             future.complete(false);
             return future;
@@ -495,7 +502,7 @@ public class YtDlpDownloader{
                 long start = System.currentTimeMillis();
 
                 List<String> list = GDownloader.readOutput(
-                    main.getYtDlpUpdater().getExecutablePath().toString(),
+                    ytDlpPath.getAbsolutePath(),
                     "--dump-json",
                     "--flat-playlist",
                     "--extractor-args",
@@ -625,14 +632,14 @@ public class YtDlpDownloader{
                     List<String> subtitleArgs = new ArrayList<>();
 
                     genericArgs.addAll(Arrays.asList(
-                        main.getYtDlpUpdater().getExecutablePath().toString(),
+                        ytDlpPath.getAbsolutePath(),
                         "-i"
                     ));
 
-                    if(main.getFfmpegUpdater().getExecutablePath() != null){
+                    if(ffmpegPath != null){
                         genericArgs.addAll(Arrays.asList(
                             "--ffmpeg-location",
-                            main.getFfmpegUpdater().getExecutablePath().toString()
+                            ffmpegPath.getAbsolutePath()
                         ));
                     }
 
@@ -862,13 +869,8 @@ public class YtDlpDownloader{
                         Pair<Integer, String> result = processDownload(next, genericArgs, thumbnailArgs);
 
                         if(result != null){
-                            if(result.getKey() != 0){
-                                if(!next.getCancelHook().get()){
-                                    log.error("Failed to download thumbnail");
-                                }
-
-                                fireListeners();
-                                return;
+                            if(result.getKey() != 0 && !next.getCancelHook().get()){
+                                log.error("Failed to download thumbnail: {}", result.getValue());
                             }
                         }else{
                             wasStopped = true;
@@ -888,13 +890,8 @@ public class YtDlpDownloader{
                         Pair<Integer, String> result = processDownload(next, genericArgs, subtitleArgs);
 
                         if(result != null){
-                            if(result.getKey() != 0){
-                                if(!next.getCancelHook().get()){
-                                    log.error("Failed to download subtitles");
-                                }
-
-                                fireListeners();
-                                return;
+                            if(result.getKey() != 0 && !next.getCancelHook().get()){
+                                log.error("Failed to download subtitles: {}", result.getValue());
                             }
                         }else{
                             wasStopped = true;
@@ -981,7 +978,6 @@ public class YtDlpDownloader{
                             () -> next.deleteMediaFiles());
 
                         completedDownloads.offer(next);
-
                         fireListeners();
                     }else{
                         log.error("Unexpected download state");

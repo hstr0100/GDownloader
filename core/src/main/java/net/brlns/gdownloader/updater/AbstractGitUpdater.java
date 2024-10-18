@@ -35,10 +35,13 @@ import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.time.Duration;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
+import net.brlns.gdownloader.settings.enums.ISettingsEnum;
 import net.brlns.gdownloader.util.NoFallbackAvailableException;
 import net.brlns.gdownloader.util.Nullable;
 import net.brlns.gdownloader.util.Pair;
@@ -59,14 +62,21 @@ public abstract class AbstractGitUpdater{
 
     protected final GDownloader main;
 
+    private final List<ProgressListener> listeners = new CopyOnWriteArrayList<>();
+
     @Getter
     private boolean updated = false;
 
-    @Getter
-    protected File executablePath;
-
     public AbstractGitUpdater(GDownloader mainIn){
         main = mainIn;
+    }
+
+    public void registerListener(ProgressListener listener){
+        listeners.add(listener);
+    }
+
+    public void unregisterListener(ProgressListener listener){
+        listeners.remove(listener);
     }
 
     protected abstract String getUser();
@@ -85,6 +95,18 @@ public abstract class AbstractGitUpdater{
     @Nullable
     protected abstract String getLockFileName();
 
+    public abstract boolean isSupported();
+
+    public abstract String getName();
+
+    protected abstract void setExecutablePath(File executablePath);
+
+    protected void finishUpdate(File executablePath){
+        setExecutablePath(executablePath);
+
+        notifyStatus(UpdateStatus.DONE);
+    }
+
     protected void tryFallback(File workDir) throws Exception{
         String fileName = getRuntimeBinaryName();
 
@@ -93,8 +115,8 @@ public abstract class AbstractGitUpdater{
 
             File binaryFile = new File(workDir, fileName);
             if(binaryFile.exists() && lockExists(lock)){
+                finishUpdate(binaryFile);
                 log.info("Selected previous installation as fallback {}", getRepo());
-                executablePath = binaryFile;
                 return;
             }
         }
@@ -107,9 +129,10 @@ public abstract class AbstractGitUpdater{
             String[] resources = fileName.split(";");
 
             if(resources.length == 1){
-                executablePath = copyResource(
+                finishUpdate(copyResource(
                     "/bin/" + fileName,
-                    new File(workDir, fileName));
+                    new File(workDir, fileName)));
+                log.info("Selected bundled binary as fallback {}", getRepo());
             }else{
                 File outFile = new File(workDir, getRuntimeBinaryName());
                 if(!outFile.exists()){
@@ -127,21 +150,32 @@ public abstract class AbstractGitUpdater{
                 }
 
                 if(successes != 0 && successes == resources.length){
-                    executablePath = outFile;
+                    finishUpdate(outFile);
+                    log.info("Selected bundled binary as fallback {}", getRepo());
                 }
             }
 
-            if(executablePath != null){
-                log.info("Selected bundled binary as fallback {}", getRepo());
-                return;
-            }
+            return;
         }
+
+        notifyStatus(UpdateStatus.FAILED);
 
         throw new NoFallbackAvailableException();
     }
 
     public final void check(boolean force) throws Exception{
+        doUpdateCheck(force);
+
+        if(_internalLastStatus != UpdateStatus.DONE && _internalLastStatus != UpdateStatus.FAILED){
+            throw new IllegalStateException("Exitted without notifying either status DONE or FAILED, final status was: " + _internalLastStatus);
+        }
+    }
+
+    protected void doUpdateCheck(boolean force) throws Exception{
         updated = false;
+
+        notifyProgress(UpdateStatus.CHECKING, 0);
+
         File workDir = GDownloader.getWorkDirectory();
 
         if(!main.getConfig().isAutomaticUpdates() && !force){
@@ -165,6 +199,8 @@ public abstract class AbstractGitUpdater{
         }catch(Exception e){
             log.error("HTTP error for {}", getRepo());
         }
+
+        notifyProgress(UpdateStatus.CHECKING, 50);
 
         if(tag == null){
             log.error("Release tag was null {}", getRepo());
@@ -199,7 +235,7 @@ public abstract class AbstractGitUpdater{
 
         if(binaryPath.exists() || this instanceof SelfUpdater){
             if(checkLock(lock, lockTag)){
-                executablePath = binaryPath;
+                finishUpdate(binaryPath);
 
                 log.info("{} is up to date", getRepo());
                 return;
@@ -220,17 +256,22 @@ public abstract class AbstractGitUpdater{
         try{
             log.info("Starting download {}", getRepo());
 
-            executablePath = doDownload(url, workDir);
+            notifyProgress(UpdateStatus.CHECKING, 100);
+
+            File path = doDownload(url, workDir);
 
             createLock(lock, lockTag);
 
             updated = true;
 
-            log.info("Downloaded {}", executablePath);
+            finishUpdate(path);
+            log.info("Downloaded {}", path);
         }catch(Exception e){
             log.error("Failed to update {} - {}", getRepo(), e.getCause());
 
             if(tmpDir != null){
+                notifyStatus(UpdateStatus.FAILED);
+
                 Files.move(tmpDir.resolve(binaryPath.getName()), binaryPath.toPath(), StandardCopyOption.REPLACE_EXISTING);
             }else{
                 tryFallback(workDir);
@@ -312,6 +353,8 @@ public abstract class AbstractGitUpdater{
     }
 
     protected void downloadFile(String urlIn, File outputFile) throws IOException, InterruptedException{
+        notifyProgress(UpdateStatus.DOWNLOADING, 0);
+
         log.info("Downloading {} -> {}", urlIn, outputFile);
 
         HttpRequest request = HttpRequest.newBuilder()
@@ -323,16 +366,26 @@ public abstract class AbstractGitUpdater{
 
         if(response.statusCode() == 200){
             int bufferSize = 8192;
+            long totalBytes = response.headers().firstValueAsLong("Content-Length").orElse(-1L);
+            long downloadedBytes = 0;
 
             try(InputStream inputStream = response.body();
-                BufferedOutputStream bos = new BufferedOutputStream(
-                    Files.newOutputStream(outputFile.toPath()), bufferSize)){
+                BufferedOutputStream bos = new BufferedOutputStream(Files.newOutputStream(outputFile.toPath()), bufferSize)){
 
                 byte[] buffer = new byte[bufferSize];
                 int bytesRead;
+
                 while((bytesRead = inputStream.read(buffer)) != -1){
                     bos.write(buffer, 0, bytesRead);
+                    downloadedBytes += bytesRead;
+
+                    if(totalBytes > 0){
+                        double progress = (double)downloadedBytes * 100 / totalBytes;
+                        notifyProgress(UpdateStatus.DOWNLOADING, progress);
+                    }
                 }
+
+                notifyProgress(UpdateStatus.DOWNLOADING, 100);
             }
         }else{
             throw new IOException("Failed to download file: " + urlIn + ": " + response.statusCode());
@@ -359,4 +412,39 @@ public abstract class AbstractGitUpdater{
         }
     }
 
+    private UpdateStatus _internalLastStatus;
+
+    protected void notifyStatus(UpdateStatus status){
+        notifyProgress(status, 0);
+    }
+
+    protected void notifyProgress(UpdateStatus status, double progress){
+        _internalLastStatus = status;
+
+        for(ProgressListener listener : listeners){
+            listener.update(status, progress);
+        }
+    }
+
+    @Getter
+    public enum UpdateStatus implements ISettingsEnum{
+        CHECKING("enums.update_status.checking"),
+        DOWNLOADING("enums.update_status.downloading"),
+        UNPACKING("enums.update_status.unpacking"),
+        DONE("enums.update_status.done"),
+        FAILED("enums.update_status.failed");
+
+        private final String translationKey;
+
+        private UpdateStatus(String translationKeyIn){
+            translationKey = translationKeyIn;
+        }
+    }
+
+    @FunctionalInterface
+    public static interface ProgressListener{
+
+        void update(UpdateStatus status, double progress);
+
+    }
 }

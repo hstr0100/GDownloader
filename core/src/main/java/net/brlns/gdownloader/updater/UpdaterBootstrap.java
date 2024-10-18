@@ -148,7 +148,9 @@ public class UpdaterBootstrap{
                     Path zipOutputPath = Paths.get(workDir.toString(), "tmp_ota_zip");
                     log.info("Zip out path {}", zipOutputPath);
 
-                    ArchiveUtils.inflateZip(path.toFile(), zipOutputPath, false);
+                    ArchiveUtils.inflateZip(path.toFile(), zipOutputPath, false, (progress) -> {
+                        log.info("Unpack progress: {}%", progress);
+                    });
 
                     log.info("Trying to perform ota update");
 

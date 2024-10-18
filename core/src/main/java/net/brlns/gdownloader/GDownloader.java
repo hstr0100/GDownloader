@@ -58,11 +58,7 @@ import net.brlns.gdownloader.settings.enums.BrowserEnum;
 import net.brlns.gdownloader.ui.GUIManager;
 import net.brlns.gdownloader.ui.GUIManager.MessageType;
 import net.brlns.gdownloader.ui.themes.ThemeProvider;
-import net.brlns.gdownloader.updater.ArchVersionEnum;
-import net.brlns.gdownloader.updater.FFMpegUpdater;
-import net.brlns.gdownloader.updater.SelfUpdater;
-import net.brlns.gdownloader.updater.UpdaterBootstrap;
-import net.brlns.gdownloader.updater.YtDlpUpdater;
+import net.brlns.gdownloader.updater.*;
 import net.brlns.gdownloader.util.NoFallbackAvailableException;
 import net.brlns.gdownloader.util.Nullable;
 import org.jsoup.Jsoup;
@@ -109,13 +105,7 @@ public final class GDownloader{
     private YtDlpDownloader downloadManager;
 
     @Getter
-    private SelfUpdater selfUpdater;
-
-    @Getter
-    private YtDlpUpdater ytDlpUpdater;
-
-    @Getter
-    private FFMpegUpdater ffmpegUpdater;
+    private List<AbstractGitUpdater> updaters = new ArrayList<>();
 
     @Getter
     private GUIManager guiManager;
@@ -193,11 +183,17 @@ public final class GDownloader{
 
             tray.add(trayIcon);
 
-            selfUpdater = new SelfUpdater(this);
-            ytDlpUpdater = new YtDlpUpdater(this);
-            ffmpegUpdater = new FFMpegUpdater(this);
+            updaters.add(new SelfUpdater(this));
+            updaters.add(new YtDlpUpdater(this));
+            updaters.add(new FFMpegUpdater(this));
 
-            checkForUpdates(true);
+            if(config.isDebugMode()){
+                for(AbstractGitUpdater updater : updaters){
+                    updater.registerListener((status, progress) -> {
+                        log.info("UPDATER {}: Status: {} Progress: {}", updater.getClass().getName(), status, String.format("%.1f", progress));
+                    });
+                }
+            }
 
             updateStartupStatus();
 
@@ -286,11 +282,11 @@ public final class GDownloader{
     }
 
     public boolean checkForUpdates(){
-        return checkForUpdates(false);
+        return checkForUpdates(true);
     }
 
-    public boolean checkForUpdates(boolean firstBoot){
-        if(!firstBoot){
+    public boolean checkForUpdates(boolean userInitiated){
+        if(userInitiated){
             if(downloadManager.isBlocked()){//This means we are already checking for updates
                 return false;
             }
@@ -307,91 +303,78 @@ public final class GDownloader{
             );
         }
 
-        CountDownLatch latch = new CountDownLatch(3);
+        CountDownLatch latch = new CountDownLatch(updaters.size());
 
-        threadPool.execute(() -> {
-            try{
-                if(!isFromJar()){
-                    selfUpdater.check(!firstBoot);
-                }else{
-                    log.info("Program updates are not yet available when running from .jar.");
-                }
-            }catch(NoFallbackAvailableException e){
-                log.error("Unsupported OS for self updates");
-            }catch(Exception e){
-                handleException(e);
-            }finally{
-                latch.countDown();
-            }
-        });
-
-        threadPool.execute(() -> {
-            try{
-                ytDlpUpdater.check(!firstBoot);
-            }catch(NoFallbackAvailableException e){
-                log.error("Unsupported OS for YT-DLP");
-
-                if(firstBoot){
-                    System.exit(0);
-                }
-            }catch(Exception e){
-                handleException(e);
-
-                if(ytDlpUpdater.getExecutablePath() == null || !ytDlpUpdater.getExecutablePath().exists()){
-                    log.error("Failed to initialize YT-DLP");
-
-                    if(firstBoot){
-                        System.exit(0);
+        for(AbstractGitUpdater updater : updaters){
+            if(updater.isSupported()){
+                threadPool.execute(() -> {
+                    try{
+                        log.error("Starting updater " + updater.getClass().getName());
+                        updater.check(userInitiated);
+                    }catch(NoFallbackAvailableException e){
+                        log.error("Updater for " + updater.getClass().getName() + " failed and no fallback is available. Your OS might be unsupported.");
+                    }catch(Exception e){
+                        handleException(e);
+                    }finally{
+                        latch.countDown();
                     }
-                }
-            }finally{
+                });
+            }else{
+                log.info("Updater " + updater.getClass().getName() + " is not supported in this platform or runtime method.");
+
                 latch.countDown();
             }
-        });
-
-        threadPool.execute(() -> {
-            try{
-                ffmpegUpdater.check(!firstBoot);
-            }catch(NoFallbackAvailableException e){
-                log.error("Unsupported OS for FFMPEG, install it manually");
-            }catch(Exception e){
-                handleException(e);
-
-                if(ffmpegUpdater.getExecutablePath() == null || !ffmpegUpdater.getExecutablePath().exists()){
-                    log.error("Failed to initialize FFMPEG, install it manually");
-                }
-            }finally{
-                latch.countDown();
-            }
-        });
+        }
 
         threadPool.execute(() -> {
             try{
                 latch.await();
-
-                log.info("Finished checking for updates");
-
-                downloadManager.unblock();
-
-                if(!firstBoot){
-                    guiManager.showMessage(
-                        l10n("gui.update.notification_title"),
-                        l10n((ytDlpUpdater.isUpdated() || ffmpegUpdater.isUpdated() || selfUpdater.isUpdated()
-                            ? "gui.update.new_updates_installed"
-                            : "gui.update.updated")),
-                        2500,
-                        GUIManager.MessageType.INFO,
-                        false
-                    );
-                }
-
-                if(selfUpdater.isUpdated()){
-                    log.info("Restarting to apply updates.");
-                    restart();
-                }
             }catch(InterruptedException e){
                 //Ignore
             }
+
+            log.info("Finished checking for updates");
+
+            boolean updated = false;
+
+            for(AbstractGitUpdater updater : updaters){
+                if(updater.isUpdated()){
+                    updated = true;
+                    break;
+                }
+            }
+
+            if(userInitiated){
+                guiManager.showMessage(
+                    l10n("gui.update.notification_title"),
+                    l10n(updated
+                        ? "gui.update.new_updates_installed"
+                        : "gui.update.updated"),
+                    2500,
+                    GUIManager.MessageType.INFO,
+                    false
+                );
+            }
+
+            for(AbstractGitUpdater updater : updaters){
+                if(updater instanceof SelfUpdater selfUpdater){
+                    if(selfUpdater.isUpdated()){
+                        log.info("Restarting to apply updates.");
+                        restart();
+                        break;
+                    }
+                }
+            }
+
+            if(downloadManager.getYtDlpPath() == null || !downloadManager.getYtDlpPath().exists()){
+                log.error("Failed to initialize YT-DLP, the program cannot continue. Exitting...");
+
+                if(!userInitiated){
+                    System.exit(0);
+                }
+            }
+
+            downloadManager.unblock();
         });
 
         return true;
@@ -989,6 +972,10 @@ public final class GDownloader{
     }
 
     private void handleClipboardInput(String data, boolean force){
+        if(downloadManager.isBlocked()){
+            return;
+        }
+
         threadPool.execute(() -> {
             List<CompletableFuture<Boolean>> list = new ArrayList<>();
 
@@ -1403,6 +1390,8 @@ public final class GDownloader{
             if(!noGui){
                 instance.initUi();
             }
+
+            instance.checkForUpdates(false);
 
             log.info("Started");
 

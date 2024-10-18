@@ -23,7 +23,9 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.function.DoubleConsumer;
 import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 import java.util.zip.ZipInputStream;
 
 /**
@@ -31,14 +33,18 @@ import java.util.zip.ZipInputStream;
  */
 public class ArchiveUtils{
 
-    public static void inflateZip(File file, Path destDir, boolean removeRoot) throws IOException{
+    public static void inflateZip(File file, Path destDir, boolean removeRoot, DoubleConsumer progressCallback) throws IOException{
         if(Files.notExists(destDir)){
             Files.createDirectories(destDir);
         }
 
+        int totalEntries = countEntries(file);
+
         try(ZipInputStream zipIn = new ZipInputStream(new FileInputStream(file))){
             ZipEntry entry;
             String topDirectoryName = null;
+
+            int extractedEntries = 0;
 
             while((entry = zipIn.getNextEntry()) != null){
                 if(topDirectoryName == null){
@@ -59,7 +65,17 @@ public class ArchiveUtils{
                 }
 
                 zipIn.closeEntry();
+
+                extractedEntries++;
+                double progress = (double)extractedEntries / totalEntries * 100;
+                progressCallback.accept(Math.clamp(progress, 0.0, 100.0));
             }
+        }
+    }
+
+    private static int countEntries(File file) throws IOException{
+        try(ZipFile zipFile = new ZipFile(file)){
+            return zipFile.size();
         }
     }
 

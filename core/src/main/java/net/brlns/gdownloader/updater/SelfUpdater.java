@@ -88,4 +88,20 @@ public class SelfUpdater extends AbstractGitUpdater{
 
         return outputFile;
     }
+
+    @Override
+    public boolean isSupported(){
+        return !GDownloader.isFromJar();
+    }
+
+    @Override
+    protected void setExecutablePath(File executablePath){
+        //Not used
+    }
+
+    @Override
+    public String getName(){
+        return "GDownloader";
+    }
+
 }

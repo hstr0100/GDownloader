@@ -93,12 +93,16 @@ public class FFMpegUpdater extends AbstractGitUpdater{
         try{
             downloadFile(url, zipPath);
 
-            ArchiveUtils.inflateZip(zipPath, zipOutputPath, true);
+            notifyProgress(UpdateStatus.UNPACKING, 0);
+            ArchiveUtils.inflateZip(zipPath, zipOutputPath, true, (progress) -> {
+                notifyProgress(UpdateStatus.UNPACKING, progress);
+            });
 
             Path sourcePath = zipOutputPath.resolve("bin");
             log.info("Source binary path {}", sourcePath);
 
             Files.move(sourcePath, outputFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            notifyProgress(UpdateStatus.UNPACKING, 100);
         }finally{
             if(zipPath.exists()){
                 zipPath.delete();
@@ -109,4 +113,20 @@ public class FFMpegUpdater extends AbstractGitUpdater{
 
         return outputFile;
     }
+
+    @Override
+    public boolean isSupported(){
+        return GDownloader.isWindows();
+    }
+
+    @Override
+    protected void setExecutablePath(File executablePath){
+        main.getDownloadManager().setFfmpegPath(executablePath);
+    }
+
+    @Override
+    public String getName(){
+        return "FFMPEG";
+    }
+
 }

@@ -49,6 +49,7 @@ import net.brlns.gdownloader.YtDlpDownloader;
 import net.brlns.gdownloader.ui.custom.*;
 import net.brlns.gdownloader.ui.themes.ThemeProvider;
 import net.brlns.gdownloader.ui.themes.UIColors;
+import net.brlns.gdownloader.updater.AbstractGitUpdater;
 
 import static javax.swing.TransferHandler.MOVE;
 import static net.brlns.gdownloader.Language.*;
@@ -76,6 +77,8 @@ public final class GUIManager{
     private JFrame appWindow;
     private JPanel queuePanel;
     private JScrollPane queueScrollPane;
+
+    private JPanel updaterPanel;
 
     private final Map<Integer, MediaCard> mediaCards = new ConcurrentHashMap<>();
 
@@ -115,6 +118,8 @@ public final class GUIManager{
     }
 
     public void wakeUp(){
+        updaterPanel = createUpdaterPanel();
+
         setUpAppWindow();
 
         SwingUtilities.invokeLater(() -> {
@@ -355,32 +360,118 @@ public final class GUIManager{
                 panel.removeAll();
             }
 
-            JPanel innerPanel = new JPanel(new GridBagLayout());
-            innerPanel.setOpaque(false);
-            innerPanel.setBackground(color(BACKGROUND));
-
-            GridBagConstraints gbc = new GridBagConstraints();
-            gbc.gridx = 0;
-            gbc.gridy = GridBagConstraints.RELATIVE;
-            gbc.anchor = GridBagConstraints.CENTER;
-            gbc.insets = new Insets(5, 0, 5, 0);
-
-            JLabel upperLabel = new JLabel("", SwingConstants.CENTER);
-            upperLabel.setForeground(color(FOREGROUND));
-            upperLabel.setText(l10n("gui.checking_updates"));
-
-            JLabel bottomLabel = new JLabel("", SwingConstants.CENTER);
-            bottomLabel.setForeground(color(FOREGROUND));
-            bottomLabel.setText(l10n("gui.checking_updates.please_wait"));
-
-            innerPanel.add(upperLabel, gbc);
-            innerPanel.add(bottomLabel, gbc);
-
-            panel.add(innerPanel, BorderLayout.CENTER);
+            panel.add(updaterPanel, BorderLayout.CENTER);
         }
 
         panel.revalidate();
         panel.repaint();
+    }
+
+    private JPanel createUpdaterPanel(){
+        JPanel innerPanel = new JPanel(new GridBagLayout());
+        innerPanel.setOpaque(false);
+        innerPanel.setBackground(color(BACKGROUND));
+
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.gridx = 0;
+        gbc.gridy = GridBagConstraints.RELATIVE;
+        gbc.anchor = GridBagConstraints.CENTER;
+        gbc.insets = new Insets(5, 0, 5, 0);
+
+        JLabel upperLabel = new JLabel("", SwingConstants.CENTER);
+        upperLabel.setForeground(color(FOREGROUND));
+        upperLabel.setText(l10n("gui.checking_updates"));
+        innerPanel.add(upperLabel, gbc);
+
+        JLabel bottomLabel = new JLabel("", SwingConstants.CENTER);
+        bottomLabel.setForeground(color(FOREGROUND));
+        bottomLabel.setText(l10n("gui.checking_updates.please_wait"));
+        innerPanel.add(bottomLabel, gbc);
+
+        JPanel spacerPanel = new JPanel();
+        spacerPanel.setOpaque(false);
+        spacerPanel.setPreferredSize(new Dimension(1, 20));
+        innerPanel.add(spacerPanel, gbc);
+
+        for(AbstractGitUpdater updater : main.getUpdaters()){
+            if(!updater.isSupported()){
+                continue;
+            }
+
+            JPanel updaterRowPanel = new JPanel(new GridBagLayout());
+            updaterRowPanel.setOpaque(false);
+            updaterRowPanel.setBackground(color(BACKGROUND));
+
+            GridBagConstraints labelGbc = new GridBagConstraints();
+            labelGbc.gridx = 0;
+            labelGbc.gridy = 0;
+            labelGbc.anchor = GridBagConstraints.WEST;
+            labelGbc.fill = GridBagConstraints.NONE;
+            labelGbc.insets = new Insets(0, 0, 0, 10);
+
+            JLabel updaterLabel = new JLabel("", SwingConstants.LEFT);
+            updaterLabel.setForeground(color(FOREGROUND));
+            updaterLabel.setText(updater.getName());
+            updaterLabel.setPreferredSize(new Dimension(100, 15));
+            updaterLabel.setMaximumSize(new Dimension(100, 15));
+
+            GridBagConstraints progressBarGbc = new GridBagConstraints();
+            progressBarGbc.gridx = 1;
+            progressBarGbc.gridy = 0;
+            progressBarGbc.anchor = GridBagConstraints.EAST;
+            progressBarGbc.fill = GridBagConstraints.NONE;
+
+            CustomProgressBar progressBar = new CustomProgressBar(Color.WHITE);
+            progressBar.setValue(0);
+            progressBar.setStringPainted(true);
+            progressBar.setString(l10n("enums.update_status.checking"));
+            progressBar.setForeground(Color.MAGENTA);
+            progressBar.setBackground(Color.GRAY);
+            progressBar.setPreferredSize(new Dimension(200, 15));
+            progressBar.setMaximumSize(new Dimension(200, 15));
+
+            updaterRowPanel.add(updaterLabel, labelGbc);
+            updaterRowPanel.add(progressBar, progressBarGbc);
+
+            gbc.gridx = 0;
+            gbc.gridy = GridBagConstraints.RELATIVE;
+            gbc.fill = GridBagConstraints.HORIZONTAL;
+            innerPanel.add(updaterRowPanel, gbc);
+
+            updater.registerListener((status, progress) -> {
+                switch(status){
+                    case CHECKING -> {
+                        progressBar.setValue((int)progress);
+                        progressBar.setString(status.getDisplayName() + ": " + String.format("%.1f", progress) + "%");
+                        progressBar.setForeground(Color.MAGENTA);
+                    }
+                    case DOWNLOADING -> {
+                        progressBar.setValue((int)progress);
+                        progressBar.setString(status.getDisplayName() + ": " + String.format("%.1f", progress) + "%");
+                        progressBar.setForeground(new Color(255, 214, 0));
+                    }
+                    case UNPACKING -> {
+                        progressBar.setValue((int)progress);
+                        progressBar.setString(status.getDisplayName() + ": " + String.format("%.1f", progress) + "%");
+                        progressBar.setForeground(Color.ORANGE);
+                    }
+                    case DONE -> {
+                        progressBar.setValue(100);
+                        progressBar.setString(status.getDisplayName());
+                        progressBar.setForeground(new Color(0, 200, 83));
+                    }
+                    case FAILED -> {
+                        progressBar.setValue(100);
+                        progressBar.setString(status.getDisplayName());
+                        progressBar.setForeground(Color.RED);
+                    }
+                    default ->
+                        throw new RuntimeException("Unhandled status: " + status);
+                }
+            });
+        }
+
+        return innerPanel;
     }
 
     private JButton createToggleButton(
