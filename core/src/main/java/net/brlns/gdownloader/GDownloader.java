@@ -126,7 +126,6 @@ public final class GDownloader{
         File workDir = getWorkDirectory();
         configFile = new File(workDir, "config.json");
 
-        //TODO: rotate logs
         File logFile = new File(workDir, "gdownloader_log.txt");
         File previousLogFile = new File(workDir, "gdownloader_log_previous.txt");
 

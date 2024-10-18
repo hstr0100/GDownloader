@@ -76,7 +76,7 @@ public class LoggerUtils{
             jnativeLogger.setLevel(java.util.logging.Level.ALL);
 
             log.info("Log level changed to: {}", logger.getLevel());
-        }else if(logger.getLevel() != DEFAULT_LOG_LEVEL){
+        }else if(!debug && logger.getLevel() != DEFAULT_LOG_LEVEL){
             logger.setLevel(DEFAULT_LOG_LEVEL);
             jnativeLogger.setLevel(java.util.logging.Level.OFF);
 

@@ -25,6 +25,7 @@ module net.brlns.gdownloader {
     requires jdk.crypto.ec;
     requires java.logging;
     requires java.management;
+    requires java.naming;
 
     requires transitive com.github.kwhat.jnativehook;
     requires transitive com.fasterxml.jackson.databind;
