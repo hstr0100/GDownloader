@@ -33,6 +33,7 @@ public enum WebFilterEnum implements ISettingsEnum{
     TWITTER("X/Twitter", s -> s.contains("twitter.com") || s.matches("^(https?:\\/\\/)?(www\\.)?x\\.com(\\/.*)?$")),//It was such a better name
     CRUNCHYROLL("Crunchyroll", s -> s.contains("crunchyroll.com")),
     DROPOUT("Dropout", s -> s.contains("dropout.tv")),
+    REDDIT("Reddit", s -> s.contains("reddit.com")),
     DEFAULT("Download", s -> false);
 
     private final String displayName;
