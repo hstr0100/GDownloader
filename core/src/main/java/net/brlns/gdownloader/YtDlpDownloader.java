@@ -84,7 +84,7 @@ import static net.brlns.gdownloader.util.URLUtils.*;
 //FEEDBACK Icons too small
 //FEEDBACK Should choose to download video and audio independently on each card
 //TODO maybe add notifications for each toggled toolbar option
-//TODO check updates on a timer, but do not ever restart when anything is in the queue.
+//DROPPED check updates on a timer, but do not ever restart when anything is in the queue.
 //TODO individual 'retry failed download' button
 //TODO --no-playlist when single video option is active
 //TODO Artifacting seems to be happening on the scroll pane with AMD video cards
@@ -92,7 +92,6 @@ import static net.brlns.gdownloader.util.URLUtils.*;
 //TODO RearrangeableDeque's offerLast should be linked to the cards in the UI
 //TODO Better visual eye candy for when dragging cards
 //TODO Add setting to allow the user to manually specify the target codec
-//TODO Debug intermittent DNS lookup errors being thrown by urllib3 on linux. Attempt automatic retries after a few seconds.
 //TODO Add 'Clear Completed Downloads' button.
 //TODO Refactor Quality Settings. We should find a way to avoid hardcoding them. Allow the user the flexibility to add their own filters or ditch them altogether for less maintenance.
 //TODO Attempt fetching thumbnail and metadata for any website. Let yt-dlp attempt to handle them.
@@ -103,11 +102,11 @@ import static net.brlns.gdownloader.util.URLUtils.*;
 //TODO Avoid checking file extensions for thumbnails. Instead rely on mime type if available.
 //TODO Investigate screen reader support (https://www.nvaccess.org/download/)
 //TODO Send notifications when a NO_METHOD is triggered, explaining why it was triggered.
-//TODO Test downloading sections of a livestream (currently it gets stuck on status PREPARING)
+//TODO Test downloading sections of a livestream (currently it gets stuck on status PREPARING). Note: it also leaves a zombie ffmpeg process behind dealing with the hls stream.
+//TODO The issue above is a yt-dlp bug https://github.com/yt-dlp/yt-dlp/issues/7927
 //TODO Add a viewer for log files.
-//TODO Add rate limiting settings, with some default options that should work for most use cases.
+//TODO Implement rate-limiting options internally; the way it's currently implemented does not account for concurrent or non-playlist downloads.
 //TODO Notify the user whenever a setting that requires restart was changed.
-//TODO Sanitize file names for windows. Paths larger than >256/260 chars are failing spectacularly. Seems related to yt-dlp itself.
 //Off to a bootcamp, project on pause
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -1035,84 +1034,96 @@ public class YtDlpDownloader{
         log.info("Arguments {}", finalArgs);
 
         Process process = Runtime.getRuntime().exec(finalArgs.stream().toArray(String[]::new));
-
         next.setProcess(process);
-
-        BufferedReader stdInput = new BufferedReader(new InputStreamReader(process.getInputStream()));
-        BufferedReader stdError = new BufferedReader(new InputStreamReader(process.getErrorStream()));
 
         double lastPercentage = 0;
         String line;
 
         boolean downloadStarted = false;
 
-        while(downloadsRunning.get() && !next.getCancelHook().get() && process.isAlive() && !Thread.currentThread().isInterrupted()){
-            if(process.getInputStream().available() <= 0){
-                continue;
-            }
+        try(BufferedReader stdInput = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            BufferedReader stdError = new BufferedReader(new InputStreamReader(process.getErrorStream()))){
 
-            line = stdInput.readLine();
-            if(line == null){
-                break;
-            }
-
-            log.info("[{}] - {}", next.getDownloadId(), line);
-
-            if(line.contains("[download]") && !line.contains("Destination:")){
-                String[] parts = line.split("\\s+");
-                for(String part : parts){
-                    if(part.endsWith("%")){
-                        double percent = Double.parseDouble(part.replace("%", ""));
-
-                        if(percent > lastPercentage || percent < 5 || Math.abs(percent - lastPercentage) > 10){
-                            next.getMediaCard().setPercentage(percent);
-                            lastPercentage = percent;
-                        }
-                    }
+            while(downloadsRunning.get() && !next.getCancelHook().get() && process.isAlive() && !Thread.currentThread().isInterrupted()){
+                if(process.getInputStream().available() <= 0){
+                    continue;
                 }
 
-                next.updateStatus(DownloadStatus.DOWNLOADING, line.replace("[download] ", ""));
-
-                downloadStarted = true;
-            }else if(downloadStarted){
-                next.updateStatus(DownloadStatus.PROCESSING, line);
-            }else{
-                next.updateStatus(DownloadStatus.PREPARING, line);
-            }
-        }
-
-        String lastError = "- -";
-
-        while(downloadsRunning.get() && !next.getCancelHook().get() && !Thread.currentThread().isInterrupted()){
-            if(process.getErrorStream().available() <= 0){
-                if(!process.isAlive()){
+                line = stdInput.readLine();
+                if(line == null){
                     break;
                 }
 
-                continue;
+                log.info("[{}] - {}", next.getDownloadId(), line);
+
+                if(line.contains("[download]") && !line.contains("Destination:")){
+                    String[] parts = line.split("\\s+");
+                    for(String part : parts){
+                        if(part.endsWith("%")){
+                            double percent = Double.parseDouble(part.replace("%", ""));
+
+                            if(percent > lastPercentage || percent < 5 || Math.abs(percent - lastPercentage) > 10){
+                                next.getMediaCard().setPercentage(percent);
+                                lastPercentage = percent;
+                            }
+                        }
+                    }
+
+                    next.updateStatus(DownloadStatus.DOWNLOADING, line.replace("[download] ", ""));
+                    downloadStarted = true;
+                }else if(downloadStarted){
+                    next.updateStatus(DownloadStatus.PROCESSING, line);
+                }else{
+                    next.updateStatus(DownloadStatus.PREPARING, line);
+                }
             }
 
-            String err = stdError.readLine();
-            if(err != null){
-                log.error("[{}] - {}", next.getDownloadId(), err);
-                lastError = err;
+            String lastError = "- -";
+
+            while(downloadsRunning.get() && !next.getCancelHook().get() && !Thread.currentThread().isInterrupted()){
+                if(process.getErrorStream().available() <= 0){
+                    if(!process.isAlive()){
+                        break;
+                    }
+
+                    continue;
+                }
+
+                String err = stdError.readLine();
+                if(err != null){
+                    log.error("[{}] - {}", next.getDownloadId(), err);
+                    lastError = err;
+                }
             }
-        }
 
-        long stopped = (System.currentTimeMillis() - start);
+            long stopped = (System.currentTimeMillis() - start);
 
-        if(!downloadsRunning.get() || next.getCancelHook().get()){
-            process.destroyForcibly();
+            if(!downloadsRunning.get() || next.getCancelHook().get()){
+                if(process.isAlive()){
+                    process.destroy();
 
-            log.info("Download process halted after {}ms", stopped);
+                    if(!process.waitFor(5, TimeUnit.SECONDS)){
+                        log.warn("Process did not terminate in time, forcefully stopping it.");
+                        process.destroyForcibly();
+                    }
 
-            return null;
-        }else{
-            int exitCode = process.waitFor();
+                    log.info("Download process halted after {}ms", stopped);
+                }
 
-            log.info("Download process took {}ms", stopped);
+                return null;
+            }else{
+                int exitCode = process.waitFor();
+                log.info("Download process took {}ms", stopped);
+                return new Pair<>(exitCode, lastError);
+            }
+        }finally{
+            if(process.isAlive()){
+                process.destroy();
 
-            return new Pair<>(exitCode, lastError);
+                if(!process.waitFor(5, TimeUnit.SECONDS)){
+                    process.destroyForcibly();
+                }
+            }
         }
     }
 
