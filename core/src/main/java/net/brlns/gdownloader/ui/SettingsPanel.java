@@ -806,6 +806,13 @@ public class SettingsPanel{
             false
         );
 
+        addCheckBox(downloadSettingsPanel, gbcPanel,
+            "settings.random_interval_between_downloads",
+            settings::isRandomIntervalBetweenDownloads,
+            settings::setRandomIntervalBetweenDownloads,
+            false
+        );
+
         gbcPanel.gridx = 0;
         gbcPanel.gridy++;
         gbcPanel.weightx = 1;

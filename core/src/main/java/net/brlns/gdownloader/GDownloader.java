@@ -83,9 +83,10 @@ public final class GDownloader{
     /**
      * Constants and application states
      */
-    public static final String REGISTRY_APP_NAME = "GDownloader";//Don't change
+    public static final String REGISTRY_APP_NAME = "GDownloader";//Changing this might result in orphaned registry keys.
 
-    public static final String CACHE_DIRETORY_NAME = "gdownloader_cache";
+    public static final String CACHE_DIRETORY_NAME = "tmp";
+    public static final String OLD_CACHE_DIRETORY_NAME = "gdownloader_cache";
 
     public static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
@@ -274,9 +275,13 @@ public final class GDownloader{
     public void clearCache(boolean notify){
         downloadManager.stopDownloads();
 
+        //A shorter cache dir name might benefit NTFS filesystems.
         File cachePath = new File(getDownloadsDirectory(), CACHE_DIRETORY_NAME);
-
         deleteRecursively(cachePath.toPath());
+
+        //We have to get rid of the old cache dir if it exists.
+        File oldCachePath = new File(getDownloadsDirectory(), OLD_CACHE_DIRETORY_NAME);
+        deleteRecursively(oldCachePath.toPath());
 
         if(notify){
             guiManager.showMessage(

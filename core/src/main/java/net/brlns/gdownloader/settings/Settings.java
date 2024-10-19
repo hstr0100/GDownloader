@@ -93,6 +93,9 @@ public class Settings{
     @JsonProperty("AutoDownloadStart")
     private boolean autoDownloadStart = false;
 
+    @JsonProperty("RandomIntervalBetweenDownloads")
+    private boolean randomIntervalBetweenDownloads = false;
+
     @JsonProperty("DisplayLinkCaptureNotifications")
     private boolean displayLinkCaptureNotifications = true;
 
