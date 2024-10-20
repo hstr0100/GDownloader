@@ -16,7 +16,7 @@
  */
 package net.brlns.gdownloader.settings.enums;
 
-import java.util.function.Function;
+import java.util.regex.Pattern;
 import lombok.Getter;
 
 import static net.brlns.gdownloader.Language.*;
@@ -26,23 +26,22 @@ import static net.brlns.gdownloader.Language.*;
  */
 @Getter
 public enum WebFilterEnum implements ISettingsEnum{
-    YOUTUBE("Youtube", s -> s.contains("youtube.com") && !isYoutubePlaylist(s) || s.contains("youtu.be") || isYoutubeChannel(s)),
-    YOUTUBE_PLAYLIST("Youtube Playlists", s -> s.contains("youtube.com") && isYoutubePlaylist(s)),
-    TWITCH("Twitch", s -> s.contains("twitch.tv")),//best[height<=480]+Audio_Only
-    FACEBOOK("Facebook", s -> s.contains("facebook.com")),
-    TWITTER("X/Twitter", s -> s.contains("twitter.com") || s.matches("^(https?:\\/\\/)?(www\\.)?x\\.com(\\/.*)?$")),//It was such a better name
-    CRUNCHYROLL("Crunchyroll", s -> s.contains("crunchyroll.com")),
-    DROPOUT("Dropout", s -> s.contains("dropout.tv")),
-    REDDIT("Reddit", s -> s.contains("reddit.com")),
-    DEFAULT("Download", s -> false);
+    YOUTUBE("Youtube", "^(https?:\\/\\/)?(www\\.)?(youtube\\.com|youtu\\.be)(?!.*(\\/live|\\/playlist|list=)).*$"),
+    YOUTUBE_PLAYLIST("Youtube Playlists", "^(https?:\\/\\/)?(www\\.)?youtube\\.com.*(list=|\\/playlist).*$"),
+    TWITCH("Twitch", "^(https?:\\/\\/)?(www\\.)?twitch\\.tv(\\/.*)?$"),
+    FACEBOOK("Facebook", "^(https?:\\/\\/)?(www\\.)?facebook\\.com(\\/.*)?$"),
+    TWITTER("X/Twitter", "^(https?:\\/\\/)?(www\\.)?(x|twitter)\\.com(\\/.*)?$"),
+    CRUNCHYROLL("Crunchyroll", "^(https?:\\/\\/)?(www\\.)?crunchyroll\\.com(\\/.*)?$"),
+    DROPOUT("Dropout", "^(https?:\\/\\/)?(www\\.)?dropout\\.tv(\\/.*)?$"),
+    REDDIT("Reddit", "^(https?:\\/\\/)?(www\\.|old\\.|new\\.)?reddit\\.com(\\/.*)?$"),
+    DEFAULT("", "");
 
     private final String displayName;
+    private final Pattern pattern;
 
-    private final Function<String, Boolean> pattern;
-
-    private WebFilterEnum(String displayNameIn, Function<String, Boolean> patternIn){
-        displayName = displayNameIn;
-        pattern = patternIn;
+    WebFilterEnum(String displayNameIn, String regex){
+        this.displayName = displayNameIn;
+        this.pattern = Pattern.compile(regex);
     }
 
     @Override
@@ -55,8 +54,8 @@ public enum WebFilterEnum implements ISettingsEnum{
         return "";
     }
 
-    public static boolean isYoutubePlaylist(String s){
-        return s.contains("youtube") && (s.contains("list=") || s.contains("/playlist"));
+    public boolean matches(String url){
+        return this == DEFAULT ? false : pattern.matcher(url).matches();
     }
 
     public static boolean isYoutubeChannel(String s){

@@ -25,12 +25,13 @@ import java.awt.Toolkit;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.StringSelection;
 import java.awt.image.BufferedImage;
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.ByteBuffer;
+import java.nio.channels.Channels;
+import java.nio.channels.ReadableByteChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -104,6 +105,7 @@ import static net.brlns.gdownloader.util.URLUtils.*;
 //TODO Add a viewer for log files.
 //TODO Implement rate-limiting options internally; the way it's currently implemented does not account for concurrent or non-playlist downloads.
 //TODO Notify the user whenever a setting that requires restart was changed.
+//TODO: settings version
 //Off to a bootcamp, project on pause
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -191,10 +193,12 @@ public class YtDlpDownloader{
         }
 
         for(WebFilterEnum webFilter : WebFilterEnum.values()){
-            if(webFilter == WebFilterEnum.DEFAULT && (main.getConfig().isCaptureAnyLinks() || force) || webFilter.getPattern().apply(inputUrl)){
+            if(webFilter == WebFilterEnum.DEFAULT && (main.getConfig().isCaptureAnyLinks() || force) || webFilter.matches(inputUrl)){
                 if(capturedLinks.contains(inputUrl)){
                     continue;
                 }
+
+                log.info("URL: {} matched {}", inputUrl, webFilter);
 
                 String filteredUrl;
 
@@ -441,12 +445,12 @@ public class YtDlpDownloader{
     }
 
     public void retryFailedDownloads(){
-        QueueEntry next;
-        while((next = failedDownloads.poll()) != null){
-            next.updateStatus(DownloadStatus.QUEUED, l10n("gui.download_status.not_started"));
-            next.reset();
+        QueueEntry entry;
+        while((entry = failedDownloads.poll()) != null){
+            entry.updateStatus(DownloadStatus.QUEUED, l10n("gui.download_status.not_started"));
+            entry.reset();
 
-            downloadDeque.offerLast(next);
+            downloadDeque.offerLast(entry);
         }
 
         startDownloads();
@@ -459,26 +463,26 @@ public class YtDlpDownloader{
         capturedPlaylists.clear();
 
         //We deliberately keep the download processes running
-        QueueEntry next;
-        while((next = downloadDeque.poll()) != null){
-            main.getGuiManager().removeMediaCard(next.getMediaCard().getId());
-            //downloadDeque.remove(next);
+        QueueEntry entry;
+        while((entry = downloadDeque.poll()) != null){
+            main.getGuiManager().removeMediaCard(entry.getMediaCard().getId());
+            //downloadDeque.remove(entry);
 
-            if(!next.isRunning()){
-                next.clean();
+            if(!entry.isRunning()){
+                entry.clean();
             }
         }
 
-        while((next = failedDownloads.poll()) != null){
-            main.getGuiManager().removeMediaCard(next.getMediaCard().getId());
+        while((entry = failedDownloads.poll()) != null){
+            main.getGuiManager().removeMediaCard(entry.getMediaCard().getId());
 
-            if(!next.isRunning()){
-                next.clean();
+            if(!entry.isRunning()){
+                entry.clean();
             }
         }
 
-        while((next = completedDownloads.poll()) != null){
-            main.getGuiManager().removeMediaCard(next.getMediaCard().getId());
+        while((entry = completedDownloads.poll()) != null){
+            main.getGuiManager().removeMediaCard(entry.getMediaCard().getId());
         }
 
         fireListeners();
@@ -549,10 +553,10 @@ public class YtDlpDownloader{
                 break;
             }
 
-            QueueEntry next = downloadDeque.poll();
-            //downloadDeque.remove(next);
+            QueueEntry entry = downloadDeque.poll();
+            //downloadDeque.remove(entry);
 
-            MediaCard mediaCard = next.getMediaCard();
+            MediaCard mediaCard = entry.getMediaCard();
             if(mediaCard.isClosed()){
                 break;
             }
@@ -562,7 +566,7 @@ public class YtDlpDownloader{
 
             downloadScheduler.submitWithPriority(() -> {
                 if(!downloadsRunning.get()){
-                    downloadDeque.offerFirst(next);
+                    downloadDeque.offerFirst(entry);
 
                     runningDownloads.decrementAndGet();
                     fireListeners();
@@ -574,12 +578,12 @@ public class YtDlpDownloader{
                     boolean downloadVideo = main.getConfig().isDownloadVideo();
 
                     if(!downloadAudio && !downloadVideo){
-                        next.updateStatus(DownloadStatus.NO_METHOD, l10n("enums.download_status.no_method.video_tip"));
-                        next.reset();
+                        entry.updateStatus(DownloadStatus.NO_METHOD, l10n("enums.download_status.no_method.video_tip"));
+                        entry.reset();
 
-                        failedDownloads.offer(next);
+                        failedDownloads.offer(entry);
 
-                        log.error("{} - No option to download.", next.getWebFilter());
+                        log.error("{} - No option to download.", entry.getWebFilter());
 
                         if(downloadDeque.size() <= 1){
                             stopDownloads();
@@ -588,7 +592,7 @@ public class YtDlpDownloader{
                         return;
                     }
 
-                    QualitySettings needle = main.getConfig().getQualitySettings().get(next.getWebFilter());
+                    QualitySettings needle = main.getConfig().getQualitySettings().get(entry.getWebFilter());
 
                     QualitySettings quality;
                     if(needle != null){
@@ -600,12 +604,12 @@ public class YtDlpDownloader{
                     AudioBitrateEnum audioBitrate = quality.getAudioBitrate();
 
                     if(!downloadVideo && downloadAudio && audioBitrate == AudioBitrateEnum.NO_AUDIO){
-                        next.updateStatus(DownloadStatus.NO_METHOD, l10n("enums.download_status.no_method.audio_tip"));
-                        next.reset();
+                        entry.updateStatus(DownloadStatus.NO_METHOD, l10n("enums.download_status.no_method.audio_tip"));
+                        entry.reset();
 
-                        failedDownloads.offer(next);
+                        failedDownloads.offer(entry);
 
-                        log.error("{} - No audio quality selected, but was set to download audio only.", next.getWebFilter());
+                        log.error("{} - No audio quality selected, but was set to download audio only.", entry.getWebFilter());
 
                         if(downloadDeque.size() <= 1){
                             stopDownloads();
@@ -614,13 +618,13 @@ public class YtDlpDownloader{
                         return;
                     }
 
-                    next.getRunning().set(true);
-                    next.updateStatus(DownloadStatus.STARTING, l10n("gui.download_status.starting"));
+                    entry.getRunning().set(true);
+                    entry.updateStatus(DownloadStatus.STARTING, l10n("gui.download_status.starting"));
 
                     File finalPath = main.getOrCreateDownloadsDirectory();
 
-                    File tmpPath = GDownloader.getOrCreate(finalPath, GDownloader.CACHE_DIRETORY_NAME, String.valueOf(next.getDownloadId()));
-                    next.setTmpDirectory(tmpPath);
+                    File tmpPath = GDownloader.getOrCreate(finalPath, GDownloader.CACHE_DIRETORY_NAME, String.valueOf(entry.getDownloadId()));
+                    entry.setTmpDirectory(tmpPath);
 
                     List<String> genericArgs = new ArrayList<>();
                     List<String> audioArgs = new ArrayList<>();
@@ -670,7 +674,7 @@ public class YtDlpDownloader{
 
                     int titleLength = GDownloader.isWindows() ? 60 : 100;
 
-                    switch(next.getWebFilter()){
+                    switch(entry.getWebFilter()){
                         case YOUTUBE_PLAYLIST:
                             genericArgs.addAll(Arrays.asList(
                                 "--yes-playlist"
@@ -686,13 +690,13 @@ public class YtDlpDownloader{
                             }
 
                             String audioNameFormat = tmpPath.getAbsolutePath()
-                                + (next.getWebFilter() == WebFilterEnum.YOUTUBE_PLAYLIST ? "/%(playlist)s/" : "/")
+                                + (entry.getWebFilter() == WebFilterEnum.YOUTUBE_PLAYLIST ? "/%(playlist)s/" : "/")
                                 + "%(title)." + titleLength + "s (" + audioBitrate.getValue() + "kbps).%(ext)s";
 
                             log.debug("Audio name format length: {}", audioNameFormat.length());
 
                             String videoNameFormat = tmpPath.getAbsolutePath()
-                                + (next.getWebFilter() == WebFilterEnum.YOUTUBE_PLAYLIST ? "/%(playlist)s/" : "/")
+                                + (entry.getWebFilter() == WebFilterEnum.YOUTUBE_PLAYLIST ? "/%(playlist)s/" : "/")
                                 + "%(title)." + titleLength + "s (%(uploader_id)s %(upload_date)s %(resolution)s).%(ext)s";
 
                             log.debug("Video name format length: {}", videoNameFormat.length());
@@ -776,7 +780,7 @@ public class YtDlpDownloader{
                         case CRUNCHYROLL:
                         case DROPOUT:
                             if(!main.getConfig().isReadCookies()){
-                                log.warn("Cookies required for this website {}", next.getOriginalUrl());
+                                log.warn("Cookies required for this website {}", entry.getOriginalUrl());
                             }
 
                         //fall-through
@@ -814,15 +818,15 @@ public class YtDlpDownloader{
                             ));
                         }
 
-                        Pair<Integer, String> result = processDownload(next, genericArgs, videoArgs);
+                        Pair<Integer, String> result = processDownload(entry, genericArgs, videoArgs);
 
                         if(result != null){
                             if(result.getKey() != 0){
-                                if(!next.getCancelHook().get()){
-                                    next.updateStatus(DownloadStatus.FAILED, result.getValue());
-                                    next.reset();
+                                if(!entry.getCancelHook().get()){
+                                    entry.updateStatus(DownloadStatus.FAILED, result.getValue());
+                                    entry.reset();
 
-                                    failedDownloads.offer(next);
+                                    failedDownloads.offer(entry);
                                 }
 
                                 fireListeners();
@@ -845,15 +849,15 @@ public class YtDlpDownloader{
                             audioBitrate.getValue() + "k"
                         ));
 
-                        Pair<Integer, String> result = processDownload(next, genericArgs, audioArgs);
+                        Pair<Integer, String> result = processDownload(entry, genericArgs, audioArgs);
 
                         if(result != null){
                             if(result.getKey() != 0){
-                                if(!next.getCancelHook().get()){
-                                    next.updateStatus(DownloadStatus.FAILED, result.getValue());
-                                    next.reset();
+                                if(!entry.getCancelHook().get()){
+                                    entry.updateStatus(DownloadStatus.FAILED, result.getValue());
+                                    entry.reset();
 
-                                    failedDownloads.offer(next);
+                                    failedDownloads.offer(entry);
                                 }
 
                                 fireListeners();
@@ -875,10 +879,10 @@ public class YtDlpDownloader{
                             quality.getThumbnailContainer().getValue()
                         ));
 
-                        Pair<Integer, String> result = processDownload(next, genericArgs, thumbnailArgs);
+                        Pair<Integer, String> result = processDownload(entry, genericArgs, thumbnailArgs);
 
                         if(result != null){
-                            if(result.getKey() != 0 && !next.getCancelHook().get()){
+                            if(result.getKey() != 0 && !entry.getCancelHook().get()){
                                 log.error("Failed to download thumbnail: {}", result.getValue());
                             }
                         }else{
@@ -896,10 +900,10 @@ public class YtDlpDownloader{
                             quality.getSubtitleContainer().getValue()
                         ));
 
-                        Pair<Integer, String> result = processDownload(next, genericArgs, subtitleArgs);
+                        Pair<Integer, String> result = processDownload(entry, genericArgs, subtitleArgs);
 
                         if(result != null){
-                            if(result.getKey() != 0 && !next.getCancelHook().get()){
+                            if(result.getKey() != 0 && !entry.getCancelHook().get()){
                                 log.error("Failed to download subtitles: {}", result.getValue());
                             }
                         }else{
@@ -908,12 +912,12 @@ public class YtDlpDownloader{
                     }
 
                     if(!downloadsRunning.get() || wasStopped){
-                        next.updateStatus(DownloadStatus.STOPPED, l10n("gui.download_status.not_started"));
-                        next.reset();
+                        entry.updateStatus(DownloadStatus.STOPPED, l10n("gui.download_status.not_started"));
+                        entry.reset();
 
-                        downloadDeque.offerFirst(next);
+                        downloadDeque.offerFirst(entry);
                         fireListeners();
-                    }else if(!next.getCancelHook().get()){
+                    }else if(!entry.getCancelHook().get()){
                         Map<String, Runnable> rightClickOptions = new TreeMap<>();
 
                         try(Stream<Path> dirStream = Files.walk(tmpPath.toPath())){
@@ -935,24 +939,24 @@ public class YtDlpDownloader{
                                     try{
                                         Files.createDirectories(targetPath.getParent());
                                         Files.copy(path, targetPath, StandardCopyOption.REPLACE_EXISTING);
-                                        next.getFinalMediaFiles().add(targetPath.toFile());
+                                        entry.getFinalMediaFiles().add(targetPath.toFile());
 
                                         if(isVideo){
                                             rightClickOptions.put(
                                                 l10n("gui.play_video"),
-                                                () -> next.play(VideoContainerEnum.class));
+                                                () -> entry.play(VideoContainerEnum.class));
                                         }
 
                                         if(isAudio){
                                             rightClickOptions.put(
                                                 l10n("gui.play_audio"),
-                                                () -> next.play(AudioContainerEnum.class));
+                                                () -> entry.play(AudioContainerEnum.class));
                                         }
 
                                         if(isThumbnail){
                                             rightClickOptions.put(
                                                 l10n("gui.view_thumbnail"),
-                                                () -> next.play(ThumbnailContainerEnum.class));
+                                                () -> entry.play(ThumbnailContainerEnum.class));
                                         }
 
                                         log.info("Copied file: {}", path.getFileName());
@@ -969,38 +973,38 @@ public class YtDlpDownloader{
 
                         GDownloader.deleteRecursively(tmpPath.toPath());
 
-                        next.updateStatus(DownloadStatus.COMPLETE, l10n("gui.download_status.finished"));
+                        entry.updateStatus(DownloadStatus.COMPLETE, l10n("gui.download_status.finished"));
 
                         mediaCard.getRightClickMenu().put(
                             l10n("gui.restart_download"),
                             () -> {
-                                next.updateStatus(DownloadStatus.QUEUED, l10n("gui.download_status.not_started"));
-                                next.reset();
+                                entry.updateStatus(DownloadStatus.QUEUED, l10n("gui.download_status.not_started"));
+                                entry.reset();
 
-                                completedDownloads.remove(next);
-                                downloadDeque.offerLast(next);
+                                completedDownloads.remove(entry);
+                                downloadDeque.offerLast(entry);
                                 fireListeners();
                             });
 
                         mediaCard.getRightClickMenu().put(
                             l10n("gui.delete_files"),
-                            () -> next.deleteMediaFiles());
+                            () -> entry.deleteMediaFiles());
 
-                        completedDownloads.offer(next);
+                        completedDownloads.offer(entry);
                         fireListeners();
                     }else{
                         log.error("Unexpected download state");
                     }
                 }catch(Exception e){
-                    next.updateStatus(DownloadStatus.FAILED, e.getLocalizedMessage());
-                    next.reset();
+                    entry.updateStatus(DownloadStatus.FAILED, e.getLocalizedMessage());
+                    entry.reset();
 
-                    downloadDeque.offerLast(next);//Retry later
+                    downloadDeque.offerLast(entry);//Retry later
                     fireListeners();
 
                     main.handleException(e);
                 }finally{
-                    next.getRunning().set(false);
+                    entry.getRunning().set(false);
 
                     runningDownloads.decrementAndGet();
                     fireListeners();
@@ -1014,83 +1018,89 @@ public class YtDlpDownloader{
     }
 
     @Nullable
-    private Pair<Integer, String> processDownload(QueueEntry next,
+    private Pair<Integer, String> processDownload(QueueEntry entry,
         List<String> genericArgs, List<String> specificArgs) throws Exception{
+
         long start = System.currentTimeMillis();
 
         List<String> finalArgs = new ArrayList<>(genericArgs);
         finalArgs.addAll(specificArgs);
-        finalArgs.add(next.getUrl());
+        finalArgs.add(entry.getUrl());
 
         log.info("Arguments {}", finalArgs);
 
-        Process process = Runtime.getRuntime().exec(finalArgs.stream().toArray(String[]::new));
-        next.setProcess(process);
+        ProcessBuilder processBuilder = new ProcessBuilder(finalArgs);
+        processBuilder.redirectErrorStream(true);
+        Process process = processBuilder.start();
+        entry.setProcess(process);
 
         double lastPercentage = 0;
-        String line;
-
         boolean downloadStarted = false;
+        String lastOutput = "";
 
-        try(BufferedReader stdInput = new BufferedReader(new InputStreamReader(process.getInputStream()));
-            BufferedReader stdError = new BufferedReader(new InputStreamReader(process.getErrorStream()))){
+        try(ReadableByteChannel stdInput = Channels.newChannel(process.getInputStream())){
+            ByteBuffer buffer = ByteBuffer.allocate(4096);
+            StringBuilder output = new StringBuilder();
+            char prevChar = '\0';
 
-            while(downloadsRunning.get() && !next.getCancelHook().get() && process.isAlive() && !Thread.currentThread().isInterrupted()){
-                if(process.getInputStream().available() <= 0){
-                    continue;
+            while(downloadsRunning.get() && !entry.getCancelHook().get() && process.isAlive()){
+                if(Thread.currentThread().isInterrupted()){
+                    process.destroy();
+                    throw new InterruptedException("Download interrupted");
                 }
 
-                line = stdInput.readLine();
-                if(line == null){
-                    break;
-                }
+                buffer.clear();
+                int bytesRead = stdInput.read(buffer);
+                if(bytesRead > 0){
+                    buffer.flip();
 
-                log.info("[{}] - {}", next.getDownloadId(), line);
+                    while(buffer.hasRemaining()){
+                        char ch = (char)buffer.get();
+                        output.append(ch);
 
-                if(line.contains("[download]") && !line.contains("Destination:")){
-                    String[] parts = line.split("\\s+");
-                    for(String part : parts){
-                        if(part.endsWith("%")){
-                            double percent = Double.parseDouble(part.replace("%", ""));
+                        if(ch == '\n' || (ch == '\r' && prevChar != '\n')){
+                            lastOutput = output.toString();
+                            output.setLength(0);
+                        }
 
-                            if(percent > lastPercentage || percent < 5 || Math.abs(percent - lastPercentage) > 10){
-                                next.getMediaCard().setPercentage(percent);
-                                lastPercentage = percent;
+                        prevChar = ch;
+                    }
+
+                    if(lastOutput.contains("[download]") && !lastOutput.contains("Destination:")){
+                        String[] parts = lastOutput.split("\\s+");
+                        for(String part : parts){
+                            if(part.endsWith("%")){
+                                double percent = Double.parseDouble(part.replace("%", ""));
+                                if(percent > lastPercentage || percent < 5
+                                    || Math.abs(percent - lastPercentage) > 10){
+                                    entry.getMediaCard().setPercentage(percent);
+                                    lastPercentage = percent;
+                                }
                             }
                         }
-                    }
 
-                    next.updateStatus(DownloadStatus.DOWNLOADING, line.replace("[download] ", ""));
-                    downloadStarted = true;
-                }else if(downloadStarted){
-                    next.updateStatus(DownloadStatus.PROCESSING, line);
-                }else{
-                    next.updateStatus(DownloadStatus.PREPARING, line);
+                        entry.updateStatus(DownloadStatus.DOWNLOADING, lastOutput.replace("[download] ", ""));
+                        downloadStarted = true;
+                    }else{
+                        log.info("[{}] - {}", entry.getDownloadId(), lastOutput);
+
+                        if(downloadStarted){
+                            entry.updateStatus(DownloadStatus.PROCESSING, lastOutput);
+                        }else{
+                            entry.updateStatus(DownloadStatus.PREPARING, lastOutput);
+                        }
+                    }
                 }
+
+                Thread.sleep(100);
             }
 
-            String lastError = "- -";
+            long stopped = System.currentTimeMillis() - start;
 
-            while(downloadsRunning.get() && !next.getCancelHook().get() && !Thread.currentThread().isInterrupted()){
-                if(process.getErrorStream().available() <= 0){
-                    if(!process.isAlive()){
-                        break;
-                    }
-
-                    continue;
-                }
-
-                String err = stdError.readLine();
-                if(err != null){
-                    log.error("[{}] - {}", next.getDownloadId(), err);
-                    lastError = err;
-                }
-            }
-
-            long stopped = (System.currentTimeMillis() - start);
-
-            if(!downloadsRunning.get() || next.getCancelHook().get()){
+            if(!downloadsRunning.get() || entry.getCancelHook().get()){
                 if(process.isAlive()){
+                    long quitTimer = System.currentTimeMillis();
+
                     process.destroy();
 
                     if(!process.waitFor(5, TimeUnit.SECONDS)){
@@ -1098,14 +1108,16 @@ public class YtDlpDownloader{
                         process.destroyForcibly();
                     }
 
-                    log.info("Download process halted after {}ms", stopped);
+                    log.info("Download process halted after {}ms. Took {}ms to stop",
+                        stopped,
+                        (System.currentTimeMillis() - quitTimer));
                 }
 
                 return null;
             }else{
                 int exitCode = process.waitFor();
                 log.info("Download process took {}ms", stopped);
-                return new Pair<>(exitCode, lastError);
+                return new Pair<>(exitCode, lastOutput);
             }
         }finally{
             if(process.isAlive()){
