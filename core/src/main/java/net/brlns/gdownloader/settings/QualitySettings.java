@@ -75,7 +75,7 @@ public class QualitySettings{
 
     //TODO this needs some work
     @JsonIgnore
-    public String getQualitySettings(){
+    public String buildQualitySelector(){
         return "(" + selector.getValue() + "[height>=" + minHeight.getValue() + "][height<=" + maxHeight.getValue() + "][ext=" + videoContainer.getValue() + "][fps=" + fps.getValue() + "]+bestaudio/"
             + selector.getValue() + "[height>=" + minHeight.getValue() + "][height<=" + maxHeight.getValue() + "][ext=" + videoContainer.getValue() + "]+bestaudio/"
             + selector.getValue() + "[ext=" + videoContainer.getValue() + "]+bestaudio/"

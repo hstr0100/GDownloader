@@ -1,0 +1,172 @@
+/*
+ * Copyright (C) 2024 hstr0100
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+package net.brlns.gdownloader.settings.filters;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import java.io.File;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.regex.Pattern;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import net.brlns.gdownloader.GDownloader;
+import net.brlns.gdownloader.settings.QualitySettings;
+import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
+
+/**
+ * @author Gabriel / hstr0100 / vertx010
+ */
+@Data
+@Slf4j
+@AllArgsConstructor
+@NoArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
+@JsonTypeInfo(
+    use = JsonTypeInfo.Id.NAME,
+    include = JsonTypeInfo.As.PROPERTY,
+    property = "Id",
+    defaultImpl = GenericFilter.class
+)
+@JsonSubTypes({
+    @JsonSubTypes.Type(value = CrunchyrollFilter.class, name = "crunchyroll"),
+    @JsonSubTypes.Type(value = DropoutFilter.class, name = "dropout"),
+    @JsonSubTypes.Type(value = FacebookFilter.class, name = "facebook"),
+    @JsonSubTypes.Type(value = RedditFilter.class, name = "reddit"),
+    @JsonSubTypes.Type(value = TwitchFilter.class, name = "twitch"),
+    @JsonSubTypes.Type(value = XFilter.class, name = "x"),
+    @JsonSubTypes.Type(value = YoutubeFilter.class, name = "youtube"),
+    @JsonSubTypes.Type(value = YoutubePlaylistFilter.class, name = "youtube_playlist"),
+    @JsonSubTypes.Type(value = GenericFilter.class, name = "default")
+})
+public abstract class AbstractUrlFilter{
+
+    @JsonIgnore
+    public static final List<AbstractUrlFilter> DEFAULTS = new ArrayList<>();
+
+    static{
+        DEFAULTS.add(new YoutubeFilter());
+        DEFAULTS.add(new YoutubePlaylistFilter());
+
+        DEFAULTS.add(new CrunchyrollFilter());
+        DEFAULTS.add(new DropoutFilter());
+        DEFAULTS.add(new FacebookFilter());
+        DEFAULTS.add(new RedditFilter());
+        DEFAULTS.add(new TwitchFilter());
+        DEFAULTS.add(new XFilter());
+
+        DEFAULTS.add(new GenericFilter());
+    }
+
+    @JsonProperty("FilterName")
+    private String filterName = "";
+
+    @JsonProperty("UrlRegex")
+    private String urlRegex = "";
+
+    @JsonProperty("VideoNamePattern")
+    private String videoNamePattern = "";
+
+    @JsonProperty("AudioNamePattern")
+    private String audioNamePattern = "";
+
+    /**
+     * Represents a set of extra arguments for yt-dlp.
+     * These arguments are categorized based on the type of download (e.g., VIDEO, AUDIO, SUBTITLES, etc.).
+     * Arguments in the ALL category apply to all categories that depend on this filter.
+     *
+     * JSON schema:
+     *
+     * <pre>
+     * "ExtraYtDlpArguments" : {
+     *   "ALL": [
+     *     "--ignore-config",
+     *     "--proxy",
+     *     "http://example.com:1234",
+     *     "--skip-download"
+     *   ],
+     *   "VIDEO": [
+     *     "--no-playlist"
+     *   ],
+     *   "AUDIO": [],
+     *   "SUBTITLES" : [],
+     *   "THUMBNAILS" : []
+     * }
+     * </pre>
+     */
+    @JsonProperty("ExtraYtDlpArguments")
+    private Map<DownloadTypeEnum, List<String>> extraYtDlpArguments = new HashMap<>();
+
+    @JsonProperty("QualitySettings")
+    private QualitySettings qualitySettings = QualitySettings.builder().build();
+
+    @JsonIgnore
+    public String getDisplayName(){
+        String name = getFilterName();
+        if(name.isEmpty()){
+            log.error("Filter name was empty for class: {}", getClass());
+        }
+
+        return name;
+    }
+
+    @JsonIgnore
+    private Pattern _cachedPattern;
+
+    @JsonIgnore
+    public boolean matches(String url){
+        if(urlRegex.isEmpty()){
+            return false;
+        }
+
+        if(_cachedPattern == null){
+            _cachedPattern = Pattern.compile(urlRegex);
+        }
+
+        return _cachedPattern.matcher(url).matches();
+    }
+
+    @JsonIgnore
+    public List<String> getArguments(DownloadTypeEnum typeEnum, GDownloader main, File savePath){
+        List<String> arguments = new ArrayList<>();
+
+        arguments.addAll(buildArguments(typeEnum, main, savePath));
+
+        if(extraYtDlpArguments.containsKey(typeEnum)){
+            arguments.addAll(extraYtDlpArguments.get(typeEnum));
+        }
+
+        return arguments;
+    }
+
+    @JsonIgnore
+    protected abstract List<String> buildArguments(DownloadTypeEnum typeEnum, GDownloader main, File savePath);
+
+    @JsonIgnore
+    public abstract boolean areCookiesRequired();
+
+    @JsonIgnore
+    public abstract boolean canAcceptDownload(String url, GDownloader main);
+
+}

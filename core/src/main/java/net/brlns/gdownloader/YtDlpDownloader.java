@@ -54,6 +54,10 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.settings.QualitySettings;
 import net.brlns.gdownloader.settings.enums.*;
+import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
+import net.brlns.gdownloader.settings.filters.GenericFilter;
+import net.brlns.gdownloader.settings.filters.YoutubeFilter;
+import net.brlns.gdownloader.settings.filters.YoutubePlaylistFilter;
 import net.brlns.gdownloader.ui.GUIManager;
 import net.brlns.gdownloader.ui.GUIManager.DialogButton;
 import net.brlns.gdownloader.ui.MediaCard;
@@ -63,6 +67,7 @@ import net.brlns.gdownloader.util.Pair;
 import net.brlns.gdownloader.util.PriorityThreadPoolExecutor;
 
 import static net.brlns.gdownloader.Language.*;
+import static net.brlns.gdownloader.settings.enums.DownloadTypeEnum.*;
 import static net.brlns.gdownloader.util.URLUtils.*;
 
 //TODO media converter
@@ -72,16 +77,14 @@ import static net.brlns.gdownloader.util.URLUtils.*;
 //TODO max simultaneous downloads should be independent per website
 //TODO silence unnecessary debug messages
 //TODO investigate adding AppImage build
-//TODO we should only grab clipboard AFTER the button is clicked
-//TODO add custom ytdlp filename modifiers to the settings
+//TODO we should only grab clipboard AFTER the toggle button is clicked
 //TODO scale on resolution DPI
 //TODO save last window size in config
 //TODO keep older versions of ytdlp and retry failed downloads against them
-//TODO extra ytdlp args @TODO bad arguments could break downloads, leave as is? users can edit the config.json directly to add things like proxy arguments
+//TODO Advanced users can edit the config.json directly to add extra yt-dlp arguments like proxy settings. but maybe expose those settings in the ui.
 //TODO verify checksums during updates, add bouncycastle, check signatures
 //TODO write a component factory for GUIManager
 //TODO git actions build for different platforms
-//FEEDBACK Icons too small
 //FEEDBACK Should choose to download video and audio independently on each card
 //TODO maybe add notifications for each toggled toolbar option
 //DROPPED check updates on a timer, but do not ever restart when anything is in the queue.
@@ -91,9 +94,8 @@ import static net.brlns.gdownloader.util.URLUtils.*;
 //TODO open a window asking which videos in a playlist to download or not
 //TODO RearrangeableDeque's offerLast should be linked to the cards in the UI
 //TODO Better visual eye candy for when dragging cards
-//TODO Add setting to allow the user to manually specify the target codec
+//TODO Add setting to allow the user to manually specify the target codec for audio transcoding? currently it defaults to aac.
 //TODO Add 'Clear Completed Downloads' button.
-//TODO Refactor Quality Settings. We should find a way to avoid hardcoding them. Allow the user the flexibility to add their own filters or ditch them altogether for less maintenance.
 //TODO Javadoc, a whole lot of it.
 //TODO Refactor this very class. Separate some logic into different methods.
 //TODO Twitch settings purposefully default to suboptimal quality due to huge file sizes. Maybe consider adding a warning about this in the GUI.
@@ -105,7 +107,8 @@ import static net.brlns.gdownloader.util.URLUtils.*;
 //TODO Add a viewer for log files.
 //TODO Implement rate-limiting options internally; the way it's currently implemented does not account for concurrent or non-playlist downloads.
 //TODO Notify the user whenever a setting that requires restart was changed.
-//TODO: settings version
+//TODO Settings version
+//TODO When downloading playlists, move their entire directory from the temporary folder.
 //Off to a bootcamp, project on pause
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -186,214 +189,242 @@ public class YtDlpDownloader{
     public CompletableFuture<Boolean> captureUrl(@Nullable String inputUrl, boolean force, PlayListOptionEnum playlistOption){
         CompletableFuture<Boolean> future = new CompletableFuture<>();
 
-        if(downloadsBlocked.get() || ytDlpPath == null || inputUrl == null || isGarbageUrl(inputUrl) || capturedLinks.contains(inputUrl)
-            || WebFilterEnum.isYoutubeChannel(inputUrl) && !main.getConfig().isDownloadYoutubeChannels()){
+        if(downloadsBlocked.get() || ytDlpPath == null || inputUrl == null || isGarbageUrl(inputUrl) || capturedLinks.contains(inputUrl)){
             future.complete(false);
             return future;
         }
 
-        for(WebFilterEnum webFilter : WebFilterEnum.values()){
-            if(webFilter == WebFilterEnum.DEFAULT && (main.getConfig().isCaptureAnyLinks() || force) || webFilter.matches(inputUrl)){
-                if(capturedLinks.contains(inputUrl)){
-                    continue;
-                }
+        Optional<AbstractUrlFilter> filterOptional = getFilterForUrl(inputUrl,
+            main.getConfig().isCaptureAnyLinks() || force);
 
-                log.info("URL: {} matched {}", inputUrl, webFilter);
+        if(!filterOptional.isPresent()){
+            log.error("No filter found for url: {}. Ignoring.", inputUrl);
+            future.complete(false);
+            return future;
+        }
 
-                String filteredUrl;
+        AbstractUrlFilter filter = filterOptional.get();
+        log.info("URL: {} matched {}", inputUrl, filter);
 
-                switch(webFilter){
-                    case YOUTUBE -> {
-                        filteredUrl = filterVideo(inputUrl);
+        if(!filter.canAcceptDownload(inputUrl, main)){
+            log.info("Filter {} has denied to accept url {}; Verify settings.", filter, inputUrl);
+            future.complete(false);
+            return future;
+        }
+
+        if(capturedLinks.contains(inputUrl)){
+            future.complete(false);
+            return future;
+        }
+
+        String filteredUrl;
+        //TODO: move these to the appropriate classes.
+        if(filter instanceof YoutubePlaylistFilter){
+            switch(playlistOption){
+                case DOWNLOAD_PLAYLIST: {
+                    filteredUrl = filterPlaylist(inputUrl);
+
+                    if(filteredUrl != null){
+                        capturedPlaylists.add(filteredUrl);
                     }
 
-                    case YOUTUBE_PLAYLIST -> {
-                        switch(playlistOption){
-                            case DOWNLOAD_PLAYLIST: {
-                                filteredUrl = filterPlaylist(inputUrl);
+                    break;
+                }
 
-                                if(filteredUrl != null){
-                                    capturedPlaylists.add(filteredUrl);
-                                }
+                case DOWNLOAD_SINGLE: {
+                    String playlist = filterPlaylist(inputUrl);
 
-                                break;
+                    if(playlist != null){
+                        capturedPlaylists.add(playlist);
+                    }
+
+                    String video = filterVideo(inputUrl);
+
+                    log.info("Video url is {}", video);
+
+                    if(video != null && video.contains("?v=") && !video.contains("list=")){
+                        return captureUrl(video, force);
+                    }else{
+                        future.complete(false);
+                        return future;
+                    }
+                }
+
+                case ALWAYS_ASK:
+                default: {
+                    String playlist = filterPlaylist(inputUrl);
+
+                    if(playlist == null){
+                        future.complete(false);
+                        return future;
+                    }
+
+                    if(!capturedPlaylists.contains(playlist)){
+                        DialogButton playlistDialogOption = new DialogButton(PlayListOptionEnum.DOWNLOAD_PLAYLIST.getDisplayName(), (boolean setDefault) -> {
+                            if(setDefault){
+                                main.getConfig().setPlaylistDownloadOption(PlayListOptionEnum.DOWNLOAD_PLAYLIST);
+                                main.updateConfig();
                             }
 
-                            case DOWNLOAD_SINGLE: {
-                                String playlist = filterPlaylist(inputUrl);
-
-                                if(playlist != null){
-                                    capturedPlaylists.add(playlist);
-                                }
-
-                                String video = filterVideo(inputUrl);
-
-                                log.info("Video url is {}", video);
-
-                                if(video != null && video.contains("?v=") && !video.contains("list=")){
-                                    return captureUrl(video, force);
-                                }else{
-                                    future.complete(false);
-                                    return future;
-                                }
-                            }
-
-                            case ALWAYS_ASK:
-                            default: {
-                                String playlist = filterPlaylist(inputUrl);
-
-                                if(playlist == null){
-                                    future.complete(false);
-                                    return future;
-                                }
-
-                                if(!capturedPlaylists.contains(playlist)){
-                                    DialogButton playlistDialogOption = new DialogButton(PlayListOptionEnum.DOWNLOAD_PLAYLIST.getDisplayName(), (boolean setDefault) -> {
-                                        if(setDefault){
-                                            main.getConfig().setPlaylistDownloadOption(PlayListOptionEnum.DOWNLOAD_PLAYLIST);
-                                            main.updateConfig();
-                                        }
-
-                                        captureUrl(playlist, force, PlayListOptionEnum.DOWNLOAD_PLAYLIST)
-                                            .whenComplete((Boolean result, Throwable e) -> {
-                                                if(e != null){
-                                                    main.handleException(e);
-                                                }
-
-                                                future.complete(result);
-                                            });
-                                    });
-
-                                    DialogButton singleDialogOption = new DialogButton(PlayListOptionEnum.DOWNLOAD_SINGLE.getDisplayName(), (boolean setDefault) -> {
-                                        if(setDefault){
-                                            main.getConfig().setPlaylistDownloadOption(PlayListOptionEnum.DOWNLOAD_SINGLE);
-                                            main.updateConfig();
-                                        }
-
-                                        captureUrl(inputUrl, force, PlayListOptionEnum.DOWNLOAD_SINGLE)
-                                            .whenComplete((Boolean result, Throwable e) -> {
-                                                if(e != null){
-                                                    main.handleException(e);
-                                                }
-
-                                                future.complete(result);
-                                            });
-                                    });
-
-                                    DialogButton defaultOption = new DialogButton("", (boolean setDefault) -> {
-                                        future.complete(false);
-                                    });
-
-                                    //The dialog is synchronized
-                                    main.getGuiManager().showConfirmDialog(
-                                        l10n("dialog.confirm"),
-                                        l10n("dialog.download_playlist") + "\n\n" + playlist,
-                                        30000,
-                                        defaultOption,
-                                        playlistDialogOption,
-                                        singleDialogOption);
-
-                                    return future;
-                                }else{
-                                    //TODO I'm assuming this is a wanted behavior - having subsequent links being treated as individual videos
-                                    //It's odd that you'd download a whole playlist and then an individual video from it though, maybe investigate use cases
-                                    String video = filterVideo(inputUrl);
-
-                                    log.info("Individual video url is {}", video);
-
-                                    if(video != null && video.contains("?v=") && !video.contains("list=")){
-                                        return captureUrl(video, force);
-                                    }else{
-                                        future.complete(false);
-                                        return future;
+                            captureUrl(playlist, force, PlayListOptionEnum.DOWNLOAD_PLAYLIST)
+                                .whenComplete((Boolean result, Throwable e) -> {
+                                    if(e != null){
+                                        main.handleException(e);
                                     }
-                                }
+
+                                    future.complete(result);
+                                });
+                        });
+
+                        DialogButton singleDialogOption = new DialogButton(PlayListOptionEnum.DOWNLOAD_SINGLE.getDisplayName(), (boolean setDefault) -> {
+                            if(setDefault){
+                                main.getConfig().setPlaylistDownloadOption(PlayListOptionEnum.DOWNLOAD_SINGLE);
+                                main.updateConfig();
                             }
+
+                            captureUrl(inputUrl, force, PlayListOptionEnum.DOWNLOAD_SINGLE)
+                                .whenComplete((Boolean result, Throwable e) -> {
+                                    if(e != null){
+                                        main.handleException(e);
+                                    }
+
+                                    future.complete(result);
+                                });
+                        });
+
+                        DialogButton defaultOption = new DialogButton("", (boolean setDefault) -> {
+                            future.complete(false);
+                        });
+
+                        //The dialog is synchronized
+                        main.getGuiManager().showConfirmDialog(
+                            l10n("dialog.confirm"),
+                            l10n("dialog.download_playlist") + "\n\n" + playlist,
+                            30000,
+                            defaultOption,
+                            playlistDialogOption,
+                            singleDialogOption);
+
+                        return future;
+                    }else{
+                        //TODO I'm assuming this is a wanted behavior - having subsequent links being treated as individual videos
+                        //It's odd that you'd download a whole playlist and then an individual video from it though, maybe investigate use cases
+                        String video = filterVideo(inputUrl);
+
+                        log.info("Individual video url is {}", video);
+
+                        if(video != null && video.contains("?v=") && !video.contains("list=")){
+                            return captureUrl(video, force);
+                        }else{
+                            future.complete(false);
+                            return future;
                         }
                     }
-
-                    default -> {
-                        filteredUrl = inputUrl;
-                    }
-                }
-
-                if(filteredUrl == null){
-                    if(main.getConfig().isDebugMode()){
-                        main.handleException(new Throwable("Filtered url was null"));
-                    }
-
-                    future.complete(false);
-                    return future;
-                }
-
-                if(capturedLinks.add(filteredUrl)){
-                    capturedLinks.add(inputUrl);
-
-                    log.info("Captured {}", inputUrl);
-
-                    MediaCard mediaCard = main.getGuiManager().addMediaCard(main.getConfig().isDownloadVideo(), "");
-
-                    int downloadId = downloadCounter.incrementAndGet();
-
-                    QueueEntry queueEntry = new QueueEntry(main, mediaCard, webFilter, inputUrl, filteredUrl, downloadId);
-                    queueEntry.updateStatus(DownloadStatus.QUERYING, l10n("gui.download_status.querying"));
-
-                    String filtered = filteredUrl;
-                    mediaCard.setOnClose(() -> {
-                        queueEntry.close();
-
-                        capturedPlaylists.remove(inputUrl);
-                        capturedLinks.remove(inputUrl);
-                        capturedLinks.remove(filtered);
-
-                        downloadDeque.remove(queueEntry);
-                        failedDownloads.remove(queueEntry);
-                        completedDownloads.remove(queueEntry);
-
-                        fireListeners();
-                    });
-
-                    mediaCard.setOnLeftClick(() -> {
-                        main.openDownloadsDirectory();
-                    });
-
-                    mediaCard.getRightClickMenu().putAll(Map.of(
-                        l10n("gui.open_downloads_directory"),
-                        () -> main.openDownloadsDirectory(),
-                        l10n("gui.open_in_browser"),
-                        () -> queueEntry.openUrl(),
-                        l10n("gui.copy_url"),
-                        () -> queueEntry.copyUrlToClipboard()
-                    ));
-
-                    mediaCard.setOnDrag((targetIndex) -> {
-                        if(downloadDeque.contains(queueEntry)){
-                            try{
-                                downloadDeque.moveToPosition(queueEntry,
-                                    Math.clamp(targetIndex, 0, downloadDeque.size() - 1));
-                            }catch(Exception e){
-                                main.handleException(e, false);
-                            }
-                        }
-                    });
-
-                    mediaCard.setValidateDropTarget(() -> {
-                        return downloadDeque.contains(queueEntry);
-                    });
-
-                    queryVideo(queueEntry);
-
-                    downloadDeque.offerLast(queueEntry);
-                    fireListeners();
-
-                    future.complete(true);
-                    return future;
                 }
             }
+        }else if(filter instanceof YoutubeFilter){
+            filteredUrl = filterVideo(inputUrl);
+        }else{
+            filteredUrl = inputUrl;
+        }
+
+        if(filteredUrl == null){
+            if(main.getConfig().isDebugMode()){
+                main.handleException(new Throwable("Filtered url was null"));
+            }
+
+            future.complete(false);
+            return future;
+        }
+
+        if(capturedLinks.add(filteredUrl)){
+            capturedLinks.add(inputUrl);
+
+            log.info("Captured {}", inputUrl);
+
+            MediaCard mediaCard = main.getGuiManager().addMediaCard(main.getConfig().isDownloadVideo(), "");
+
+            int downloadId = downloadCounter.incrementAndGet();
+
+            QueueEntry queueEntry = new QueueEntry(main, mediaCard, filter, inputUrl, filteredUrl, downloadId);
+            queueEntry.updateStatus(DownloadStatus.QUERYING, l10n("gui.download_status.querying"));
+
+            String filtered = filteredUrl;
+            mediaCard.setOnClose(() -> {
+                queueEntry.close();
+
+                capturedPlaylists.remove(inputUrl);
+                capturedLinks.remove(inputUrl);
+                capturedLinks.remove(filtered);
+
+                downloadDeque.remove(queueEntry);
+                failedDownloads.remove(queueEntry);
+                completedDownloads.remove(queueEntry);
+
+                fireListeners();
+            });
+
+            mediaCard.setOnLeftClick(() -> {
+                main.openDownloadsDirectory();
+            });
+
+            mediaCard.getRightClickMenu().putAll(Map.of(
+                l10n("gui.open_downloads_directory"),
+                () -> main.openDownloadsDirectory(),
+                l10n("gui.open_in_browser"),
+                () -> queueEntry.openUrl(),
+                l10n("gui.copy_url"),
+                () -> queueEntry.copyUrlToClipboard()
+            ));
+
+            mediaCard.setOnDrag((targetIndex) -> {
+                if(downloadDeque.contains(queueEntry)){
+                    try{
+                        downloadDeque.moveToPosition(queueEntry,
+                            Math.clamp(targetIndex, 0, downloadDeque.size() - 1));
+                    }catch(Exception e){
+                        main.handleException(e, false);
+                    }
+                }
+            });
+
+            mediaCard.setValidateDropTarget(() -> {
+                return downloadDeque.contains(queueEntry);
+            });
+
+            queryVideo(queueEntry);
+
+            downloadDeque.offerLast(queueEntry);
+            fireListeners();
+
+            future.complete(true);
+            return future;
         }
 
         future.complete(false);
         return future;
+    }
+
+    private Optional<AbstractUrlFilter> getFilterForUrl(String url, boolean allowAnyLink){
+        AbstractUrlFilter filter = null;
+
+        for(AbstractUrlFilter filterNeedle : main.getConfig().getUrlFilters()){
+            if(filterNeedle.matches(url)){
+                filter = filterNeedle;
+                break;
+            }
+        }
+
+        if(filter == null && allowAnyLink){
+            for(AbstractUrlFilter filterNeedle : main.getConfig().getUrlFilters()){
+                if(filterNeedle.getClass().equals(GenericFilter.class)){
+                    filter = filterNeedle;
+                    break;
+                }
+            }
+        }
+
+        return Optional.ofNullable(filter);
     }
 
     public boolean isRunning(){
@@ -502,14 +533,25 @@ public class YtDlpDownloader{
 
                 long start = System.currentTimeMillis();
 
-                List<String> list = GDownloader.readOutput(
+                List<String> arguments = new ArrayList<>();
+                arguments.addAll(List.of(
                     ytDlpPath.getAbsolutePath(),
                     "--dump-json",
                     "--flat-playlist",
                     "--extractor-args",
                     "youtube:player_skip=webpage,configs,js;player_client=android,web",
                     queueEntry.getUrl()
-                );
+                ));
+
+                if(main.getConfig().isReadCookies()){
+                    arguments.addAll(List.of(
+                        "--cookies-from-browser",
+                        main.getBrowserForCookies().getName()
+                    ));
+                }
+
+                List<String> list = GDownloader.readOutput(
+                    arguments.stream().toArray(String[]::new));
 
                 if(main.getConfig().isDebugMode()){
                     long what = System.currentTimeMillis() - start;
@@ -574,6 +616,12 @@ public class YtDlpDownloader{
                 }
 
                 try{
+                    AbstractUrlFilter filter = entry.getFilter();
+
+                    if(filter.areCookiesRequired() && !main.getConfig().isReadCookies()){
+                        log.warn("Cookies required for this website {}", entry.getOriginalUrl());
+                    }
+
                     boolean downloadAudio = main.getConfig().isDownloadAudio();
                     boolean downloadVideo = main.getConfig().isDownloadVideo();
 
@@ -583,7 +631,7 @@ public class YtDlpDownloader{
 
                         failedDownloads.offer(entry);
 
-                        log.error("{} - No option to download.", entry.getWebFilter());
+                        log.error("{} - No option to download.", filter);
 
                         if(downloadDeque.size() <= 1){
                             stopDownloads();
@@ -592,14 +640,7 @@ public class YtDlpDownloader{
                         return;
                     }
 
-                    QualitySettings needle = main.getConfig().getQualitySettings().get(entry.getWebFilter());
-
-                    QualitySettings quality;
-                    if(needle != null){
-                        quality = needle;
-                    }else{
-                        quality = main.getConfig().getDefaultQualitySettings();
-                    }
+                    QualitySettings quality = filter.getQualitySettings();
 
                     AudioBitrateEnum audioBitrate = quality.getAudioBitrate();
 
@@ -609,7 +650,7 @@ public class YtDlpDownloader{
 
                         failedDownloads.offer(entry);
 
-                        log.error("{} - No audio quality selected, but was set to download audio only.", entry.getWebFilter());
+                        log.error("{} - No audio quality selected, but was set to download audio only.", filter);
 
                         if(downloadDeque.size() <= 1){
                             stopDownloads();
@@ -626,285 +667,73 @@ public class YtDlpDownloader{
                     File tmpPath = GDownloader.getOrCreate(finalPath, GDownloader.CACHE_DIRETORY_NAME, String.valueOf(entry.getDownloadId()));
                     entry.setTmpDirectory(tmpPath);
 
-                    List<String> genericArgs = new ArrayList<>();
-                    List<String> audioArgs = new ArrayList<>();
-                    List<String> videoArgs = new ArrayList<>();
-                    List<String> thumbnailArgs = new ArrayList<>();
-                    List<String> subtitleArgs = new ArrayList<>();
+                    List<String> genericArguments = new ArrayList<>();
 
-                    genericArgs.addAll(Arrays.asList(
+                    genericArguments.addAll(List.of(
                         ytDlpPath.getAbsolutePath(),
                         "-i"
                     ));
 
                     if(ffmpegPath != null){
-                        genericArgs.addAll(Arrays.asList(
+                        genericArguments.addAll(List.of(
                             "--ffmpeg-location",
                             ffmpegPath.getAbsolutePath()
                         ));
                     }
 
-                    if(main.getConfig().isRandomIntervalBetweenDownloads()){
-                        genericArgs.addAll(Arrays.asList(
-                            "--max-sleep-interval",
-                            "45",
-                            "--min-sleep-interval",
-                            "25"
-                        ));
-                    }
-
-                    if(main.getConfig().isReadCookies()){
-                        log.info("Choosen browser for cookies is {}", main.getBrowserForCookies());
-
-                        genericArgs.addAll(Arrays.asList(
-                            "--cookies-from-browser",
-                            main.getBrowserForCookies().getName()
-                        ));
-                    }
-
-                    if(GDownloader.isWindows()){
-                        //NTFS shenanigans ahead
-                        //TODO: query registry for longpath support status
-                        genericArgs.addAll(Arrays.asList(
-                            "--windows-filenames",
-                            "--trim-filenames",
-                            String.valueOf(240)//Give some extra room for fragment files
-                        ));
-                    }
-
-                    int titleLength = GDownloader.isWindows() ? 60 : 100;
-
-                    switch(entry.getWebFilter()){
-                        case YOUTUBE_PLAYLIST:
-                            genericArgs.addAll(Arrays.asList(
-                                "--yes-playlist"
-                            ));
-
-                        //Intentional fall-through
-                        case YOUTUBE:
-                            if(main.getConfig().isUseSponsorBlock()){
-                                genericArgs.addAll(Arrays.asList(
-                                    "--sponsorblock-mark",
-                                    "sponsor,intro,outro,selfpromo,interaction,music_offtopic"
-                                ));
-                            }
-
-                            String audioNameFormat = tmpPath.getAbsolutePath()
-                                + (entry.getWebFilter() == WebFilterEnum.YOUTUBE_PLAYLIST ? "/%(playlist)s/" : "/")
-                                + "%(title)." + titleLength + "s (" + audioBitrate.getValue() + "kbps).%(ext)s";
-
-                            log.debug("Audio name format length: {}", audioNameFormat.length());
-
-                            String videoNameFormat = tmpPath.getAbsolutePath()
-                                + (entry.getWebFilter() == WebFilterEnum.YOUTUBE_PLAYLIST ? "/%(playlist)s/" : "/")
-                                + "%(title)." + titleLength + "s (%(uploader_id)s %(upload_date)s %(resolution)s).%(ext)s";
-
-                            log.debug("Video name format length: {}", videoNameFormat.length());
-
-                            audioArgs.addAll(Arrays.asList(
-                                "-o",
-                                audioNameFormat,
-                                "--embed-thumbnail",
-                                "--embed-metadata"
-                            ));
-
-                            videoArgs.addAll(Arrays.asList(
-                                "-o",
-                                videoNameFormat,
-                                "--embed-thumbnail",
-                                "--embed-metadata",
-                                "--embed-subs",
-                                "--sub-langs",
-                                "all,-live_chat",
-                                "--parse-metadata",
-                                "description:(?s)(?P<meta_comment>.+)",
-                                "--embed-chapters"
-                            ));
-
-                            if(main.getConfig().isDownloadAutoGeneratedSubtitles()){
-                                //Extremely discouraged: this can trigger rate limiting extremely fast. Aside from being slow.
-                                //Of note: embedding these vtt files into video files does not seem to work. Not even with --convert-subs.
-                                subtitleArgs.add("--write-auto-sub");
-                            }
-
-                            subtitleArgs.addAll(Arrays.asList(
-                                "-o",
-                                videoNameFormat
-                            ));
-
-                            thumbnailArgs.addAll(Arrays.asList(
-                                "-o",
-                                videoNameFormat
-                            ));
-
-                            break;
-                        case TWITCH:
-                            genericArgs.addAll(Arrays.asList(
-                                "-o",
-                                tmpPath.getAbsolutePath() + "/%(title)." + titleLength + "s (%(uploader_id)s %(upload_date)s %(resolution)s).%(ext)s",
-                                "--verbose",
-                                "--continue",
-                                "--hls-prefer-native"
-                            ));
-
-                            videoArgs.addAll(Arrays.asList(
-                                "--parse-metadata",
-                                ":%(?P<is_live>)"
-                            ));
-
-                            break;
-                        case TWITTER:
-                            genericArgs.addAll(Arrays.asList(
-                                "-o",
-                                tmpPath.getAbsolutePath() + "/%(title)." + titleLength + "s (%(uploader_id)s %(upload_date)s %(resolution)s).%(ext)s"
-                            ));
-
-                            break;
-                        case FACEBOOK:
-                            genericArgs.addAll(Arrays.asList(
-                                "-o",
-                                tmpPath.getAbsolutePath() + "/%(title)." + titleLength + "s (%(upload_date)s %(resolution)s).%(ext)s"
-                            ));
-
-                            if(!main.getConfig().isRandomIntervalBetweenDownloads()){
-                                //In my experience, Facebook pretty much requires this. So we add it regardless of settings.
-                                genericArgs.addAll(Arrays.asList(
-                                    "--max-sleep-interval",
-                                    "30",
-                                    "--min-sleep-interval",
-                                    "15"
-                                ));
-                            }
-
-                            break;
-                        case CRUNCHYROLL:
-                        case DROPOUT:
-                            if(!main.getConfig().isReadCookies()){
-                                log.warn("Cookies required for this website {}", entry.getOriginalUrl());
-                            }
-
-                        //fall-through
-                        case REDDIT:
-                        default:
-                            genericArgs.addAll(Arrays.asList(
-                                "-o",
-                                tmpPath.getAbsolutePath() + "/%(title)." + titleLength + "s (%(resolution)s).%(ext)s"
-                            ));
-
-                            break;
-                    }
+                    genericArguments.addAll(filter.getArguments(ALL, main, tmpPath));
 
                     for(String arg : main.getConfig().getExtraYtDlpArguments().split(" ")){
                         if(!arg.isEmpty()){
-                            genericArgs.add(arg);
+                            genericArguments.add(arg);
                         }
                     }
 
                     boolean wasStopped = false;
 
-                    if(downloadVideo){
-                        videoArgs.addAll(Arrays.asList(
-                            "-f",
-                            quality.getQualitySettings(),
-                            "--merge-output-format",
-                            quality.getVideoContainer().getValue()
-                        ));
-
-                        if(main.getConfig().isTranscodeAudioToAAC()){
-                            videoArgs.addAll(Arrays.asList(
-                                "--postprocessor-args",
-                                //Opus is not supported by some native video players
-                                "ffmpeg:-c:a aac -b:a " + audioBitrate.getValue() + "k"
-                            ));
+                    for(DownloadTypeEnum type : DownloadTypeEnum.values()){
+                        if(type == ALL){
+                            continue;
                         }
 
-                        Pair<Integer, String> result = processDownload(entry, genericArgs, videoArgs);
+                        if(type == VIDEO && !downloadVideo
+                            || type == AUDIO && !downloadAudio
+                            || type == SUBTITLES && !main.getConfig().isDownloadSubtitles()
+                            || type == THUMBNAILS && !main.getConfig().isDownloadThumbnails()){
+                            continue;
+                        }
+
+                        List<String> arguments = new ArrayList<>(genericArguments);
+
+                        List<String> downloadArguments = filter.getArguments(type, main, tmpPath);
+                        arguments.addAll(downloadArguments);
+
+                        log.debug("Generic {}: Type {} ({}): {}",
+                            genericArguments,
+                            type,
+                            filter.getDisplayName(),
+                            downloadArguments);
+
+                        Pair<Integer, String> result = processDownload(entry, arguments);
 
                         if(result != null){
                             if(result.getKey() != 0){
                                 if(!entry.getCancelHook().get()){
-                                    entry.updateStatus(DownloadStatus.FAILED, result.getValue());
-                                    entry.reset();
+                                    if(type == VIDEO || type == AUDIO){
+                                        entry.updateStatus(DownloadStatus.FAILED, result.getValue());
+                                        entry.reset();
 
-                                    failedDownloads.offer(entry);
+                                        failedDownloads.offer(entry);
+                                    }else{
+                                        //These can be treated as low priority downloads since thumbnails
+                                        //and subtitles are already embedded by default, if they fail we just move on.
+                                        //For now, downloading only subs or thumbs is not supported.
+                                        log.error("Failed to download {}: {}", type, result.getValue());
+                                    }
                                 }
 
                                 fireListeners();
                                 return;
-                            }
-                        }else{
-                            wasStopped = true;
-                        }
-                    }
-
-                    //isDownloadAudio() might have changed at this point, do a fresh check just to be sure
-                    if(main.getConfig().isDownloadAudio() && audioBitrate != AudioBitrateEnum.NO_AUDIO){
-                        audioArgs.addAll(Arrays.asList(
-                            "-f",
-                            "bestaudio",
-                            "--extract-audio",
-                            "--audio-format",
-                            quality.getAudioContainer().getValue(),
-                            "--audio-quality",
-                            audioBitrate.getValue() + "k"
-                        ));
-
-                        Pair<Integer, String> result = processDownload(entry, genericArgs, audioArgs);
-
-                        if(result != null){
-                            if(result.getKey() != 0){
-                                if(!entry.getCancelHook().get()){
-                                    entry.updateStatus(DownloadStatus.FAILED, result.getValue());
-                                    entry.reset();
-
-                                    failedDownloads.offer(entry);
-                                }
-
-                                fireListeners();
-                                return;
-                            }
-                        }else{
-                            wasStopped = true;
-                        }
-                    }
-
-                    //These can be treated as low priority downloads since thumbnails
-                    //and subtitles are already embedded by default, if they fail we just move on.
-                    //For now, downloading only subs or thumbs is not supported.
-                    if(main.getConfig().isDownloadThumbnails()){
-                        thumbnailArgs.addAll(Arrays.asList(
-                            "--write-thumbnail",
-                            "--skip-download",
-                            "--convert-thumbnails",
-                            quality.getThumbnailContainer().getValue()
-                        ));
-
-                        Pair<Integer, String> result = processDownload(entry, genericArgs, thumbnailArgs);
-
-                        if(result != null){
-                            if(result.getKey() != 0 && !entry.getCancelHook().get()){
-                                log.error("Failed to download thumbnail: {}", result.getValue());
-                            }
-                        }else{
-                            wasStopped = true;
-                        }
-                    }
-
-                    if(main.getConfig().isDownloadSubtitles()){
-                        subtitleArgs.addAll(Arrays.asList(
-                            "--all-subs",
-                            "--skip-download",
-                            "--sub-format",
-                            quality.getSubtitleContainer().getValue(),
-                            "--convert-subs",
-                            quality.getSubtitleContainer().getValue()
-                        ));
-
-                        Pair<Integer, String> result = processDownload(entry, genericArgs, subtitleArgs);
-
-                        if(result != null){
-                            if(result.getKey() != 0 && !entry.getCancelHook().get()){
-                                log.error("Failed to download subtitles: {}", result.getValue());
                             }
                         }else{
                             wasStopped = true;
@@ -1018,13 +847,10 @@ public class YtDlpDownloader{
     }
 
     @Nullable
-    private Pair<Integer, String> processDownload(QueueEntry entry,
-        List<String> genericArgs, List<String> specificArgs) throws Exception{
-
+    private Pair<Integer, String> processDownload(QueueEntry entry, List<String> arguments) throws Exception{
         long start = System.currentTimeMillis();
 
-        List<String> finalArgs = new ArrayList<>(genericArgs);
-        finalArgs.addAll(specificArgs);
+        List<String> finalArgs = new ArrayList<>(arguments);
         finalArgs.add(entry.getUrl());
 
         log.info("Arguments {}", finalArgs);
@@ -1164,7 +990,7 @@ public class YtDlpDownloader{
         private final GDownloader main;
 
         private final MediaCard mediaCard;
-        private final WebFilterEnum webFilter;
+        private final AbstractUrlFilter filter;
         private final String originalUrl;
         private final String url;
         private final int downloadId;
@@ -1312,7 +1138,7 @@ public class YtDlpDownloader{
         }
 
         public void updateStatus(DownloadStatus status, String text){
-            mediaCard.setLabel(webFilter.getDisplayName(), getTitle(),
+            mediaCard.setLabel(filter.getDisplayName(), getTitle(),
                 status != DownloadStatus.DOWNLOADING ? truncate(text, 40) : truncate(text, 51));
 
             mediaCard.setTooltip(text);

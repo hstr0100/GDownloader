@@ -24,7 +24,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import javax.swing.*;
@@ -39,6 +38,7 @@ import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.settings.QualitySettings;
 import net.brlns.gdownloader.settings.Settings;
 import net.brlns.gdownloader.settings.enums.*;
+import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
 import net.brlns.gdownloader.ui.custom.CustomButton;
 import net.brlns.gdownloader.ui.custom.CustomCheckBoxUI;
 import net.brlns.gdownloader.ui.custom.CustomComboBoxUI;
@@ -845,9 +845,9 @@ public class SettingsPanel{
         resolutionPanel.setLayout(new BoxLayout(resolutionPanel, BoxLayout.Y_AXIS));
         resolutionPanel.setBackground(color(BACKGROUND));
 
-        for(Map.Entry<WebFilterEnum, QualitySettings> entry : settings.getQualitySettings().entrySet()){
-            WebFilterEnum filter = entry.getKey();
-            QualitySettings qualitySettings = entry.getValue();
+        //TODO: weight the display order?
+        for(AbstractUrlFilter filter : settings.getUrlFilters()){
+            QualitySettings qualitySettings = filter.getQualitySettings();
 
             JPanel itemPanel = new JPanel(new GridBagLayout());
             TitledBorder border = BorderFactory.createTitledBorder(

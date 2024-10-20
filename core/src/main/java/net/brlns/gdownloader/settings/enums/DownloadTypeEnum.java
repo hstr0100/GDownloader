@@ -17,41 +17,26 @@
 package net.brlns.gdownloader.settings.enums;
 
 import lombok.Getter;
-import net.brlns.gdownloader.settings.filters.*;
 
 /**
- * The sole purpose of this class as of 2024-10-20 is for config migration.
- *
- * Do not use.
- *
  * @author Gabriel / hstr0100 / vertx010
  */
 @Getter
-@Deprecated
-public enum WebFilterEnum implements ISettingsEnum{
-    YOUTUBE(YoutubeFilter.class),
-    YOUTUBE_PLAYLIST(YoutubePlaylistFilter.class),
-    TWITCH(TwitchFilter.class),
-    FACEBOOK(FacebookFilter.class),
-    TWITTER(XFilter.class),
-    CRUNCHYROLL(CrunchyrollFilter.class),
-    DROPOUT(DropoutFilter.class),
-    REDDIT(RedditFilter.class),
-    DEFAULT(GenericFilter.class);
-
-    private final Class<? extends AbstractUrlFilter> filterClass;
-
-    WebFilterEnum(Class<? extends AbstractUrlFilter> filterClass){
-        this.filterClass = filterClass;
-    }
-
-    @Override
-    public String getDisplayName(){
-        return "";
-    }
+public enum DownloadTypeEnum implements ISettingsEnum{
+    ALL,
+    //Downloads will also follow this specific order
+    VIDEO,
+    AUDIO,
+    SUBTITLES,
+    THUMBNAILS;
 
     @Override
     public String getTranslationKey(){
         return "";
+    }
+
+    @Override
+    public String getDisplayName(){
+        return name().toLowerCase();
     }
 }

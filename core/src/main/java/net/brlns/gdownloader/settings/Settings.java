@@ -19,15 +19,24 @@ package net.brlns.gdownloader.settings;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import lombok.Data;
-import net.brlns.gdownloader.settings.enums.*;
+import lombok.extern.slf4j.Slf4j;
+import net.brlns.gdownloader.settings.enums.BrowserEnum;
+import net.brlns.gdownloader.settings.enums.LanguageEnum;
+import net.brlns.gdownloader.settings.enums.PlayListOptionEnum;
+import net.brlns.gdownloader.settings.enums.ThemeEnum;
+import net.brlns.gdownloader.settings.enums.WebFilterEnum;
+import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
 @Data
+@Slf4j
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class Settings{
 
@@ -127,36 +136,43 @@ public class Settings{
     @JsonProperty("PlaySounds")
     private boolean playSounds = false;
 
+    @Deprecated
     @JsonProperty("QualitySettings")
     private Map<WebFilterEnum, QualitySettings> qualitySettings = new TreeMap<>();
 
+    @JsonProperty("UrlFilters")
+    private List<AbstractUrlFilter> urlFilters = new ArrayList<>();
+
     public Settings(){
-        for(WebFilterEnum filter : WebFilterEnum.values()){
-            QualitySettings quality;
-
-            if(filter == WebFilterEnum.TWITCH){
-                quality = QualitySettings.builder()
-                    .selector(QualitySelectorEnum.WORST)
-                    .minHeight(ResolutionEnum.RES_480)
-                    .maxHeight(ResolutionEnum.RES_720)
-                    .build();
-            }else{
-                quality = QualitySettings.builder().build();
-            }
-
-            qualitySettings.put(filter, quality);
-        }
+        urlFilters.addAll(AbstractUrlFilter.DEFAULTS);
     }
 
     @JsonIgnore
-    public QualitySettings getDefaultQualitySettings(){
-        QualitySettings settings = qualitySettings.get(WebFilterEnum.DEFAULT);
-        if(settings == null){
-            settings = QualitySettings.builder().build();
-
-            qualitySettings.put(WebFilterEnum.DEFAULT, settings);
+    @SuppressWarnings("deprecation")
+    public void doMigration(){
+        if(urlFilters.isEmpty()){
+            urlFilters.addAll(AbstractUrlFilter.DEFAULTS);
+        }else{
+            AbstractUrlFilter.DEFAULTS.stream()
+                .filter(
+                    filter -> urlFilters.stream()
+                        .noneMatch(savedFilter -> savedFilter.getClass().equals(filter.getClass()))
+                )
+                .forEach(urlFilters::add);
         }
 
-        return settings;
+        for(Map.Entry<WebFilterEnum, QualitySettings> entry : qualitySettings.entrySet()){
+            WebFilterEnum key = entry.getKey();
+            QualitySettings value = entry.getValue();
+
+            urlFilters.stream()
+                .filter(filter -> filter.getClass().equals(key.getFilterClass()))
+                .forEach(filter -> {
+                    filter.setQualitySettings(value);
+                    log.info("Migrated {} -> {}", key, value);
+                });
+        }
+
+        qualitySettings.clear();
     }
 }

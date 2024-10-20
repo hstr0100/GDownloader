@@ -39,6 +39,7 @@ module net.brlns.gdownloader {
     exports net.brlns.gdownloader;
     exports net.brlns.gdownloader.settings;
     exports net.brlns.gdownloader.settings.enums;
+    exports net.brlns.gdownloader.settings.filters;
     exports net.brlns.gdownloader.ui;
     exports net.brlns.gdownloader.ui.custom;
     exports net.brlns.gdownloader.ui.themes;

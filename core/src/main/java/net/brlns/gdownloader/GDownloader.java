@@ -147,6 +147,7 @@ public final class GDownloader{
 
         try{
             config = OBJECT_MAPPER.readValue(configFile, Settings.class);
+            config.doMigration();
         }catch(IOException e){
             config = new Settings();
             updateConfig();

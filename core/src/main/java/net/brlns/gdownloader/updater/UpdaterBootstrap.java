@@ -25,7 +25,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
@@ -109,7 +108,7 @@ public class UpdaterBootstrap{
                 arguments.add("--portable");
             }
 
-            arguments.addAll(Arrays.asList(args));
+            arguments.addAll(List.of(args));
             log.info("Launching {}", arguments);
 
             try{//Attempt to hand it off to the new version
