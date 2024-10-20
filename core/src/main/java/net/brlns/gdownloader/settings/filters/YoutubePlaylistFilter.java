@@ -35,8 +35,11 @@ import static net.brlns.gdownloader.settings.enums.DownloadTypeEnum.*;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class YoutubePlaylistFilter extends YoutubeFilter{
 
+    public static final String ID = "youtube_playlist";
+
     @SuppressWarnings("this-escape")
     public YoutubePlaylistFilter(){
+        setId(ID);
         setFilterName("Youtube Playlists");
         setUrlRegex("^(https?:\\/\\/)?(www\\.)?youtube\\.com.*(list=|\\/playlist).*$");
         setVideoNamePattern("%(playlist)s - %(title).60s (%(uploader_id)s %(upload_date)s %(resolution)s).%(ext)s");

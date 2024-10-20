@@ -156,7 +156,7 @@ public class Settings{
             AbstractUrlFilter.DEFAULTS.stream()
                 .filter(
                     filter -> urlFilters.stream()
-                        .noneMatch(savedFilter -> savedFilter.getClass().equals(filter.getClass()))
+                        .noneMatch(savedFilter -> savedFilter.getId().equals(filter.getId()))
                 )
                 .forEach(urlFilters::add);
         }
@@ -166,7 +166,7 @@ public class Settings{
             QualitySettings value = entry.getValue();
 
             urlFilters.stream()
-                .filter(filter -> filter.getClass().equals(key.getFilterClass()))
+                .filter(filter -> filter.getId().equals(key.getId()))
                 .forEach(filter -> {
                     filter.setQualitySettings(value);
                     log.info("Migrated {} -> {}", key, value);

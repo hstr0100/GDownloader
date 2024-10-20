@@ -45,20 +45,20 @@ import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonTypeInfo(
     use = JsonTypeInfo.Id.NAME,
-    include = JsonTypeInfo.As.PROPERTY,
+    include = JsonTypeInfo.As.EXISTING_PROPERTY,
     property = "Id",
     defaultImpl = GenericFilter.class
 )
 @JsonSubTypes({
-    @JsonSubTypes.Type(value = CrunchyrollFilter.class, name = "crunchyroll"),
-    @JsonSubTypes.Type(value = DropoutFilter.class, name = "dropout"),
-    @JsonSubTypes.Type(value = FacebookFilter.class, name = "facebook"),
-    @JsonSubTypes.Type(value = RedditFilter.class, name = "reddit"),
-    @JsonSubTypes.Type(value = TwitchFilter.class, name = "twitch"),
-    @JsonSubTypes.Type(value = XFilter.class, name = "x"),
-    @JsonSubTypes.Type(value = YoutubeFilter.class, name = "youtube"),
-    @JsonSubTypes.Type(value = YoutubePlaylistFilter.class, name = "youtube_playlist"),
-    @JsonSubTypes.Type(value = GenericFilter.class, name = "default")
+    @JsonSubTypes.Type(value = CrunchyrollFilter.class, name = CrunchyrollFilter.ID),
+    @JsonSubTypes.Type(value = DropoutFilter.class, name = DropoutFilter.ID),
+    @JsonSubTypes.Type(value = FacebookFilter.class, name = FacebookFilter.ID),
+    @JsonSubTypes.Type(value = RedditFilter.class, name = RedditFilter.ID),
+    @JsonSubTypes.Type(value = TwitchFilter.class, name = TwitchFilter.ID),
+    @JsonSubTypes.Type(value = XFilter.class, name = XFilter.ID),
+    @JsonSubTypes.Type(value = YoutubeFilter.class, name = YoutubeFilter.ID),
+    @JsonSubTypes.Type(value = YoutubePlaylistFilter.class, name = YoutubePlaylistFilter.ID),
+    @JsonSubTypes.Type(value = GenericFilter.class, name = GenericFilter.ID)
 })
 public abstract class AbstractUrlFilter{
 
@@ -78,6 +78,9 @@ public abstract class AbstractUrlFilter{
 
         DEFAULTS.add(new GenericFilter());
     }
+
+    @JsonProperty("Id")
+    private String id = "";
 
     @JsonProperty("FilterName")
     private String filterName = "";
@@ -167,6 +170,6 @@ public abstract class AbstractUrlFilter{
     public abstract boolean areCookiesRequired();
 
     @JsonIgnore
-    public abstract boolean canAcceptDownload(String url, GDownloader main);
+    public abstract boolean canAcceptUrl(String url, GDownloader main);
 
 }

@@ -16,7 +16,6 @@
  */
 package net.brlns.gdownloader.settings.filters;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -29,8 +28,11 @@ import lombok.EqualsAndHashCode;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class RedditFilter extends GenericFilter{
 
+    public static final String ID = "reddit";
+
     @SuppressWarnings("this-escape")
     public RedditFilter(){
+        setId(ID);
         setFilterName("Reddit");
         setUrlRegex("^(https?:\\/\\/)?(www\\.|old\\.|new\\.)?reddit\\.com(\\/.*)?$");
     }

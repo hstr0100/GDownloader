@@ -20,7 +20,7 @@ import lombok.Getter;
 import net.brlns.gdownloader.settings.filters.*;
 
 /**
- * The sole purpose of this class as of 2024-10-20 is for config migration.
+ * The sole purpose of this enum as of 2024-10-20 is for config migration.
  *
  * Do not use.
  *
@@ -29,20 +29,20 @@ import net.brlns.gdownloader.settings.filters.*;
 @Getter
 @Deprecated
 public enum WebFilterEnum implements ISettingsEnum{
-    YOUTUBE(YoutubeFilter.class),
-    YOUTUBE_PLAYLIST(YoutubePlaylistFilter.class),
-    TWITCH(TwitchFilter.class),
-    FACEBOOK(FacebookFilter.class),
-    TWITTER(XFilter.class),
-    CRUNCHYROLL(CrunchyrollFilter.class),
-    DROPOUT(DropoutFilter.class),
-    REDDIT(RedditFilter.class),
-    DEFAULT(GenericFilter.class);
+    YOUTUBE(YoutubeFilter.ID),
+    YOUTUBE_PLAYLIST(YoutubePlaylistFilter.ID),
+    TWITCH(TwitchFilter.ID),
+    FACEBOOK(FacebookFilter.ID),
+    TWITTER(XFilter.ID),
+    CRUNCHYROLL(CrunchyrollFilter.ID),
+    DROPOUT(DropoutFilter.ID),
+    REDDIT(RedditFilter.ID),
+    DEFAULT(GenericFilter.ID);
 
-    private final Class<? extends AbstractUrlFilter> filterClass;
+    private final String id;
 
-    WebFilterEnum(Class<? extends AbstractUrlFilter> filterClass){
-        this.filterClass = filterClass;
+    private WebFilterEnum(String idIn){
+        id = idIn;
     }
 
     @Override

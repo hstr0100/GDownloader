@@ -29,8 +29,11 @@ import lombok.EqualsAndHashCode;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class CrunchyrollFilter extends GenericFilter{
 
+    public static final String ID = "crunchyroll";
+
     @SuppressWarnings("this-escape")
     public CrunchyrollFilter(){
+        setId(ID);
         setFilterName("Crunchyroll");
         setUrlRegex("^(https?:\\/\\/)?(www\\.)?crunchyroll\\.com(\\/.*)?$");
     }

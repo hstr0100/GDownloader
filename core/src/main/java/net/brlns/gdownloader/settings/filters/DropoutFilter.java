@@ -29,8 +29,11 @@ import lombok.EqualsAndHashCode;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class DropoutFilter extends GenericFilter{
 
+    public static final String ID = "dropout";
+
     @SuppressWarnings("this-escape")
     public DropoutFilter(){
+        setId(ID);
         setFilterName("Dropout");
         setUrlRegex("^(https?:\\/\\/)?(www\\.)?dropout\\.tv(\\/.*)?$");
     }

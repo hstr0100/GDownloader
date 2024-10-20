@@ -36,8 +36,11 @@ import static net.brlns.gdownloader.settings.enums.DownloadTypeEnum.*;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class YoutubeFilter extends GenericFilter{
 
+    public static final String ID = "youtube";
+
     @SuppressWarnings("this-escape")
     public YoutubeFilter(){
+        setId(ID);
         setFilterName("Youtube");
         setUrlRegex("^(https?:\\/\\/)?(www\\.)?(youtube\\.com|youtu\\.be)(?!.*(\\/live|\\/playlist|list=)).*$");
         setVideoNamePattern("%(title).60s (%(uploader_id)s %(upload_date)s %(resolution)s).%(ext)s");
@@ -87,7 +90,7 @@ public class YoutubeFilter extends GenericFilter{
 
     @JsonIgnore
     @Override
-    public boolean canAcceptDownload(String url, GDownloader main){
+    public boolean canAcceptUrl(String url, GDownloader main){
         return !isYoutubeChannel(url) || isYoutubeChannel(url) && main.getConfig().isDownloadYoutubeChannels();
     }
 

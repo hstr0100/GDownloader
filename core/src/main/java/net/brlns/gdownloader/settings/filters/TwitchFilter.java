@@ -38,8 +38,11 @@ import static net.brlns.gdownloader.settings.enums.DownloadTypeEnum.*;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class TwitchFilter extends GenericFilter{
 
+    public static final String ID = "twitch";
+
     @SuppressWarnings("this-escape")
     public TwitchFilter(){
+        setId(ID);
         setFilterName("Twitch");
         setUrlRegex("^(https?:\\/\\/)?(www\\.)?twitch\\.tv(\\/.*)?$");
         setVideoNamePattern("%(title).60s (%(uploader_id)s %(upload_date)s %(resolution)s).%(ext)s");

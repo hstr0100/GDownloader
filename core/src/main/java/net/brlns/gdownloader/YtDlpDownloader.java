@@ -81,7 +81,7 @@ import static net.brlns.gdownloader.util.URLUtils.*;
 //TODO scale on resolution DPI
 //TODO save last window size in config
 //TODO keep older versions of ytdlp and retry failed downloads against them
-//TODO Advanced users can edit the config.json directly to add extra yt-dlp arguments like proxy settings. but maybe expose those settings in the ui.
+//TODO Advanced users can edit the config.json directly to add extra yt-dlp arguments like proxy settings. but maybe expose those settings to the ui.
 //TODO verify checksums during updates, add bouncycastle, check signatures
 //TODO write a component factory for GUIManager
 //TODO git actions build for different platforms
@@ -206,7 +206,7 @@ public class YtDlpDownloader{
         AbstractUrlFilter filter = filterOptional.get();
         log.info("URL: {} matched {}", inputUrl, filter);
 
-        if(!filter.canAcceptDownload(inputUrl, main)){
+        if(!filter.canAcceptUrl(inputUrl, main)){
             log.info("Filter {} has denied to accept url {}; Verify settings.", filter, inputUrl);
             future.complete(false);
             return future;
@@ -296,7 +296,6 @@ public class YtDlpDownloader{
                             future.complete(false);
                         });
 
-                        //The dialog is synchronized
                         main.getGuiManager().showConfirmDialog(
                             l10n("dialog.confirm"),
                             l10n("dialog.download_playlist") + "\n\n" + playlist,
@@ -417,7 +416,7 @@ public class YtDlpDownloader{
 
         if(filter == null && allowAnyLink){
             for(AbstractUrlFilter filterNeedle : main.getConfig().getUrlFilters()){
-                if(filterNeedle.getClass().equals(GenericFilter.class)){
+                if(filterNeedle.getId().equals(GenericFilter.ID)){
                     filter = filterNeedle;
                     break;
                 }

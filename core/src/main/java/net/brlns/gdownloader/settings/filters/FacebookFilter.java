@@ -36,8 +36,11 @@ import static net.brlns.gdownloader.settings.enums.DownloadTypeEnum.*;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class FacebookFilter extends GenericFilter{
 
+    public static final String ID = "facebook";
+
     @SuppressWarnings("this-escape")
     public FacebookFilter(){
+        setId(ID);
         setFilterName("Facebook");
         setUrlRegex("^(https?:\\/\\/)?(www\\.)?facebook\\.com(\\/.*)?$");
         setVideoNamePattern("%(title).60s (%(upload_date)s %(resolution)s).%(ext)s");

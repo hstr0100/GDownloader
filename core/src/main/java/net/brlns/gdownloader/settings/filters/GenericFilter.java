@@ -40,8 +40,11 @@ import static net.brlns.gdownloader.Language.*;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class GenericFilter extends AbstractUrlFilter{
 
+    public static final String ID = "default";
+
     @SuppressWarnings("this-escape")
     public GenericFilter(){
+        setId(ID);
         setVideoNamePattern("%(title).60s (%(resolution)s).%(ext)s");
         setAudioNamePattern(getVideoNamePattern().replace("%(resolution)s", "%(audio_bitrate)s"));
     }
@@ -183,7 +186,7 @@ public class GenericFilter extends AbstractUrlFilter{
 
     @JsonIgnore
     @Override
-    public boolean canAcceptDownload(String url, GDownloader main){
+    public boolean canAcceptUrl(String url, GDownloader main){
         return true;
     }
 
