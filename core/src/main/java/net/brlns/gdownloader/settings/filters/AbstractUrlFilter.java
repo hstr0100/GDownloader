@@ -63,7 +63,7 @@ import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
 public abstract class AbstractUrlFilter{
 
     @JsonIgnore
-    public static final List<Class<?>> DEFAULTS = new ArrayList<>();
+    private static final List<Class<?>> DEFAULTS = new ArrayList<>();
 
     static{
         JsonSubTypes jsonSubTypes = AbstractUrlFilter.class.getAnnotation(JsonSubTypes.class);
@@ -75,8 +75,6 @@ public abstract class AbstractUrlFilter{
                 DEFAULTS.add(type.value());
             }
         }
-
-        log.info("{}", DEFAULTS);
     }
 
     @JsonIgnore

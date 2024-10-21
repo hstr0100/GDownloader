@@ -40,8 +40,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -64,6 +64,7 @@ import net.brlns.gdownloader.ui.GUIManager;
 import net.brlns.gdownloader.ui.GUIManager.DialogButton;
 import net.brlns.gdownloader.ui.MediaCard;
 import net.brlns.gdownloader.util.ConcurrentRearrangeableDeque;
+import net.brlns.gdownloader.util.LinkedIterableBlockingQueue;
 import net.brlns.gdownloader.util.Nullable;
 import net.brlns.gdownloader.util.Pair;
 import net.brlns.gdownloader.util.PriorityThreadPoolExecutor;
@@ -120,7 +121,7 @@ public class YtDlpDownloader{
 
     private final GDownloader main;
 
-    private final ScheduledExecutorService processMonitor;
+    private final ExecutorService processMonitor;
     private final PriorityThreadPoolExecutor downloadScheduler;
 
     private final List<Consumer<YtDlpDownloader>> listeners = new ArrayList<>();
@@ -131,7 +132,7 @@ public class YtDlpDownloader{
     private final ConcurrentRearrangeableDeque<QueueEntry> downloadDeque
         = new ConcurrentRearrangeableDeque<>();
 
-    private final Queue<QueueEntry> runningQueue = new ConcurrentLinkedQueue<>();
+    private final Queue<QueueEntry> runningQueue = new LinkedIterableBlockingQueue<>();
 
     private final Queue<QueueEntry> completedDownloads = new ConcurrentLinkedQueue<>();
     private final Queue<QueueEntry> failedDownloads = new ConcurrentLinkedQueue<>();
@@ -153,24 +154,33 @@ public class YtDlpDownloader{
     public YtDlpDownloader(GDownloader mainIn){
         main = mainIn;
 
-        processMonitor = Executors.newScheduledThreadPool(1);
-        processMonitor.scheduleAtFixedRate(() -> {
-            for(QueueEntry entry : runningQueue){
-                if(!downloadsRunning.get() || entry.getCancelHook().get()){
-                    Process process = entry.getProcess();
+        processMonitor = Executors.newSingleThreadExecutor();
+        processMonitor.submit(() -> {
+            while(!Thread.currentThread().isInterrupted()){
+                for(QueueEntry entry : runningQueue){
+                    if(!downloadsRunning.get() || entry.getCancelHook().get()){
+                        Process process = entry.getProcess();
 
-                    if(process != null && process.isAlive()){
-                        log.info("Process Monitor is stopping {}", entry.getUrl());
+                        if(process != null && process.isAlive()){
+                            log.info("Process Monitor is stopping {}", entry.getUrl());
 
-                        try{
-                            tryStopProcess(process);
-                        }catch(Exception e){
-                            log.error("Interrupted {}", e.getMessage());
+                            try{
+                                tryStopProcess(process);
+                            }catch(Exception e){
+                                log.error("Interrupted {}", e.getMessage());
+                            }
                         }
                     }
                 }
+
+                try{
+                    Thread.sleep(300);
+                }catch(InterruptedException e){
+                    Thread.currentThread().interrupt();
+                    break;
+                }
             }
-        }, 0, 100, TimeUnit.MILLISECONDS);
+        });
 
         //10 Threads for now. This caps us at a maximum of 10 concurrent downloads.
         //I hope you have plenty of cpu threads to spare if you wish to push this further.
@@ -634,7 +644,7 @@ public class YtDlpDownloader{
 
                     if(filter.areCookiesRequired() && !main.getConfig().isReadCookies()){
                         //TODO: Visual cue
-                        log.warn("Cookies required for this website {}", entry.getOriginalUrl());
+                        log.warn("Cookies are required for this website {}", entry.getOriginalUrl());
                     }
 
                     boolean downloadAudio = main.getConfig().isDownloadAudio();
@@ -701,15 +711,15 @@ public class YtDlpDownloader{
                     boolean wasStopped = false;
 
                     try{
-                        runningQueue.add(entry);
+                        runningQueue.offer(entry);
 
                         for(DownloadTypeEnum type : DownloadTypeEnum.values()){
-                            if(type == ALL){
-                                continue;
-                            }
-
-                            if(type == VIDEO && !downloadVideo
-                                || type == AUDIO && !downloadAudio
+                            if(type == ALL
+                                //Intentionally not doing a fresh check for isDownloadVideo() here.
+                                //Mostly prevents an impossibly rare scenario where the user could have disabled all download possibilities after the sanity checks.
+                                //It would not hurt anything if they did, however, they would end up with a 'completed' download that did not in fact download anything.
+                                || type == VIDEO && !downloadVideo
+                                || type == AUDIO && !main.getConfig().isDownloadAudio()
                                 || type == SUBTITLES && !main.getConfig().isDownloadSubtitles()
                                 || type == THUMBNAILS && !main.getConfig().isDownloadThumbnails()){
                                 continue;
@@ -901,7 +911,7 @@ public class YtDlpDownloader{
                         output.append(ch);
 
                         if(ch == '\n' || (ch == '\r' && prevChar != '\n')){
-                            lastOutput = output.toString();
+                            lastOutput = output.toString().replace("\n", "");
                             output.setLength(0);
                         }
 
@@ -1264,6 +1274,8 @@ public class YtDlpDownloader{
 
             thumbnails.stream()
                 .filter(thumb -> thumb.getUrl() != null)
+                //While WebP might be preferred for the web, we don't want to deal with it unless absolutely necessary.
+                //Sorting in reverse here means we are attempting to obtain the most basic and compatible thumbnails available first.
                 .sorted(Comparator.comparingInt(Thumbnail::getPreference).reversed())
                 .map(Thumbnail::getUrl)
                 .forEach(builder::add);
@@ -1291,6 +1303,7 @@ public class YtDlpDownloader{
 
         @JsonIgnore
         @Nullable
+        //TODO: implement
         public LocalDate getUploadDateAsLocalDate(){
             if(uploadDate != null && !uploadDate.isEmpty()){
                 DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd");

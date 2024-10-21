@@ -103,7 +103,6 @@ class UrlFilterTest{
     void testEdgeCases(){
         YoutubeFilter filter = new YoutubeFilter();
         assertFalse(filter.matches(""));
-        assertFalse(filter.matches(""));
 
         NullPointerException exception = assertThrows(NullPointerException.class, () -> filter.matches(null));
         assertNotNull(exception);
