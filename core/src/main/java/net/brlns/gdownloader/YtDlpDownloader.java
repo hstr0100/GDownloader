@@ -63,11 +63,7 @@ import net.brlns.gdownloader.settings.filters.YoutubePlaylistFilter;
 import net.brlns.gdownloader.ui.GUIManager;
 import net.brlns.gdownloader.ui.GUIManager.DialogButton;
 import net.brlns.gdownloader.ui.MediaCard;
-import net.brlns.gdownloader.util.ConcurrentRearrangeableDeque;
-import net.brlns.gdownloader.util.LinkedIterableBlockingQueue;
-import net.brlns.gdownloader.util.Nullable;
-import net.brlns.gdownloader.util.Pair;
-import net.brlns.gdownloader.util.PriorityThreadPoolExecutor;
+import net.brlns.gdownloader.util.*;
 
 import static net.brlns.gdownloader.Language.*;
 import static net.brlns.gdownloader.settings.enums.DownloadTypeEnum.*;
@@ -689,7 +685,7 @@ public class YtDlpDownloader{
 
                     File finalPath = main.getOrCreateDownloadsDirectory();
 
-                    File tmpPath = GDownloader.getOrCreate(finalPath, GDownloader.CACHE_DIRETORY_NAME, String.valueOf(entry.getDownloadId()));
+                    File tmpPath = DirectoryUtils.getOrCreate(finalPath, GDownloader.CACHE_DIRETORY_NAME, String.valueOf(entry.getDownloadId()));
                     entry.setTmpDirectory(tmpPath);
 
                     List<String> genericArguments = new ArrayList<>();
@@ -826,7 +822,7 @@ public class YtDlpDownloader{
 
                         mediaCard.getRightClickMenu().putAll(rightClickOptions);
 
-                        GDownloader.deleteRecursively(tmpPath.toPath());
+                        DirectoryUtils.deleteRecursively(tmpPath.toPath());
 
                         entry.updateStatus(DownloadStatus.COMPLETE, l10n("gui.download_status.finished"));
 
@@ -1103,7 +1099,7 @@ public class YtDlpDownloader{
 
         public void clean(){
             if(tmpDirectory != null && tmpDirectory.exists()){
-                GDownloader.deleteRecursively(tmpDirectory.toPath());
+                DirectoryUtils.deleteRecursively(tmpDirectory.toPath());
             }
         }
 

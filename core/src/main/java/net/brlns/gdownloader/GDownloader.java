@@ -48,7 +48,6 @@ import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import javax.swing.UIManager;
 import javax.swing.plaf.FontUIResource;
 import lombok.Getter;
@@ -59,6 +58,7 @@ import net.brlns.gdownloader.ui.GUIManager;
 import net.brlns.gdownloader.ui.GUIManager.MessageType;
 import net.brlns.gdownloader.ui.themes.ThemeProvider;
 import net.brlns.gdownloader.updater.*;
+import net.brlns.gdownloader.util.DirectoryUtils;
 import net.brlns.gdownloader.util.LoggerUtils;
 import net.brlns.gdownloader.util.NoFallbackAvailableException;
 import net.brlns.gdownloader.util.Nullable;
@@ -281,11 +281,11 @@ public final class GDownloader{
 
         //A shorter cache dir name might benefit NTFS filesystems.
         File cachePath = new File(getDownloadsDirectory(), CACHE_DIRETORY_NAME);
-        deleteRecursively(cachePath.toPath());
+        DirectoryUtils.deleteRecursively(cachePath.toPath());
 
         //We have to get rid of the old cache dir if it exists.
         File oldCachePath = new File(getDownloadsDirectory(), OLD_CACHE_DIRETORY_NAME);
-        deleteRecursively(oldCachePath.toPath());
+        DirectoryUtils.deleteRecursively(oldCachePath.toPath());
 
         if(notify){
             guiManager.showMessage(
@@ -819,7 +819,7 @@ public final class GDownloader{
                     }
                 }
             }else{
-                File autostartDirectory = getOrCreate(System.getProperty("user.home"), "/.config/autostart");
+                File autostartDirectory = DirectoryUtils.getOrCreate(System.getProperty("user.home"), "/.config/autostart");
 
                 File desktopFile = new File(autostartDirectory, REGISTRY_APP_NAME + ".desktop");
                 if(!desktopFile.exists() && currentStatus){
@@ -932,7 +932,7 @@ public final class GDownloader{
         if(!oldDir.equals(newDir)){
             downloadManager.stopDownloads();
 
-            deleteRecursively(oldDir.toPath());
+            DirectoryUtils.deleteRecursively(oldDir.toPath());
         }
 
         config.setDownloadsPath(newDir.getAbsolutePath());
@@ -1273,45 +1273,10 @@ public final class GDownloader{
                 }
             }
 
-            _cachedWorkDir = getOrCreate(appDir.toFile());
+            _cachedWorkDir = DirectoryUtils.getOrCreate(appDir.toFile());
         }
 
         return _cachedWorkDir;
-    }
-
-    public static boolean deleteRecursively(Path directory){
-        if(!Files.exists(directory)){
-            return true;
-        }
-
-        try(Stream<Path> dirStream = Files.walk(directory)){
-            boolean success = dirStream
-                .sorted(Comparator.reverseOrder()) // Ensure deeper directories are deleted first
-                .allMatch(file -> {
-                    try{
-                        return Files.deleteIfExists(file);
-                    }catch(IOException e){
-                        log.error("Failed to delete: {} {}", file, e.getLocalizedMessage());
-                        return false;
-                    }
-                });
-
-            return success;
-        }catch(IOException e){
-            log.error("Failed to delete: {} {}", directory, e.getLocalizedMessage());
-            return false;
-        }
-    }
-
-    public static File getOrCreate(String dir, String... path){
-        return getOrCreate(new File(dir), path);
-    }
-
-    public static File getOrCreate(File dir, String... path){
-        File file = new File(dir, String.join(File.separator, path));
-        file.mkdirs();
-
-        return file;
     }
 
     public static boolean isWindows(){
