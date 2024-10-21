@@ -24,6 +24,7 @@ import java.nio.file.StandardCopyOption;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.util.ArchiveUtils;
+import net.brlns.gdownloader.util.DirectoryUtils;
 import net.brlns.gdownloader.util.Nullable;
 
 /**
@@ -108,7 +109,7 @@ public class FFMpegUpdater extends AbstractGitUpdater{
                 zipPath.delete();
             }
 
-            GDownloader.deleteRecursively(zipOutputPath);
+            DirectoryUtils.deleteRecursively(zipOutputPath);
         }
 
         return outputFile;

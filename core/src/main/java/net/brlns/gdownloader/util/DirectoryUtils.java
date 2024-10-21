@@ -24,14 +24,49 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
-import net.brlns.gdownloader.GDownloader;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
 @Slf4j
 public class DirectoryUtils{
+
+    public static boolean deleteRecursively(Path directory){
+        if(!Files.exists(directory)){
+            return true;
+        }
+
+        try(Stream<Path> dirStream = Files.walk(directory)){
+            boolean success = dirStream
+                .sorted(Comparator.reverseOrder()) // Ensure deeper directories are deleted first
+                .allMatch(file -> {
+                    try{
+                        return Files.deleteIfExists(file);
+                    }catch(IOException e){
+                        log.error("Failed to delete: {} {}", file, e.getLocalizedMessage());
+                        return false;
+                    }
+                });
+
+            return success;
+        }catch(IOException e){
+            log.error("Failed to delete: {} {}", directory, e.getLocalizedMessage());
+            return false;
+        }
+    }
+
+    public static File getOrCreate(String dir, String... path){
+        return getOrCreate(new File(dir), path);
+    }
+
+    public static File getOrCreate(File dir, String... path){
+        File file = new File(dir, String.join(File.separator, path));
+        file.mkdirs();
+
+        return file;
+    }
 
     /**
      * Shenanigans to deal with heavily fail-prone filesystem operations on Windows
@@ -69,7 +104,7 @@ public class DirectoryUtils{
         for(int i = 0; i < directoryNames.size() - numberToDelete; i++){
             int number = extractNumber(directoryNames.get(i));
             if(number < highest){
-                GDownloader.deleteRecursively(
+                deleteRecursively(
                     Paths.get(workDir.toString(), directoryNames.get(i)));
             }
         }
