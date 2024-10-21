@@ -547,11 +547,6 @@ public class YtDlpDownloader{
     }
 
     private void queryVideo(QueueEntry queueEntry){
-//      if(queueEntry.getWebFilter() == WebFilterEnum.DEFAULT){
-//          queueEntry.updateStatus(DownloadStatus.QUEUED, l10n("gui.download_status.not_started"));
-//          return;
-//      }
-
         downloadScheduler.submitWithPriority(() -> {
             try{
                 if(queueEntry.getCancelHook().get()){

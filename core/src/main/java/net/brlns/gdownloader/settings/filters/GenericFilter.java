@@ -113,20 +113,8 @@ public class GenericFilter extends AbstractUrlFilter{
                     "-f",
                     getQualitySettings().buildQualitySelector(),
                     "--merge-output-format",
-                    videoContainer.getValue(),
-                    "--embed-thumbnail",
-                    "--embed-metadata",
-                    "--embed-chapters"
+                    videoContainer.getValue()
                 ));
-
-                switch(videoContainer){
-                    case MKV, MP4, WEBM ->
-                        arguments.addAll(List.of(
-                            "--embed-subs",
-                            "--sub-langs",
-                            "all,-live_chat"
-                        ));
-                }
 
                 if(config.isTranscodeAudioToAAC()){
                     arguments.addAll(List.of(
@@ -150,9 +138,7 @@ public class GenericFilter extends AbstractUrlFilter{
                         "--audio-format",
                         quality.getAudioContainer().getValue(),
                         "--audio-quality",
-                        audioBitrate.getValue() + "k",
-                        "--embed-thumbnail",
-                        "--embed-metadata"
+                        audioBitrate.getValue() + "k"
                     ));
                 }
             }

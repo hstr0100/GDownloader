@@ -51,6 +51,7 @@ import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
     @JsonSubTypes.Type(value = YoutubeFilter.class, name = YoutubeFilter.ID),
     @JsonSubTypes.Type(value = YoutubePlaylistFilter.class, name = YoutubePlaylistFilter.ID),
 
+    @JsonSubTypes.Type(value = BiliBiliFilter.class, name = BiliBiliFilter.ID),
     @JsonSubTypes.Type(value = CrunchyrollFilter.class, name = CrunchyrollFilter.ID),
     @JsonSubTypes.Type(value = DropoutFilter.class, name = DropoutFilter.ID),
     @JsonSubTypes.Type(value = FacebookFilter.class, name = FacebookFilter.ID),
