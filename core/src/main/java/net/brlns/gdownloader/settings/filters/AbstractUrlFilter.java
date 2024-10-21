@@ -29,7 +29,6 @@ import java.util.Map;
 import java.util.regex.Pattern;
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.settings.QualitySettings;
@@ -49,33 +48,52 @@ import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
     defaultImpl = GenericFilter.class
 )
 @JsonSubTypes({
+    @JsonSubTypes.Type(value = YoutubeFilter.class, name = YoutubeFilter.ID),
+    @JsonSubTypes.Type(value = YoutubePlaylistFilter.class, name = YoutubePlaylistFilter.ID),
+
     @JsonSubTypes.Type(value = CrunchyrollFilter.class, name = CrunchyrollFilter.ID),
     @JsonSubTypes.Type(value = DropoutFilter.class, name = DropoutFilter.ID),
     @JsonSubTypes.Type(value = FacebookFilter.class, name = FacebookFilter.ID),
     @JsonSubTypes.Type(value = RedditFilter.class, name = RedditFilter.ID),
     @JsonSubTypes.Type(value = TwitchFilter.class, name = TwitchFilter.ID),
     @JsonSubTypes.Type(value = XFilter.class, name = XFilter.ID),
-    @JsonSubTypes.Type(value = YoutubeFilter.class, name = YoutubeFilter.ID),
-    @JsonSubTypes.Type(value = YoutubePlaylistFilter.class, name = YoutubePlaylistFilter.ID),
+
     @JsonSubTypes.Type(value = GenericFilter.class, name = GenericFilter.ID)
 })
 public abstract class AbstractUrlFilter{
 
     @JsonIgnore
-    public static final List<AbstractUrlFilter> DEFAULTS = new ArrayList<>();
+    public static final List<Class<?>> DEFAULTS = new ArrayList<>();
 
     static{
-        DEFAULTS.add(new YoutubeFilter());
-        DEFAULTS.add(new YoutubePlaylistFilter());
+        JsonSubTypes jsonSubTypes = AbstractUrlFilter.class.getAnnotation(JsonSubTypes.class);
 
-        DEFAULTS.add(new CrunchyrollFilter());
-        DEFAULTS.add(new DropoutFilter());
-        DEFAULTS.add(new FacebookFilter());
-        DEFAULTS.add(new RedditFilter());
-        DEFAULTS.add(new TwitchFilter());
-        DEFAULTS.add(new XFilter());
+        if(jsonSubTypes != null){
+            JsonSubTypes.Type[] types = jsonSubTypes.value();
 
-        DEFAULTS.add(new GenericFilter());
+            for(JsonSubTypes.Type type : types){
+                DEFAULTS.add(type.value());
+            }
+        }
+
+        log.info("{}", DEFAULTS);
+    }
+
+    @JsonIgnore
+    public static List<AbstractUrlFilter> getDefaultUrlFilters(){
+        List<AbstractUrlFilter> filters = new ArrayList<>();
+
+        for(Class<?> filterClass : DEFAULTS){
+            try{
+                AbstractUrlFilter filter = (AbstractUrlFilter)filterClass.getDeclaredConstructor().newInstance();
+
+                filters.add(filter);
+            }catch(Exception e){
+                log.error("Error instantiating class. {}", e.getMessage());
+            }
+        }
+
+        return filters;
     }
 
     @JsonProperty("Id")

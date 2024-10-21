@@ -146,16 +146,18 @@ public class Settings{
     private List<AbstractUrlFilter> urlFilters = new ArrayList<>();
 
     public Settings(){
-        urlFilters.addAll(AbstractUrlFilter.DEFAULTS);
+        urlFilters.addAll(AbstractUrlFilter.getDefaultUrlFilters());
     }
 
     @JsonIgnore
     @SuppressWarnings("deprecation")
     public void doMigration(){
+        List<AbstractUrlFilter> defaultFilters = AbstractUrlFilter.getDefaultUrlFilters();
+
         if(urlFilters.isEmpty()){
-            urlFilters.addAll(AbstractUrlFilter.DEFAULTS);
+            urlFilters.addAll(defaultFilters);
         }else{
-            AbstractUrlFilter.DEFAULTS.stream()
+            defaultFilters.stream()
                 .filter(
                     filter -> urlFilters.stream()
                         .noneMatch(savedFilter -> savedFilter.getId().equals(filter.getId()))
