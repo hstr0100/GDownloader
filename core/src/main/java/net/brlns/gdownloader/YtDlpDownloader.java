@@ -236,11 +236,6 @@ public class YtDlpDownloader{
             return future;
         }
 
-        if(capturedLinks.contains(inputUrl)){
-            future.complete(false);
-            return future;
-        }
-
         String filteredUrl;
         //TODO: move these to the appropriate classes.
         if(filter instanceof YoutubePlaylistFilter){
@@ -352,10 +347,7 @@ public class YtDlpDownloader{
         }
 
         if(filteredUrl == null){
-            if(main.getConfig().isDebugMode()){
-                main.handleException(new Throwable("Filtered url was null"));
-            }
-
+            log.error("Filtered url was null.");
             future.complete(false);
             return future;
         }
@@ -419,6 +411,12 @@ public class YtDlpDownloader{
 
             downloadDeque.offerLast(queueEntry);
             fireListeners();
+
+            if(main.getConfig().isAutoDownloadStart()){
+                if(!downloadsRunning.get() && !downloadDeque.isEmpty()){
+                    startDownloads();
+                }
+            }
 
             future.complete(true);
             return future;
@@ -606,12 +604,6 @@ public class YtDlpDownloader{
     }
 
     public void processQueue(){
-        if(main.getConfig().isAutoDownloadStart()){
-            if(!downloadsRunning.get() && !downloadDeque.isEmpty()){
-                startDownloads();
-            }
-        }
-
         while(downloadsRunning.get() && !downloadDeque.isEmpty()){
             if(runningDownloads.get() >= main.getConfig().getMaxSimultaneousDownloads()){
                 break;
