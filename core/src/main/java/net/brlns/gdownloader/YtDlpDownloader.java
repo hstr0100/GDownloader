@@ -108,7 +108,6 @@ import static net.brlns.gdownloader.util.URLUtils.*;
 //TODO Implement rate-limiting options internally; the way it's currently implemented does not account for concurrent or non-playlist downloads.
 //TODO Notify the user whenever a setting that requires restart was changed.
 //TODO Settings version
-//TODO When downloading playlists, move their entire directory from the temporary folder.
 //Off to a bootcamp, project on pause
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -618,6 +617,7 @@ public class YtDlpDownloader{
                     AbstractUrlFilter filter = entry.getFilter();
 
                     if(filter.areCookiesRequired() && !main.getConfig().isReadCookies()){
+                        //TODO: Visual cue
                         log.warn("Cookies required for this website {}", entry.getOriginalUrl());
                     }
 
@@ -682,12 +682,6 @@ public class YtDlpDownloader{
 
                     genericArguments.addAll(filter.getArguments(ALL, main, tmpPath));
 
-                    for(String arg : main.getConfig().getExtraYtDlpArguments().split(" ")){
-                        if(!arg.isEmpty()){
-                            genericArguments.add(arg);
-                        }
-                    }
-
                     boolean wasStopped = false;
 
                     for(DownloadTypeEnum type : DownloadTypeEnum.values()){
@@ -707,7 +701,7 @@ public class YtDlpDownloader{
                         List<String> downloadArguments = filter.getArguments(type, main, tmpPath);
                         arguments.addAll(downloadArguments);
 
-                        log.debug("Generic {}: Type {} ({}): {}",
+                        log.debug("ALL {}: Type {} ({}): {}",
                             genericArguments,
                             type,
                             filter.getDisplayName(),

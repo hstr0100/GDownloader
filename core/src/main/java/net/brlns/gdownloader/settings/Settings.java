@@ -74,13 +74,15 @@ public class Settings{
     @JsonProperty("UseSystemFont")
     private boolean useSystemFont = false;
 
+    @JsonProperty("LogMagnetLinks")
+    private boolean logMagnetLinks = false;
+
     @JsonProperty("Theme")
     private ThemeEnum theme = ThemeEnum.DARK;
 
     @JsonProperty("CaptureAnyLinks")
     private boolean captureAnyLinks = false;
 
-    //TODO expose to settings panel
     @JsonProperty("ExtraYtDlpArguments")
     private String extraYtDlpArguments = "";
 

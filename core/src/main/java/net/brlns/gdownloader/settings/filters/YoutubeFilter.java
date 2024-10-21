@@ -81,7 +81,6 @@ public class YoutubeFilter extends GenericFilter{
                     //Of note: embedding these vtt files into video files does not seem to work. Not even with --convert-subs.
                     arguments.add("--write-auto-sub");
                 }
-
             }
         }
 

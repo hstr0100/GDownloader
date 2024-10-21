@@ -152,7 +152,10 @@ public final class GDownloader{
             config = new Settings();
             updateConfig();
 
-            handleException(e);
+            //We have to init the language to display the exception.
+            Language.initLanguage(config);
+
+            handleException(e, true);
         }
 
         log.info("Loaded config file");
@@ -1009,7 +1012,8 @@ public final class GDownloader{
                     list.add(downloadManager.captureUrl(url, force));
                 }
 
-                if(url.startsWith("magnet")){
+                //Small extra utility
+                if(config.isLogMagnetLinks() && url.startsWith("magnet")){
                     logUrl(url, "magnets");
                 }
             }

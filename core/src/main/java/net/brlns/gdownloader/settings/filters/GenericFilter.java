@@ -71,6 +71,13 @@ public class GenericFilter extends AbstractUrlFilter{
 
         switch(typeEnum){
             case ALL -> {
+                //For backwards compatibility. This should have been a list.
+                for(String arg : config.getExtraYtDlpArguments().split(" ")){
+                    if(!arg.isEmpty()){
+                        arguments.add(arg);
+                    }
+                }
+
                 if(config.isRandomIntervalBetweenDownloads()){
                     arguments.addAll(List.of(
                         "--max-sleep-interval",

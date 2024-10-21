@@ -41,7 +41,6 @@ import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
 @Data
 @Slf4j
 @AllArgsConstructor
-@NoArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonTypeInfo(
     use = JsonTypeInfo.Id.NAME,
@@ -123,6 +122,12 @@ public abstract class AbstractUrlFilter{
 
     @JsonProperty("QualitySettings")
     private QualitySettings qualitySettings = QualitySettings.builder().build();
+
+    public AbstractUrlFilter(){
+        for(DownloadTypeEnum downloadType : DownloadTypeEnum.values()){
+            extraYtDlpArguments.put(downloadType, new ArrayList<>());
+        }
+    }
 
     @JsonIgnore
     public String getDisplayName(){
