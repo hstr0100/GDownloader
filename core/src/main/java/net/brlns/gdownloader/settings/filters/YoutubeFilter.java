@@ -23,6 +23,7 @@ import java.util.List;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import net.brlns.gdownloader.GDownloader;
+import net.brlns.gdownloader.settings.QualitySettings;
 import net.brlns.gdownloader.settings.Settings;
 import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
 
@@ -51,6 +52,7 @@ public class YoutubeFilter extends GenericFilter{
     @Override
     protected List<String> buildArguments(DownloadTypeEnum typeEnum, GDownloader main, File savePath){
         Settings config = main.getConfig();
+        QualitySettings quality = getQualitySettings();
 
         List<String> arguments = super.buildArguments(typeEnum, main, savePath);
 
@@ -66,13 +68,27 @@ public class YoutubeFilter extends GenericFilter{
             case VIDEO -> {
                 arguments.addAll(List.of(
                     "--parse-metadata",
-                    "description:(?s)(?P<meta_comment>.+)"
+                    "description:(?s)(?P<meta_comment>.+)",
+                    "--embed-thumbnail",
+                    "--embed-metadata",
+                    "--embed-chapters"
                 ));
+
+                switch(quality.getVideoContainer()){
+                    case MKV, MP4, WEBM ->
+                        arguments.addAll(List.of(
+                            "--embed-subs",
+                            "--sub-langs",
+                            "all,-live_chat"
+                        ));
+                }
             }
             case AUDIO -> {
                 arguments.addAll(List.of(
                     "--parse-metadata",
-                    "description:(?s)(?P<meta_comment>.+)"
+                    "description:(?s)(?P<meta_comment>.+)",
+                    "--embed-thumbnail",
+                    "--embed-metadata"
                 ));
             }
             case SUBTITLES -> {
