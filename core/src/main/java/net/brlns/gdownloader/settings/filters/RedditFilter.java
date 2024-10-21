@@ -35,5 +35,6 @@ public class RedditFilter extends GenericFilter{
         setId(ID);
         setFilterName("Reddit");
         setUrlRegex("^(https?:\\/\\/)?(www\\.|old\\.|new\\.)?reddit\\.com(\\/.*)?$");
+        setEmbedThumbnailAndMetadata(true);
     }
 }

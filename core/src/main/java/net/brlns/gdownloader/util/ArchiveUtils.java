@@ -68,7 +68,7 @@ public class ArchiveUtils{
 
                 extractedEntries++;
                 double progress = (double)extractedEntries / totalEntries * 100;
-                progressCallback.accept(Math.clamp(progress, 0.0, 100.0));
+                progressCallback.accept(Math.clamp(progress, 0d, 100d));
             }
         }
     }

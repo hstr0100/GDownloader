@@ -138,6 +138,9 @@ public class Settings{
     @JsonProperty("PlaySounds")
     private boolean playSounds = false;
 
+    @JsonProperty("AutoDownloadRetry")
+    private boolean autoDownloadRetry = true;
+
     @Deprecated
     @JsonProperty("QualitySettings")
     private Map<WebFilterEnum, QualitySettings> qualitySettings = new TreeMap<>();

@@ -392,6 +392,20 @@ public abstract class AbstractGitUpdater{
         }
     }
 
+    private UpdateStatus _internalLastStatus;
+
+    protected void notifyStatus(UpdateStatus status){
+        notifyProgress(status, 0);
+    }
+
+    protected void notifyProgress(UpdateStatus status, double progress){
+        _internalLastStatus = status;
+
+        for(ProgressListener listener : listeners){
+            listener.update(status, progress);
+        }
+    }
+
     public static void makeExecutable(Path path) throws IOException{
         if(!GDownloader.isWindows()){
             if(Files.isDirectory(path)){
@@ -409,20 +423,6 @@ public abstract class AbstractGitUpdater{
             }else{
                 throw new IOException("The path provided is neither a file nor a directory.");
             }
-        }
-    }
-
-    private UpdateStatus _internalLastStatus;
-
-    protected void notifyStatus(UpdateStatus status){
-        notifyProgress(status, 0);
-    }
-
-    protected void notifyProgress(UpdateStatus status, double progress){
-        _internalLastStatus = status;
-
-        for(ProgressListener listener : listeners){
-            listener.update(status, progress);
         }
     }
 

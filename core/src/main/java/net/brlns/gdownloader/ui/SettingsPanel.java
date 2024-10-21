@@ -735,6 +735,13 @@ public class SettingsPanel{
         );
 
         addCheckBox(downloadSettingsPanel, gbcPanel,
+            "settings.auto_download_retry",
+            settings::isAutoDownloadRetry,
+            settings::setAutoDownloadRetry,
+            false
+        );
+
+        addCheckBox(downloadSettingsPanel, gbcPanel,
             "settings.download_audio",
             settings::isDownloadAudio,
             settings::setDownloadAudio,

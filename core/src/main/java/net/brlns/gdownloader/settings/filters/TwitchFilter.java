@@ -47,6 +47,7 @@ public class TwitchFilter extends GenericFilter{
         setUrlRegex("^(https?:\\/\\/)?(www\\.)?twitch\\.tv(\\/.*)?$");
         setVideoNamePattern("%(title).60s (%(uploader_id)s %(upload_date)s %(resolution)s).%(ext)s");
         setAudioNamePattern(getVideoNamePattern().replace("%(resolution)s", "%(audio_bitrate)s"));
+        setEmbedThumbnailAndMetadata(false);
         setQualitySettings(QualitySettings.builder()
             .selector(QualitySelectorEnum.WORST)
             .minHeight(ResolutionEnum.RES_480)

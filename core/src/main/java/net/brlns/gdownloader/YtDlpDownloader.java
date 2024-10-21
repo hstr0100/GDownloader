@@ -116,6 +116,8 @@ import static net.brlns.gdownloader.util.URLUtils.*;
 @Slf4j
 public class YtDlpDownloader{
 
+    private static final int MAX_DOWNLOAD_RETRIES = 10;
+
     private final GDownloader main;
 
     private final ExecutorService processMonitor;
@@ -509,6 +511,7 @@ public class YtDlpDownloader{
         QueueEntry entry;
         while((entry = failedDownloads.poll()) != null){
             entry.updateStatus(DownloadStatus.QUEUED, l10n("gui.download_status.not_started"));
+            entry.resetRetryCounter();//Normaly we want the retry count to stick around, but not in this case.
             entry.reset();
 
             downloadDeque.offerLast(entry);
@@ -732,14 +735,33 @@ public class YtDlpDownloader{
 
                             Pair<Integer, String> result = processDownload(entry, arguments);
 
+                            //TODO: This code block is so deep it could probably find oil down there already.
                             if(result != null){
                                 if(result.getKey() != 0){
                                     if(!entry.getCancelHook().get()){
                                         if(type == VIDEO || type == AUDIO){
-                                            entry.updateStatus(DownloadStatus.FAILED, result.getValue());
-                                            entry.reset();
+                                            if(!main.getConfig().isAutoDownloadRetry()
+                                                || entry.getRetryCounter().incrementAndGet() > MAX_DOWNLOAD_RETRIES){
 
-                                            failedDownloads.offer(entry);
+                                                log.info("Download of {} failed, all retry attempts failed.",
+                                                    entry.getUrl());
+
+                                                entry.updateStatus(DownloadStatus.FAILED, result.getValue());
+                                                entry.reset();
+
+                                                failedDownloads.offer(entry);
+                                            }else{
+                                                log.info("Download of {} failed, retrying ({}/{})",
+                                                    entry.getUrl(),
+                                                    entry.getRetryCounter().get(),
+                                                    MAX_DOWNLOAD_RETRIES);
+
+                                                entry.updateStatus(DownloadStatus.STOPPED, l10n("gui.download_status.not_started"));
+                                                entry.reset();
+
+                                                downloadDeque.offerFirst(entry);
+                                                fireListeners();
+                                            }
                                         }else{
                                             //These can be treated as low priority downloads since thumbnails
                                             //and subtitles are already embedded by default, if they fail we just move on.
@@ -1030,6 +1052,8 @@ public class YtDlpDownloader{
 
         private Process process;
 
+        private AtomicInteger retryCounter = new AtomicInteger();
+
         public void openUrl(){
             main.openUrlInBrowser(originalUrl);
         }
@@ -1104,6 +1128,8 @@ public class YtDlpDownloader{
         }
 
         public void close(){
+            resetRetryCounter();
+
             cancelHook.set(true);
 
             if(process != null){
@@ -1116,6 +1142,10 @@ public class YtDlpDownloader{
         public void reset(){
             cancelHook.set(false);
             process = null;
+        }
+
+        public void resetRetryCounter(){
+            retryCounter.set(0);
         }
 
         public void setVideoInfo(VideoInfo videoInfoIn){

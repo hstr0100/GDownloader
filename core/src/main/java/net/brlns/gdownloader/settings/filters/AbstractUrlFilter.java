@@ -110,6 +110,8 @@ public abstract class AbstractUrlFilter{
     @JsonProperty("AudioNamePattern")
     private String audioNamePattern = "";
 
+    @JsonProperty("EmbedThumbnailAndMetadata")
+    private boolean embedThumbnailAndMetadata = false;
     /**
      * Represents a set of extra arguments for yt-dlp.
      * These arguments are categorized based on the type of download (e.g., VIDEO, AUDIO, SUBTITLES, etc.).

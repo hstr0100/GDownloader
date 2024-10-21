@@ -47,6 +47,7 @@ public class GenericFilter extends AbstractUrlFilter{
         setId(ID);
         setVideoNamePattern("%(title).60s (%(resolution)s).%(ext)s");
         setAudioNamePattern(getVideoNamePattern().replace("%(resolution)s", "%(audio_bitrate)s"));
+        setEmbedThumbnailAndMetadata(false);
     }
 
     @JsonIgnore
@@ -116,6 +117,23 @@ public class GenericFilter extends AbstractUrlFilter{
                     videoContainer.getValue()
                 ));
 
+                if(isEmbedThumbnailAndMetadata()){
+                    arguments.addAll(List.of(
+                        "--embed-thumbnail",
+                        "--embed-metadata",
+                        "--embed-chapters"
+                    ));
+
+                    switch(quality.getVideoContainer()){
+                        case MKV, MP4, WEBM ->
+                            arguments.addAll(List.of(
+                                "--embed-subs",
+                                "--sub-langs",
+                                "all,-live_chat"
+                            ));
+                    }
+                }
+
                 if(config.isTranscodeAudioToAAC()){
                     arguments.addAll(List.of(
                         "--postprocessor-args",
@@ -140,6 +158,13 @@ public class GenericFilter extends AbstractUrlFilter{
                         "--audio-quality",
                         audioBitrate.getValue() + "k"
                     ));
+
+                    if(isEmbedThumbnailAndMetadata()){
+                        arguments.addAll(List.of(
+                            "--embed-thumbnail",
+                            "--embed-metadata"
+                        ));
+                    }
                 }
             }
             case THUMBNAILS -> {

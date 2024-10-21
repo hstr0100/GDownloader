@@ -37,5 +37,6 @@ public class BiliBiliFilter extends GenericFilter{
         setUrlRegex("^(https?:\\/\\/)?(www\\.)?bilibili\\.com(\\/.*)?$");
         setVideoNamePattern("%(title).60s (%(uploader_id)s %(upload_date)s %(resolution)s).%(ext)s");
         setAudioNamePattern(getVideoNamePattern().replace("%(resolution)s", "%(audio_bitrate)s"));
+        setEmbedThumbnailAndMetadata(false);
     }
 }
