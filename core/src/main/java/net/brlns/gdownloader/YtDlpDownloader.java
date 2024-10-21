@@ -1273,7 +1273,7 @@ public class YtDlpDownloader{
             }
 
             thumbnails.stream()
-                .filter(thumb -> thumb.getUrl() != null)
+                .filter(thumb -> thumb.getUrl() != null && thumb.getUrl().startsWith("http"))
                 //While WebP might be preferred for the web, we don't want to deal with it unless absolutely necessary.
                 //Sorting in reverse here means we are attempting to obtain the most basic and compatible thumbnails available first.
                 .sorted(Comparator.comparingInt(Thumbnail::getPreference).reversed())

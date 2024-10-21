@@ -20,11 +20,14 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Locale;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
+@Slf4j
 public class LockUtils{
 
     public static String getLockTag(String releaseTag){
@@ -64,5 +67,55 @@ public class LockUtils{
 
     public static boolean removeLock(File lockFile) throws IOException{
         return lockFile.delete();
+    }
+
+    public static boolean diskLockExistsAndIsNewer(Path workDir, String version){
+        try{
+            File lock = new File(workDir.toString(), "ota_lock.txt");
+
+            if(lockExists(lock)){
+                String diskVersion = readLock(lock).split("_")[0];
+                diskVersion = diskVersion.replace("v", "");
+                log.info("Lock {} version: {}", workDir, diskVersion);
+
+                if(isVersionNewer(version, diskVersion)){
+                    log.info("{} is newer than: {}", diskVersion, version);
+                    return true;
+                }
+            }
+        }catch(IOException e){
+            log.error("IOException trying to verify lock file {}", e.getMessage());
+        }
+
+        return false;
+    }
+
+    public static boolean isVersionNewer(String currentVersion, String diskVersion){
+        String[] currentParts = normalizeVersion(currentVersion).split("\\.");
+        String[] diskParts = normalizeVersion(diskVersion).split("\\.");
+
+        int length = Math.max(currentParts.length, diskParts.length);
+
+        for(int i = 0; i < length; i++){
+            int currentPart = i < currentParts.length ? parseVersionPart(currentParts[i]) : 0;
+            int diskPart = i < diskParts.length ? parseVersionPart(diskParts[i]) : 0;
+
+            if(currentPart < diskPart){
+                return true;//newer
+            }else if(currentPart > diskPart){
+                return false;//older
+            }
+        }
+
+        return false;//equal
+    }
+
+    private static int parseVersionPart(String part){
+        String numericPart = part.split("[^\\d]")[0];
+        return numericPart.matches("\\d+") ? Integer.parseInt(numericPart) : 0;
+    }
+
+    private static String normalizeVersion(String version){
+        return version.replaceAll("[^0-9.]", "");
     }
 }

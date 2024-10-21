@@ -25,13 +25,13 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.util.ArchiveUtils;
 import net.brlns.gdownloader.util.Nullable;
 
+import static net.brlns.gdownloader.util.DirectoryUtils.*;
 import static net.brlns.gdownloader.util.LockUtils.*;
 
 /**
@@ -64,7 +64,7 @@ public class UpdaterBootstrap{
 
         Path path = Paths.get(workDir.toString(), "gdownloader_ota.zip");
         if(!Files.exists(path)){
-            Path runtimePath = getNewestEntry(workDir);
+            Path runtimePath = getNewestDirectoryEntry(PREFIX, workDir);
 
             String launchCommand = getLaunchCommand();
 
@@ -153,7 +153,7 @@ public class UpdaterBootstrap{
 
                     log.info("Trying to perform ota update");
 
-                    Path newEntry = createNewEntry(workDir);
+                    Path newEntry = createNewDirectoryEntry(PREFIX, workDir);
                     log.info("Next directory: {}", newEntry);
 
                     Files.move(zipOutputPath, newEntry, StandardCopyOption.REPLACE_EXISTING);
@@ -162,7 +162,7 @@ public class UpdaterBootstrap{
                     AbstractGitUpdater.makeExecutable(newEntry);
 
                     log.info("Removing older entries");
-                    deleteOlderEntries(workDir);
+                    deleteOlderDirectoryEntries(PREFIX, workDir, 2);
 
                     log.info("Removing ota file");
                     Files.delete(path);
@@ -199,116 +199,4 @@ public class UpdaterBootstrap{
             return null;
         }
     }
-
-    /**
-     * Shenanigans to deal with heavily fail-prone filesystem operations on Windows
-     */
-    private static int getHighest(Path workDir){
-        List<String> directoryNames = getDirectoryNames(workDir);
-        if(directoryNames.isEmpty()){
-            return 0;
-        }
-
-        return directoryNames.stream()
-            .mapToInt(UpdaterBootstrap::extractNumber)
-            .max()
-            .orElse(0);
-    }
-
-    private static Path getNewestEntry(Path workDir){
-        int highest = getHighest(workDir);
-
-        return Paths.get(workDir.toString(), PREFIX + highest);
-    }
-
-    private static void deleteOlderEntries(Path workDir){
-        List<String> directoryNames = getDirectoryNames(workDir);
-        directoryNames.sort(Comparator.comparingInt(UpdaterBootstrap::extractNumber));
-
-        int highest = getHighest(workDir);
-
-        for(int i = 0; i < directoryNames.size() - 2; i++){
-            int number = extractNumber(directoryNames.get(i));
-            if(number < highest){
-                GDownloader.deleteRecursively(
-                    Paths.get(workDir.toString(), directoryNames.get(i)));
-            }
-        }
-    }
-
-    private static Path createNewEntry(Path workDir) throws IOException{
-        int highest = getHighest(workDir);
-
-        return Files.createDirectory(Paths.get(workDir.toString(), PREFIX + (highest + 1)));
-    }
-
-    private static List<String> getDirectoryNames(Path workDir){
-        List<String> directoryNames = new ArrayList<>();
-
-        File dir = workDir.toFile();
-        if(dir.isDirectory()){
-            for(File file : dir.listFiles()){
-                if(file.isDirectory() && file.getName().startsWith(PREFIX)){
-                    directoryNames.add(file.getName());
-                }
-            }
-        }
-
-        return directoryNames;
-    }
-
-    private static boolean diskLockExistsAndIsNewer(Path workDir, String version){
-        try{
-            File lock = new File(workDir.toString(), "ota_lock.txt");
-
-            if(lockExists(lock)){
-                String diskVersion = readLock(lock).split("_")[0];
-                diskVersion = diskVersion.replace("v", "");
-                log.info("Lock {} version: {}", workDir, diskVersion);
-
-                if(isVersionNewer(version, diskVersion)){
-                    log.info("{} is newer than: {}", diskVersion, version);
-                    return true;
-                }
-            }
-        }catch(IOException e){
-            log.error("IOException trying to verify ota lock file {}", e.getMessage());
-        }
-
-        return false;
-    }
-
-    private static int extractNumber(String directoryName){
-        return Integer.parseInt(directoryName.replaceAll("\\D+", ""));
-    }
-
-    public static boolean isVersionNewer(String currentVersion, String diskVersion){
-        String[] currentParts = normalizeVersion(currentVersion).split("\\.");
-        String[] diskParts = normalizeVersion(diskVersion).split("\\.");
-
-        int length = Math.max(currentParts.length, diskParts.length);
-
-        for(int i = 0; i < length; i++){
-            int currentPart = i < currentParts.length ? parseVersionPart(currentParts[i]) : 0;
-            int diskPart = i < diskParts.length ? parseVersionPart(diskParts[i]) : 0;
-
-            if(currentPart < diskPart){
-                return true;//newer
-            }else if(currentPart > diskPart){
-                return false;//older
-            }
-        }
-
-        return false;//equal
-    }
-
-    private static int parseVersionPart(String part){
-        String numericPart = part.split("[^\\d]")[0];
-        return numericPart.matches("\\d+") ? Integer.parseInt(numericPart) : 0;
-    }
-
-    private static String normalizeVersion(String version){
-        return version.replaceAll("[^0-9.]", "");
-    }
-
 }
