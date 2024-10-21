@@ -110,6 +110,7 @@ import static net.brlns.gdownloader.util.URLUtils.*;
 //TODO Implement rate-limiting options internally; the way it's currently implemented does not account for concurrent or non-playlist downloads.
 //TODO Notify the user whenever a setting that requires restart was changed.
 //TODO Settings version
+//TODO Quit lingering ffmpeg processes spawned by yt-dlp
 //Off to a bootcamp, project on pause
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -748,6 +749,7 @@ public class YtDlpDownloader{
                                             //and subtitles are already embedded by default, if they fail we just move on.
                                             //For now, downloading only subs or thumbs is not supported.
                                             log.error("Failed to download {}: {}", type, result.getValue());
+                                            continue;
                                         }
                                     }
 
