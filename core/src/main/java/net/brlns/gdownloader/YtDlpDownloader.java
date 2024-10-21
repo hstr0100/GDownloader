@@ -40,6 +40,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -117,6 +119,7 @@ public class YtDlpDownloader{
 
     private final GDownloader main;
 
+    private final ScheduledExecutorService processMonitor;
     private final PriorityThreadPoolExecutor downloadScheduler;
 
     private final List<Consumer<YtDlpDownloader>> listeners = new ArrayList<>();
@@ -126,6 +129,8 @@ public class YtDlpDownloader{
 
     private final ConcurrentRearrangeableDeque<QueueEntry> downloadDeque
         = new ConcurrentRearrangeableDeque<>();
+
+    private final Queue<QueueEntry> runningQueue = new ConcurrentLinkedQueue<>();
 
     private final Queue<QueueEntry> completedDownloads = new ConcurrentLinkedQueue<>();
     private final Queue<QueueEntry> failedDownloads = new ConcurrentLinkedQueue<>();
@@ -147,8 +152,27 @@ public class YtDlpDownloader{
     public YtDlpDownloader(GDownloader mainIn){
         main = mainIn;
 
-        //I know what era of computer this will be running on, so more than 10 threads would be insanity
-        //But maybe add it as a setting later
+        processMonitor = Executors.newScheduledThreadPool(1);
+        processMonitor.scheduleAtFixedRate(() -> {
+            for(QueueEntry entry : runningQueue){
+                if(!downloadsRunning.get() || entry.getCancelHook().get()){
+                    Process process = entry.getProcess();
+
+                    if(process != null && process.isAlive()){
+                        log.info("Process Monitor is stopping {}", entry.getUrl());
+
+                        try{
+                            tryStopProcess(process);
+                        }catch(Exception e){
+                            log.error("Interrupted {}", e.getMessage());
+                        }
+                    }
+                }
+            }
+        }, 0, 100, TimeUnit.MILLISECONDS);
+
+        //10 Threads for now. This caps us at a maximum of 10 concurrent downloads.
+        //I hope you have plenty of cpu threads to spare if you wish to push this further.
         downloadScheduler = new PriorityThreadPoolExecutor(10, 10, 0L, TimeUnit.MILLISECONDS);
     }
 
@@ -491,7 +515,7 @@ public class YtDlpDownloader{
         capturedLinks.clear();
         capturedPlaylists.clear();
 
-        //We deliberately keep the download processes running
+        //Active downloads are intentionally immune to this.
         QueueEntry entry;
         while((entry = downloadDeque.poll()) != null){
             main.getGuiManager().removeMediaCard(entry.getMediaCard().getId());
@@ -580,7 +604,6 @@ public class YtDlpDownloader{
         }, 1);
     }
 
-    @SuppressWarnings("fallthrough")
     public void processQueue(){
         if(main.getConfig().isAutoDownloadStart()){
             if(!downloadsRunning.get() && !downloadDeque.isEmpty()){
@@ -684,53 +707,59 @@ public class YtDlpDownloader{
 
                     boolean wasStopped = false;
 
-                    for(DownloadTypeEnum type : DownloadTypeEnum.values()){
-                        if(type == ALL){
-                            continue;
-                        }
+                    try{
+                        runningQueue.add(entry);
 
-                        if(type == VIDEO && !downloadVideo
-                            || type == AUDIO && !downloadAudio
-                            || type == SUBTITLES && !main.getConfig().isDownloadSubtitles()
-                            || type == THUMBNAILS && !main.getConfig().isDownloadThumbnails()){
-                            continue;
-                        }
-
-                        List<String> arguments = new ArrayList<>(genericArguments);
-
-                        List<String> downloadArguments = filter.getArguments(type, main, tmpPath);
-                        arguments.addAll(downloadArguments);
-
-                        log.debug("ALL {}: Type {} ({}): {}",
-                            genericArguments,
-                            type,
-                            filter.getDisplayName(),
-                            downloadArguments);
-
-                        Pair<Integer, String> result = processDownload(entry, arguments);
-
-                        if(result != null){
-                            if(result.getKey() != 0){
-                                if(!entry.getCancelHook().get()){
-                                    if(type == VIDEO || type == AUDIO){
-                                        entry.updateStatus(DownloadStatus.FAILED, result.getValue());
-                                        entry.reset();
-
-                                        failedDownloads.offer(entry);
-                                    }else{
-                                        //These can be treated as low priority downloads since thumbnails
-                                        //and subtitles are already embedded by default, if they fail we just move on.
-                                        //For now, downloading only subs or thumbs is not supported.
-                                        log.error("Failed to download {}: {}", type, result.getValue());
-                                    }
-                                }
-
-                                fireListeners();
-                                return;
+                        for(DownloadTypeEnum type : DownloadTypeEnum.values()){
+                            if(type == ALL){
+                                continue;
                             }
-                        }else{
-                            wasStopped = true;
+
+                            if(type == VIDEO && !downloadVideo
+                                || type == AUDIO && !downloadAudio
+                                || type == SUBTITLES && !main.getConfig().isDownloadSubtitles()
+                                || type == THUMBNAILS && !main.getConfig().isDownloadThumbnails()){
+                                continue;
+                            }
+
+                            List<String> arguments = new ArrayList<>(genericArguments);
+
+                            List<String> downloadArguments = filter.getArguments(type, main, tmpPath);
+                            arguments.addAll(downloadArguments);
+
+                            log.debug("ALL {}: Type {} ({}): {}",
+                                genericArguments,
+                                type,
+                                filter.getDisplayName(),
+                                downloadArguments);
+
+                            Pair<Integer, String> result = processDownload(entry, arguments);
+
+                            if(result != null){
+                                if(result.getKey() != 0){
+                                    if(!entry.getCancelHook().get()){
+                                        if(type == VIDEO || type == AUDIO){
+                                            entry.updateStatus(DownloadStatus.FAILED, result.getValue());
+                                            entry.reset();
+
+                                            failedDownloads.offer(entry);
+                                        }else{
+                                            //These can be treated as low priority downloads since thumbnails
+                                            //and subtitles are already embedded by default, if they fail we just move on.
+                                            //For now, downloading only subs or thumbs is not supported.
+                                            log.error("Failed to download {}: {}", type, result.getValue());
+                                        }
+                                    }
+
+                                    fireListeners();
+                                    return;
+                                }
+                            }else{
+                                wasStopped = true;
+                            }
                         }
+                    }finally{
+                        runningQueue.remove(entry);
                     }
 
                     if(!downloadsRunning.get() || wasStopped){
@@ -917,20 +946,9 @@ public class YtDlpDownloader{
             long stopped = System.currentTimeMillis() - start;
 
             if(!downloadsRunning.get() || entry.getCancelHook().get()){
-                if(process.isAlive()){
-                    long quitTimer = System.currentTimeMillis();
+                tryStopProcess(process);
 
-                    process.destroy();
-
-                    if(!process.waitFor(5, TimeUnit.SECONDS)){
-                        log.warn("Process did not terminate in time, forcefully stopping it.");
-                        process.destroyForcibly();
-                    }
-
-                    log.info("Download process halted after {}ms. Took {}ms to stop",
-                        stopped,
-                        (System.currentTimeMillis() - quitTimer));
-                }
+                log.info("Download process halted after {}ms.", stopped);
 
                 return null;
             }else{
@@ -939,13 +957,25 @@ public class YtDlpDownloader{
                 return new Pair<>(exitCode, lastOutput);
             }
         }finally{
-            if(process.isAlive()){
-                process.destroy();
+            tryStopProcess(process);
+        }
+    }
 
-                if(!process.waitFor(5, TimeUnit.SECONDS)){
-                    process.destroyForcibly();
-                }
+    private void tryStopProcess(Process process) throws InterruptedException{
+        if(process.isAlive()){
+            long quitTimer = System.currentTimeMillis();
+
+            //First try to politely ask the process to excuse itself.
+            process.destroy();
+
+            if(!process.waitFor(5, TimeUnit.SECONDS)){
+                log.warn("Process did not terminate in time, forcefully stopping it.");
+                //Time's up. I guess asking nicely wasn't in the cards.
+                process.destroyForcibly();
             }
+
+            log.info("Took {}ms to stop the process.",
+                (System.currentTimeMillis() - quitTimer));
         }
     }
 
