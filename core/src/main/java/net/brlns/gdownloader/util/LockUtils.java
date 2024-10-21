@@ -84,7 +84,7 @@ public class LockUtils{
                 }
             }
         }catch(IOException e){
-            log.error("IOException trying to verify lock file {}", e.getMessage());
+            log.error("IO error trying to verify lock file", e);
         }
 
         return false;

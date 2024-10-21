@@ -197,7 +197,7 @@ public abstract class AbstractGitUpdater{
         try{
             tag = getLatestReleaseTag();
         }catch(Exception e){
-            log.error("HTTP error for {}", getRepo());
+            log.error("HTTP error for {}", getRepo(), e);
         }
 
         notifyProgress(UpdateStatus.CHECKING, 50);
@@ -267,7 +267,7 @@ public abstract class AbstractGitUpdater{
             finishUpdate(path);
             log.info("Downloaded {}", path);
         }catch(Exception e){
-            log.error("Failed to update {} - {}", getRepo(), e.getCause());
+            log.error("Failed to update {}", getRepo(), e);
 
             if(tmpDir != null){
                 notifyStatus(UpdateStatus.FAILED);

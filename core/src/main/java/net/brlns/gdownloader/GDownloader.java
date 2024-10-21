@@ -351,7 +351,7 @@ public final class GDownloader{
             try{
                 latch.await();
             }catch(InterruptedException e){
-                //Ignore
+                log.error("Interrupted", e);
             }
 
             log.info("Finished checking for updates");
@@ -540,7 +540,7 @@ public final class GDownloader{
                     }
                 }
             }catch(Exception e){
-                log.error("{}", e.getCause());
+                log.error("Error querying for browser", e);
             }
 
             BrowserEnum browser = BrowserEnum.getBrowserForName(browserName);
@@ -724,7 +724,7 @@ public final class GDownloader{
             processBuilder.start();
             log.info("New instance launched with command: {}", launchString);
         }catch(IOException e){
-            log.error("Cannot restart {}", e.getLocalizedMessage());
+            log.error("Cannot restart, IO error", e);
         }
     }
 
@@ -975,7 +975,7 @@ public final class GDownloader{
 
                     success = true;
                 }catch(UnsupportedFlavorException | IOException e){
-                    log.warn(e.getLocalizedMessage());
+                    log.warn("Cannot obtain transfer data", e);
                 }
             }
 
@@ -991,7 +991,7 @@ public final class GDownloader{
 
                     success = true;
                 }catch(UnsupportedFlavorException | IOException e){
-                    log.warn(e.getLocalizedMessage());
+                    log.warn("Cannot obtain transfer data", e);
                 }
             }
         }
@@ -1087,7 +1087,7 @@ public final class GDownloader{
                     pw.println(str);
                 }
             }catch(IOException e){
-                //Ignore
+                log.warn("Cannot log to file", e);
             }
         }
     }
@@ -1142,7 +1142,7 @@ public final class GDownloader{
             Path codeSourcePath = Paths.get(GDownloader.class.getProtectionDomain().getCodeSource().getLocation().toURI());
             log.info("Code source path: {}", codeSourcePath);
         }catch(URISyntaxException e){
-            e.printStackTrace();
+            log.warn("URI syntax error", e);
         }
 
         GraphicsDevice device = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice();
@@ -1160,7 +1160,7 @@ public final class GDownloader{
     }
 
     public final void handleException(Throwable e, boolean displayToUser){
-        e.printStackTrace();
+        log.error("An exception has been caught", e);
 
         if(displayToUser){
             guiManager.showMessage(
@@ -1371,8 +1371,7 @@ public final class GDownloader{
 
                 logger.setUseParentHandlers(false);
             }catch(NativeHookException e){
-                System.err.println("There was a problem registering the native hook.");
-                e.printStackTrace();
+                log.error("There was a problem registering the native hook.", e);
 
                 System.exit(1);
             }
@@ -1392,8 +1391,8 @@ public final class GDownloader{
 
                 try{
                     GlobalScreen.unregisterNativeHook();
-                }catch(NativeHookException ex){
-                    ex.printStackTrace();
+                }catch(NativeHookException e){
+                    log.error("There was a problem unregistering the native hook.", e);
                 }
 
                 if(instance.isRestartRequested()){

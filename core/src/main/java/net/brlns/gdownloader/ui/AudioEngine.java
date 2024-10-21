@@ -34,7 +34,7 @@ public class AudioEngine{
         try{
             tone(1500, 50, 0.05);
         }catch(LineUnavailableException e){
-            log.error("Audio data line error {}", e.getLocalizedMessage());
+            log.error("Audio data line error", e);
         }
     }
 

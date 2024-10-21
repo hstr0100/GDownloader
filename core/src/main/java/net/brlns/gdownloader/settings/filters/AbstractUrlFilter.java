@@ -88,7 +88,7 @@ public abstract class AbstractUrlFilter{
 
                 filters.add(filter);
             }catch(Exception e){
-                log.error("Error instantiating class. {}", e.getMessage());
+                log.error("Error instantiating class.", e);
             }
         }
 

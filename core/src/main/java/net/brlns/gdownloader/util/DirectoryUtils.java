@@ -45,14 +45,14 @@ public class DirectoryUtils{
                     try{
                         return Files.deleteIfExists(file);
                     }catch(IOException e){
-                        log.error("Failed to delete: {} {}", file, e.getLocalizedMessage());
+                        log.error("Failed to delete: {}", file, e);
                         return false;
                     }
                 });
 
             return success;
         }catch(IOException e){
-            log.error("Failed to delete: {} {}", directory, e.getLocalizedMessage());
+            log.error("Failed to delete: {}", directory, e);
             return false;
         }
     }

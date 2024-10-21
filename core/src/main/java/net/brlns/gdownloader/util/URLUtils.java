@@ -41,7 +41,7 @@ public class URLUtils{
                 }
             }
         }catch(Exception e){
-            log.warn("Invalid url {} {}", youtubeUrl, e.getLocalizedMessage());
+            log.warn("Invalid url {}", youtubeUrl, e.getLocalizedMessage());
         }
 
         return null;

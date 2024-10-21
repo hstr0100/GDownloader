@@ -133,13 +133,13 @@ public class UpdaterBootstrap{
                         }
                     }
                 }catch(Exception e){
-                    log.error("Input stream exception {}", e.getMessage());
+                    log.error("Input stream exception", e);
                 }
 
                 int exitCode = process.waitFor();
                 log.error("Cannot restart for update, process exited with code: {}", exitCode);
             }catch(IOException | InterruptedException e){
-                log.error("Cannot restart for update {}", e.getLocalizedMessage());
+                log.error("Cannot restart for update", e);
             }
         }else{
             try{
@@ -174,7 +174,7 @@ public class UpdaterBootstrap{
                     Files.delete(path);
                 }
             }catch(IOException e){
-                log.error("Cannot procceed, IO error with ota file {} {}", path, e.getMessage());
+                log.error("Cannot procceed, IO error with ota file {}", path, e);
             }
         }
     }

@@ -108,6 +108,7 @@ import static net.brlns.gdownloader.util.URLUtils.*;
 //TODO Notify the user whenever a setting that requires restart was changed.
 //TODO Settings version
 //TODO Quit lingering ffmpeg processes spawned by yt-dlp
+//TODO Verify which exceptions are important to display to the user via GDownloader::handleException
 //Off to a bootcamp, project on pause
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -162,8 +163,10 @@ public class YtDlpDownloader{
 
                             try{
                                 tryStopProcess(process);
+                            }catch(InterruptedException e){
+                                log.error("Interrupted", e);
                             }catch(Exception e){
-                                log.error("Interrupted {}", e.getMessage());
+                                log.error("Failed to stop process", e);
                             }
                         }
                     }
@@ -595,7 +598,7 @@ public class YtDlpDownloader{
                     break;
                 }
             }catch(Exception e){
-                log.error("Failed to parse json {}", e.getLocalizedMessage());
+                log.error("Failed to parse json, yt-dlp returned malformed data for url {}", queueEntry.getUrl(), e);
             }finally{
                 if(queueEntry.getDownloadStatus() == DownloadStatus.QUERYING){
                     queueEntry.updateStatus(DownloadStatus.QUEUED, l10n("gui.download_status.not_started"));
@@ -807,12 +810,12 @@ public class YtDlpDownloader{
 
                                         log.info("Copied file: {}", path.getFileName());
                                     }catch(IOException e){
-                                        log.error("Failed to copy file: {} {}", path.getFileName(), e.getLocalizedMessage());
+                                        log.error("Failed to copy file: {}", path.getFileName(), e);
                                     }
                                 }
                             });
                         }catch(IOException e){
-                            log.error("Failed to list files {}", e.getLocalizedMessage());
+                            log.error("Failed to list files", e);
                         }
 
                         mediaCard.getRightClickMenu().putAll(rightClickOptions);
@@ -842,6 +845,8 @@ public class YtDlpDownloader{
                         log.error("Unexpected download state");
                     }
                 }catch(Exception e){
+                    log.error("Failed to download", e);
+
                     entry.updateStatus(DownloadStatus.FAILED, e.getLocalizedMessage());
                     entry.reset();
 
@@ -1139,7 +1144,7 @@ public class YtDlpDownloader{
                     log.error("ImageIO.read returned null for {}", url);
                 }
             }catch(IOException | URISyntaxException e){
-                log.error("ImageIO.read exception {} {}", e.getLocalizedMessage(), url);
+                log.error("ImageIO.read exception {}", url, e);
             }
 
             return Optional.empty();
