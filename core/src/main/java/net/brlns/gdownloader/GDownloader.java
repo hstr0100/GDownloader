@@ -285,8 +285,14 @@ public final class GDownloader{
 
     private int calculateThreadPoolSize(Settings config){
         int cores = Runtime.getRuntime().availableProcessors();
+
+        int extraThreads = 1;
         //We add up to 4 extra threads for clipboard management and the updater.
-        return config.getMaxSimultaneousDownloads() + Math.clamp(cores, 1, 4);
+        if(config.isMonitorClipboardForLinks()){
+            extraThreads = Math.clamp(cores, 1, 4);
+        }
+
+        return config.getMaxSimultaneousDownloads() + extraThreads;
     }
 
     public void clearCache(){
