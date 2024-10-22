@@ -57,7 +57,11 @@ import net.brlns.gdownloader.settings.enums.BrowserEnum;
 import net.brlns.gdownloader.ui.GUIManager;
 import net.brlns.gdownloader.ui.GUIManager.MessageType;
 import net.brlns.gdownloader.ui.themes.ThemeProvider;
-import net.brlns.gdownloader.updater.*;
+import net.brlns.gdownloader.updater.AbstractGitUpdater;
+import net.brlns.gdownloader.updater.FFMpegUpdater;
+import net.brlns.gdownloader.updater.SelfUpdater;
+import net.brlns.gdownloader.updater.UpdaterBootstrap;
+import net.brlns.gdownloader.updater.YtDlpUpdater;
 import net.brlns.gdownloader.util.DirectoryUtils;
 import net.brlns.gdownloader.util.LoggerUtils;
 import net.brlns.gdownloader.util.NoFallbackAvailableException;
@@ -432,6 +436,16 @@ public final class GDownloader{
         return popup;
     }
 
+    /**
+     * Helper for building system tray menu entries.
+     */
+    private MenuItem buildMenuItem(String name, ActionListener actionListener){
+        MenuItem menuItem = new MenuItem(name);
+        menuItem.addActionListener(actionListener);
+
+        return menuItem;
+    }
+
     public void openDownloadsDirectory(){
         open(getOrCreateDownloadsDirectory());
     }
@@ -556,65 +570,6 @@ public final class GDownloader{
         }
 
         return _cachedBrowser;
-    }
-
-    public ArchVersionEnum getArchVersion(){
-        ArchVersionEnum archVersion = null;
-
-        String arch = System.getProperty("os.arch").toLowerCase(Locale.ENGLISH);
-        String os = System.getProperty("os.name").toLowerCase(Locale.ENGLISH);
-
-        switch(arch){
-            case "x86", "i386" -> {
-                if(os.contains("mac")){
-                    archVersion = ArchVersionEnum.MAC_X86;
-                }else if(os.contains("win")){
-                    archVersion = ArchVersionEnum.WINDOWS_X86;
-                }
-            }
-
-            case "amd64", "x86_64" -> {
-                if(os.contains("nux")){
-                    archVersion = ArchVersionEnum.LINUX_X64;
-                }else if(os.contains("mac")){
-                    archVersion = ArchVersionEnum.MAC_X64;
-                }else if(os.contains("win")){
-                    archVersion = ArchVersionEnum.WINDOWS_X64;
-                }
-            }
-
-            case "arm", "aarch32" -> {
-                if(os.contains("nux")){
-                    archVersion = ArchVersionEnum.LINUX_ARM;
-                }
-            }
-
-            case "arm64", "aarch64" -> {
-                if(os.contains("nux")){
-                    archVersion = ArchVersionEnum.LINUX_ARM64;
-                }
-            }
-
-            default -> {
-                log.error("Unknown architecture: {}", arch);
-            }
-        }
-
-        if(archVersion == null){
-            throw new UnsupportedOperationException("Unsupported operating system: " + os + " " + arch);
-        }
-
-        return archVersion;
-    }
-
-    /**
-     * Helper for building system tray menu entries.
-     */
-    private MenuItem buildMenuItem(String name, ActionListener actionListener){
-        MenuItem menuItem = new MenuItem(name);
-        menuItem.addActionListener(actionListener);
-
-        return menuItem;
     }
 
     //TODO: this could be moved to the settings class itself.

@@ -87,9 +87,6 @@ public abstract class AbstractGitUpdater{
     protected abstract String getBinaryName();
 
     @Nullable
-    protected abstract String getBinaryFallback();
-
-    @Nullable
     protected abstract String getRuntimeBinaryName();
 
     @Nullable
@@ -119,43 +116,6 @@ public abstract class AbstractGitUpdater{
                 log.info("Selected previous installation as fallback {}", getRepo());
                 return;
             }
-        }
-
-        //For included ffmpeg and yt-dlp binaries
-        //Will only optionally be available to end user builds
-        fileName = getBinaryFallback();
-
-        if(fileName != null){
-            String[] resources = fileName.split(";");
-
-            if(resources.length == 1){
-                finishUpdate(copyResource(
-                    "/bin/" + fileName,
-                    new File(workDir, fileName)));
-                log.info("Selected bundled binary as fallback {}", getRepo());
-            }else{
-                File outFile = new File(workDir, getRuntimeBinaryName());
-                if(!outFile.exists()){
-                    outFile.mkdirs();
-                }
-
-                int successes = 0;
-                for(String resource : resources){
-                    File output = copyResource(
-                        "/bin/" + resource, new File(outFile, resource));
-
-                    if(output != null){
-                        successes++;
-                    }
-                }
-
-                if(successes != 0 && successes == resources.length){
-                    finishUpdate(outFile);
-                    log.info("Selected bundled binary as fallback {}", getRepo());
-                }
-            }
-
-            return;
         }
 
         notifyStatus(UpdateStatus.FAILED);

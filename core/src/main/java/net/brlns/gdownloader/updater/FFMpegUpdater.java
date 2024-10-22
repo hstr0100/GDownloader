@@ -53,17 +53,7 @@ public class FFMpegUpdater extends AbstractGitUpdater{
     @Override
     @Nullable
     public String getBinaryName(){
-        ArchVersionEnum archVersion = main.getArchVersion();
-
-        return archVersion.getFfmpegBinary();
-    }
-
-    @Override
-    @Nullable
-    public String getBinaryFallback(){
-        ArchVersionEnum archVersion = main.getArchVersion();
-
-        return archVersion.getFfmpegFallback();
+        return ArchVersionEnum.getArchVersion().getFfmpegBinary();
     }
 
     @Nullable

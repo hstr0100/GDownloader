@@ -49,15 +49,7 @@ public class SelfUpdater extends AbstractGitUpdater{
     @Override
     @Nullable
     public String getBinaryName(){
-        ArchVersionEnum archVersion = main.getArchVersion();
-
-        return archVersion.getSelfBinary();
-    }
-
-    @Override
-    @Nullable
-    public String getBinaryFallback(){
-        return null;
+        return ArchVersionEnum.getArchVersion().getSelfBinary();
     }
 
     @Nullable
