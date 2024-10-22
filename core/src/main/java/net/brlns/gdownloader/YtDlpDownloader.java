@@ -760,7 +760,6 @@ public class YtDlpDownloader{
                                                 entry.reset();
 
                                                 downloadDeque.offerFirst(entry);
-                                                fireListeners();
                                             }
                                         }else{
                                             //These can be treated as low priority downloads since thumbnails

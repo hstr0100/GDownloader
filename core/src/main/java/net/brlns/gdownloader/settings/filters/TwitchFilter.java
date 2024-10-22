@@ -69,10 +69,12 @@ public class TwitchFilter extends GenericFilter{
                 ));
             }
             case VIDEO -> {
-                arguments.addAll(List.of(
-                    "--parse-metadata",
-                    ":%(?P<is_live>)"
-                ));
+                if(isEmbedThumbnailAndMetadata()){
+                    arguments.addAll(List.of(
+                        "--parse-metadata",
+                        ":%(?P<is_live>)"
+                    ));
+                }
             }
         }
 
