@@ -53,7 +53,7 @@ public class Settings{
     private LanguageEnum language = LanguageEnum.ENGLISH;
 
     @JsonProperty("ReadCookies")
-    private boolean readCookies = true;
+    private boolean readCookies = false;
 
     @JsonProperty("BrowserForCookies")
     private BrowserEnum browser = BrowserEnum.UNSET;
