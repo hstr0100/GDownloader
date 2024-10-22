@@ -94,8 +94,10 @@ public class SettingsPanel{
 
     public void createAndShowGUI(){
         if(frame != null){
-            frame.dispose();
-            frame = null;
+            frame.setVisible(true);
+            frame.setExtendedState(JFrame.NORMAL);
+            frame.requestFocus();
+            return;
         }
 
         settings = GDownloader.OBJECT_MAPPER.convertValue(main.getConfig(), Settings.class);

@@ -63,7 +63,11 @@ import net.brlns.gdownloader.settings.filters.YoutubePlaylistFilter;
 import net.brlns.gdownloader.ui.GUIManager;
 import net.brlns.gdownloader.ui.GUIManager.DialogButton;
 import net.brlns.gdownloader.ui.MediaCard;
-import net.brlns.gdownloader.util.*;
+import net.brlns.gdownloader.util.ConcurrentRearrangeableDeque;
+import net.brlns.gdownloader.util.DirectoryUtils;
+import net.brlns.gdownloader.util.LinkedIterableBlockingQueue;
+import net.brlns.gdownloader.util.Nullable;
+import net.brlns.gdownloader.util.Pair;
 
 import static net.brlns.gdownloader.Language.*;
 import static net.brlns.gdownloader.settings.enums.DownloadTypeEnum.*;
@@ -121,7 +125,6 @@ public class YtDlpDownloader{
     private final GDownloader main;
 
     private final ExecutorService processMonitor;
-    private final PriorityThreadPoolExecutor downloadScheduler;
 
     private final List<Consumer<YtDlpDownloader>> listeners = new ArrayList<>();
 
@@ -182,10 +185,6 @@ public class YtDlpDownloader{
                 }
             }
         });
-
-        //10 Threads for now. This caps us at a maximum of 10 concurrent downloads.
-        //I hope you have plenty of cpu threads to spare if you wish to push this further.
-        downloadScheduler = new PriorityThreadPoolExecutor(10, 10, 0L, TimeUnit.MILLISECONDS);
     }
 
     public boolean isBlocked(){
@@ -423,10 +422,8 @@ public class YtDlpDownloader{
             downloadDeque.offerLast(queueEntry);
             fireListeners();
 
-            if(main.getConfig().isAutoDownloadStart()){
-                if(!downloadsRunning.get() && !downloadDeque.isEmpty()){
-                    startDownloads();
-                }
+            if(main.getConfig().isAutoDownloadStart() && !downloadsRunning.get()){
+                startDownloads();
             }
 
             future.complete(true);
@@ -553,7 +550,7 @@ public class YtDlpDownloader{
     }
 
     private void queryVideo(QueueEntry queueEntry){
-        downloadScheduler.submitWithPriority(() -> {
+        main.getGlobalThreadPool().submitWithPriority(() -> {
             try{
                 if(queueEntry.getCancelHook().get()){
                     return;
@@ -627,7 +624,7 @@ public class YtDlpDownloader{
             runningDownloads.incrementAndGet();
             fireListeners();
 
-            downloadScheduler.submitWithPriority(() -> {
+            main.getGlobalThreadPool().submitWithPriority(() -> {
                 if(!downloadsRunning.get()){
                     downloadDeque.offerFirst(entry);
 
@@ -967,16 +964,19 @@ public class YtDlpDownloader{
             long stopped = System.currentTimeMillis() - start;
 
             if(!downloadsRunning.get() || entry.getCancelHook().get()){
-                tryStopProcess(process);
-
                 log.info("Download process halted after {}ms.", stopped);
 
                 return null;
             }else{
                 int exitCode = process.waitFor();
                 log.info("Download process took {}ms", stopped);
+
                 return new Pair<>(exitCode, lastOutput);
             }
+        }catch(IOException e){
+            log.info("IO error: {}", e.getMessage());
+
+            return null;
         }finally{
             tryStopProcess(process);
         }

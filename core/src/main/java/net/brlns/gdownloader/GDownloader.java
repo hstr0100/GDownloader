@@ -66,6 +66,7 @@ import net.brlns.gdownloader.util.DirectoryUtils;
 import net.brlns.gdownloader.util.LoggerUtils;
 import net.brlns.gdownloader.util.NoFallbackAvailableException;
 import net.brlns.gdownloader.util.Nullable;
+import net.brlns.gdownloader.util.PriorityThreadPoolExecutor;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
@@ -122,7 +123,8 @@ public final class GDownloader{
     private final Clipboard clipboard;
     private final Map<FlavorType, String> lastClipboardState = new HashMap<>();
 
-    private ExecutorService threadPool = Executors.newFixedThreadPool(5);
+    @Getter
+    private final PriorityThreadPoolExecutor globalThreadPool;
 
     private final AtomicBoolean restartRequested = new AtomicBoolean(false);
 
@@ -167,6 +169,11 @@ public final class GDownloader{
         if(config.isDebugMode()){
             printDebugInformation();
         }
+
+        int threads = calculateThreadPoolSize(config);
+        globalThreadPool = new PriorityThreadPoolExecutor(
+            threads, threads, 0L, TimeUnit.MILLISECONDS);
+        log.info("Started global thread pool with {} threads", threads);
 
         Language.initLanguage(config);
         updateConfig();
@@ -268,12 +275,18 @@ public final class GDownloader{
             initialized = true;
             //SysTray is daemon
 
-            threadPool.execute(() -> {
+            globalThreadPool.submitWithPriority(() -> {
                 clearCache();
-            });
+            }, 100);
         }catch(Exception e){
             handleException(e);
         }
+    }
+
+    private int calculateThreadPoolSize(Settings config){
+        int cores = Runtime.getRuntime().availableProcessors();
+        //We add up to 4 extra threads for clipboard management and the updater.
+        return config.getMaxSimultaneousDownloads() + Math.clamp(cores, 1, 4);
     }
 
     public void clearCache(){
@@ -332,7 +345,7 @@ public final class GDownloader{
 
         for(AbstractGitUpdater updater : updaters){
             if(updater.isSupported()){
-                threadPool.execute(() -> {
+                globalThreadPool.submitWithPriority(() -> {
                     try{
                         log.error("Starting updater " + updater.getClass().getName());
                         updater.check(userInitiated);
@@ -343,7 +356,7 @@ public final class GDownloader{
                     }finally{
                         latch.countDown();
                     }
-                });
+                }, 5);
             }else{
                 log.info("Updater " + updater.getClass().getName() + " is not supported in this platform or runtime method.");
 
@@ -351,7 +364,7 @@ public final class GDownloader{
             }
         }
 
-        threadPool.execute(() -> {
+        globalThreadPool.submitWithPriority(() -> {
             try{
                 latch.await();
             }catch(InterruptedException e){
@@ -400,7 +413,7 @@ public final class GDownloader{
             }
 
             downloadManager.unblock();
-        });
+        }, 5);
 
         return true;
     }
@@ -594,7 +607,16 @@ public final class GDownloader{
                 log.info("Browser changed to {}", configIn.getBrowser());
             }
 
-            LoggerUtils.setDebugLogLevel(config.isDebugMode());
+            int threads = calculateThreadPoolSize(configIn);
+
+            if(globalThreadPool.getCorePoolSize() != threads
+                || globalThreadPool.getMaximumPoolSize() != threads){
+                globalThreadPool.resize(threads, threads);
+
+                log.info("Resized global thread pool to {} threads", threads);
+            }
+
+            LoggerUtils.setDebugLogLevel(configIn.isDebugMode());
         }catch(IOException e){
             handleException(e);
         }
@@ -959,7 +981,7 @@ public final class GDownloader{
             return;
         }
 
-        threadPool.execute(() -> {
+        globalThreadPool.submitWithPriority(() -> {
             List<CompletableFuture<Boolean>> list = new ArrayList<>();
 
             for(String url : extractUrlsFromString(data)){
@@ -1012,7 +1034,7 @@ public final class GDownloader{
             }catch(TimeoutException e){
                 log.warn("Timed out waiting for futures");
             }
-        });
+        }, 20);
     }
 
     private void processClipboardData(FlavorType flavorType, String data){
@@ -1108,6 +1130,9 @@ public final class GDownloader{
 
         log.info("ScaleX: {}", scaleX);
         log.info("ScaleY: {}", scaleY);
+
+        int cores = Runtime.getRuntime().availableProcessors();
+        log.info("Number of available processor cores: {}", cores);
     }
 
     public final void handleException(Throwable e){

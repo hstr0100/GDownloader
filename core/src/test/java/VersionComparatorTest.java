@@ -7,7 +7,7 @@ import static org.junit.jupiter.api.Assertions.*;
 public class VersionComparatorTest{
 
     @Test
-    public void testVersionIsNewer(){
+    void testVersionIsNewer(){
         assertTrue(LockUtils.isVersionNewer("1.0.10", "1.0.11"));
         assertTrue(LockUtils.isVersionNewer("1.0.12", "1.0.13"));
         assertTrue(LockUtils.isVersionNewer("1.2.1", "1.2.222"));
@@ -22,22 +22,22 @@ public class VersionComparatorTest{
     }
 
     @Test
-    public void testVersionIsNotNewer(){
-        assertFalse(LockUtils.isVersionNewer("1.0.11", "1.0.10"));
-        assertFalse(LockUtils.isVersionNewer("1.0.13", "1.0.12"));
+    void testVersionIsNotNewer(){
         assertFalse(LockUtils.isVersionNewer("1.2.222", "1.2.222"));
         assertFalse(LockUtils.isVersionNewer("10.1.0", "10.1.0"));
     }
 
     @Test
-    public void testVersionIsOlder(){
+    void testVersionIsOlder(){
+        assertFalse(LockUtils.isVersionNewer("1.0.11", "1.0.10"));
+        assertFalse(LockUtils.isVersionNewer("1.0.13", "1.0.12"));
         assertFalse(LockUtils.isVersionNewer("1.2.1", "1.2.0"));
         assertFalse(LockUtils.isVersionNewer("1.0.10", "1.0.9"));
         assertFalse(LockUtils.isVersionNewer("1.344.10", "1.12.10"));
     }
 
     @Test
-    public void testDifferentLengthVersions(){
+    void testDifferentLengthVersions(){
         assertTrue(LockUtils.isVersionNewer("1.2", "1.2.1"));
         assertTrue(LockUtils.isVersionNewer("1.0", "1.0.0.1"));
         assertFalse(LockUtils.isVersionNewer("1.0.0.1", "1.0"));

@@ -57,6 +57,18 @@ public class PriorityThreadPoolExecutor extends ThreadPoolExecutor{
         return submitWithPriority(task, null, priority);
     }
 
+    public void resize(int newCorePoolSize, int newMaxPoolSize){
+        int currentMaxPoolSize = getMaximumPoolSize();
+
+        int tempSize = Math.min(currentMaxPoolSize, newMaxPoolSize);
+
+        setCorePoolSize(tempSize);
+        setMaximumPoolSize(tempSize);
+
+        setMaximumPoolSize(newMaxPoolSize);
+        setCorePoolSize(newCorePoolSize);
+    }
+
     private class PriorityTask<V> extends FutureTask<V> implements Comparable<PriorityTask<V>>{
 
         private final int priority;
