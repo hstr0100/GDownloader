@@ -53,10 +53,13 @@ import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
 
     @JsonSubTypes.Type(value = BiliBiliFilter.class, name = BiliBiliFilter.ID),
     @JsonSubTypes.Type(value = CrunchyrollFilter.class, name = CrunchyrollFilter.ID),
+    @JsonSubTypes.Type(value = DailymotionFilter.class, name = DailymotionFilter.ID),
     @JsonSubTypes.Type(value = DropoutFilter.class, name = DropoutFilter.ID),
     @JsonSubTypes.Type(value = FacebookFilter.class, name = FacebookFilter.ID),
+    @JsonSubTypes.Type(value = ImgurFilter.class, name = ImgurFilter.ID),
     @JsonSubTypes.Type(value = RedditFilter.class, name = RedditFilter.ID),
     @JsonSubTypes.Type(value = TwitchFilter.class, name = TwitchFilter.ID),
+    @JsonSubTypes.Type(value = VimeoFilter.class, name = VimeoFilter.ID),
     @JsonSubTypes.Type(value = XFilter.class, name = XFilter.ID),
 
     @JsonSubTypes.Type(value = GenericFilter.class, name = GenericFilter.ID)
@@ -112,6 +115,7 @@ public abstract class AbstractUrlFilter{
 
     @JsonProperty("EmbedThumbnailAndMetadata")
     private boolean embedThumbnailAndMetadata = false;
+
     /**
      * Represents a set of extra arguments for yt-dlp.
      * These arguments are categorized based on the type of download (e.g., VIDEO, AUDIO, SUBTITLES, etc.).

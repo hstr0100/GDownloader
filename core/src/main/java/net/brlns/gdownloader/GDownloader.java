@@ -930,7 +930,7 @@ public final class GDownloader{
 
                     success = true;
                 }catch(UnsupportedFlavorException | IOException e){
-                    log.warn("Cannot obtain transfer data", e);
+                    log.warn("Cannot obtain transfer data");
                 }
             }
 
@@ -946,7 +946,7 @@ public final class GDownloader{
 
                     success = true;
                 }catch(UnsupportedFlavorException | IOException e){
-                    log.warn("Cannot obtain transfer data", e);
+                    log.warn("Cannot obtain transfer data");
                 }
             }
         }
