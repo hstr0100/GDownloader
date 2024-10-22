@@ -1151,7 +1151,7 @@ public class YtDlpDownloader{
             videoInfo = videoInfoIn;
 
             Optional<BufferedImage> optional = videoInfo.supportedThumbnails()
-                .limit(3)
+                .limit(5)
                 .map(urlIn -> tryLoadThumbnail(urlIn))
                 .filter(Optional::isPresent)
                 .map(Optional::get)
@@ -1165,6 +1165,8 @@ public class YtDlpDownloader{
 
         private Optional<BufferedImage> tryLoadThumbnail(String url){
             try{
+                log.debug("Trying to load thumbnail {}", url);
+
                 BufferedImage img = ImageIO.read(new URI(url).toURL());
 
                 if(img != null){
@@ -1293,16 +1295,24 @@ public class YtDlpDownloader{
         private Stream<String> supportedThumbnails(){
             Stream.Builder<String> builder = Stream.builder();
 
-            if(thumbnail != null && thumbnail.startsWith("http")){
+            if(thumbnail != null && thumbnail.matches("^https?://.*")){
                 builder.add(thumbnail);
             }
 
             thumbnails.stream()
-                .filter(thumb -> thumb.getUrl() != null && thumb.getUrl().startsWith("http"))
-                //While WebP might be preferred for the web, we don't want to deal with it unless absolutely necessary.
-                //Sorting in reverse here means we are attempting to obtain the most basic and compatible thumbnails available first.
+                .filter(thumb -> thumb.getUrl() != null && thumb.getUrl().matches("^https?://.*(?<!\\.webp)$"))
+                // Sorting in reverse to get the most basic and compatible thumbnails first
+                .sorted(Comparator.comparingInt(Thumbnail::getPreference).reversed())
+                .limit(2)
+                .map(Thumbnail::getUrl)
+                .forEach(builder::add);
+
+            //Add WebP thumbnails last
+            thumbnails.stream()
+                .filter(thumb -> thumb.getUrl() != null && thumb.getUrl().matches("^https?://.*\\.webp$"))
                 .sorted(Comparator.comparingInt(Thumbnail::getPreference).reversed())
                 .map(Thumbnail::getUrl)
+                .limit(2)
                 .forEach(builder::add);
 
             return builder.build();
