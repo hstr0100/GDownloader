@@ -1010,12 +1010,8 @@ public class YtDlpDownloader{
         return input;
     }
 
-    @Nullable
-    private static String getHumanReadableFileSizeIfExists(long bytes){
-        //Return null for 0 too
-        if(bytes <= 0 || bytes > Long.MAX_VALUE){
-            return null;
-        }
+    private static String getHumanReadableFileSize(long bytes){
+        assert bytes >= 0 || bytes < Long.MAX_VALUE : "Invalid argument. Expected valid positive long";
 
         String[] units = {"B", "KB", "MB", "GB", "TB", "EB"};
         int unitIndex = 0;
@@ -1215,8 +1211,12 @@ public class YtDlpDownloader{
 
         private Optional<String> getSize(){
             if(videoInfo != null){
-                return Optional.ofNullable(
-                    getHumanReadableFileSizeIfExists(videoInfo.getFilesizeApprox()));
+                long size = videoInfo.getFilesizeApprox();
+
+                //For this, we consider 0 as null.
+                if(size > 0 && size < Long.MAX_VALUE){
+                    return Optional.of(getHumanReadableFileSize(videoInfo.getFilesizeApprox()));
+                }
             }
 
             return Optional.empty();

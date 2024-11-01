@@ -57,6 +57,7 @@ import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
     @JsonSubTypes.Type(value = DropoutFilter.class, name = DropoutFilter.ID),
     @JsonSubTypes.Type(value = FacebookFilter.class, name = FacebookFilter.ID),
     @JsonSubTypes.Type(value = ImgurFilter.class, name = ImgurFilter.ID),
+    @JsonSubTypes.Type(value = PatreonFilter.class, name = PatreonFilter.ID),
     @JsonSubTypes.Type(value = RedditFilter.class, name = RedditFilter.ID),
     @JsonSubTypes.Type(value = TwitchFilter.class, name = TwitchFilter.ID),
     @JsonSubTypes.Type(value = VimeoFilter.class, name = VimeoFilter.ID),
