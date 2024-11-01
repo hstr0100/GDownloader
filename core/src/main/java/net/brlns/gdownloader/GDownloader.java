@@ -218,7 +218,8 @@ public final class GDownloader{
             if(config.isDebugMode()){
                 for(AbstractGitUpdater updater : updaters){
                     updater.registerListener((status, progress) -> {
-                        log.info("UPDATER {}: Status: {} Progress: {}", updater.getClass().getName(), status, String.format("%.1f", progress));
+                        log.info("UPDATER {}: Status: {} Progress: {}",
+                            updater.getClass().getName(), status, String.format("%.1f", progress));
                     });
                 }
             }
@@ -541,7 +542,13 @@ public final class GDownloader{
 
             try{
                 if(os.contains("win")){
-                    List<String> output = readOutput("reg", "query", "HKCU\\Software\\Microsoft\\Windows\\Shell\\Associations\\UrlAssociations\\http\\UserChoice", "/v", "Progid");
+                    List<String> output = readOutput(
+                        "reg",
+                        "query",
+                        "HKCU\\Software\\Microsoft\\Windows\\Shell\\Associations\\UrlAssociations\\http\\UserChoice",
+                        "/v",
+                        "Progid"
+                    );
 
                     log.info("Default browser: {}", output);
 
@@ -797,7 +804,8 @@ public final class GDownloader{
                         if(exitCode == 0){
                             log.info("Registry entry added successfully.");
                         }else{
-                            log.error("Failed to add registry entry. Exit code: {} Command list: {}", exitCode, createBuilder.command());
+                            log.error("Failed to add registry entry. Exit code: {} Command list: {}",
+                                exitCode, createBuilder.command());
                         }
                     }
                 }
@@ -1064,7 +1072,8 @@ public final class GDownloader{
         String message = ft.getMessage();
 
         synchronized(_logSync){
-            try(FileWriter fw = new FileWriter(getOrCreateDownloadsDirectory().toPath().resolve(file + ".txt").toFile(), true);
+            try(FileWriter fw = new FileWriter(getOrCreateDownloadsDirectory()
+                .toPath().resolve(file + ".txt").toFile(), true);
                 PrintWriter pw = new PrintWriter(fw)){
                 for(String str : message.split("\n")){
                     pw.println(str);

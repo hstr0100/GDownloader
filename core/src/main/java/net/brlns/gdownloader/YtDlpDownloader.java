@@ -289,37 +289,39 @@ public class YtDlpDownloader{
                     }
 
                     if(!capturedPlaylists.contains(playlist)){
-                        DialogButton playlistDialogOption = new DialogButton(PlayListOptionEnum.DOWNLOAD_PLAYLIST.getDisplayName(), (boolean setDefault) -> {
-                            if(setDefault){
-                                main.getConfig().setPlaylistDownloadOption(PlayListOptionEnum.DOWNLOAD_PLAYLIST);
-                                main.updateConfig();
-                            }
+                        DialogButton playlistDialogOption = new DialogButton(PlayListOptionEnum.DOWNLOAD_PLAYLIST.getDisplayName(),
+                            (boolean setDefault) -> {
+                                if(setDefault){
+                                    main.getConfig().setPlaylistDownloadOption(PlayListOptionEnum.DOWNLOAD_PLAYLIST);
+                                    main.updateConfig();
+                                }
 
-                            captureUrl(playlist, force, PlayListOptionEnum.DOWNLOAD_PLAYLIST)
-                                .whenComplete((Boolean result, Throwable e) -> {
-                                    if(e != null){
-                                        main.handleException(e);
-                                    }
+                                captureUrl(playlist, force, PlayListOptionEnum.DOWNLOAD_PLAYLIST)
+                                    .whenComplete((Boolean result, Throwable e) -> {
+                                        if(e != null){
+                                            main.handleException(e);
+                                        }
 
-                                    future.complete(result);
-                                });
-                        });
+                                        future.complete(result);
+                                    });
+                            });
 
-                        DialogButton singleDialogOption = new DialogButton(PlayListOptionEnum.DOWNLOAD_SINGLE.getDisplayName(), (boolean setDefault) -> {
-                            if(setDefault){
-                                main.getConfig().setPlaylistDownloadOption(PlayListOptionEnum.DOWNLOAD_SINGLE);
-                                main.updateConfig();
-                            }
+                        DialogButton singleDialogOption = new DialogButton(PlayListOptionEnum.DOWNLOAD_SINGLE.getDisplayName(),
+                            (boolean setDefault) -> {
+                                if(setDefault){
+                                    main.getConfig().setPlaylistDownloadOption(PlayListOptionEnum.DOWNLOAD_SINGLE);
+                                    main.updateConfig();
+                                }
 
-                            captureUrl(inputUrl, force, PlayListOptionEnum.DOWNLOAD_SINGLE)
-                                .whenComplete((Boolean result, Throwable e) -> {
-                                    if(e != null){
-                                        main.handleException(e);
-                                    }
+                                captureUrl(inputUrl, force, PlayListOptionEnum.DOWNLOAD_SINGLE)
+                                    .whenComplete((Boolean result, Throwable e) -> {
+                                        if(e != null){
+                                            main.handleException(e);
+                                        }
 
-                                    future.complete(result);
-                                });
-                        });
+                                        future.complete(result);
+                                    });
+                            });
 
                         DialogButton defaultOption = new DialogButton("", (boolean setDefault) -> {
                             future.complete(false);
@@ -1008,6 +1010,26 @@ public class YtDlpDownloader{
         return input;
     }
 
+    @Nullable
+    public static String convertBytes(long bytes){
+        //Return null for 0 too
+        if(bytes <= 0 || bytes > Long.MAX_VALUE){
+            return null;
+        }
+
+        String[] units = {"B", "KB", "MB", "GB", "TB", "EB"};
+        int unitIndex = 0;
+
+        double size = (double)bytes;
+
+        while(size >= 1024 && unitIndex < units.length - 1){
+            size /= 1024;
+            unitIndex++;
+        }
+
+        return String.format("%.1f%s", size, units[unitIndex]);
+    }
+
     @Getter
     private enum DownloadStatus implements ISettingsEnum{
         QUERYING("enums.download_status.querying"),
@@ -1191,8 +1213,23 @@ public class YtDlpDownloader{
                 .replace("www.", ""), 30);
         }
 
+        private Optional<String> getSize(){
+            if(videoInfo != null){
+                return Optional.ofNullable(convertBytes(videoInfo.getFilesizeApprox()));
+            }
+
+            return Optional.empty();
+        }
+
         public void updateStatus(DownloadStatus status, String text){
-            mediaCard.setLabel(filter.getDisplayName(), getTitle(),
+            String topText = filter.getDisplayName();
+
+            Optional<String> size = getSize();
+            if(size.isPresent()){
+                topText += " (~" + size.get() + ")";
+            }
+
+            mediaCard.setLabel(topText, getTitle(),
                 status != DownloadStatus.DOWNLOADING ? truncate(text, 40) : truncate(text, 51));
 
             mediaCard.setTooltip(text);
@@ -1359,6 +1396,9 @@ public class YtDlpDownloader{
 
         @JsonProperty("resolution")
         private String resolution;
+
+        @JsonProperty("filesize_approx")
+        private long filesizeApprox;
 
         @JsonProperty("fps")
         private int fps;

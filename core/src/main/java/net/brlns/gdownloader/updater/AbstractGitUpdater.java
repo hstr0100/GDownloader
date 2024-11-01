@@ -104,7 +104,7 @@ public abstract class AbstractGitUpdater{
         notifyStatus(UpdateStatus.DONE);
     }
 
-    protected void tryFallback(File workDir) throws Exception{
+    protected void tryFallback(File workDir) throws NoFallbackAvailableException, Exception{
         String fileName = getRuntimeBinaryName();
 
         if(fileName != null){
