@@ -1011,7 +1011,7 @@ public class YtDlpDownloader{
     }
 
     @Nullable
-    public static String convertBytes(long bytes){
+    private static String getHumanReadableFileSizeIfExists(long bytes){
         //Return null for 0 too
         if(bytes <= 0 || bytes > Long.MAX_VALUE){
             return null;
@@ -1215,7 +1215,8 @@ public class YtDlpDownloader{
 
         private Optional<String> getSize(){
             if(videoInfo != null){
-                return Optional.ofNullable(convertBytes(videoInfo.getFilesizeApprox()));
+                return Optional.ofNullable(
+                    getHumanReadableFileSizeIfExists(videoInfo.getFilesizeApprox()));
             }
 
             return Optional.empty();
