@@ -22,6 +22,7 @@ package net.brlns.gdownloader.ui.themes;
 public enum UIColors{
     ICON,
     ICON_ACTIVE,
+    ICON_INACTIVE,
     ICON_HOVER,
     ICON_CLOSE,
     BACKGROUND,

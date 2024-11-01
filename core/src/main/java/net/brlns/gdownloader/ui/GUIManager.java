@@ -229,7 +229,7 @@ public final class GUIManager{
         });
 
         buttonPanel.add(createToggleButton(
-            (state) -> loadIcon("/assets/mp3.png", state ? ICON_ACTIVE : ICON),
+            (state) -> loadIcon("/assets/mp3.png", state ? ICON_ACTIVE : ICON_INACTIVE),
             (state) -> loadIcon("/assets/mp3.png", ICON_HOVER),
             (state) -> state ? "gui.dont_download_audio.tooltip"
                 : "gui.download_audio.tooltip",
@@ -241,7 +241,7 @@ public final class GUIManager{
         ));
 
         buttonPanel.add(createToggleButton(
-            (state) -> loadIcon("/assets/mp4.png", state ? ICON_ACTIVE : ICON),
+            (state) -> loadIcon("/assets/mp4.png", state ? ICON_ACTIVE : ICON_INACTIVE),
             (state) -> loadIcon("/assets/mp4.png", ICON_HOVER),
             (state) -> state ? "gui.dont_download_video.tooltip"
                 : "gui.download_video.tooltip",
