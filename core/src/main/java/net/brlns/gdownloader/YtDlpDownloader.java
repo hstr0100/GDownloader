@@ -113,6 +113,7 @@ import static net.brlns.gdownloader.util.URLUtils.*;
 //TODO Settings version
 //TODO Quit lingering ffmpeg processes spawned by yt-dlp
 //TODO Verify which exceptions are important to display to the user via GDownloader::handleException
+//TODO Add an url ignore list / Allow filters to be disabled
 //Off to a bootcamp, project on pause
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -1011,7 +1012,7 @@ public class YtDlpDownloader{
     }
 
     private static String getHumanReadableFileSize(long bytes){
-        assert bytes >= 0 || bytes < Long.MAX_VALUE : "Invalid argument. Expected valid positive long";
+        assert bytes >= 0 && bytes < Long.MAX_VALUE : "Invalid argument. Expected valid positive long";
 
         String[] units = {"B", "KB", "MB", "GB", "TB", "EB"};
         int unitIndex = 0;
@@ -1215,7 +1216,7 @@ public class YtDlpDownloader{
 
                 //For this, we consider 0 as null.
                 if(size > 0 && size < Long.MAX_VALUE){
-                    return Optional.of(getHumanReadableFileSize(videoInfo.getFilesizeApprox()));
+                    return Optional.of(getHumanReadableFileSize(size));
                 }
             }
 
