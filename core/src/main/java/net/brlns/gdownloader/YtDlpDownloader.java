@@ -571,7 +571,7 @@ public class YtDlpDownloader{
                     queueEntry.getUrl()
                 ));
 
-                if(main.getConfig().isReadCookies()){
+                if(main.getConfig().isReadCookiesFromBrowser()){
                     arguments.addAll(List.of(
                         "--cookies-from-browser",
                         main.getBrowserForCookies().getName()
@@ -639,7 +639,7 @@ public class YtDlpDownloader{
                 try{
                     AbstractUrlFilter filter = entry.getFilter();
 
-                    if(filter.areCookiesRequired() && !main.getConfig().isReadCookies()){
+                    if(filter.areCookiesRequired() && !main.getConfig().isReadCookiesFromBrowser()){
                         //TODO: Visual cue
                         log.warn("Cookies are required for this website {}", entry.getOriginalUrl());
                     }
@@ -701,6 +701,10 @@ public class YtDlpDownloader{
                             "--ffmpeg-location",
                             ffmpegPath.getAbsolutePath()
                         ));
+                    }
+
+                    if(!main.getConfig().isRespectYtDlpConfigFile()){
+                        genericArguments.add("--ignore-config");
                     }
 
                     genericArguments.addAll(filter.getArguments(ALL, main, tmpPath));

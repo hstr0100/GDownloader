@@ -31,7 +31,9 @@ public enum BrowserEnum implements ISettingsEnum{
     EDGE("edge", "Microsoft Edge"),
     OPERA("opera", "Opera"),
     SAFARI("safari", "Safari"),
-    BRAVE("brave", "Brave");
+    BRAVE("brave", "Brave"),
+    VIVALDI("vivaldi", "Vivaldi"),
+    WHALE("whale", "Whale");
 
     private final String name;
     private final String[] aliases;

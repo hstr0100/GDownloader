@@ -650,8 +650,8 @@ public class SettingsPanel{
 
         addCheckBox(downloadSettingsPanel, gbcPanel,
             "settings.read_cookies",
-            settings::isReadCookies,
-            settings::setReadCookies,
+            settings::isReadCookiesFromBrowser,
+            settings::setReadCookiesFromBrowser,
             false
         );
 
@@ -819,6 +819,13 @@ public class SettingsPanel{
             "settings.random_interval_between_downloads",
             settings::isRandomIntervalBetweenDownloads,
             settings::setRandomIntervalBetweenDownloads,
+            false
+        );
+
+        addCheckBox(downloadSettingsPanel, gbcPanel,
+            "settings.respect_ytdlp_config_file",
+            settings::isRespectYtDlpConfigFile,
+            settings::setRespectYtDlpConfigFile,
             false
         );
 

@@ -40,6 +40,9 @@ import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class Settings{
 
+    @JsonProperty("ConfigVersion")
+    private int configVersion = 20;
+
     @JsonProperty("MonitorClipboardForLinks")
     private boolean monitorClipboardForLinks = true;
 
@@ -52,14 +55,21 @@ public class Settings{
     @JsonProperty("Language")
     private LanguageEnum language = LanguageEnum.ENGLISH;
 
+    @Deprecated
     @JsonProperty("ReadCookies")
     private boolean readCookies = false;
+
+    @JsonProperty("ReadCookiesFromBrowser")
+    private boolean readCookiesFromBrowser = false;
 
     @JsonProperty("BrowserForCookies")
     private BrowserEnum browser = BrowserEnum.UNSET;
 
     @JsonProperty("DownloadYoutubeChannels")
     private boolean downloadYoutubeChannels = false;
+
+    @JsonProperty("RespectYtDlpConfigFile")
+    private boolean respectYtDlpConfigFile = false;
 
     @JsonProperty("DownloadsPath")
     private String downloadsPath = "";
@@ -181,5 +191,12 @@ public class Settings{
         }
 
         qualitySettings.clear();
+
+        //Broken in Chromium
+        //https://github.com/yt-dlp/yt-dlp/issues/7271
+        //https://github.com/yt-dlp/yt-dlp/issues/10927
+        if(isReadCookies() && getBrowser() == BrowserEnum.FIREFOX){
+            setReadCookiesFromBrowser(true);
+        }
     }
 }

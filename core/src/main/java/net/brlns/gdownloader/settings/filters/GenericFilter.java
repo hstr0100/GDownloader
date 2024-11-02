@@ -88,7 +88,7 @@ public class GenericFilter extends AbstractUrlFilter{
                     ));
                 }
 
-                if(config.isReadCookies()){
+                if(config.isReadCookiesFromBrowser()){
                     arguments.addAll(List.of(
                         "--cookies-from-browser",
                         main.getBrowserForCookies().getName()
