@@ -33,7 +33,7 @@ public class DarkTheme extends AbstractTheme{
     protected void initColors(){
         put(ICON, Color.WHITE);
         put(ICON_ACTIVE, new Color(56, 192, 251));
-        put(ICON_INACTIVE, new Color(244, 67, 54));
+        put(ICON_INACTIVE, new Color(239, 83, 80));
         put(ICON_HOVER, new Color(128, 128, 128));
         put(ICON_CLOSE, new Color(224, 64, 6));
         put(BACKGROUND, Color.DARK_GRAY);
