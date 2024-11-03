@@ -816,7 +816,7 @@ public final class GDownloader{
                         }
                     }
                 }
-            }else{
+            }else if(isLinux()){
                 File autostartDirectory = DirectoryUtils.getOrCreate(System.getProperty("user.home"), "/.config/autostart");
 
                 File desktopFile = new File(autostartDirectory, REGISTRY_APP_NAME + ".desktop");
@@ -877,6 +877,8 @@ public final class GDownloader{
 
                     log.info("Startup entry removed.");
                 }
+            }else{
+                log.error("Unsupported operation.");
             }
         }catch(Exception e){
             handleException(e);
@@ -1279,6 +1281,11 @@ public final class GDownloader{
         }
 
         return _cachedWorkDir;
+    }
+
+    public static boolean isMac(){
+        String osName = System.getProperty("os.name").toLowerCase();
+        return osName.contains("mac");
     }
 
     public static boolean isWindows(){

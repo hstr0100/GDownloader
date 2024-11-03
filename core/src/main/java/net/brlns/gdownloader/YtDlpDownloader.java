@@ -1214,7 +1214,7 @@ public class YtDlpDownloader{
                 .replace("www.", ""), 30);
         }
 
-        private Optional<String> getSize(){
+        private Optional<String> getDisplaySize(){
             if(videoInfo != null){
                 long size = videoInfo.getFilesizeApprox();
 
@@ -1230,7 +1230,7 @@ public class YtDlpDownloader{
         public void updateStatus(DownloadStatus status, String text){
             String topText = filter.getDisplayName();
 
-            Optional<String> size = getSize();
+            Optional<String> size = getDisplaySize();
             if(size.isPresent()){
                 topText += " (~" + size.get() + ")";
             }
