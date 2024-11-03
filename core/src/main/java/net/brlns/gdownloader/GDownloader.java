@@ -566,7 +566,14 @@ public final class GDownloader{
                         }
                     }
                 }else if(os.contains("mac")){
-                    browserName = "safari";//hstr0100 does not have a mac to figure out how to implement this.
+                    List<String> output = readOutput(
+                            "bash",
+                            "-c",
+                            "defaults read ~/Library/Preferences/com.apple.LaunchServices/com.apple.launchservices.secure | awk -F '\"' '/http;/{print window[(NR)-1]}{window[NR]=$2}'");
+
+                    log.info("Default browser: {}", output);
+
+                    browserName = output.getFirst();
                 }else if(os.contains("nix") || os.contains("nux")){
                     List<String> output = readOutput("xdg-settings", "get", "default-web-browser");
 
