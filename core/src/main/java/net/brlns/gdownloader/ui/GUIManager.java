@@ -86,7 +86,7 @@ public final class GUIManager{
 
     private final AtomicInteger mediaCardId = new AtomicInteger();
 
-    private boolean isShowingMessage = false;
+    private final AtomicBoolean isShowingMessage = new AtomicBoolean();
 
     private final GDownloader main;
 
@@ -161,7 +161,7 @@ public final class GUIManager{
         return icon;
     }
 
-    private void constructToolBar(JPanel mainPanel){
+    private JPanel constructToolBar(){
         JPanel topPanel = new JPanel(new GridBagLayout());
         topPanel.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0));
         topPanel.setBackground(color(BACKGROUND));
@@ -300,7 +300,7 @@ public final class GUIManager{
         gbcButtons.weightx = 1.0;
         topPanel.add(buttonPanel, gbcButtons);
 
-        mainPanel.add(topPanel, BorderLayout.SOUTH);
+        return topPanel;
     }
 
     private JButton createToggleDownloadsButton(
@@ -321,7 +321,7 @@ public final class GUIManager{
         return button;
     }
 
-    public void addStatusLabel(JPanel statusPanel, UIColors textColor, StatusLabelUpdater updater){
+    private void addStatusLabel(JPanel statusPanel, UIColors textColor, StatusLabelUpdater updater){
         JLabel statusLabel = new JLabel("");
         statusLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 5));
         statusLabel.setForeground(color(textColor));
@@ -338,33 +338,35 @@ public final class GUIManager{
     }
 
     private void updateQueuePanelMessage(){
-        JPanel panel = getEmptyQueuePanel();
+        SwingUtilities.invokeLater(() -> {
+            JPanel panel = getEmptyQueuePanel();
 
-        Component firstComponent = panel.getComponent(0);
+            Component firstComponent = panel.getComponent(0);
 
-        if(!main.getDownloadManager().isBlocked()){
-            if(!(firstComponent instanceof JLabel)){
-                panel.removeAll();
+            if(!main.getDownloadManager().isBlocked()){
+                if(!(firstComponent instanceof JLabel)){
+                    panel.removeAll();
 
-                JLabel label = new JLabel("", SwingConstants.CENTER);
-                label.setForeground(color(FOREGROUND));
-                panel.add(label, BorderLayout.CENTER);
+                    JLabel label = new JLabel("", SwingConstants.CENTER);
+                    label.setForeground(color(FOREGROUND));
+                    panel.add(label, BorderLayout.CENTER);
+                }
+
+                JLabel label = (JLabel)panel.getComponent(0);
+                label.setText(main.getConfig().isMonitorClipboardForLinks()
+                    ? l10n("gui.empty_queue")
+                    : l10n("gui.empty_queue.enable_clipboard"));
+            }else{
+                if(!(firstComponent instanceof JPanel)){
+                    panel.removeAll();
+                }
+
+                panel.add(updaterPanel, BorderLayout.CENTER);
             }
 
-            JLabel label = (JLabel)panel.getComponent(0);
-            label.setText(main.getConfig().isMonitorClipboardForLinks()
-                ? l10n("gui.empty_queue")
-                : l10n("gui.empty_queue.enable_clipboard"));
-        }else{
-            if(!(firstComponent instanceof JPanel)){
-                panel.removeAll();
-            }
-
-            panel.add(updaterPanel, BorderLayout.CENTER);
-        }
-
-        panel.revalidate();
-        panel.repaint();
+            panel.revalidate();
+            panel.repaint();
+        });
     }
 
     private JPanel createUpdaterPanel(){
@@ -520,7 +522,7 @@ public final class GUIManager{
         return button;
     }
 
-    public JButton createButton(ImageIcon icon, ImageIcon hoverIcon, String tooltipText, java.awt.event.ActionListener actionListener){
+    protected JButton createButton(ImageIcon icon, ImageIcon hoverIcon, String tooltipText, ActionListener actionListener){
         JButton button = new JButton(icon);
         button.setUI(new BasicButtonUI());
         button.setFocusPainted(false);
@@ -566,120 +568,123 @@ public final class GUIManager{
 
     public void showConfirmDialog(String title, String message, int timeoutMs,
         DialogButton onClose, DialogButton... buttons){
-        JDialog dialog = new JDialog(appWindow, title, Dialog.ModalityType.APPLICATION_MODAL){
-            private boolean actionPerformed = false;
 
-            @Override
-            public void dispose(){
-                if(!actionPerformed){
-                    actionPerformed = true;
+        SwingUtilities.invokeLater(() -> {
+            JDialog dialog = new JDialog(appWindow, title, Dialog.ModalityType.APPLICATION_MODAL){
+                private boolean actionPerformed = false;
 
-                    onClose.getAction().accept(false);
+                @Override
+                public void dispose(){
+                    if(!actionPerformed){
+                        actionPerformed = true;
+
+                        onClose.getAction().accept(false);
+                    }
+
+                    super.dispose();
                 }
+            };
 
-                super.dispose();
+            dialog.setAlwaysOnTop(true);//TODO: We might wanna consider just bringing this to top but not pinning it there. Java doesn't directly support this but there are workarounds.
+            dialog.setSize(500, 300);
+            dialog.setResizable(false);
+            dialog.setLocationRelativeTo(null);
+            dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+
+            try{
+                dialog.setIconImage(getAppIcon());
+            }catch(IOException e){
+                main.handleException(e);
             }
-        };
 
-        dialog.setAlwaysOnTop(true);//TODO: We might wanna consider just bringing this to top but not pinning it there. Java doesn't directly support this but there are workarounds.
-        dialog.setSize(500, 300);
-        dialog.setResizable(false);
-        dialog.setLocationRelativeTo(null);
-        dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+            JPanel panel = new JPanel(new BorderLayout());
+            panel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+            panel.setBackground(color(BACKGROUND));
 
-        try{
-            dialog.setIconImage(getAppIcon());
-        }catch(IOException e){
-            main.handleException(e);
-        }
+            JPanel dialogPanel = new JPanel(new BorderLayout());
+            dialogPanel.setOpaque(false);
+            dialogPanel.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0));
 
-        JPanel panel = new JPanel(new BorderLayout());
-        panel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
-        panel.setBackground(color(BACKGROUND));
+            JLabel dialogLabel = new JLabel(wrapText(50, message), SwingConstants.CENTER);
+            dialogLabel.setForeground(color(FOREGROUND));
+            dialogPanel.add(dialogLabel, BorderLayout.CENTER);
 
-        JPanel dialogPanel = new JPanel(new BorderLayout());
-        dialogPanel.setOpaque(false);
-        dialogPanel.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0));
+            panel.add(dialogPanel, BorderLayout.CENTER);
 
-        JLabel dialogLabel = new JLabel(wrapText(50, message), SwingConstants.CENTER);
-        dialogLabel.setForeground(color(FOREGROUND));
-        dialogPanel.add(dialogLabel, BorderLayout.CENTER);
+            JPanel checkboxPanel = new JPanel();
+            checkboxPanel.setOpaque(false);
+            checkboxPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0));
 
-        panel.add(dialogPanel, BorderLayout.CENTER);
+            JCheckBox rememberCheckBox = new JCheckBox(l10n("gui.remember_choice"));
+            rememberCheckBox.setUI(new CustomCheckBoxUI());
+            rememberCheckBox.setBackground(color(BACKGROUND));
+            rememberCheckBox.setForeground(color(FOREGROUND));
+            rememberCheckBox.setOpaque(false);
+            checkboxPanel.add(rememberCheckBox);
 
-        JPanel checkboxPanel = new JPanel();
-        checkboxPanel.setOpaque(false);
-        checkboxPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0));
+            JPanel buttonPanel = new JPanel();
+            buttonPanel.setBackground(color(SIDE_PANEL_SELECTED));
+            buttonPanel.setOpaque(false);
 
-        JCheckBox rememberCheckBox = new JCheckBox(l10n("gui.remember_choice"));
-        rememberCheckBox.setUI(new CustomCheckBoxUI());
-        rememberCheckBox.setBackground(color(BACKGROUND));
-        rememberCheckBox.setForeground(color(FOREGROUND));
-        rememberCheckBox.setOpaque(false);
-        checkboxPanel.add(rememberCheckBox);
+            for(DialogButton dialogButton : buttons){
+                JButton button = createDialogButton(
+                    dialogButton.getTitle(),
+                    BUTTON_BACKGROUND,
+                    BUTTON_FOREGROUND,
+                    BUTTON_HOVER);
 
-        JPanel buttonPanel = new JPanel();
-        buttonPanel.setBackground(color(SIDE_PANEL_SELECTED));
-        buttonPanel.setOpaque(false);
+                button.addActionListener(e -> {
+                    dialogButton.getAction().accept(rememberCheckBox.isSelected());
+                    dialog.dispose();
+                });
 
-        for(DialogButton dialogButton : buttons){
-            JButton button = createDialogButton(
-                dialogButton.getTitle(),
-                BUTTON_BACKGROUND,
-                BUTTON_FOREGROUND,
-                BUTTON_HOVER);
+                buttonPanel.add(button);
+            }
 
-            button.addActionListener(e -> {
-                dialogButton.getAction().accept(rememberCheckBox.isSelected());
-                dialog.dispose();
+            JPanel southPanel = new JPanel(new BorderLayout());
+            southPanel.setOpaque(false);
+            southPanel.add(checkboxPanel, BorderLayout.NORTH);
+
+            CustomProgressBar dialogProgressBar = new CustomProgressBar();
+            dialogProgressBar.setValue(100);
+            dialogProgressBar.setStringPainted(false);
+            dialogProgressBar.setForeground(color(FOREGROUND));
+            dialogProgressBar.setBackground(color(BACKGROUND));
+            //dialogProgressBar.setBorderPainted(false);
+            dialogProgressBar.setPreferredSize(new Dimension(dialog.getWidth() - 10, 7));
+
+            Timer timer = new Timer(50, new ActionListener(){
+                int elapsed = 0;
+
+                @Override
+                public void actionPerformed(ActionEvent e){
+                    elapsed += 50;
+
+                    int progress = 100 - (elapsed * 100) / timeoutMs;
+                    dialogProgressBar.setValue(progress);
+
+                    if(elapsed >= timeoutMs){
+                        ((Timer)e.getSource()).stop();
+                        dialog.dispose();
+                    }
+                }
             });
 
-            buttonPanel.add(button);
-        }
-
-        JPanel southPanel = new JPanel(new BorderLayout());
-        southPanel.setOpaque(false);
-        southPanel.add(checkboxPanel, BorderLayout.NORTH);
-
-        CustomProgressBar dialogProgressBar = new CustomProgressBar();
-        dialogProgressBar.setValue(100);
-        dialogProgressBar.setStringPainted(false);
-        dialogProgressBar.setForeground(color(FOREGROUND));
-        dialogProgressBar.setBackground(color(BACKGROUND));
-        //dialogProgressBar.setBorderPainted(false);
-        dialogProgressBar.setPreferredSize(new Dimension(dialog.getWidth() - 10, 7));
-
-        Timer timer = new Timer(50, new ActionListener(){
-            int elapsed = 0;
-
-            @Override
-            public void actionPerformed(ActionEvent e){
-                elapsed += 50;
-
-                int progress = 100 - (elapsed * 100) / timeoutMs;
-                dialogProgressBar.setValue(progress);
-
-                if(elapsed >= timeoutMs){
-                    ((Timer)e.getSource()).stop();
-                    dialog.dispose();
+            dialog.addWindowListener(new WindowAdapter(){
+                @Override
+                public void windowOpened(WindowEvent e){
+                    timer.start();
                 }
-            }
+            });
+
+            southPanel.add(dialogProgressBar, BorderLayout.CENTER);
+            southPanel.add(buttonPanel, BorderLayout.SOUTH);
+
+            panel.add(southPanel, BorderLayout.SOUTH);
+
+            dialog.add(panel);
+            dialog.setVisible(true);
         });
-
-        dialog.addWindowListener(new WindowAdapter(){
-            @Override
-            public void windowOpened(WindowEvent e){
-                timer.start();
-            }
-        });
-
-        southPanel.add(dialogProgressBar, BorderLayout.CENTER);
-        southPanel.add(buttonPanel, BorderLayout.SOUTH);
-
-        panel.add(southPanel, BorderLayout.SOUTH);
-
-        dialog.add(panel);
-        dialog.setVisible(true);
     }
 
     public void showMessage(String title, String message, int durationMillis, MessageType messageType, boolean playTone){
@@ -689,123 +694,137 @@ public final class GUIManager{
 
         messageQueue.add(new Message(title, message, durationMillis, messageType, playTone));
 
-        if(!isShowingMessage){
+        if(!isShowingMessage.get()){
             displayNextMessage();
         }
     }
 
     private void displayNextMessage(){
-        if(messageQueue.isEmpty()){
-            isShowingMessage = false;
-            return;
-        }
+        SwingUtilities.invokeLater(() -> {
+            if(messageWindow != null){
+                messageWindow.setVisible(false);
+                messageWindow.dispose();
 
-        isShowingMessage = true;
-        Message nextMessage = messageQueue.poll();
-
-        if(messageWindow != null){
-            messageWindow.dispose();
-        }
-
-        messageWindow = new JWindow();
-        messageWindow.setAlwaysOnTop(true);
-
-        messageWindow.setSize(350, 110);
-
-        Color titleColor;
-        Color textColor;
-        switch(nextMessage.getMessageType()){
-            case ERROR -> {
-                titleColor = Color.RED;
-                textColor = Color.GRAY;
+                messageWindow = null;
             }
-            case WARNING -> {
-                titleColor = Color.YELLOW;
-                textColor = Color.GRAY;
+
+            if(messageQueue.isEmpty()){
+                isShowingMessage.set(false);
+                return;
             }
-            default -> {
-                titleColor = color(LIGHT_TEXT);
-                textColor = color(FOREGROUND);
-            }
-        }
 
-        JPanel panel = new JPanel(new BorderLayout());
-        panel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
-        panel.setBackground(color(BACKGROUND));
+            isShowingMessage.set(true);
 
-        JPanel titlePanel = new JPanel(new BorderLayout());
-        titlePanel.setOpaque(false);
+            Message nextMessage = messageQueue.poll();
 
-        JLabel titleLabel = new JLabel(wrapText(45, nextMessage.getTitle()));
-        titleLabel.setForeground(titleColor);
-        titleLabel.setHorizontalAlignment(SwingConstants.LEFT);
-        titlePanel.add(titleLabel, BorderLayout.WEST);
+            messageWindow = new JWindow();
+            messageWindow.setAlwaysOnTop(true);
 
-        AtomicBoolean cancelHook = new AtomicBoolean(false);
+            messageWindow.setSize(350, 110);
 
-        titlePanel.add(createButton(
-            loadIcon("/assets/x-mark.png", ICON, 12),
-            loadIcon("/assets/x-mark.png", ICON_CLOSE, 12),
-            "gui.close.tooltip",
-            e -> cancelHook.set(true)
-        ), BorderLayout.EAST);
-
-        panel.add(titlePanel, BorderLayout.NORTH);
-
-        messagePanel = new JPanel(new BorderLayout());
-        messagePanel.setOpaque(false);
-        messagePanel.setBorder(BorderFactory.createEmptyBorder(10, 0, 20, 0));
-
-        JLabel messageLabel = new JLabel(wrapText(50, nextMessage.getMessage()), SwingConstants.CENTER);
-        messageLabel.setForeground(textColor);
-        messagePanel.add(messageLabel, BorderLayout.CENTER);
-
-        panel.add(messagePanel, BorderLayout.CENTER);
-
-        CustomProgressBar messageProgressBar = new CustomProgressBar();
-        messageProgressBar.setValue(nextMessage.getDurationMillis());
-        messageProgressBar.setStringPainted(false);
-        messageProgressBar.setForeground(color(FOREGROUND));
-        messageProgressBar.setBackground(color(BACKGROUND));
-        //messageProgressBar.setBorderPainted(false);
-        messageProgressBar.setPreferredSize(new Dimension(messageWindow.getWidth() - 10, 5));
-
-        Timer timer = new Timer(50, new ActionListener(){
-            int elapsed = 0;
-
-            @Override
-            public void actionPerformed(ActionEvent e){
-                elapsed += 50;
-
-                int progress = 100 - (elapsed * 100) / nextMessage.getDurationMillis();
-                messageProgressBar.setValue(progress);
-
-                if(elapsed >= nextMessage.getDurationMillis() || cancelHook.get()){
-                    ((Timer)e.getSource()).stop();
-
-                    SwingUtilities.invokeLater(() -> {
-                        messageWindow.setVisible(false);
-                        displayNextMessage();
-                    });
+            Color titleColor;
+            Color textColor;
+            switch(nextMessage.getMessageType()){
+                case ERROR -> {
+                    titleColor = Color.RED;
+                    textColor = Color.GRAY;
+                }
+                case WARNING -> {
+                    titleColor = Color.YELLOW;
+                    textColor = Color.GRAY;
+                }
+                default -> {
+                    titleColor = color(LIGHT_TEXT);
+                    textColor = color(FOREGROUND);
                 }
             }
+
+            JPanel panel = new JPanel(new BorderLayout());
+            panel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+            panel.setBackground(color(BACKGROUND));
+
+            JPanel titlePanel = new JPanel(new BorderLayout());
+            titlePanel.setOpaque(false);
+
+            JLabel titleLabel = new JLabel(wrapText(45, nextMessage.getTitle()));
+            titleLabel.setForeground(titleColor);
+            titleLabel.setHorizontalAlignment(SwingConstants.LEFT);
+            titlePanel.add(titleLabel, BorderLayout.WEST);
+
+            AtomicBoolean cancelHook = new AtomicBoolean(false);
+
+            titlePanel.add(createButton(
+                loadIcon("/assets/x-mark.png", ICON, 12),
+                loadIcon("/assets/x-mark.png", ICON_CLOSE, 12),
+                "gui.close.tooltip",
+                e -> cancelHook.set(true)
+            ), BorderLayout.EAST);
+
+            panel.add(titlePanel, BorderLayout.NORTH);
+
+            panel.addMouseListener(new MouseAdapter(){
+                @Override
+                public void mousePressed(MouseEvent e){
+                    cancelHook.set(true);
+                }
+            });
+
+            messagePanel = new JPanel(new BorderLayout());
+            messagePanel.setOpaque(false);
+            messagePanel.setBorder(BorderFactory.createEmptyBorder(10, 0, 20, 0));
+
+            JLabel messageLabel = new JLabel(wrapText(50, nextMessage.getMessage()), SwingConstants.CENTER);
+            messageLabel.setForeground(textColor);
+            messagePanel.add(messageLabel, BorderLayout.CENTER);
+
+            panel.add(messagePanel, BorderLayout.CENTER);
+
+            CustomProgressBar messageProgressBar = new CustomProgressBar();
+            messageProgressBar.setValue(nextMessage.getDurationMillis());
+            messageProgressBar.setStringPainted(false);
+            messageProgressBar.setForeground(color(FOREGROUND));
+            messageProgressBar.setBackground(color(BACKGROUND));
+            //messageProgressBar.setBorderPainted(false);
+            messageProgressBar.setPreferredSize(new Dimension(messageWindow.getWidth() - 10, 5));
+
+            Timer timer = new Timer(50, new ActionListener(){
+                int elapsed = 0;
+
+                @Override
+                public void actionPerformed(ActionEvent e){
+                    elapsed += 50;
+
+                    int progress = 100 - (elapsed * 100) / nextMessage.getDurationMillis();
+                    messageProgressBar.setValue(progress);
+
+                    if(elapsed >= nextMessage.getDurationMillis() || cancelHook.get()){
+                        ((Timer)e.getSource()).stop();
+
+                        displayNextMessage();
+                    }
+                }
+            });
+
+            panel.add(messageProgressBar, BorderLayout.SOUTH);
+
+            messageWindow.add(panel);
+
+            updateMessageWindowSize();
+            adjustMessageWindowPosition();
+
+            messageWindow.setVisible(true);
+
+            timer.start();
+
+            if(nextMessage.isPlayTone() && main.getConfig().isPlaySounds()){
+                AudioEngine.playNotificationTone();
+            }
         });
-
-        panel.add(messageProgressBar, BorderLayout.SOUTH);
-
-        messageWindow.add(panel);
-
-        updateMessageWindowSize();
-        messageWindow.setVisible(true);
-
-        timer.start();
-
-        if(nextMessage.isPlayTone() && main.getConfig().isPlaySounds()){
-            AudioEngine.playNotificationTone();
-        }
     }
 
     private void updateMessageWindowSize(){
+        assert SwingUtilities.isEventDispatchThread();
+
         int newHeight = calculateMessageWindowHeight();
         messageWindow.setSize(350, newHeight);
 
@@ -823,11 +842,11 @@ public final class GUIManager{
         }
 
         messageWindow.setLocation(windowX, windowY);
-
-        adjustMessageWindowPosition(true);
     }
 
     private int calculateMessageWindowHeight(){
+        assert SwingUtilities.isEventDispatchThread();
+
         int totalHeight = 0;
         if(messagePanel != null){
             for(Component comp : messagePanel.getComponents()){
@@ -841,118 +860,124 @@ public final class GUIManager{
     }
 
     public void refreshWindow(){
-        if(appWindow == null){
-            throw new RuntimeException("Called before initialization");
-        }
+        SwingUtilities.invokeLater(() -> {
+            if(appWindow == null){
+                throw new RuntimeException("Called before initialization");
+            }
 
-        appWindow.setAlwaysOnTop(main.getConfig().isKeepWindowAlwaysOnTop());
-        appWindow.setDefaultCloseOperation(main.getConfig().isExitOnClose() ? JFrame.EXIT_ON_CLOSE : JFrame.HIDE_ON_CLOSE);
+            appWindow.setAlwaysOnTop(main.getConfig().isKeepWindowAlwaysOnTop());
+            appWindow.setDefaultCloseOperation(main.getConfig().isExitOnClose() ? JFrame.EXIT_ON_CLOSE : JFrame.HIDE_ON_CLOSE);
+        });
     }
 
     private void setUpAppWindow(){
-        if(appWindow == null){
-            // note to self, tooltips only show up when focused
-            String version = System.getProperty("jpackage.app-version");
+        SwingUtilities.invokeLater(() -> {
+            if(appWindow == null){
+                // note to self, tooltips only show up when focused
+                String version = System.getProperty("jpackage.app-version");
 
-            appWindow = new JFrame(GDownloader.REGISTRY_APP_NAME + (version != null ? " v" + version : ""));
-            refreshWindow();
+                appWindow = new JFrame(GDownloader.REGISTRY_APP_NAME + (version != null ? " v" + version : ""));
+                refreshWindow();
 
-            //appWindow.setResizable(false);
-            //appWindow.setUndecorated(true);
-            try{
-                appWindow.setIconImage(getAppIcon());
-            }catch(IOException e){
-                main.handleException(e);
-            }
-
-            appWindow.addWindowStateListener((WindowEvent e) -> {
-                if((e.getNewState() & JFrame.MAXIMIZED_BOTH) == JFrame.MAXIMIZED_BOTH){
-                    appWindow.setAlwaysOnTop(false);
-                }else{
-                    appWindow.setAlwaysOnTop(main.getConfig().isKeepWindowAlwaysOnTop());
+                //appWindow.setResizable(false);
+                //appWindow.setUndecorated(true);
+                try{
+                    appWindow.setIconImage(getAppIcon());
+                }catch(IOException e){
+                    main.handleException(e);
                 }
 
-                adjustMediaCards();
-            });
-
-            appWindow.addWindowListener(new WindowAdapter(){
-                @Override
-                public void windowClosing(WindowEvent e){
-                    adjustMessageWindowPosition();
-                }
-
-                @Override
-                public void windowIconified(WindowEvent e){
-                    adjustMessageWindowPosition();
-                }
-
-                @Override
-                public void windowDeiconified(WindowEvent e){
-                    adjustMessageWindowPosition();
-                }
-            });
-
-            KeyboardFocusManager manager = KeyboardFocusManager.getCurrentKeyboardFocusManager();
-            manager.addKeyEventDispatcher((KeyEvent e) -> {
-                if(e.getID() == KeyEvent.KEY_PRESSED){
-                    if((e.getKeyCode() == KeyEvent.VK_V) && ((e.getModifiersEx() & KeyEvent.CTRL_DOWN_MASK) != 0)){
-                        main.resetClipboard();
-
-                        main.updateClipboard(null, true);
+                appWindow.addWindowStateListener((WindowEvent e) -> {
+                    if((e.getNewState() & JFrame.MAXIMIZED_BOTH) == JFrame.MAXIMIZED_BOTH){
+                        appWindow.setAlwaysOnTop(false);
+                    }else{
+                        appWindow.setAlwaysOnTop(main.getConfig().isKeepWindowAlwaysOnTop());
                     }
-                }
 
-                return false;
-            });
-
-            adjustWindowSize();
-
-            adjustMessageWindowPosition();
-
-            JPanel mainPanel = new JPanel(new BorderLayout());
-            mainPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
-            mainPanel.setBackground(color(BACKGROUND));
-
-            JPanel headerPanel = new JPanel(new BorderLayout());
-            headerPanel.setBackground(color(BACKGROUND));
-
-            constructToolBar(headerPanel);
-
-            mainPanel.add(headerPanel, BorderLayout.NORTH);
-
-            queuePanel = new JPanel();
-            queuePanel.setLayout(new BoxLayout(queuePanel, BoxLayout.Y_AXIS));
-            queuePanel.setBackground(color(BACKGROUND));
-
-            new DropTarget(appWindow, new PanelDropTargetListener());
-
-            queuePanel.add(getEmptyQueuePanel(), BorderLayout.CENTER);
-
-            queueScrollPane = new JScrollPane(queuePanel);
-            queueScrollPane.getVerticalScrollBar().setUI(new CustomScrollBarUI());
-            queueScrollPane.getHorizontalScrollBar().setUI(new CustomScrollBarUI());
-
-            queueScrollPane.setBorder(BorderFactory.createEmptyBorder());
-            queueScrollPane.setBackground(color(BACKGROUND));
-            //queueScrollPane.getViewport().setBackground(color(BACKGROUND));
-            queueScrollPane.getVerticalScrollBar().setUnitIncrement(4);
-            queueScrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-            queueScrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
-
-            mainPanel.add(queueScrollPane, BorderLayout.CENTER);
-
-            appWindow.add(mainPanel);
-
-            appWindow.addComponentListener(new ComponentAdapter(){
-                @Override
-                public void componentResized(ComponentEvent e){
                     adjustMediaCards();
-                }
-            });
-        }
+                });
+
+                appWindow.addWindowListener(new WindowAdapter(){
+                    @Override
+                    public void windowClosing(WindowEvent e){
+                        adjustMessageWindowPosition();
+                    }
+
+                    @Override
+                    public void windowIconified(WindowEvent e){
+                        adjustMessageWindowPosition();
+                    }
+
+                    @Override
+                    public void windowDeiconified(WindowEvent e){
+                        adjustMessageWindowPosition();
+                    }
+                });
+
+                KeyboardFocusManager manager = KeyboardFocusManager.getCurrentKeyboardFocusManager();
+                manager.addKeyEventDispatcher((KeyEvent e) -> {
+                    if(e.getID() == KeyEvent.KEY_PRESSED){
+                        if((e.getKeyCode() == KeyEvent.VK_V) && ((e.getModifiersEx() & KeyEvent.CTRL_DOWN_MASK) != 0)){
+                            main.resetClipboard();
+
+                            main.updateClipboard(null, true);
+                        }
+                    }
+
+                    return false;
+                });
+
+                adjustWindowSize();
+
+                adjustMessageWindowPosition();
+
+                JPanel mainPanel = new JPanel(new BorderLayout());
+                mainPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+                mainPanel.setBackground(color(BACKGROUND));
+
+                JPanel headerPanel = new JPanel(new BorderLayout());
+                headerPanel.setBackground(color(BACKGROUND));
+                headerPanel.add(constructToolBar(), BorderLayout.SOUTH);
+
+                mainPanel.add(headerPanel, BorderLayout.NORTH);
+
+                queuePanel = new JPanel();
+                queuePanel.setLayout(new BoxLayout(queuePanel, BoxLayout.Y_AXIS));
+                queuePanel.setBackground(color(BACKGROUND));
+
+                new DropTarget(appWindow, new PanelDropTargetListener());
+
+                queuePanel.add(getEmptyQueuePanel(), BorderLayout.CENTER);
+                updateQueuePanelMessage();
+
+                queueScrollPane = new JScrollPane(queuePanel);
+                queueScrollPane.getVerticalScrollBar().setUI(new CustomScrollBarUI());
+                queueScrollPane.getHorizontalScrollBar().setUI(new CustomScrollBarUI());
+
+                queueScrollPane.setBorder(BorderFactory.createEmptyBorder());
+                queueScrollPane.setBackground(color(BACKGROUND));
+                //queueScrollPane.getViewport().setBackground(color(BACKGROUND));
+                queueScrollPane.getVerticalScrollBar().setUnitIncrement(4);
+                queueScrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+                queueScrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
+
+                mainPanel.add(queueScrollPane, BorderLayout.CENTER);
+
+                appWindow.add(mainPanel);
+
+                appWindow.addComponentListener(new ComponentAdapter(){
+                    @Override
+                    public void componentResized(ComponentEvent e){
+                        adjustMediaCards();
+                    }
+                });
+            }
+        });
     }
 
     private void adjustMediaCards(){
+        assert SwingUtilities.isEventDispatchThread();
+
         double factor = 1;
         if(appWindow.getExtendedState() == JFrame.MAXIMIZED_BOTH){
             factor = 1.20;
@@ -981,18 +1006,130 @@ public final class GUIManager{
         messageLabel.setForeground(color(FOREGROUND));
         emptyQueuePanel.add(messageLabel, BorderLayout.CENTER);
 
-        updateQueuePanelMessage();
-
         return emptyQueuePanel;
     }
 
-    public MediaCard addMediaCard(boolean video, String... mediaLabel){
-        setUpAppWindow();
+    private void showPopupPanel(JPanel parentPanel, Map<String, Runnable> actions, int x, int y){
+        assert SwingUtilities.isEventDispatchThread();
 
-        if(!appWindow.isVisible()){
-            appWindow.setVisible(true);
+        if(actions.isEmpty()){
+            return;
         }
 
+        JPanel popupPanel = new JPanel();
+        popupPanel.setLayout(new GridLayout(actions.size(), 1));
+        popupPanel.setBackground(Color.DARK_GRAY);
+        popupPanel.setBorder(BorderFactory.createLineBorder(Color.GRAY));
+        popupPanel.setOpaque(true);
+
+        JWindow popupWindow = new JWindow();
+        popupWindow.setLayout(new BorderLayout());
+
+        for(Map.Entry<String, Runnable> entry : actions.entrySet()){
+            JButton button = new CustomMenuButton(entry.getKey());
+
+            button.addActionListener(e -> {
+                entry.getValue().run();
+                popupWindow.dispose();
+            });
+
+            popupPanel.add(button);
+        }
+
+        popupWindow.add(popupPanel, BorderLayout.CENTER);
+        popupWindow.pack();
+
+        Point locationOnScreen = parentPanel.getLocationOnScreen();
+        popupWindow.setLocation(locationOnScreen.x + x, locationOnScreen.y + y);
+
+        AWTEventListener globalMouseListener = new AWTEventListener(){
+            @Override
+            public void eventDispatched(AWTEvent event){
+                if(event.getID() == MouseEvent.MOUSE_CLICKED){
+                    MouseEvent me = (MouseEvent)event;
+                    Component component = SwingUtilities.getDeepestComponentAt(me.getComponent(), me.getX(), me.getY());
+
+                    if(component == null || !SwingUtilities.isDescendingFrom(component, popupWindow)){
+                        popupWindow.dispose();
+                        Toolkit.getDefaultToolkit().removeAWTEventListener(this);
+                    }
+                }
+            }
+        };
+
+        Toolkit.getDefaultToolkit().addAWTEventListener(globalMouseListener, AWTEvent.MOUSE_EVENT_MASK);
+
+        popupWindow.addWindowListener(new WindowAdapter(){
+            @Override
+            public void windowClosed(WindowEvent e){
+                Toolkit.getDefaultToolkit().removeAWTEventListener(globalMouseListener);
+            }
+        });
+
+        popupWindow.setVisible(true);
+    }
+
+    //https://stackoverflow.com/questions/5147768/scroll-jscrollpane-to-bottom
+    private void scrollToBottom(JScrollPane scrollPane){
+        JScrollBar verticalBar = scrollPane.getVerticalScrollBar();
+
+        verticalBar.addAdjustmentListener(new AdjustmentListener(){
+            @Override
+            public void adjustmentValueChanged(AdjustmentEvent e){
+                Adjustable adjustable = e.getAdjustable();
+                adjustable.setValue(adjustable.getMaximum());
+                verticalBar.removeAdjustmentListener(this);
+            }
+        });
+    }
+
+    private void adjustWindowSize(){
+        assert SwingUtilities.isEventDispatchThread();
+
+        appWindow.setSize(658, 370);
+        appWindow.setMinimumSize(new Dimension(appWindow.getWidth(), 225));
+
+        Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+        Insets screenInsets = Toolkit.getDefaultToolkit().getScreenInsets(appWindow.getGraphicsConfiguration());
+        int taskbarHeight = screenInsets.bottom;
+
+        int windowX = screenSize.width - appWindow.getWidth() - 10;
+        int windowY = screenSize.height - appWindow.getHeight() - taskbarHeight - 10;
+
+        int minHeight = screenSize.height - appWindow.getHeight() - taskbarHeight - 10;
+        if(windowY < minHeight){
+            appWindow.setSize(appWindow.getWidth(), screenSize.height - minHeight);
+            windowY = minHeight;
+        }
+
+        appWindow.setLocation(windowX, windowY);
+    }
+
+    private void adjustMessageWindowPosition(){
+        assert SwingUtilities.isEventDispatchThread();
+
+        if(messageWindow != null){
+            Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+            //Insets screenInsets = Toolkit.getDefaultToolkit().getScreenInsets(messageWindow.getGraphicsConfiguration());
+            //int taskbarHeight = screenInsets.bottom;
+
+            int newX = screenSize.width - messageWindow.getWidth() - 10;
+            int newY = /*screenSize.height - messageWindow.getHeight() - taskbarHeight -*/ 10;
+
+            messageWindow.setLocation(newX, newY);
+
+            //TODO check if the window is actually on top
+            if(appWindow != null && appWindow.isVisible() && (appWindow.getExtendedState() & Frame.ICONIFIED) != 1){
+                if(messageWindow.getBounds().intersects(appWindow.getBounds())){
+                    newY = appWindow.getY() - messageWindow.getHeight() - 10;
+
+                    messageWindow.setLocation(newX, newY);
+                }
+            }
+        }
+    }
+
+    public MediaCard addMediaCard(boolean video, String... mediaLabel){
         int id = mediaCardId.incrementAndGet();
 
         JPanel card = new JPanel();
@@ -1086,12 +1223,6 @@ public final class GUIManager{
         gbc.anchor = GridBagConstraints.CENTER;
         card.add(closeButton, gbc);
 
-        if(mediaCards.isEmpty()){
-            queuePanel.remove(getEmptyQueuePanel());
-        }
-
-        queuePanel.add(card);
-
         MediaCard mediaCard = new MediaCard(id, card, mediaNameLabel, thumbnailPanel, progressBar);
 
         card.setTransferHandler(new PanelTransferHandler());
@@ -1144,167 +1275,53 @@ public final class GUIManager{
 
         mediaCards.put(id, mediaCard);
 
-        appWindow.revalidate();
-        appWindow.repaint();
+        SwingUtilities.invokeLater(() -> {
+            setUpAppWindow();
 
-        scrollToBottom(queueScrollPane);
+            if(!appWindow.isVisible()){
+                appWindow.setVisible(true);
+            }
+
+            queuePanel.remove(getEmptyQueuePanel());
+
+            queuePanel.add(card);
+
+            appWindow.revalidate();
+            appWindow.repaint();
+
+            scrollToBottom(queueScrollPane);
+        });
 
         return mediaCard;
     }
 
-    private void showPopupPanel(JPanel parentPanel, Map<String, Runnable> actions, int x, int y){
-        if(actions.isEmpty()){
-            return;
-        }
-
-        JPanel popupPanel = new JPanel();
-        popupPanel.setLayout(new GridLayout(actions.size(), 1));
-        popupPanel.setBackground(Color.DARK_GRAY);
-        popupPanel.setBorder(BorderFactory.createLineBorder(Color.GRAY));
-        popupPanel.setOpaque(true);
-
-        JWindow popupWindow = new JWindow();
-        popupWindow.setLayout(new BorderLayout());
-
-        for(Map.Entry<String, Runnable> entry : actions.entrySet()){
-            JButton button = new CustomMenuButton(entry.getKey());
-
-            button.addActionListener(e -> {
-                entry.getValue().run();
-                popupWindow.dispose();
-            });
-
-            popupPanel.add(button);
-        }
-
-        popupWindow.add(popupPanel, BorderLayout.CENTER);
-        popupWindow.pack();
-
-        Point locationOnScreen = parentPanel.getLocationOnScreen();
-        popupWindow.setLocation(locationOnScreen.x + x, locationOnScreen.y + y);
-
-        popupWindow.setVisible(true);
-
-        AWTEventListener globalMouseListener = new AWTEventListener(){
-            @Override
-            public void eventDispatched(AWTEvent event){
-                if(event.getID() == MouseEvent.MOUSE_CLICKED){
-                    MouseEvent me = (MouseEvent)event;
-                    Component component = SwingUtilities.getDeepestComponentAt(me.getComponent(), me.getX(), me.getY());
-
-                    if(component == null || !SwingUtilities.isDescendingFrom(component, popupWindow)){
-                        popupWindow.dispose();
-                        Toolkit.getDefaultToolkit().removeAWTEventListener(this);
-                    }
-                }
-            }
-        };
-
-        Toolkit.getDefaultToolkit().addAWTEventListener(globalMouseListener, AWTEvent.MOUSE_EVENT_MASK);
-
-        popupWindow.addWindowListener(new WindowAdapter(){
-            @Override
-            public void windowClosed(WindowEvent e){
-                Toolkit.getDefaultToolkit().removeAWTEventListener(globalMouseListener);
-            }
-        });
-    }
-
-    //https://stackoverflow.com/questions/5147768/scroll-jscrollpane-to-bottom
-    private void scrollToBottom(JScrollPane scrollPane){
-        JScrollBar verticalBar = scrollPane.getVerticalScrollBar();
-
-        verticalBar.addAdjustmentListener(new AdjustmentListener(){
-            @Override
-            public void adjustmentValueChanged(AdjustmentEvent e){
-                Adjustable adjustable = e.getAdjustable();
-                adjustable.setValue(adjustable.getMaximum());
-                verticalBar.removeAdjustmentListener(this);
-            }
-        });
-    }
-
-    private void adjustWindowSize(){
-        SwingUtilities.invokeLater(() -> {
-            appWindow.setSize(658, 370);
-            appWindow.setMinimumSize(new Dimension(appWindow.getWidth(), 225));
-
-            Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-            Insets screenInsets = Toolkit.getDefaultToolkit().getScreenInsets(appWindow.getGraphicsConfiguration());
-            int taskbarHeight = screenInsets.bottom;
-
-            int windowX = screenSize.width - appWindow.getWidth() - 10;
-            int windowY = screenSize.height - appWindow.getHeight() - taskbarHeight - 10;
-
-            int minHeight = screenSize.height - appWindow.getHeight() - taskbarHeight - 10;
-            if(windowY < minHeight){
-                appWindow.setSize(appWindow.getWidth(), screenSize.height - minHeight);
-                windowY = minHeight;
-            }
-
-            appWindow.setLocation(windowX, windowY);
-        });
-    }
-
-    private void adjustMessageWindowPosition(){
-        adjustMessageWindowPosition(false);
-    }
-
-    private void adjustMessageWindowPosition(boolean immediate){
-        Runnable task = () -> {
-            if(messageWindow != null){
-                Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-                //Insets screenInsets = Toolkit.getDefaultToolkit().getScreenInsets(messageWindow.getGraphicsConfiguration());
-                //int taskbarHeight = screenInsets.bottom;
-
-                int newX = screenSize.width - messageWindow.getWidth() - 10;
-                int newY = /*screenSize.height - messageWindow.getHeight() - taskbarHeight -*/ 10;
-
-                messageWindow.setLocation(newX, newY);
-
-                //TODO check if the window is actually on top
-                if(appWindow != null && appWindow.isVisible() && (appWindow.getExtendedState() & Frame.ICONIFIED) != 1){
-                    if(messageWindow.getBounds().intersects(appWindow.getBounds())){
-                        newY = appWindow.getY() - messageWindow.getHeight() - 10;
-
-                        messageWindow.setLocation(newX, newY);
-                    }
-                }
-            }
-        };
-
-        if(immediate){
-            task.run();
-        }else{
-            SwingUtilities.invokeLater(task);
-        }
-    }
-
     public void removeMediaCard(int id){
-        MediaCard progressBar = mediaCards.remove(id);
+        MediaCard mediaCard = mediaCards.remove(id);
 
-        if(progressBar != null){
-            progressBar.close();
+        if(mediaCard != null){
+            mediaCard.close();
 
-            queuePanel.remove(progressBar.getPanel());
+            SwingUtilities.invokeLater(() -> {
+                queuePanel.remove(mediaCard.getPanel());
 
-            if(mediaCards.isEmpty()){
-                queuePanel.add(getEmptyQueuePanel(), BorderLayout.CENTER);
-            }
+                if(mediaCards.isEmpty()){
+                    queuePanel.add(getEmptyQueuePanel(), BorderLayout.CENTER);
+                }
 
-            appWindow.revalidate();
-            appWindow.repaint();
+                appWindow.revalidate();
+                appWindow.repaint();
+            });
         }
     }
 
     public void closeAppWindow(){
-        if(appWindow != null){
-            appWindow.setVisible(false);
+        SwingUtilities.invokeLater(() -> {
+            if(appWindow != null){
+                appWindow.setVisible(false);
 
-//          mediaCards.clear();
-//          queuePanel.removeAll();
-            adjustMessageWindowPosition();
-        }
+                adjustMessageWindowPosition();
+            }
+        });
     }
 
     @Data
@@ -1567,26 +1584,28 @@ public final class GUIManager{
                         Point dropLocation = dropTarget.getLocationOnScreen();
 
                         if(windowBounds.contains(dropLocation) && dropTarget instanceof JPanel jPanel){
-                            int targetIndex = getComponentIndex(jPanel);
-
-                            if(main.getConfig().isDebugMode()){
-                                log.debug("Drop target index is {}", targetIndex);
-                            }
-
-                            if(card.getOnDrag() != null){
-                                int validIndex = getValidComponentIndex(jPanel);
+                            SwingUtilities.invokeLater(() -> {
+                                int targetIndex = getComponentIndex(jPanel);
 
                                 if(main.getConfig().isDebugMode()){
-                                    log.debug("Valid target index is {}", validIndex);
+                                    log.debug("Drop target index is {}", targetIndex);
                                 }
 
-                                card.getOnDrag().accept(validIndex);
-                            }
+                                if(card.getOnDrag() != null){
+                                    int validIndex = getValidComponentIndex(jPanel);
 
-                            queuePanel.remove(sourcePanel);
-                            queuePanel.add(sourcePanel, targetIndex);
-                            queuePanel.revalidate();
-                            queuePanel.repaint();
+                                    if(main.getConfig().isDebugMode()){
+                                        log.debug("Valid target index is {}", validIndex);
+                                    }
+
+                                    card.getOnDrag().accept(validIndex);
+                                }
+
+                                queuePanel.remove(sourcePanel);
+                                queuePanel.add(sourcePanel, targetIndex);
+                                queuePanel.revalidate();
+                                queuePanel.repaint();
+                            });
 
                             return true;
                         }

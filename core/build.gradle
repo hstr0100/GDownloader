@@ -109,7 +109,7 @@ task zipJpackageImage(type: Zip) {
     doFirst {
         def basePath = os.isWindows() ? "$buildDir/jpackage/${rootProject.name}" :
                        os.isLinux() ? "$buildDir/jpackage/${rootProject.name}/lib" :
-                       "$buildDir/jpackage/${rootProject.name}.app/Contents"//TODO: Is this correct the correct path for the runtime on this platform?
+                       "$buildDir/jpackage/${rootProject.name}.app/Contents"
 
         def portableLockFile = file("$basePath/runtime/portable.lock")
         portableLockFile.text = "This file ensures that the program will run in portable mode.\nDeleting it when the program is not installed is not recommended."

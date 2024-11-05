@@ -110,7 +110,6 @@ import static net.brlns.gdownloader.util.URLUtils.*;
 //TODO Add a viewer for log files.
 //TODO Implement rate-limiting options internally; the way it's currently implemented does not account for concurrent or non-playlist downloads.
 //TODO Notify the user whenever a setting that requires restart was changed.
-//TODO Settings version
 //TODO Quit lingering ffmpeg processes spawned by yt-dlp
 //TODO Verify which exceptions are important to display to the user via GDownloader::handleException
 //TODO Add an url ignore list / Allow filters to be disabled
@@ -999,7 +998,7 @@ public class YtDlpDownloader{
 
             return null;
         }finally{
-            tryStopProcess(process);
+            //Our ProcessMonitor will take care of closing the underlying process.
         }
     }
 

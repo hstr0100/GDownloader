@@ -627,9 +627,9 @@ public final class GDownloader{
                 log.info("Browser changed to {}", configIn.getBrowser());
             }
 
-            int threads = calculateThreadPoolSize(configIn);
-
             if(globalThreadPool != null){
+                int threads = calculateThreadPoolSize(configIn);
+
                 if(globalThreadPool.getCorePoolSize() != threads
                     || globalThreadPool.getMaximumPoolSize() != threads){
                     globalThreadPool.resize(threads, threads);

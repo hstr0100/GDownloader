@@ -93,267 +93,269 @@ public class SettingsPanel{
     }
 
     public void createAndShowGUI(){
-        if(frame != null){
-            frame.setVisible(true);
-            frame.setExtendedState(JFrame.NORMAL);
-            frame.requestFocus();
-            return;
-        }
-
-        settings = GDownloader.OBJECT_MAPPER.convertValue(main.getConfig(), Settings.class);
-
-        frame = new JFrame(l10n("settings.title", GDownloader.REGISTRY_APP_NAME)){
-            @Override
-            public void dispose(){
-                frame = null;
-
-                super.dispose();
+        SwingUtilities.invokeLater(() -> {
+            if(frame != null){
+                frame.setVisible(true);
+                frame.setExtendedState(JFrame.NORMAL);
+                frame.requestFocus();
+                return;
             }
-        };
 
-        frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        frame.setSize(950, 600);
-        frame.setLayout(new BorderLayout());
-        frame.setResizable(false);
-        frame.setLocationRelativeTo(null);
+            settings = GDownloader.OBJECT_MAPPER.convertValue(main.getConfig(), Settings.class);
 
-        try{
-            frame.setIconImage(main.getGuiManager().getAppIcon());
-        }catch(IOException e){
-            main.handleException(e);
-        }
+            frame = new JFrame(l10n("settings.title", GDownloader.REGISTRY_APP_NAME)){
+                @Override
+                public void dispose(){
+                    frame = null;
 
-        sidebarPanel = new JPanel();
-        sidebarPanel.setBackground(color(SIDE_PANEL));
-        sidebarPanel.setLayout(new GridBagLayout());
-
-        JPanel mainContentPanel = new JPanel(new BorderLayout());
-
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        gbc.anchor = GridBagConstraints.NORTH;
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.weightx = 1.0;
-        gbc.insets = new Insets(0, 0, 0, 0);
-
-        {
-            JPanel headerPanel = new JPanel();
-            headerPanel.setBackground(color(SIDE_PANEL));
-
-            JLabel headerLabel = new JLabel(l10n("settings.sidebar_title"));
-            headerLabel.setForeground(color(FOREGROUND));
-            headerLabel.setHorizontalAlignment(SwingConstants.CENTER);
-            headerPanel.setLayout(new BorderLayout());
-            headerPanel.add(headerLabel, BorderLayout.CENTER);
-            headerPanel.setPreferredSize(new Dimension(32, 32));
-
-            sidebarPanel.add(headerPanel, gbc);
-
-            gbc.gridy++;
-        }
-
-        {
-            cardLayout = new CardLayout();
-            contentPanel = new JPanel(cardLayout);
-            contentPanel.setBackground(color(BACKGROUND));
-
-            JPanel headerPanel = new JPanel(new GridBagLayout());
-            headerPanel.setBackground(color(SIDE_PANEL_SELECTED));
-
-            JLabel headerLabel = new JLabel(contentPanels.get(0).getDisplayName());
-            headerLabel.setForeground(color(FOREGROUND));
-            headerLabel.setHorizontalAlignment(SwingConstants.CENTER);
-            headerLabel.setVerticalAlignment(SwingConstants.CENTER);
-
-            headerPanel.setPreferredSize(new Dimension(32, 32));
-            headerPanel.add(headerLabel, new GridBagConstraints());
-
-            mainContentPanel.add(headerPanel, BorderLayout.NORTH);
-
-            int i = 0;
-            for(SettingsMenuEntry entry : contentPanels){
-                int index = i;
-
-                JButton button = new JButton();
-                button.setToolTipText(entry.getDisplayName());
-                button.setPreferredSize(new Dimension(120, 120));
-                button.setBorderPainted(false);
-                button.setContentAreaFilled(false);
-                button.setOpaque(true);
-                button.setFocusPainted(false);
-                button.setBackground(color(index == 0 ? SIDE_PANEL_SELECTED : SIDE_PANEL));
-
-                button.setIcon(manager.loadIcon(entry.getIcon(), ICON, 60));
-
-                Runnable action = () -> {
-                    cardLayout.show(contentPanel, String.valueOf(index));
-                    headerLabel.setText(entry.getDisplayName());
-
-                    Component[] buttons = sidebarPanel.getComponents();
-                    for(Component button1 : buttons){
-                        button1.setBackground(color(SIDE_PANEL));
-                    }
-
-                    button.setBackground(color(SIDE_PANEL_SELECTED));
-                };
-
-                button.addActionListener((ActionEvent e) -> {
-                    action.run();
-                });
-
-                if(index == 0){
-                    _resetAction = action;
+                    super.dispose();
                 }
+            };
 
-                sidebarPanel.add(button, gbc);
+            frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+            frame.setSize(950, 600);
+            frame.setLayout(new BorderLayout());
+            frame.setResizable(false);
+            frame.setLocationRelativeTo(null);
 
-                gbc.gridy++;
-
-                contentPanel.add(entry.getPanel().get(), String.valueOf(index));
-
-                i++;
+            try{
+                frame.setIconImage(main.getGuiManager().getAppIcon());
+            }catch(IOException e){
+                main.handleException(e);
             }
 
-            mainContentPanel.add(contentPanel, BorderLayout.CENTER);
+            sidebarPanel = new JPanel();
+            sidebarPanel.setBackground(color(SIDE_PANEL));
+            sidebarPanel.setLayout(new GridBagLayout());
+
+            JPanel mainContentPanel = new JPanel(new BorderLayout());
+
+            GridBagConstraints gbc = new GridBagConstraints();
+            gbc.gridx = 0;
+            gbc.gridy = 0;
+            gbc.anchor = GridBagConstraints.NORTH;
+            gbc.fill = GridBagConstraints.HORIZONTAL;
+            gbc.weightx = 1.0;
+            gbc.insets = new Insets(0, 0, 0, 0);
 
             {
-                JPanel bottomPanel = new JPanel(new BorderLayout());
-                bottomPanel.setBackground(color(SIDE_PANEL_SELECTED));
-                bottomPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+                JPanel headerPanel = new JPanel();
+                headerPanel.setBackground(color(SIDE_PANEL));
+
+                JLabel headerLabel = new JLabel(l10n("settings.sidebar_title"));
+                headerLabel.setForeground(color(FOREGROUND));
+                headerLabel.setHorizontalAlignment(SwingConstants.CENTER);
+                headerPanel.setLayout(new BorderLayout());
+                headerPanel.add(headerLabel, BorderLayout.CENTER);
+                headerPanel.setPreferredSize(new Dimension(32, 32));
+
+                sidebarPanel.add(headerPanel, gbc);
+
+                gbc.gridy++;
+            }
+
+            {
+                cardLayout = new CardLayout();
+                contentPanel = new JPanel(cardLayout);
+                contentPanel.setBackground(color(BACKGROUND));
+
+                JPanel headerPanel = new JPanel(new GridBagLayout());
+                headerPanel.setBackground(color(SIDE_PANEL_SELECTED));
+
+                JLabel headerLabel = new JLabel(contentPanels.get(0).getDisplayName());
+                headerLabel.setForeground(color(FOREGROUND));
+                headerLabel.setHorizontalAlignment(SwingConstants.CENTER);
+                headerLabel.setVerticalAlignment(SwingConstants.CENTER);
+
+                headerPanel.setPreferredSize(new Dimension(32, 32));
+                headerPanel.add(headerLabel, new GridBagConstraints());
+
+                mainContentPanel.add(headerPanel, BorderLayout.NORTH);
+
+                int i = 0;
+                for(SettingsMenuEntry entry : contentPanels){
+                    int index = i;
+
+                    JButton button = new JButton();
+                    button.setToolTipText(entry.getDisplayName());
+                    button.setPreferredSize(new Dimension(120, 120));
+                    button.setBorderPainted(false);
+                    button.setContentAreaFilled(false);
+                    button.setOpaque(true);
+                    button.setFocusPainted(false);
+                    button.setBackground(color(index == 0 ? SIDE_PANEL_SELECTED : SIDE_PANEL));
+
+                    button.setIcon(manager.loadIcon(entry.getIcon(), ICON, 60));
+
+                    Runnable action = () -> {
+                        cardLayout.show(contentPanel, String.valueOf(index));
+                        headerLabel.setText(entry.getDisplayName());
+
+                        Component[] buttons = sidebarPanel.getComponents();
+                        for(Component button1 : buttons){
+                            button1.setBackground(color(SIDE_PANEL));
+                        }
+
+                        button.setBackground(color(SIDE_PANEL_SELECTED));
+                    };
+
+                    button.addActionListener((ActionEvent e) -> {
+                        action.run();
+                    });
+
+                    if(index == 0){
+                        _resetAction = action;
+                    }
+
+                    sidebarPanel.add(button, gbc);
+
+                    gbc.gridy++;
+
+                    contentPanel.add(entry.getPanel().get(), String.valueOf(index));
+
+                    i++;
+                }
+
+                mainContentPanel.add(contentPanel, BorderLayout.CENTER);
 
                 {
-                    JPanel leftPanel = new JPanel();
-                    leftPanel.setBackground(color(SIDE_PANEL_SELECTED));
-                    leftPanel.setLayout(new FlowLayout(FlowLayout.LEFT, 10, 10));
+                    JPanel bottomPanel = new JPanel(new BorderLayout());
+                    bottomPanel.setBackground(color(SIDE_PANEL_SELECTED));
+                    bottomPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-                    leftPanel.add(manager.createButton(
-                        manager.loadIcon("/assets/shutdown.png", ICON, 24),
-                        manager.loadIcon("/assets/shutdown.png", ICON_HOVER, 24),
-                        "gui.exit.tooltip",
-                        e -> System.exit(0)
-                    ));
+                    {
+                        JPanel leftPanel = new JPanel();
+                        leftPanel.setBackground(color(SIDE_PANEL_SELECTED));
+                        leftPanel.setLayout(new FlowLayout(FlowLayout.LEFT, 10, 10));
 
-                    leftPanel.add(manager.createButton(
-                        manager.loadIcon("/assets/restart.png", ICON, 24),
-                        manager.loadIcon("/assets/restart.png", ICON_HOVER, 24),
-                        "gui.restart.tooltip",
-                        e -> {
+                        leftPanel.add(manager.createButton(
+                            manager.loadIcon("/assets/shutdown.png", ICON, 24),
+                            manager.loadIcon("/assets/shutdown.png", ICON_HOVER, 24),
+                            "gui.exit.tooltip",
+                            e -> System.exit(0)
+                        ));
+
+                        leftPanel.add(manager.createButton(
+                            manager.loadIcon("/assets/restart.png", ICON, 24),
+                            manager.loadIcon("/assets/restart.png", ICON_HOVER, 24),
+                            "gui.restart.tooltip",
+                            e -> {
+                                saveSettings();
+
+                                main.restart();
+                            }
+                        ));
+
+                        leftPanel.add(manager.createButton(
+                            manager.loadIcon("/assets/bin.png", ICON, 24),
+                            manager.loadIcon("/assets/bin.png", ICON_HOVER, 24),
+                            "gui.clear_cache.tooltip",
+                            e -> main.clearCache(true)
+                        ));
+
+                        leftPanel.add(manager.createButton(
+                            manager.loadIcon("/assets/update.png", ICON, 24),
+                            manager.loadIcon("/assets/update.png", ICON_HOVER, 24),
+                            "gui.update.tooltip",
+                            e -> main.checkForUpdates()
+                        ));
+
+                        bottomPanel.add(leftPanel, BorderLayout.WEST);
+                    }
+
+                    {
+                        JPanel rightPanel = new JPanel();
+                        rightPanel.setBackground(color(SIDE_PANEL_SELECTED));
+                        rightPanel.setLayout(new FlowLayout(FlowLayout.RIGHT, 10, 10));
+
+                        JButton resetButton = createButton(
+                            "settings.restore_defaults",
+                            "settings.restore_defaults.tooltip",
+                            BUTTON_BACKGROUND,
+                            BUTTON_FOREGROUND,
+                            BUTTON_HOVER);
+
+                        resetButton.setPreferredSize(new Dimension(200, 30));
+                        resetButton.addActionListener((ActionEvent e) -> {
+                            settings = new Settings();
+
+                            reloadSettings();
+
+                            main.updateConfig(settings);
+                        });
+
+                        rightPanel.add(resetButton);
+
+                        JButton saveButton = createButton(
+                            "settings.save",
+                            "settings.save.tooltip",
+                            BUTTON_BACKGROUND,
+                            BUTTON_FOREGROUND,
+                            BUTTON_HOVER);
+
+                        saveButton.setPreferredSize(new Dimension(200, 30));
+                        saveButton.addActionListener((ActionEvent e) -> {
                             saveSettings();
 
-                            main.restart();
-                        }
-                    ));
+                            frame.dispose();
+                            frame = null;
+                        });
 
-                    leftPanel.add(manager.createButton(
-                        manager.loadIcon("/assets/bin.png", ICON, 24),
-                        manager.loadIcon("/assets/bin.png", ICON_HOVER, 24),
-                        "gui.clear_cache.tooltip",
-                        e -> main.clearCache(true)
-                    ));
+                        rightPanel.add(saveButton);
 
-                    leftPanel.add(manager.createButton(
-                        manager.loadIcon("/assets/update.png", ICON, 24),
-                        manager.loadIcon("/assets/update.png", ICON_HOVER, 24),
-                        "gui.update.tooltip",
-                        e -> main.checkForUpdates()
-                    ));
+                        bottomPanel.add(rightPanel, BorderLayout.EAST);
+                    }
 
-                    bottomPanel.add(leftPanel, BorderLayout.WEST);
+                    mainContentPanel.add(bottomPanel, BorderLayout.SOUTH);
+                    frame.add(mainContentPanel, BorderLayout.CENTER);
                 }
-
-                {
-                    JPanel rightPanel = new JPanel();
-                    rightPanel.setBackground(color(SIDE_PANEL_SELECTED));
-                    rightPanel.setLayout(new FlowLayout(FlowLayout.RIGHT, 10, 10));
-
-                    JButton resetButton = createButton(
-                        "settings.restore_defaults",
-                        "settings.restore_defaults.tooltip",
-                        BUTTON_BACKGROUND,
-                        BUTTON_FOREGROUND,
-                        BUTTON_HOVER);
-
-                    resetButton.setPreferredSize(new Dimension(200, 30));
-                    resetButton.addActionListener((ActionEvent e) -> {
-                        settings = new Settings();
-
-                        reloadSettings();
-
-                        main.updateConfig(settings);
-                    });
-
-                    rightPanel.add(resetButton);
-
-                    JButton saveButton = createButton(
-                        "settings.save",
-                        "settings.save.tooltip",
-                        BUTTON_BACKGROUND,
-                        BUTTON_FOREGROUND,
-                        BUTTON_HOVER);
-
-                    saveButton.setPreferredSize(new Dimension(200, 30));
-                    saveButton.addActionListener((ActionEvent e) -> {
-                        saveSettings();
-
-                        frame.dispose();
-                        frame = null;
-                    });
-
-                    rightPanel.add(saveButton);
-
-                    bottomPanel.add(rightPanel, BorderLayout.EAST);
-                }
-
-                mainContentPanel.add(bottomPanel, BorderLayout.SOUTH);
-                frame.add(mainContentPanel, BorderLayout.CENTER);
             }
-        }
 
-        gbc.weighty = 1.0;
-        gbc.fill = GridBagConstraints.BOTH;
-        sidebarPanel.add(Box.createVerticalGlue(), gbc);
+            gbc.weighty = 1.0;
+            gbc.fill = GridBagConstraints.BOTH;
+            sidebarPanel.add(Box.createVerticalGlue(), gbc);
 
-        {
-            JButton gabButton = new JButton("@hstr0100");
-            gabButton.setToolTipText("Gabriel's GitHub - #hireme");
-            gabButton.setUI(new BasicButtonUI());
-            gabButton.setForeground(color(FOREGROUND));
-            gabButton.setFocusPainted(false);
-            gabButton.setBorderPainted(false);
-            gabButton.setContentAreaFilled(false);
-            gabButton.setOpaque(false);
+            {
+                JButton gabButton = new JButton("@hstr0100");
+                gabButton.setToolTipText("Gabriel's GitHub - #hireme");
+                gabButton.setUI(new BasicButtonUI());
+                gabButton.setForeground(color(FOREGROUND));
+                gabButton.setFocusPainted(false);
+                gabButton.setBorderPainted(false);
+                gabButton.setContentAreaFilled(false);
+                gabButton.setOpaque(false);
 
-            gabButton.addActionListener(e -> {
-                main.openUrlInBrowser("https://github.com/hstr0100");
-            });
+                gabButton.addActionListener(e -> {
+                    main.openUrlInBrowser("https://github.com/hstr0100");
+                });
 
-            gabButton.addMouseListener(new MouseAdapter(){
-                @Override
-                public void mouseEntered(MouseEvent e){
-                    gabButton.setForeground(color(LIGHT_TEXT));
-                }
+                gabButton.addMouseListener(new MouseAdapter(){
+                    @Override
+                    public void mouseEntered(MouseEvent e){
+                        gabButton.setForeground(color(LIGHT_TEXT));
+                    }
 
-                @Override
-                public void mouseExited(MouseEvent e){
-                    gabButton.setForeground(color(FOREGROUND));
-                }
-            });
+                    @Override
+                    public void mouseExited(MouseEvent e){
+                        gabButton.setForeground(color(FOREGROUND));
+                    }
+                });
 
-            gabButton.setPreferredSize(new Dimension(64, 64));
-            gbc.gridy++;
-            gbc.weighty = 0;
-            gbc.fill = GridBagConstraints.HORIZONTAL;
-            sidebarPanel.add(gabButton, gbc);
-        }
+                gabButton.setPreferredSize(new Dimension(64, 64));
+                gbc.gridy++;
+                gbc.weighty = 0;
+                gbc.fill = GridBagConstraints.HORIZONTAL;
+                sidebarPanel.add(gabButton, gbc);
+            }
 
-        frame.add(sidebarPanel, BorderLayout.WEST);
+            frame.add(sidebarPanel, BorderLayout.WEST);
 
-        frame.add(mainContentPanel, BorderLayout.CENTER);
+            frame.add(mainContentPanel, BorderLayout.CENTER);
 
-        cardLayout.show(contentPanel, String.valueOf(0));
+            cardLayout.show(contentPanel, String.valueOf(0));
 
-        frame.setVisible(true);
+            frame.setVisible(true);
+        });
     }
 
     private void saveSettings(){
@@ -394,7 +396,7 @@ public class SettingsPanel{
         _resetAction.run();
     }
 
-    public <T extends Enum<T> & ISettingsEnum> void addComboBox(JPanel panel,
+    private <T extends Enum<T> & ISettingsEnum> void addComboBox(JPanel panel,
         GridBagConstraints gbcPanel, String labelString, Class<T> enumClass,
         Supplier<T> getter, Consumer<T> setter, boolean requiresRestart){
 
@@ -425,7 +427,7 @@ public class SettingsPanel{
         panel.add(comboBox, gbcPanel);
     }
 
-    public void addCheckBox(JPanel panel, GridBagConstraints gbcPanel, String labelString,
+    private void addCheckBox(JPanel panel, GridBagConstraints gbcPanel, String labelString,
         Supplier<Boolean> getter, Consumer<Boolean> setter, boolean requiresRestart){
 
         JLabel label = createLabel(labelString, LIGHT_TEXT);
@@ -454,7 +456,7 @@ public class SettingsPanel{
         panel.add(checkBox, gbcPanel);
     }
 
-    public void addSlider(JPanel panel, GridBagConstraints gbcPanel, String labelString,
+    private void addSlider(JPanel panel, GridBagConstraints gbcPanel, String labelString,
         int min, int max, Supplier<Integer> getter, Consumer<Integer> setter){
 
         JLabel label = createLabel(labelString, LIGHT_TEXT);
