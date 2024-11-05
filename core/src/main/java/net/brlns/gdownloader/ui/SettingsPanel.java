@@ -92,6 +92,44 @@ public class SettingsPanel{
         ));
     }
 
+    private void saveSettings(){
+        if(!settings.getDownloadsPath().isEmpty()
+            && !main.getConfig().getDownloadsPath().equals(settings.getDownloadsPath())){
+
+            File file = new File(settings.getDownloadsPath());
+            if(file.exists() && file.canWrite()){
+                main.setDownloadsPath(file);//We are uselessly calling on updateConfig() here, but should be no problem
+            }else{
+                settings.setDownloadsPath("");
+
+                main.getGuiManager().showMessage(
+                    l10n("gui.error_popup_title"),
+                    l10n("gui.error_download_path_not_writable", file.getAbsolutePath()),
+                    4000,
+                    GUIManager.MessageType.ERROR,
+                    true);
+
+                log.error("Selected path not writable {}", file);
+            }
+        }
+
+        main.updateConfig(settings);
+
+        main.getGuiManager().refreshAppWindow();
+        main.updateStartupStatus();
+    }
+
+    private void reloadSettings(){
+        contentPanel.removeAll();
+
+        int i = 0;
+        for(SettingsMenuEntry entry : contentPanels){
+            contentPanel.add(entry.getPanel().get(), String.valueOf(i++));
+        }
+
+        _resetAction.run();
+    }
+
     public void createAndShowGUI(){
         SwingUtilities.invokeLater(() -> {
             if(frame != null){
@@ -356,44 +394,6 @@ public class SettingsPanel{
 
             frame.setVisible(true);
         });
-    }
-
-    private void saveSettings(){
-        if(!settings.getDownloadsPath().isEmpty()
-            && !main.getConfig().getDownloadsPath().equals(settings.getDownloadsPath())){
-
-            File file = new File(settings.getDownloadsPath());
-            if(file.exists() && file.canWrite()){
-                main.setDownloadsPath(file);//We are uselessly calling on updateConfig() here, but should be no problem
-            }else{
-                settings.setDownloadsPath("");
-
-                main.getGuiManager().showMessage(
-                    l10n("gui.error_popup_title"),
-                    l10n("gui.error_download_path_not_writable", file.getAbsolutePath()),
-                    4000,
-                    GUIManager.MessageType.ERROR,
-                    true);
-
-                log.error("Selected path not writable {}", file);
-            }
-        }
-
-        main.updateConfig(settings);
-
-        main.getGuiManager().refreshAppWindow();
-        main.updateStartupStatus();
-    }
-
-    private void reloadSettings(){
-        contentPanel.removeAll();
-
-        int i = 0;
-        for(SettingsMenuEntry entry : contentPanels){
-            contentPanel.add(entry.getPanel().get(), String.valueOf(i++));
-        }
-
-        _resetAction.run();
     }
 
     private <T extends Enum<T> & ISettingsEnum> void addComboBox(JPanel panel,

@@ -25,6 +25,7 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.SwingUtilities;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.ui.custom.CustomProgressBar;
@@ -65,46 +66,70 @@ public class MediaCard{
         }
     }
 
-    public void scaleThumbnail(double factor){
+    protected void scaleThumbnail(double factor){
         Dimension dimension = new Dimension(
             (int)(MediaCard.THUMBNAIL_WIDTH * factor),
             (int)(MediaCard.THUMBNAIL_HEIGHT * factor));
 
-        thumbnailPanel.setPreferredSize(dimension);
-        thumbnailPanel.setMinimumSize(dimension);
+        Runnable updateSize = () -> {
+            thumbnailPanel.setPreferredSize(dimension);
+            thumbnailPanel.setMinimumSize(dimension);
+        };
+
+        if(SwingUtilities.isEventDispatchThread()){
+            updateSize.run();
+        }else{
+            SwingUtilities.invokeLater(updateSize);
+        }
     }
 
     public void setTooltip(String tooltipText){
-        mediaLabel.setToolTipText(tooltipText);
+        SwingUtilities.invokeLater(() -> {
+            mediaLabel.setToolTipText(tooltipText);
+        });
     }
 
     public void setThumbnailTooltip(String tooltipText){
-        thumbnailPanel.setToolTipText(tooltipText);
+        SwingUtilities.invokeLater(() -> {
+            thumbnailPanel.setToolTipText(tooltipText);
+        });
     }
 
     public void setLabel(String... label){
-        mediaLabel.setText(GUIManager.wrapText(51, label));
+        SwingUtilities.invokeLater(() -> {
+            mediaLabel.setText(GUIManager.wrapText(51, label));
+        });
     }
 
     public void setPercentage(double percentageIn){
         percentage = percentageIn;
 
-        progressBar.setValue((int)percentageIn);
+        SwingUtilities.invokeLater(() -> {
+            progressBar.setValue((int)percentageIn);
+        });
     }
 
-    public void setString(String string){
-        progressBar.setString(string);
+    public void setProgressBarText(String text){
+        SwingUtilities.invokeLater(() -> {
+            progressBar.setString(text);
+        });
     }
 
-    public void setColor(Color color){
-        progressBar.setForeground(color);
+    public void setProgressBarTextAndColors(String text, Color backgroundColor){
+        setProgressBarTextAndColors(text, backgroundColor, Color.WHITE);
     }
 
-    public void setTextColor(Color color){
-        progressBar.setTextColor(color);
+    public void setProgressBarTextAndColors(String text, Color backgroundColor, Color textColor){
+        SwingUtilities.invokeLater(() -> {
+            progressBar.setString(text);
+            progressBar.setForeground(backgroundColor);
+            progressBar.setTextColor(textColor);
+        });
     }
 
     public void setThumbnailAndDuration(BufferedImage img, long duration){
-        thumbnailPanel.setImageAndDuration(img, duration);
+        SwingUtilities.invokeLater(() -> {
+            thumbnailPanel.setImageAndDuration(img, duration);
+        });
     }
 }

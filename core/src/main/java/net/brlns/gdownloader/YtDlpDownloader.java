@@ -1267,48 +1267,41 @@ public class YtDlpDownloader{
                 switch(status){
                     case QUERYING:
                         mediaCard.setPercentage(100);
-                        mediaCard.setString(status.getDisplayName());
-                        mediaCard.setColor(Color.MAGENTA);
+                        mediaCard.setProgressBarTextAndColors(status.getDisplayName(), Color.MAGENTA);
                         break;
                     case PROCESSING:
                         mediaCard.setPercentage(100);
-                        mediaCard.setString(status.getDisplayName());
-                        mediaCard.setColor(Color.ORANGE);
+                        mediaCard.setProgressBarTextAndColors(status.getDisplayName(), Color.ORANGE);
                         break;
                     case PREPARING:
                     case QUEUED:
                     case STOPPED:
                         mediaCard.setPercentage(100);
-                        mediaCard.setString(status.getDisplayName());
-                        mediaCard.setColor(Color.GRAY);
+                        mediaCard.setProgressBarTextAndColors(status.getDisplayName(), Color.GRAY);
                         break;
                     case DOWNLOADING:
                         mediaCard.setPercentage(0);
-                        mediaCard.setString(status.getDisplayName() + ": " + mediaCard.getPercentage() + "%");
-                        mediaCard.setColor(new Color(255, 214, 0));
+                        mediaCard.setProgressBarTextAndColors(status.getDisplayName() + ": " + mediaCard.getPercentage() + "%",
+                            new Color(255, 214, 0));
                         break;
                     case STARTING:
                         mediaCard.setPercentage(0);
-                        mediaCard.setString(status.getDisplayName());
-                        mediaCard.setColor(new Color(255, 214, 0));
+                        mediaCard.setProgressBarTextAndColors(status.getDisplayName(), new Color(255, 214, 0));
                         break;
                     case COMPLETE:
                         mediaCard.setPercentage(100);
-                        mediaCard.setString(status.getDisplayName());
-                        mediaCard.setTextColor(Color.WHITE);
-                        mediaCard.setColor(new Color(0, 200, 83));
+                        mediaCard.setProgressBarTextAndColors(status.getDisplayName(), new Color(0, 200, 83));
                         break;
                     case NO_METHOD:
                     case FAILED:
                         mediaCard.setPercentage(100);
-                        mediaCard.setString(status.getDisplayName());
-                        mediaCard.setColor(Color.RED);
+                        mediaCard.setProgressBarTextAndColors(status.getDisplayName(), Color.RED);
                         break;
                     default:
                         throw new RuntimeException("Unhandled status: " + status);
                 }
             }else if(status == DownloadStatus.DOWNLOADING){
-                mediaCard.setString(status.getDisplayName() + ": " + mediaCard.getPercentage() + "%");
+                mediaCard.setProgressBarText(status.getDisplayName() + ": " + mediaCard.getPercentage() + "%");
             }
         }
     }

@@ -114,6 +114,20 @@ public final class GUIManager{
         UIManager.put("ComboBox.borderPaintsFocus", Boolean.FALSE);
     }
 
+    public String getCurrentAppIconPath(){
+        return ThemeProvider.getTheme().getAppIconPath();
+    }
+
+    public String getCurrentTrayIconPath(){
+        return ThemeProvider.getTheme().getTrayIconPath();
+    }
+
+    public Image getAppIcon() throws IOException{
+        Image icon = ImageIO.read(getClass().getResource(getCurrentAppIconPath()));
+
+        return icon;
+    }
+
     public void displaySettingsPanel(){
         settingsPanel.createAndShowGUI();
     }
@@ -289,20 +303,6 @@ public final class GUIManager{
         }
 
         appWindow.setLocation(windowX, windowY);
-    }
-
-    public String getCurrentAppIconPath(){
-        return ThemeProvider.getTheme().getAppIconPath();
-    }
-
-    public String getCurrentTrayIconPath(){
-        return ThemeProvider.getTheme().getTrayIconPath();
-    }
-
-    public Image getAppIcon() throws IOException{
-        Image icon = ImageIO.read(getClass().getResource(getCurrentAppIconPath()));
-
-        return icon;
     }
 
     private JPanel createToolbar(){
