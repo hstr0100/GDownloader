@@ -381,7 +381,7 @@ public class SettingsPanel{
 
         main.updateConfig(settings);
 
-        main.getGuiManager().refreshWindow();
+        main.getGuiManager().refreshAppWindow();
         main.updateStartupStatus();
     }
 

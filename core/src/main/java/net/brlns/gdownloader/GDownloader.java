@@ -205,7 +205,7 @@ public final class GDownloader{
 
             trayIcon.addActionListener((ActionEvent e) -> {
                 if(initialized){
-                    guiManager.wakeUp();
+                    guiManager.createAndShowGUI();
                 }
             });
 
@@ -323,7 +323,7 @@ public final class GDownloader{
     }
 
     public void initUi(){
-        guiManager.wakeUp();
+        guiManager.createAndShowGUI();
     }
 
     public boolean checkForUpdates(){
@@ -621,10 +621,12 @@ public final class GDownloader{
 
             OBJECT_MAPPER.writerWithDefaultPrettyPrinter().writeValue(configFile, configIn);
 
-            if(configIn.getBrowser() != _cachedBrowser){
+            if(configIn.getBrowser() != _cachedBrowser && _cachedBrowser != null){
                 _cachedBrowser = null;
 
-                log.info("Browser changed to {}", configIn.getBrowser());
+                if(config.isDebugMode()){
+                    log.debug("Cached browser changed to {}", configIn.getBrowser());
+                }
             }
 
             if(globalThreadPool != null){
@@ -634,7 +636,9 @@ public final class GDownloader{
                     || globalThreadPool.getMaximumPoolSize() != threads){
                     globalThreadPool.resize(threads, threads);
 
-                    log.info("Resized global thread pool to {} threads", threads);
+                    if(config.isDebugMode()){
+                        log.debug("Resized global thread pool to {} threads", threads);
+                    }
                 }
             }
 
