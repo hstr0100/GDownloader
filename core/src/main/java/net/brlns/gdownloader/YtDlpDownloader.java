@@ -165,7 +165,9 @@ public class YtDlpDownloader{
                         Process process = entry.getProcess();
 
                         if(process != null && process.isAlive()){
-                            log.info("Process Monitor is stopping {}", entry.getUrl());
+                            if(main.getConfig().isDebugMode()){
+                                log.debug("Process Monitor is stopping {}", entry.getUrl());
+                            }
 
                             try{
                                 tryStopProcess(process);
@@ -239,7 +241,9 @@ public class YtDlpDownloader{
         }
 
         AbstractUrlFilter filter = filterOptional.get();
-        log.info("URL: {} matched {}", inputUrl, filter);
+        if(main.getConfig().isDebugMode()){
+            log.debug("URL: {} matched {}", inputUrl, filter);
+        }
 
         if(!filter.canAcceptUrl(inputUrl, main)){
             log.info("Filter {} has denied to accept url {}; Verify settings.", filter, inputUrl);
@@ -270,7 +274,9 @@ public class YtDlpDownloader{
 
                     String video = filterVideo(inputUrl);
 
-                    log.info("Video url is {}", video);
+                    if(main.getConfig().isDebugMode()){
+                        log.debug("Video url is {}", video);
+                    }
 
                     if(video != null && video.contains("?v=") && !video.contains("list=")){
                         return captureUrl(video, force);
@@ -342,7 +348,9 @@ public class YtDlpDownloader{
                         //It's odd that you'd download a whole playlist and then an individual video from it though, maybe investigate use cases
                         String video = filterVideo(inputUrl);
 
-                        log.info("Individual video url is {}", video);
+                        if(main.getConfig().isDebugMode()){
+                            log.debug("Individual video url is {}", video);
+                        }
 
                         if(video != null && video.contains("?v=") && !video.contains("list=")){
                             return captureUrl(video, force);
@@ -731,11 +739,13 @@ public class YtDlpDownloader{
                             List<String> downloadArguments = filter.getArguments(type, main, tmpPath);
                             arguments.addAll(downloadArguments);
 
-                            log.debug("ALL {}: Type {} ({}): {}",
-                                genericArguments,
-                                type,
-                                filter.getDisplayName(),
-                                downloadArguments);
+                            if(main.getConfig().isDebugMode()){
+                                log.debug("ALL {}: Type {} ({}): {}",
+                                    genericArguments,
+                                    type,
+                                    filter.getDisplayName(),
+                                    downloadArguments);
+                            }
 
                             Pair<Integer, String> result = processDownload(entry, arguments);
 
@@ -900,8 +910,6 @@ public class YtDlpDownloader{
         List<String> finalArgs = new ArrayList<>(arguments);
         finalArgs.add(entry.getUrl());
 
-        log.info("Arguments {}", finalArgs);
-
         ProcessBuilder processBuilder = new ProcessBuilder(finalArgs);
         processBuilder.redirectErrorStream(true);
         Process process = processBuilder.start();
@@ -955,7 +963,9 @@ public class YtDlpDownloader{
                         entry.updateStatus(DownloadStatus.DOWNLOADING, lastOutput.replace("[download] ", ""));
                         downloadStarted = true;
                     }else{
-                        log.info("[{}] - {}", entry.getDownloadId(), lastOutput);
+                        if(main.getConfig().isDebugMode()){
+                            log.debug("[{}] - {}", entry.getDownloadId(), lastOutput);
+                        }
 
                         if(downloadStarted){
                             entry.updateStatus(DownloadStatus.PROCESSING, lastOutput);
@@ -971,12 +981,16 @@ public class YtDlpDownloader{
             long stopped = System.currentTimeMillis() - start;
 
             if(!downloadsRunning.get() || entry.getCancelHook().get()){
-                log.info("Download process halted after {}ms.", stopped);
+                if(main.getConfig().isDebugMode()){
+                    log.debug("Download process halted after {}ms.", stopped);
+                }
 
                 return null;
             }else{
                 int exitCode = process.waitFor();
-                log.info("Download process took {}ms", stopped);
+                if(main.getConfig().isDebugMode()){
+                    log.debug("Download process took {}ms", stopped);
+                }
 
                 return new Pair<>(exitCode, lastOutput);
             }
@@ -1182,23 +1196,31 @@ public class YtDlpDownloader{
 
             optional.ifPresentOrElse(
                 img -> mediaCard.setThumbnailAndDuration(img, videoInfoIn.getDuration()),
-                () -> log.error("Failed to load a valid thumbnail")
+                () -> {
+                    if(main.getConfig().isDebugMode()){
+                        log.error("Failed to load a valid thumbnail");
+                    }
+                }
             );
         }
 
         private Optional<BufferedImage> tryLoadThumbnail(String url){
             try{
-                log.debug("Trying to load thumbnail {}", url);
+                if(main.getConfig().isDebugMode()){
+                    log.debug("Trying to load thumbnail {}", url);
+                }
 
                 BufferedImage img = ImageIO.read(new URI(url).toURL());
 
                 if(img != null){
                     return Optional.of(img);
-                }else{
+                }else if(main.getConfig().isDebugMode()){
                     log.error("ImageIO.read returned null for {}", url);
                 }
             }catch(IOException | URISyntaxException e){
-                log.error("ImageIO.read exception {}", url, e);
+                if(main.getConfig().isDebugMode()){
+                    log.error("ImageIO.read exception {}", url, e);
+                }
             }
 
             return Optional.empty();

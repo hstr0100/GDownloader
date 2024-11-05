@@ -629,11 +629,13 @@ public final class GDownloader{
 
             int threads = calculateThreadPoolSize(configIn);
 
-            if(globalThreadPool.getCorePoolSize() != threads
-                || globalThreadPool.getMaximumPoolSize() != threads){
-                globalThreadPool.resize(threads, threads);
+            if(globalThreadPool != null){
+                if(globalThreadPool.getCorePoolSize() != threads
+                    || globalThreadPool.getMaximumPoolSize() != threads){
+                    globalThreadPool.resize(threads, threads);
 
-                log.info("Resized global thread pool to {} threads", threads);
+                    log.info("Resized global thread pool to {} threads", threads);
+                }
             }
 
             LoggerUtils.setDebugLogLevel(configIn.isDebugMode());
@@ -679,10 +681,10 @@ public final class GDownloader{
             launchString = List.of(launcher);
         }
 
-        String jpackageVersion = System.getProperty("jpackage.app-path");
+        String jpackageAppPath = System.getProperty("jpackage.app-path");
 
-        if(launchString == null && jpackageVersion != null){
-            launchString = List.of(jpackageVersion);
+        if(launchString == null && jpackageAppPath != null){
+            launchString = List.of(jpackageAppPath);
         }
 
         if(launchString == null || launchString.isEmpty()){
@@ -1101,7 +1103,9 @@ public final class GDownloader{
         Elements links = doc.select("a[href]");
         Elements media = doc.select("[src]");
 
-        log.debug("Found {} Links and {} Media", links.size(), media.size());
+        if(config.isDebugMode()){
+            log.debug("Found {} Links and {} Media", links.size(), media.size());
+        }
 
         if(links.isEmpty() && media.isEmpty()){
             String regex = "(http[^\\s]*|magnet:[^\\s]*)(?=\\s|$|http|magnet:)";

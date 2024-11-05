@@ -209,7 +209,7 @@ public final class GUIManager{
         });
 
         buttonPanel.add(createToggleButton(
-            (state) -> loadIcon("/assets/copy-link.png", state ? ICON_ACTIVE : ICON),
+            (state) -> loadIcon("/assets/copy-link.png", state ? ICON_ACTIVE : ICON_INACTIVE),
             (state) -> loadIcon("/assets/copy-link.png", ICON_HOVER),
             (state) -> state ? "gui.stop_clipboard_monitor.tooltip"
                 : "gui.start_clipboard_monitor.tooltip",
@@ -683,7 +683,9 @@ public final class GUIManager{
     }
 
     public void showMessage(String title, String message, int durationMillis, MessageType messageType, boolean playTone){
-        log.info("Popup {}: {} - {}", messageType, title, message);
+        if(main.getConfig().isDebugMode()){
+            log.info("Popup {}: {} - {}", messageType, title, message);
+        }
 
         messageQueue.add(new Message(title, message, durationMillis, messageType, playTone));
 
@@ -1567,12 +1569,16 @@ public final class GUIManager{
                         if(windowBounds.contains(dropLocation) && dropTarget instanceof JPanel jPanel){
                             int targetIndex = getComponentIndex(jPanel);
 
-                            log.debug("Drop target index is {}", targetIndex);
+                            if(main.getConfig().isDebugMode()){
+                                log.debug("Drop target index is {}", targetIndex);
+                            }
 
                             if(card.getOnDrag() != null){
                                 int validIndex = getValidComponentIndex(jPanel);
 
-                                log.debug("Valid target index is {}", validIndex);
+                                if(main.getConfig().isDebugMode()){
+                                    log.debug("Valid target index is {}", validIndex);
+                                }
 
                                 card.getOnDrag().accept(validIndex);
                             }

@@ -98,9 +98,9 @@ tasks.named('shadowJar') { shadowJar ->
 task zipJpackageImage(type: Zip) {
     def architecture = System.getProperty("os.arch").contains("64") ? (os.isWindows() ? "x64" : "amd64") : (os.isWindows() ? "x86" : "i386")
 
-    def fileName = os.isWindows() ? "gdownloader-${version}-windows_portable_${architecture}.zip" :
-                   os.isLinux() ? "gdownloader-${version}-linux_portable_${architecture}.zip" :
-                   "gdownloader-${version}-mac_portable.zip"
+    def fileName = os.isWindows() ? "${lowercaseName}-${version}-windows_portable_${architecture}.zip" :
+                   os.isLinux() ? "${lowercaseName}-${version}-linux_portable_${architecture}.zip" :
+                   "${lowercaseName}-${version}-mac_portable.zip"
 
     archiveFileName.set(fileName)
     destinationDirectory.set(file("$buildDir/jpackage"))
@@ -109,7 +109,7 @@ task zipJpackageImage(type: Zip) {
     doFirst {
         def basePath = os.isWindows() ? "$buildDir/jpackage/${rootProject.name}" :
                        os.isLinux() ? "$buildDir/jpackage/${rootProject.name}/lib" :
-                       "$buildDir/jpackage/${rootProject.name}.app/Contents"
+                       "$buildDir/jpackage/${rootProject.name}.app/Contents"//TODO: Is this correct the correct path for the runtime on this platform?
 
         def portableLockFile = file("$basePath/runtime/portable.lock")
         portableLockFile.text = "This file ensures that the program will run in portable mode.\nDeleting it when the program is not installed is not recommended."

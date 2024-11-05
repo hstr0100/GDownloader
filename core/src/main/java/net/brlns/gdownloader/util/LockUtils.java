@@ -76,10 +76,10 @@ public class LockUtils{
             if(lockExists(lock)){
                 String diskVersion = readLock(lock).split("_")[0];
                 diskVersion = diskVersion.replace("v", "");
-                log.info("Lock {} version: {}", workDir, diskVersion);
+                log.debug("Lock {} version: {}", workDir, diskVersion);
 
                 if(isVersionNewer(version, diskVersion)){
-                    log.info("{} is newer than: {}", diskVersion, version);
+                    log.debug("{} is newer than: {}", diskVersion, version);
                     return true;
                 }
             }

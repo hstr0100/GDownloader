@@ -41,7 +41,7 @@ public class URLUtils{
                 }
             }
         }catch(Exception e){
-            log.warn("Invalid url {}", youtubeUrl, e.getLocalizedMessage());
+            log.debug("Invalid url {}", youtubeUrl, e.getLocalizedMessage());
         }
 
         return null;
@@ -72,7 +72,7 @@ public class URLUtils{
 
             return null;
         }catch(MalformedURLException | URISyntaxException e){
-            log.warn("Invalid url {} {}", youtubeUrl, e.getLocalizedMessage());
+            log.debug("Invalid url {} {}", youtubeUrl, e.getLocalizedMessage());
         }
 
         return null;
