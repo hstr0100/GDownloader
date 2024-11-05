@@ -349,7 +349,9 @@ public final class GUIManager{
         buttonPanel.add(retryButton);
 
         main.getDownloadManager().registerListener((YtDlpDownloader downloadManager) -> {
-            retryButton.setVisible(downloadManager.getFailedDownloads() != 0);
+            SwingUtilities.invokeLater(() -> {
+                retryButton.setVisible(downloadManager.getFailedDownloads() != 0);
+            });
         });
 
         buttonPanel.add(createToggleButton(
@@ -455,11 +457,15 @@ public final class GUIManager{
         statusLabel.setVerticalAlignment(SwingConstants.CENTER);
 
         Consumer<YtDlpDownloader> consumer = (downloadManager) -> {
-            statusLabel.setText(updater.updateText(downloadManager));
+            SwingUtilities.invokeLater(() -> {
+                statusLabel.setText(updater.updateText(downloadManager));
+            });
         };
 
+        //Run once to set an initial state.
         consumer.accept(main.getDownloadManager());
         main.getDownloadManager().registerListener(consumer);
+
         statusPanel.add(statusLabel);
     }
 
@@ -474,8 +480,10 @@ public final class GUIManager{
         main.getDownloadManager().registerListener((YtDlpDownloader downloadManager) -> {
             boolean state = downloadManager.isRunning();
 
-            button.setIcon(icon.apply(state));
-            button.setToolTipText(l10n(tooltip.apply(state)));
+            SwingUtilities.invokeLater(() -> {
+                button.setIcon(icon.apply(state));
+                button.setToolTipText(l10n(tooltip.apply(state)));
+            });
         });
 
         return button;
@@ -663,35 +671,37 @@ public final class GUIManager{
             updaterPanel.add(updaterRowPanel, gbc);
 
             updater.registerListener((status, progress) -> {
-                switch(status){
-                    case CHECKING -> {
-                        progressBar.setValue((int)progress);
-                        progressBar.setString(status.getDisplayName() + ": " + String.format("%.1f", progress) + "%");
-                        progressBar.setForeground(Color.MAGENTA);
+                SwingUtilities.invokeLater(() -> {
+                    switch(status){
+                        case CHECKING -> {
+                            progressBar.setValue((int)progress);
+                            progressBar.setString(status.getDisplayName() + ": " + String.format("%.1f", progress) + "%");
+                            progressBar.setForeground(Color.MAGENTA);
+                        }
+                        case DOWNLOADING -> {
+                            progressBar.setValue((int)progress);
+                            progressBar.setString(status.getDisplayName() + ": " + String.format("%.1f", progress) + "%");
+                            progressBar.setForeground(new Color(255, 214, 0));
+                        }
+                        case UNPACKING -> {
+                            progressBar.setValue((int)progress);
+                            progressBar.setString(status.getDisplayName() + ": " + String.format("%.1f", progress) + "%");
+                            progressBar.setForeground(Color.ORANGE);
+                        }
+                        case DONE -> {
+                            progressBar.setValue(100);
+                            progressBar.setString(status.getDisplayName());
+                            progressBar.setForeground(new Color(0, 200, 83));
+                        }
+                        case FAILED -> {
+                            progressBar.setValue(100);
+                            progressBar.setString(status.getDisplayName());
+                            progressBar.setForeground(Color.RED);
+                        }
+                        default ->
+                            throw new RuntimeException("Unhandled status: " + status);
                     }
-                    case DOWNLOADING -> {
-                        progressBar.setValue((int)progress);
-                        progressBar.setString(status.getDisplayName() + ": " + String.format("%.1f", progress) + "%");
-                        progressBar.setForeground(new Color(255, 214, 0));
-                    }
-                    case UNPACKING -> {
-                        progressBar.setValue((int)progress);
-                        progressBar.setString(status.getDisplayName() + ": " + String.format("%.1f", progress) + "%");
-                        progressBar.setForeground(Color.ORANGE);
-                    }
-                    case DONE -> {
-                        progressBar.setValue(100);
-                        progressBar.setString(status.getDisplayName());
-                        progressBar.setForeground(new Color(0, 200, 83));
-                    }
-                    case FAILED -> {
-                        progressBar.setValue(100);
-                        progressBar.setString(status.getDisplayName());
-                        progressBar.setForeground(Color.RED);
-                    }
-                    default ->
-                        throw new RuntimeException("Unhandled status: " + status);
-                }
+                });
             });
         }
 
@@ -699,7 +709,7 @@ public final class GUIManager{
     }
 
     private void updateQueuePanelMessage(){
-        SwingUtilities.invokeLater(() -> {
+        Runnable updatePanel = () -> {
             JPanel panel = getOrCreateEmptyQueuePanel();
 
             Component firstComponent = panel.getComponent(0);
@@ -727,7 +737,13 @@ public final class GUIManager{
 
             panel.revalidate();
             panel.repaint();
-        });
+        };
+
+        if(SwingUtilities.isEventDispatchThread()){
+            updatePanel.run();
+        }else{
+            SwingUtilities.invokeLater(updatePanel);
+        }
     }
 
     public void showConfirmDialog(String title, String message, int timeoutMs,
