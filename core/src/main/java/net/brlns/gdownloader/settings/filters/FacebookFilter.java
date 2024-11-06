@@ -58,7 +58,7 @@ public class FacebookFilter extends GenericFilter{
         switch(typeEnum){
             case ALL -> {
                 if(!config.isRandomIntervalBetweenDownloads()){
-                    //In my experience, Facebook pretty much requires this. So we add it regardless of settings.
+                    // In my experience, Facebook pretty much requires this. So we add it regardless of settings.
                     arguments.addAll(List.of(
                         "--max-sleep-interval",
                         "30",

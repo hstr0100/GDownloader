@@ -88,7 +88,7 @@ public final class GDownloader{
     /**
      * Constants and application states
      */
-    public static final String REGISTRY_APP_NAME = "GDownloader";//Changing this might result in orphaned registry keys.
+    public static final String REGISTRY_APP_NAME = "GDownloader";// Changing this might result in orphaned registry keys.
 
     public static final String CACHE_DIRETORY_NAME = "tmp";
     public static final String OLD_CACHE_DIRETORY_NAME = "gdownloader_cache";
@@ -129,11 +129,11 @@ public final class GDownloader{
     private final AtomicBoolean restartRequested = new AtomicBoolean(false);
 
     public GDownloader(){
-        //Initialize the config file
+        // Initialize the config file
         File workDir = getWorkDirectory();
         configFile = new File(workDir, "config.json");
 
-        //TODO: move log rotation to utils
+        // TODO: move log rotation to utils
         File logFile = new File(workDir, "gdownloader_log.txt");
         File previousLogFile = new File(workDir, "gdownloader_log_previous.txt");
 
@@ -159,7 +159,7 @@ public final class GDownloader{
             config = new Settings();
             updateConfig();
 
-            //We have to init the language to display the exception.
+            // We have to init the language to display the exception.
             Language.initLanguage(config);
 
             handleException(e, true);
@@ -197,7 +197,7 @@ public final class GDownloader{
 
             guiManager = new GUIManager(this);
 
-            //Register to the system tray
+            // Register to the system tray
             Image image = Toolkit.getDefaultToolkit().createImage(
                 getClass().getResource(guiManager.getCurrentTrayIconPath()));
 
@@ -235,7 +235,7 @@ public final class GDownloader{
                             && e.getKeyCode() == NativeKeyEvent.VC_C){
                             resetClipboard();
 
-                            //TODO check how the clipboard deals with concurrency
+                            // TODO check how the clipboard deals with concurrency
                             updateClipboard();
                         }
                     }catch(Exception ex){
@@ -245,12 +245,12 @@ public final class GDownloader{
 
                 @Override
                 public void nativeKeyReleased(NativeKeyEvent e){
-                    //Not implemented
+                    // Not implemented
                 }
 
                 @Override
                 public void nativeKeyTyped(NativeKeyEvent e){
-                    //Not implemented
+                    // Not implemented
                 }
             });
 
@@ -275,7 +275,7 @@ public final class GDownloader{
             scheduler.scheduleAtFixedRate(processClipboard, 0, 50, TimeUnit.MILLISECONDS);
 
             initialized = true;
-            //SysTray is daemon
+            // SysTray is daemon and will hold the program open after main exits.
 
             globalThreadPool.submitWithPriority(() -> {
                 clearCache();
@@ -289,7 +289,7 @@ public final class GDownloader{
         int cores = Runtime.getRuntime().availableProcessors();
 
         int extraThreads = 1;
-        //We add up to 4 extra threads for clipboard management and the updater.
+        // We add up to 4 extra threads for clipboard management and the updater.
         if(config.isMonitorClipboardForLinks()){
             extraThreads = Math.clamp(cores, 1, 4);
         }
@@ -304,11 +304,11 @@ public final class GDownloader{
     public void clearCache(boolean notify){
         downloadManager.stopDownloads();
 
-        //A shorter cache dir name might benefit NTFS filesystems.
+        // A shorter cache dir name might benefit NTFS filesystems.
         File cachePath = new File(getDownloadsDirectory(), CACHE_DIRETORY_NAME);
         DirectoryUtils.deleteRecursively(cachePath.toPath());
 
-        //We have to get rid of the old cache dir if it exists.
+        // We have to get rid of the old cache dir if it exists.
         File oldCachePath = new File(getDownloadsDirectory(), OLD_CACHE_DIRETORY_NAME);
         DirectoryUtils.deleteRecursively(oldCachePath.toPath());
 
@@ -333,7 +333,7 @@ public final class GDownloader{
 
     public boolean checkForUpdates(boolean userInitiated){
         if(userInitiated){
-            if(downloadManager.isBlocked()){//This means we are already checking for updates
+            if(downloadManager.isBlocked()){// This means we are already checking for updates
                 return false;
             }
 
@@ -513,7 +513,7 @@ public final class GDownloader{
                         success = true;
                         break;
                     }catch(IOException e){
-                        //Continue to the next browser
+                        // Continue to the next browser
                     }
                 }
 
@@ -593,9 +593,10 @@ public final class GDownloader{
 
             BrowserEnum browser = BrowserEnum.getBrowserForName(browserName);
 
-            if(browser == BrowserEnum.UNSET){
-                _cachedBrowser = GDownloader.isWindows()
-                    ? BrowserEnum.CHROME : BrowserEnum.FIREFOX;//It's the status quo isn't it
+            if(browser == BrowserEnum.UNSET){// Everything failed, let's try to take a guess and hope for the best.
+                _cachedBrowser = GDownloader.isWindows() ? BrowserEnum.CHROME
+                    : GDownloader.isMac() ? BrowserEnum.SAFARI
+                    : BrowserEnum.FIREFOX;
             }else{
                 _cachedBrowser = browser;
             }
@@ -606,7 +607,7 @@ public final class GDownloader{
         return _cachedBrowser;
     }
 
-    //TODO: this could be moved to the settings class itself.
+    // TODO: this could be moved to the settings class itself.
     public void updateConfig(){
         updateConfig(config);
     }
@@ -839,7 +840,7 @@ public final class GDownloader{
                         }
                     }
 
-                    //We almost give no thoughts to whitespaces on linux, but they can happen.
+                    // We almost give no thoughts to whitespaces on linux, but they can happen.
                     List<String> programArgs = new ArrayList<>(launchString);
                     programArgs.add("--no-gui");
 
@@ -947,7 +948,7 @@ public final class GDownloader{
         updateConfig();
     }
 
-    //TODO refactor clipboard
+    // TODO refactor clipboard
     public void resetClipboard(){
         for(FlavorType type : new HashSet<>(lastClipboardState.keySet())){
             lastClipboardState.put(type, "reset");
@@ -1019,7 +1020,7 @@ public final class GDownloader{
                     list.add(downloadManager.captureUrl(url, force));
                 }
 
-                //Small extra utility
+                // Small extra utility
                 if(config.isLogMagnetLinks() && url.startsWith("magnet")){
                     logUrl(url, "magnets");
                 }
@@ -1051,8 +1052,8 @@ public final class GDownloader{
                         );
                     }
 
-                    //If notications are off, requesting focus could probably also be an undesired behavior,
-                    //However, I think we should keep at least this one visual cue.
+                    // If notications are off, requesting focus could probably also be an undesired behavior,
+                    // However, I think we should keep at least this one visual cue.
                     guiManager.requestFocus();
                 }
             });
@@ -1228,7 +1229,7 @@ public final class GDownloader{
                 return new File(jarPath).getAbsolutePath();
             }
         }catch(URISyntaxException e){
-            //Ignore
+            // Ignore
         }
 
         return null;
@@ -1239,7 +1240,7 @@ public final class GDownloader{
 
         String appPath = launcher;
 
-        //Give preference to the main executable's path; otherwise, fallback to its own.
+        // Give preference to the main executable's path; otherwise, fallback to its own.
         if(appPath == null){
             appPath = System.getProperty("jpackage.app-path");
         }
@@ -1314,7 +1315,7 @@ public final class GDownloader{
     public static boolean isFlaggedAsPortable(){
         String appPath = System.getProperty("jpackage.app-path");
 
-        //Updates are portable versions, but we don't want those to run in portable mode unless explicity determined by the --portable flag.
+        // Updates are portable versions, but we don't want those to run in portable mode unless explicity determined by the --portable flag.
         if(appPath != null && appPath.contains(UpdaterBootstrap.PREFIX)){
             return false;
         }
@@ -1333,7 +1334,7 @@ public final class GDownloader{
             }
 
             if(args[i].equalsIgnoreCase("--force-ui-scale")){
-                uiScale = Integer.parseInt(args[++i]);//Purposefully fail on bad arguments
+                uiScale = Integer.parseInt(args[++i]);// Purposefully fail on bad arguments
             }
 
             if(args[i].equalsIgnoreCase("--from-ota")){
@@ -1361,7 +1362,7 @@ public final class GDownloader{
 
         UpdaterBootstrap.tryOta(args, fromOta);
 
-        System.setProperty("sun.java2d.uiScale", String.valueOf(uiScale));//Does not accept double
+        System.setProperty("sun.java2d.uiScale", String.valueOf(uiScale));// Does not accept double
         System.setProperty("sun.java2d.opengl", "true");
 
         if(SystemTray.isSupported()){
@@ -1370,20 +1371,20 @@ public final class GDownloader{
             try{
                 UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
             }catch(Exception e){
-                //Default to Java's look and feel
+                // Default to Java's look and feel
             }
 
             try{
                 Desktop.getDesktop().enableSuddenTermination();
                 Desktop.getDesktop().setQuitStrategy(QuitStrategy.CLOSE_ALL_WINDOWS);
             }catch(Exception e){
-                //Not windows
+                // Not windows
             }
 
             try{
                 GlobalScreen.registerNativeHook();
 
-                //Get the logger for "com.github.kwhat.jnativehook" and set the level to off.
+                // Get the logger for "com.github.kwhat.jnativehook" and set the level to off.
                 Logger logger = Logger.getLogger(GlobalScreen.class.getPackage().getName());
                 logger.setLevel(Level.OFF);
 

@@ -101,13 +101,13 @@ public class LockUtils{
             int diskPart = i < diskParts.length ? parseVersionPart(diskParts[i]) : 0;
 
             if(currentPart < diskPart){
-                return true;//newer
+                return true;// newer
             }else if(currentPart > diskPart){
-                return false;//older
+                return false;// older
             }
         }
 
-        return false;//equal
+        return false;// equal
     }
 
     private static int parseVersionPart(String part){

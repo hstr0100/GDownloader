@@ -88,7 +88,7 @@ public class SelfUpdater extends AbstractGitUpdater{
 
     @Override
     protected void setExecutablePath(File executablePath){
-        //Not used
+        // Not used
     }
 
     @Override

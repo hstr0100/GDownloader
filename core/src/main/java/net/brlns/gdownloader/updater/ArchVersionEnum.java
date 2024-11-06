@@ -29,9 +29,9 @@ public enum ArchVersionEnum{
     MAC_X86("yt-dlp_macos_legacy", null, null, OS.MAC),
     MAC_X64("yt-dlp_macos", null, null, OS.MAC),
     WINDOWS_X86("yt-dlp_x86.exe", null, null, OS.WINDOWS),
-    //Neither Apache Compress nor any java library that I know of supports the -mx=9 option used by FFmpeg's 7zs
+    // Neither Apache Compress nor any java library that I know of supports the -mx=9 option used by FFmpeg's 7zs
     WINDOWS_X64("yt-dlp.exe", "-full_build.zip", "windows_portable_x64.zip", OS.WINDOWS),
-    //TODO: Linux ffmpeg setup
+    // TODO: Linux ffmpeg setup
     LINUX_X64("yt-dlp_linux", null, "linux_portable_amd64.zip", OS.LINUX),
     LINUX_ARM("yt-dlp_linux_armv7l", null, null, OS.LINUX),
     LINUX_ARM64("yt-dlp_linux_aarch64", null, null, OS.LINUX);

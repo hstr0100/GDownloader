@@ -80,7 +80,7 @@ public class UpdaterBootstrap{
                 return;
             }
 
-            //This is a backwards-compatible check
+            // This is a backwards-compatible check
             if(!diskLockExistsAndIsNewer(workDir, version)){
                 log.info("Ota runtime on disk is not newer, running current version. (v{})", version);
                 return;
@@ -102,8 +102,8 @@ public class UpdaterBootstrap{
                 arguments.add(launchCommand);
             }
 
-            //Older portable versions already have a broken updater,
-            //so introducing this change should not affect anything.
+            // Older portable versions already have a broken updater,
+            // so introducing this change should not affect anything.
             if(GDownloader.isPortable()){
                 arguments.add("--portable");
             }
@@ -111,12 +111,12 @@ public class UpdaterBootstrap{
             arguments.addAll(List.of(args));
             log.info("Launching {}", arguments);
 
-            try{//Attempt to hand it off to the new version
+            try{// Attempt to hand it off to the new version
                 ProcessBuilder processBuilder = new ProcessBuilder(arguments);
-                processBuilder.redirectErrorStream(true);//TODO: low-prio: look into why all of the output is coming from the error stream.
+                processBuilder.redirectErrorStream(true);// TODO: low-prio: look into why all of the output is coming from the error stream.
 
-                //It took quite some brain cycles to figure out why the portable versions were failing to launch updates.
-                //Turns out we need to get rid of this conflicting env variable.
+                // It took quite some brain cycles to figure out why the portable versions were failing to launch updates.
+                // Turns out we need to get rid of this conflicting env variable.
                 processBuilder.environment().remove("_JPACKAGE_LAUNCHER");
 
                 Process process = processBuilder.start();
@@ -195,7 +195,7 @@ public class UpdaterBootstrap{
             return GDownloader.REGISTRY_APP_NAME + ".exe";
         }else if(GDownloader.isLinux()){
             return "bin" + File.separator + GDownloader.REGISTRY_APP_NAME;
-        }else{//Macn't
+        }else{// Macn't
             return null;
         }
     }

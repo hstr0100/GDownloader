@@ -73,7 +73,7 @@ public class QualitySettings{
     @JsonProperty("ThumbnailContainer")
     private ThumbnailContainerEnum thumbnailContainer = ThumbnailContainerEnum.PNG;
 
-    //TODO this needs some work
+    // TODO this needs some work
     @JsonIgnore
     public String buildQualitySelector(){
         return "(" + selector.getValue() + "[height>=" + minHeight.getValue() + "][height<=" + maxHeight.getValue() + "][ext=" + videoContainer.getValue() + "][fps=" + fps.getValue() + "]+bestaudio/"
@@ -82,7 +82,7 @@ public class QualitySettings{
             + selector.getValue() + "+bestaudio/best)";
     }
 
-    //TODO
+    // TODO
     @JsonIgnore
     public String getTranscodingOptions(){
         return "res:" + maxHeight.getValue() + ",fps,ext,codec:vp9.2";

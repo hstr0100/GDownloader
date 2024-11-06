@@ -72,7 +72,7 @@ public class GenericFilter extends AbstractUrlFilter{
 
         switch(typeEnum){
             case ALL -> {
-                //For backwards compatibility. This should have been a list.
+                // For backwards compatibility. This should have been a list.
                 for(String arg : config.getExtraYtDlpArguments().split(" ")){
                     if(!arg.isEmpty()){
                         arguments.add(arg);
@@ -96,12 +96,12 @@ public class GenericFilter extends AbstractUrlFilter{
                 }
 
                 if(GDownloader.isWindows()){
-                    //NTFS shenanigans ahead
-                    //TODO: query registry for longpath support status
+                    // NTFS shenanigans ahead
+                    // TODO: query registry for longpath support status
                     arguments.addAll(List.of(
                         "--windows-filenames",
                         "--trim-filenames",
-                        String.valueOf(240)//Give some extra room for fragment files
+                        String.valueOf(240)// Give some extra room for fragment files
                     ));
                 }
             }
@@ -137,7 +137,7 @@ public class GenericFilter extends AbstractUrlFilter{
                 if(config.isTranscodeAudioToAAC()){
                     arguments.addAll(List.of(
                         "--postprocessor-args",
-                        //Opus is not supported by some native video players
+                        // Opus is not supported by some native video players
                         "ffmpeg:-c:a aac -b:a " + (audioBitrate == AudioBitrateEnum.NO_AUDIO ? 320 : audioBitrate.getValue()) + "k"
                     ));
                 }

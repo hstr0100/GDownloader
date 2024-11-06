@@ -180,5 +180,5 @@ public class ConcurrentRearrangeableDeque<T> extends ArrayDeque<T>{
         }
     }
 
-    //TODO UnsupportedOperationException for the rest
+    // TODO UnsupportedOperationException for the rest of the overridable methods
 }

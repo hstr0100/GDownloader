@@ -297,7 +297,6 @@ public abstract class AbstractGitUpdater{
         while(assets.hasNext()){
             JsonNode asset = assets.next();
 
-            //If there is no key, there is no download url
             String downloadUrl = asset.get("browser_download_url").asText();
 
             if(downloadUrl.endsWith(getBinaryName())){

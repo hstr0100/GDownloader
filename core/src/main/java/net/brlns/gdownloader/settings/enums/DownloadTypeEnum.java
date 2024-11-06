@@ -24,7 +24,7 @@ import lombok.Getter;
 @Getter
 public enum DownloadTypeEnum implements ISettingsEnum{
     ALL,
-    //Downloads will also follow this specific order
+    // Downloads will also follow this specific order
     VIDEO,
     AUDIO,
     SUBTITLES,

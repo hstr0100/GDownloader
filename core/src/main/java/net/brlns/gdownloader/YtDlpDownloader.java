@@ -73,47 +73,47 @@ import static net.brlns.gdownloader.Language.*;
 import static net.brlns.gdownloader.settings.enums.DownloadTypeEnum.*;
 import static net.brlns.gdownloader.util.URLUtils.*;
 
-//TODO media converter
-//TODO implement CD Ripper
-//TODO d&d files for conversion to different formats, we already have ffmpeg anyway
+// TODO media converter
+// TODO implement CD Ripper
+// TODO d&d files for conversion to different formats, we already have ffmpeg anyway
 //
-//TODO max simultaneous downloads should be independent per website
-//TODO silence unnecessary debug messages
-//TODO investigate adding AppImage build
-//TODO we should only grab clipboard AFTER the toggle button is clicked
-//TODO scale on resolution DPI
-//TODO save last window size in config
-//TODO keep older versions of ytdlp and retry failed downloads against them
-//TODO Advanced users can edit the config.json directly to add extra yt-dlp arguments like proxy settings. but maybe expose those settings to the ui.
-//TODO verify checksums during updates, add bouncycastle, check signatures
-//TODO write a component factory for GUIManager
-//TODO git actions build for different platforms
-//FEEDBACK Should choose to download video and audio independently on each card
-//TODO maybe add notifications for each toggled toolbar option
-//DROPPED check updates on a timer, but do not ever restart when anything is in the queue.
-//TODO individual 'retry failed download' button
-//TODO --no-playlist when single video option is active
-//TODO Artifacting seems to be happening on the scroll pane with AMD video cards
-//TODO open a window asking which videos in a playlist to download or not
-//TODO RearrangeableDeque's offerLast should be linked to the cards in the UI
-//TODO Better visual eye candy for when dragging cards
-//TODO Add setting to allow the user to manually specify the target codec for audio transcoding? currently it defaults to aac.
-//TODO Add 'Clear Completed Downloads' button.
-//TODO Javadoc, a whole lot of it.
-//TODO Refactor this very class. Separate some logic into different methods.
-//TODO Twitch settings purposefully default to suboptimal quality due to huge file sizes. Maybe consider adding a warning about this in the GUI.
-//TODO Split GUI into a different subproject from core logic.
-//TODO Investigate screen reader support (https://www.nvaccess.org/download/)
-//TODO Send notifications when a NO_METHOD is triggered, explaining why it was triggered.
-//TODO Test downloading sections of a livestream (currently it gets stuck on status PREPARING). Note: it also leaves a zombie ffmpeg process behind dealing with the hls stream.
-//TODO The issue above is a yt-dlp bug https://github.com/yt-dlp/yt-dlp/issues/7927
-//TODO Add a viewer for log files.
-//TODO Implement rate-limiting options internally; the way it's currently implemented does not account for concurrent or non-playlist downloads.
-//TODO Notify the user whenever a setting that requires restart was changed.
-//TODO Quit lingering ffmpeg processes spawned by yt-dlp
-//TODO Verify which exceptions are important to display to the user via GDownloader::handleException
-//TODO Add an url ignore list / Allow filters to be disabled
-//Off to a bootcamp, project on pause
+// TODO max simultaneous downloads should be independent per website
+// TODO silence unnecessary debug messages
+// TODO investigate adding AppImage build
+// TODO we should only grab clipboard AFTER the toggle button is clicked
+// TODO scale on resolution DPI
+// TODO save last window size in config
+// TODO keep older versions of ytdlp and retry failed downloads against them
+// TODO Advanced users can edit the config.json directly to add extra yt-dlp arguments like proxy settings. but maybe expose those settings to the ui.
+// TODO verify checksums during updates, add bouncycastle, check signatures
+// TODO write a component factory for GUIManager
+// TODO git actions build for different platforms
+// FEEDBACK Should choose to download video and audio independently on each card
+// TODO maybe add notifications for each toggled toolbar option
+// DROPPED check updates on a timer, but do not ever restart when anything is in the queue.
+// TODO individual 'retry failed download' button
+// TODO --no-playlist when single video option is active
+// TODO Artifacting seems to be happening on the scroll pane with AMD video cards
+// TODO open a window asking which videos in a playlist to download or not
+// TODO RearrangeableDeque's offerLast should be linked to the cards in the UI
+// TODO Better visual eye candy for when dragging cards
+// TODO Add setting to allow the user to manually specify the target codec for audio transcoding? currently it defaults to aac.
+// TODO Add 'Clear Completed Downloads' button.
+// TODO Javadoc, a whole lot of it.
+// TODO Refactor this very class. Separate some logic into different methods.
+// TODO Twitch settings purposefully default to suboptimal quality due to huge file sizes. Maybe consider adding a warning about this in the GUI.
+// TODO Split GUI into a different subproject from core logic.
+// TODO Investigate screen reader support (https:// www.nvaccess.org/download/)
+// TODO Send notifications when a NO_METHOD is triggered, explaining why it was triggered.
+// TODO Test downloading sections of a livestream (currently it gets stuck on status PREPARING). Note: it also leaves a zombie ffmpeg process behind dealing with the hls stream.
+// TODO The issue above is a yt-dlp bug https:// github.com/yt-dlp/yt-dlp/issues/7927
+// TODO Add a viewer for log files.
+// TODO Implement rate-limiting options internally; the way it's currently implemented does not account for concurrent or non-playlist downloads.
+// TODO Notify the user whenever a setting that requires restart was changed.
+// TODO Quit lingering ffmpeg processes spawned by yt-dlp
+// TODO Verify which exceptions are important to display to the user via GDownloader::handleException
+// TODO Add an url ignore list / Allow filters to be disabled
+// Off to a bootcamp, project on pause
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
@@ -251,7 +251,7 @@ public class YtDlpDownloader{
         }
 
         String filteredUrl;
-        //TODO: move these to the appropriate classes.
+        // TODO: move these to the appropriate classes.
         if(filter instanceof YoutubePlaylistFilter){
             switch(playlistOption){
                 case DOWNLOAD_PLAYLIST: {
@@ -343,8 +343,8 @@ public class YtDlpDownloader{
 
                         return future;
                     }else{
-                        //TODO I'm assuming this is a wanted behavior - having subsequent links being treated as individual videos
-                        //It's odd that you'd download a whole playlist and then an individual video from it though, maybe investigate use cases
+                        // TODO I'm assuming this is a wanted behavior - having subsequent links being treated as individual videos
+                        // It's odd that you'd download a whole playlist and then an individual video from it though, maybe investigate use cases
                         String video = filterVideo(inputUrl);
 
                         if(main.getConfig().isDebugMode()){
@@ -518,7 +518,7 @@ public class YtDlpDownloader{
         QueueEntry entry;
         while((entry = failedDownloads.poll()) != null){
             entry.updateStatus(DownloadStatus.QUEUED, l10n("gui.download_status.not_started"));
-            entry.resetRetryCounter();//Normaly we want the retry count to stick around, but not in this case.
+            entry.resetRetryCounter();// Normaly we want the retry count to stick around, but not in this case.
             entry.reset();
 
             downloadDeque.offerLast(entry);
@@ -533,11 +533,10 @@ public class YtDlpDownloader{
         capturedLinks.clear();
         capturedPlaylists.clear();
 
-        //Active downloads are intentionally immune to this.
+        // Active downloads are intentionally immune to this.
         QueueEntry entry;
         while((entry = downloadDeque.poll()) != null){
             main.getGuiManager().removeMediaCard(entry.getMediaCard().getId());
-            //downloadDeque.remove(entry);
 
             if(!entry.isRunning()){
                 entry.clean();
@@ -624,7 +623,6 @@ public class YtDlpDownloader{
             }
 
             QueueEntry entry = downloadDeque.poll();
-            //downloadDeque.remove(entry);
 
             MediaCard mediaCard = entry.getMediaCard();
             if(mediaCard.isClosed()){
@@ -647,7 +645,7 @@ public class YtDlpDownloader{
                     AbstractUrlFilter filter = entry.getFilter();
 
                     if(filter.areCookiesRequired() && !main.getConfig().isReadCookiesFromBrowser()){
-                        //TODO: Visual cue
+                        // TODO: Visual cue
                         log.warn("Cookies are required for this website {}", entry.getOriginalUrl());
                     }
 
@@ -723,9 +721,9 @@ public class YtDlpDownloader{
 
                         for(DownloadTypeEnum type : DownloadTypeEnum.values()){
                             if(type == ALL
-                                //Intentionally not doing a fresh check for isDownloadVideo() here.
-                                //Mostly prevents an impossibly rare scenario where the user could have disabled all download possibilities after the sanity checks.
-                                //It would not hurt anything if they did, however, they would end up with a 'completed' download that did not in fact download anything.
+                                // Intentionally not doing a fresh check for isDownloadVideo() here.
+                                // Mostly prevents an impossibly rare scenario where the user could have disabled all download possibilities after the sanity checks.
+                                // It would not hurt anything if they did, however, they would end up with a 'completed' download that did not in fact download anything.
                                 || type == VIDEO && !downloadVideo
                                 || type == AUDIO && !main.getConfig().isDownloadAudio()
                                 || type == SUBTITLES && !main.getConfig().isDownloadSubtitles()
@@ -748,7 +746,7 @@ public class YtDlpDownloader{
 
                             Pair<Integer, String> result = processDownload(entry, arguments);
 
-                            //TODO: This code block is so deep it could probably find oil down there already.
+                            // TODO: This code block is so deep it could probably find oil down there already.
                             if(result != null){
                                 if(result.getKey() != 0){
                                     if(!entry.getCancelHook().get()){
@@ -775,9 +773,9 @@ public class YtDlpDownloader{
                                                 downloadDeque.offerFirst(entry);
                                             }
                                         }else{
-                                            //These can be treated as low priority downloads since thumbnails
-                                            //and subtitles are already embedded by default, if they fail we just move on.
-                                            //For now, downloading only subs or thumbs is not supported.
+                                            // These can be treated as low priority downloads since thumbnails
+                                            // and subtitles are already embedded by default, if they fail we just move on.
+                                            // For now, downloading only subs or thumbs is not supported.
                                             log.error("Failed to download {}: {}", type, result.getValue());
                                             continue;
                                         }
@@ -884,7 +882,7 @@ public class YtDlpDownloader{
                     entry.updateStatus(DownloadStatus.FAILED, e.getLocalizedMessage());
                     entry.reset();
 
-                    downloadDeque.offerLast(entry);//Retry later
+                    downloadDeque.offerLast(entry);// Retry later
                     fireListeners();
 
                     main.handleException(e);
@@ -998,7 +996,7 @@ public class YtDlpDownloader{
 
             return null;
         }finally{
-            //Our ProcessMonitor will take care of closing the underlying process.
+            // Our ProcessMonitor will take care of closing the underlying process.
         }
     }
 
@@ -1006,12 +1004,12 @@ public class YtDlpDownloader{
         if(process.isAlive()){
             long quitTimer = System.currentTimeMillis();
 
-            //First try to politely ask the process to excuse itself.
+            // First try to politely ask the process to excuse itself.
             process.destroy();
 
             if(!process.waitFor(5, TimeUnit.SECONDS)){
                 log.warn("Process did not terminate in time, forcefully stopping it.");
-                //Time's up. I guess asking nicely wasn't in the cards.
+                // Time's up. I guess asking nicely wasn't in the cards.
                 process.destroyForcibly();
             }
 
@@ -1239,7 +1237,7 @@ public class YtDlpDownloader{
             if(videoInfo != null){
                 long size = videoInfo.getFilesizeApprox();
 
-                //For this, we consider 0 as null.
+                // For this, we consider 0 as null.
                 if(size > 0 && size < Long.MAX_VALUE){
                     return Optional.of(getHumanReadableFileSize(size));
                 }
@@ -1364,7 +1362,7 @@ public class YtDlpDownloader{
                 .map(Thumbnail::getUrl)
                 .forEach(builder::add);
 
-            //Add WebP thumbnails last
+            // Add WebP thumbnails last
             thumbnails.stream()
                 .filter(thumb -> thumb.getUrl() != null && thumb.getUrl().matches("^https?://.*\\.webp$"))
                 .sorted(Comparator.comparingInt(Thumbnail::getPreference).reversed())
@@ -1395,7 +1393,7 @@ public class YtDlpDownloader{
 
         @JsonIgnore
         @Nullable
-        //TODO: implement
+        // TODO: implement
         public LocalDate getUploadDateAsLocalDate(){
             if(uploadDate != null && !uploadDate.isEmpty()){
                 DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd");

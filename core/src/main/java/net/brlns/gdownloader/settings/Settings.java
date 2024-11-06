@@ -74,7 +74,7 @@ public class Settings{
     @JsonProperty("DownloadsPath")
     private String downloadsPath = "";
 
-    //TODO implement
+    // TODO implement
     @JsonProperty("UIScale")
     private double uiScale = 1.0;
 
@@ -144,7 +144,7 @@ public class Settings{
     @JsonProperty("TranscodeAudioToAAC")
     private boolean transcodeAudioToAAC = true;
 
-    //TODO add more sounds
+    // TODO add more sounds
     @JsonProperty("PlaySounds")
     private boolean playSounds = false;
 
@@ -192,9 +192,9 @@ public class Settings{
 
         qualitySettings.clear();
 
-        //Broken in Chromium
-        //https://github.com/yt-dlp/yt-dlp/issues/7271
-        //https://github.com/yt-dlp/yt-dlp/issues/10927
+        // Broken in Chromium
+        // https://github.com/yt-dlp/yt-dlp/issues/7271
+        // https://github.com/yt-dlp/yt-dlp/issues/10927
         if(isReadCookies() && getBrowser() == BrowserEnum.FIREFOX){
             setReadCookiesFromBrowser(true);
         }

@@ -59,7 +59,7 @@ import static net.brlns.gdownloader.ui.themes.UIColors.*;
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-//TODO add custom tooltip to all buttons
+// TODO add custom tooltip to all buttons
 @Slf4j
 public final class GUIManager{
 
@@ -93,7 +93,7 @@ public final class GUIManager{
 
     private final SettingsPanel settingsPanel;
 
-    //TODO
+    // TODO
     @Getter
     private final double uiScale;
 
@@ -462,7 +462,7 @@ public final class GUIManager{
             });
         };
 
-        //Run once to set an initial state.
+        // Run once to set an initial state.
         consumer.accept(main.getDownloadManager());
         main.getDownloadManager().registerListener(consumer);
 
@@ -759,7 +759,7 @@ public final class GUIManager{
                 }
             };
 
-            dialog.setAlwaysOnTop(true);//TODO: We might wanna consider just bringing this to top but not pinning it there. Java doesn't directly support this but there are workarounds.
+            dialog.setAlwaysOnTop(true);// TODO: We might want to consider just bringing this to top but not pinning it there. Java doesn't directly support this but there are workarounds.
             dialog.setSize(500, 300);
             dialog.setResizable(false);
             dialog.setLocationRelativeTo(null);
@@ -1031,7 +1031,7 @@ public final class GUIManager{
 
             messageWindow.setLocation(newX, newY);
 
-            //TODO check if the window is actually on top
+            // TODO check if the window is actually on top
             if(appWindow != null && appWindow.isVisible() && (appWindow.getExtendedState() & Frame.ICONIFIED) != 1){
                 if(messageWindow.getBounds().intersects(appWindow.getBounds())){
                     newY = appWindow.getY() - messageWindow.getHeight() - 10;
@@ -1088,7 +1088,7 @@ public final class GUIManager{
         gbc.insets = new Insets(10, 10, 10, 10);
         gbc.fill = GridBagConstraints.BOTH;
 
-        //Dragidy-draggy-nub-thingy
+        // Dragidy-draggy-nub-thingy
         JPanel dragPanel = new JPanel(new BorderLayout());
         dragPanel.setPreferredSize(new Dimension(24, 24));
         dragPanel.setMinimumSize(new Dimension(24, 24));
@@ -1107,7 +1107,7 @@ public final class GUIManager{
         gbc.weighty = 0;
         card.add(dragPanel, gbc);
 
-        //Thumbnail
+        // Thumbnail
         CustomThumbnailPanel thumbnailPanel = new CustomThumbnailPanel();
         thumbnailPanel.setPreferredSize(new Dimension(MediaCard.THUMBNAIL_WIDTH, MediaCard.THUMBNAIL_HEIGHT));
         thumbnailPanel.setMinimumSize(new Dimension(MediaCard.THUMBNAIL_WIDTH, MediaCard.THUMBNAIL_HEIGHT));
@@ -1181,7 +1181,7 @@ public final class GUIManager{
                 if(component.equals(dragLabel)){
                     TransferHandler handler = card.getTransferHandler();
 
-                    if(handler != null){//peace of mind
+                    if(handler != null){// peace of mind
                         handler.exportAsDrag(card, e, MOVE);
                     }
                 }
@@ -1381,7 +1381,7 @@ public final class GUIManager{
         }
     }
 
-    //https://stackoverflow.com/questions/5147768/scroll-jscrollpane-to-bottom
+    // https://stackoverflow.com/questions/5147768/scroll-jscrollpane-to-bottom
     private static void scrollToBottom(JScrollPane scrollPane){
         JScrollBar verticalBar = scrollPane.getVerticalScrollBar();
 
@@ -1406,7 +1406,6 @@ public final class GUIManager{
             text = text.replace("\n", "<br>");
 
             for(String line : text.split("<br>")){
-                //String cutWord = line.substring(0, maxLineLength - 3) + "...";
                 if(line.length() > maxLineLength){
                     int count = 0;
 
@@ -1529,12 +1528,12 @@ public final class GUIManager{
 
         @Override
         public void dragOver(DropTargetDragEvent dtde){
-            //Not implemented
+            // Not implemented
         }
 
         @Override
         public void dropActionChanged(DropTargetDragEvent dtde){
-            //Not implemented
+            // Not implemented
         }
 
         @Override

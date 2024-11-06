@@ -25,7 +25,7 @@ import static net.brlns.gdownloader.Language.*;
  */
 @Getter
 public enum AudioBitrateEnum implements ISettingsEnum{
-    //TODO some containers can go way higher, account for that
+    // TODO some containers can go way higher, account for that
     NO_AUDIO(0, ""),
     BITRATE_192(192, "192kbps"),
     BITRATE_256(256, "256kbps"),
