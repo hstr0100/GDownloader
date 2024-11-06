@@ -1269,14 +1269,15 @@ public final class GUIManager {
             return;
         }
 
+        JWindow popupWindow = new JWindow();
+        popupWindow.setLayout(new BorderLayout());
+        popupWindow.setAlwaysOnTop(main.getConfig().isKeepWindowAlwaysOnTop());
+        
         JPanel popupPanel = new JPanel();
         popupPanel.setLayout(new GridLayout(actions.size(), 1));
         popupPanel.setBackground(Color.DARK_GRAY);
         popupPanel.setBorder(BorderFactory.createLineBorder(Color.GRAY));
         popupPanel.setOpaque(true);
-
-        JWindow popupWindow = new JWindow();
-        popupWindow.setLayout(new BorderLayout());
 
         for (Map.Entry<String, Runnable> entry : actions.entrySet()) {
             JButton button = new CustomMenuButton(entry.getKey());

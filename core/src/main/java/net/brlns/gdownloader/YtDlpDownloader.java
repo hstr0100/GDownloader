@@ -113,6 +113,7 @@ import static net.brlns.gdownloader.util.URLUtils.*;
 // TODO Quit lingering ffmpeg processes spawned by yt-dlp
 // TODO Verify which exceptions are important to display to the user via GDownloader::handleException
 // TODO Add an url ignore list / Allow filters to be disabled
+// TODO Add option to clear all installed updates and start fresh. (Tackling certain issues where failed updates could break downloads)
 // Off to a bootcamp, project on pause
 /**
  * @author Gabriel / hstr0100 / vertx010
