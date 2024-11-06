@@ -55,7 +55,7 @@ import static net.brlns.gdownloader.ui.themes.UIColors.*;
  * @author Gabriel / hstr0100 / vertx010
  */
 @Slf4j
-public class SettingsPanel{
+public class SettingsPanel {
 
     private final GDownloader main;
     private final GUIManager manager;
@@ -72,7 +72,7 @@ public class SettingsPanel{
 
     private Runnable _resetAction;
 
-    public SettingsPanel(GDownloader mainIn, GUIManager managerIn){
+    public SettingsPanel(GDownloader mainIn, GUIManager managerIn) {
         main = mainIn;
         manager = managerIn;
 
@@ -93,14 +93,14 @@ public class SettingsPanel{
         ));
     }
 
-    private void saveSettings(){
-        if(!settings.getDownloadsPath().isEmpty()
-            && !main.getConfig().getDownloadsPath().equals(settings.getDownloadsPath())){
+    private void saveSettings() {
+        if (!settings.getDownloadsPath().isEmpty()
+            && !main.getConfig().getDownloadsPath().equals(settings.getDownloadsPath())) {
 
             File file = new File(settings.getDownloadsPath());
-            if(file.exists() && file.canWrite()){
+            if (file.exists() && file.canWrite()) {
                 main.setDownloadsPath(file);// We are uselessly calling on updateConfig() twice here, but should cause no issues.
-            }else{
+            } else {
                 settings.setDownloadsPath("");
 
                 main.getGuiManager().showMessage(
@@ -120,20 +120,20 @@ public class SettingsPanel{
         main.updateStartupStatus();
     }
 
-    private void reloadSettings(){
+    private void reloadSettings() {
         contentPanel.removeAll();
 
         int i = 0;
-        for(SettingsMenuEntry entry : contentPanels){
+        for (SettingsMenuEntry entry : contentPanels) {
             contentPanel.add(entry.getPanel().get(), String.valueOf(i++));
         }
 
         _resetAction.run();
     }
 
-    public void createAndShowGUI(){
+    public void createAndShowGUI() {
         runOnEDT(() -> {
-            if(frame != null){
+            if (frame != null) {
                 frame.setVisible(true);
                 frame.setExtendedState(JFrame.NORMAL);
                 frame.requestFocus();
@@ -142,9 +142,9 @@ public class SettingsPanel{
 
             settings = GDownloader.OBJECT_MAPPER.convertValue(main.getConfig(), Settings.class);
 
-            frame = new JFrame(l10n("settings.title", GDownloader.REGISTRY_APP_NAME)){
+            frame = new JFrame(l10n("settings.title", GDownloader.REGISTRY_APP_NAME)) {
                 @Override
-                public void dispose(){
+                public void dispose() {
                     frame = null;
 
                     super.dispose();
@@ -157,9 +157,9 @@ public class SettingsPanel{
             frame.setResizable(false);
             frame.setLocationRelativeTo(null);
 
-            try{
+            try {
                 frame.setIconImage(main.getGuiManager().getAppIcon());
-            }catch(IOException e){
+            } catch (IOException e) {
                 main.handleException(e);
             }
 
@@ -212,7 +212,7 @@ public class SettingsPanel{
                 mainContentPanel.add(headerPanel, BorderLayout.NORTH);
 
                 int i = 0;
-                for(SettingsMenuEntry entry : contentPanels){
+                for (SettingsMenuEntry entry : contentPanels) {
                     int index = i;
 
                     JButton button = new JButton();
@@ -231,7 +231,7 @@ public class SettingsPanel{
                         headerLabel.setText(entry.getDisplayName());
 
                         Component[] buttons = sidebarPanel.getComponents();
-                        for(Component button1 : buttons){
+                        for (Component button1 : buttons) {
                             button1.setBackground(color(SIDE_PANEL));
                         }
 
@@ -242,7 +242,7 @@ public class SettingsPanel{
                         action.run();
                     });
 
-                    if(index == 0){
+                    if (index == 0) {
                         _resetAction = action;
                     }
 
@@ -368,14 +368,14 @@ public class SettingsPanel{
                     main.openUrlInBrowser("https://github.com/hstr0100");
                 });
 
-                gabButton.addMouseListener(new MouseAdapter(){
+                gabButton.addMouseListener(new MouseAdapter() {
                     @Override
-                    public void mouseEntered(MouseEvent e){
+                    public void mouseEntered(MouseEvent e) {
                         gabButton.setForeground(color(LIGHT_TEXT));
                     }
 
                     @Override
-                    public void mouseExited(MouseEvent e){
+                    public void mouseExited(MouseEvent e) {
                         gabButton.setForeground(color(FOREGROUND));
                     }
                 });
@@ -399,7 +399,7 @@ public class SettingsPanel{
 
     private <T extends Enum<T> & ISettingsEnum> void addComboBox(JPanel panel,
         GridBagConstraints gbcPanel, String labelString, Class<T> enumClass,
-        Supplier<T> getter, Consumer<T> setter, boolean requiresRestart){
+        Supplier<T> getter, Consumer<T> setter, boolean requiresRestart) {
 
         JLabel label = createLabel(labelString, LIGHT_TEXT);
 
@@ -410,7 +410,7 @@ public class SettingsPanel{
         panel.add(label, gbcPanel);
 
         JComboBox<String> comboBox = new JComboBox<>(ISettingsEnum.getDisplayNames(enumClass));
-        if(requiresRestart){
+        if (requiresRestart) {
             comboBox.setToolTipText(l10n("settings.requires_restart.tooltip"));
         }
 
@@ -429,7 +429,7 @@ public class SettingsPanel{
     }
 
     private void addCheckBox(JPanel panel, GridBagConstraints gbcPanel, String labelString,
-        Supplier<Boolean> getter, Consumer<Boolean> setter, boolean requiresRestart){
+        Supplier<Boolean> getter, Consumer<Boolean> setter, boolean requiresRestart) {
 
         JLabel label = createLabel(labelString, LIGHT_TEXT);
 
@@ -441,7 +441,7 @@ public class SettingsPanel{
 
         JCheckBox checkBox = new JCheckBox();
         checkBox.setSelected(getter.get());
-        if(requiresRestart){
+        if (requiresRestart) {
             checkBox.setToolTipText(l10n("settings.requires_restart.tooltip"));
         }
 
@@ -458,7 +458,7 @@ public class SettingsPanel{
     }
 
     private void addSlider(JPanel panel, GridBagConstraints gbcPanel, String labelString,
-        int min, int max, Supplier<Integer> getter, Consumer<Integer> setter){
+        int min, int max, Supplier<Integer> getter, Consumer<Integer> setter) {
 
         JLabel label = createLabel(labelString, LIGHT_TEXT);
 
@@ -476,7 +476,7 @@ public class SettingsPanel{
 
         slider.addChangeListener((ChangeEvent e) -> {
             JSlider source = (JSlider)e.getSource();
-            if(!source.getValueIsAdjusting()){
+            if (!source.getValueIsAdjusting()) {
                 int sliderValue = source.getValue();
                 setter.accept(sliderValue);
             }
@@ -490,7 +490,7 @@ public class SettingsPanel{
         panel.add(slider, gbcPanel);
     }
 
-    private JPanel createGeneralSettings(){
+    private JPanel createGeneralSettings() {
         JPanel generalSettingsPanel = new JPanel(new GridBagLayout());
         generalSettingsPanel.setBackground(color(BACKGROUND));
         generalSettingsPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
@@ -583,7 +583,7 @@ public class SettingsPanel{
 
             // Not a lot of fault tolerance here
             List<String> options = new ArrayList<>();
-            for(int i = 12; i <= 20; i++){
+            for (int i = 12; i <= 20; i++) {
                 options.add(String.valueOf(i));
             }
 
@@ -596,7 +596,7 @@ public class SettingsPanel{
 
             slider.addChangeListener((ChangeEvent e) -> {
                 JSlider source = (JSlider)e.getSource();
-                if(!source.getValueIsAdjusting()){
+                if (!source.getValueIsAdjusting()) {
                     int sliderValue = source.getValue();
 
                     settings.setFontSize(Integer.parseInt(options.get(sliderValue)));
@@ -640,7 +640,7 @@ public class SettingsPanel{
         return panelWrapper;
     }
 
-    private JPanel createDownloadSettings(){
+    private JPanel createDownloadSettings() {
         JPanel downloadSettingsPanel = new JPanel(new GridBagLayout());
         downloadSettingsPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         downloadSettingsPanel.setBackground(color(BACKGROUND));
@@ -679,19 +679,19 @@ public class SettingsPanel{
             downloadPathField.setBackground(color(TEXT_AREA_BACKGROUND));
             downloadPathField.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
 
-            downloadPathField.getDocument().addDocumentListener(new DocumentListener(){
+            downloadPathField.getDocument().addDocumentListener(new DocumentListener() {
                 @Override
-                public void changedUpdate(DocumentEvent e){
+                public void changedUpdate(DocumentEvent e) {
                     settings.setDownloadsPath(downloadPathField.getText());
                 }
 
                 @Override
-                public void removeUpdate(DocumentEvent e){
+                public void removeUpdate(DocumentEvent e) {
                     settings.setDownloadsPath(downloadPathField.getText());
                 }
 
                 @Override
-                public void insertUpdate(DocumentEvent e){
+                public void insertUpdate(DocumentEvent e) {
                     settings.setDownloadsPath(downloadPathField.getText());
                 }
             });
@@ -712,7 +712,7 @@ public class SettingsPanel{
                 JFileChooser fileChooser = new JFileChooser();
                 fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
                 int result = fileChooser.showOpenDialog(null);
-                if(result == JFileChooser.APPROVE_OPTION){
+                if (result == JFileChooser.APPROVE_OPTION) {
                     String selectedPath = fileChooser.getSelectedFile().getAbsolutePath();
                     downloadPathField.setText(selectedPath);
                 }
@@ -859,13 +859,13 @@ public class SettingsPanel{
         return panelWrapper;
     }
 
-    private JPanel createResolutionSettings(){
+    private JPanel createResolutionSettings() {
         JPanel resolutionPanel = new JPanel();
         resolutionPanel.setLayout(new BoxLayout(resolutionPanel, BoxLayout.Y_AXIS));
         resolutionPanel.setBackground(color(BACKGROUND));
 
         // TODO: weight the display order?
-        for(AbstractUrlFilter filter : settings.getUrlFilters()){
+        for (AbstractUrlFilter filter : settings.getUrlFilters()) {
             QualitySettings qualitySettings = filter.getQualitySettings();
 
             JPanel itemPanel = new JPanel(new GridBagLayout());
@@ -1026,14 +1026,14 @@ public class SettingsPanel{
         return panelWrapper;
     }
 
-    private JLabel createLabel(String text, UIColors uiColor){
+    private JLabel createLabel(String text, UIColors uiColor) {
         JLabel label = new JLabel(l10n(text));
         label.setForeground(color(uiColor));
 
         return label;
     }
 
-    private JButton createButton(String text, String tooltipText, UIColors backgroundColor, UIColors textColor, UIColors hoverColor){
+    private JButton createButton(String text, String tooltipText, UIColors backgroundColor, UIColors textColor, UIColors hoverColor) {
         CustomButton button = new CustomButton(l10n(text),
             color(hoverColor),
             color(hoverColor).brighter());
@@ -1048,20 +1048,20 @@ public class SettingsPanel{
         return button;
     }
 
-    private void customizeComboBox(JComboBox<String> component){
+    private void customizeComboBox(JComboBox<String> component) {
         component.setUI(new CustomComboBoxUI());
     }
 
-    private void customizeComponent(JComponent component, UIColors backgroundColor, UIColors textColor){
+    private void customizeComponent(JComponent component, UIColors backgroundColor, UIColors textColor) {
         component.setForeground(color(textColor));
         component.setBackground(color(backgroundColor));
 
-        if(component instanceof JCheckBox jCheckBox){
+        if (component instanceof JCheckBox jCheckBox) {
             jCheckBox.setUI(new CustomCheckBoxUI());
         }
     }
 
-    private void customizeSlider(JSlider slider, UIColors backgroundColor, UIColors textColor){
+    private void customizeSlider(JSlider slider, UIColors backgroundColor, UIColors textColor) {
         slider.setForeground(color(textColor));
         slider.setBackground(color(backgroundColor));
         slider.setOpaque(true);
@@ -1070,13 +1070,13 @@ public class SettingsPanel{
     }
 
     @Data
-    private class SettingsMenuEntry{
+    private class SettingsMenuEntry {
 
         private final String displayName;
         private final String icon;
         private final Supplier<JPanel> panel;
 
-        public SettingsMenuEntry(String translationKey, String iconIn, Supplier<JPanel> panelIn){
+        public SettingsMenuEntry(String translationKey, String iconIn, Supplier<JPanel> panelIn) {
             displayName = l10n(translationKey);
             icon = iconIn;
             panel = panelIn;

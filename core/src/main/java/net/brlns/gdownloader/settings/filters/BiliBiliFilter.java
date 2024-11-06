@@ -26,12 +26,12 @@ import lombok.EqualsAndHashCode;
 @Data
 @EqualsAndHashCode(callSuper = true)
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class BiliBiliFilter extends GenericFilter{
+public class BiliBiliFilter extends GenericFilter {
 
     public static final String ID = "bilibili";
 
     @SuppressWarnings("this-escape")
-    public BiliBiliFilter(){
+    public BiliBiliFilter() {
         setId(ID);
         setFilterName("BiliBili");
         setUrlRegex("^(https?:\\/\\/)?(www\\.)?bilibili\\.com(\\/.*)?$");

@@ -19,21 +19,21 @@ package net.brlns.gdownloader.util;
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-public class NoFallbackAvailableException extends Exception{
+public class NoFallbackAvailableException extends Exception {
 
-    public NoFallbackAvailableException(){
+    public NoFallbackAvailableException() {
         super();
     }
 
-    public NoFallbackAvailableException(String message){
+    public NoFallbackAvailableException(String message) {
         super(message);
     }
 
-    public NoFallbackAvailableException(String message, Throwable cause){
+    public NoFallbackAvailableException(String message, Throwable cause) {
         super(message, cause);
     }
 
-    public NoFallbackAvailableException(Throwable cause){
+    public NoFallbackAvailableException(Throwable cause) {
         super(cause);
     }
 }

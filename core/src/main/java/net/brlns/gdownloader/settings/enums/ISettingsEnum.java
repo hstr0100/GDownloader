@@ -23,29 +23,29 @@ import static net.brlns.gdownloader.Language.*;
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-public interface ISettingsEnum{
+public interface ISettingsEnum {
 
     String getTranslationKey();
 
-    default String getDisplayName(){
+    default String getDisplayName() {
         return l10n(getTranslationKey());
     }
 
-    public static <T extends Enum<T> & ISettingsEnum> T getEnumByIndex(Class<T> enumClass, int index){
+    public static <T extends Enum<T> & ISettingsEnum> T getEnumByIndex(Class<T> enumClass, int index) {
         T[] values = enumClass.getEnumConstants();
 
-        if(index < 0 || index >= values.length){
+        if (index < 0 || index >= values.length) {
             throw new IllegalArgumentException("Index out of bounds");
         }
 
         return values[index];
     }
 
-    public static <T extends Enum<T> & ISettingsEnum> int getEnumIndex(Class<T> enumClass, T valueToFind){
+    public static <T extends Enum<T> & ISettingsEnum> int getEnumIndex(Class<T> enumClass, T valueToFind) {
         T[] values = enumClass.getEnumConstants();
 
-        for(int i = 0; i < values.length; i++){
-            if(values[i] == valueToFind){
+        for (int i = 0; i < values.length; i++) {
+            if (values[i] == valueToFind) {
                 return i;
             }
         }
@@ -53,7 +53,7 @@ public interface ISettingsEnum{
         throw new IllegalArgumentException("Enum constant not found");
     }
 
-    public static <T extends Enum<T> & ISettingsEnum> String[] getDisplayNames(Class<T> enumClass){
+    public static <T extends Enum<T> & ISettingsEnum> String[] getDisplayNames(Class<T> enumClass) {
         T[] values = enumClass.getEnumConstants();
 
         return Arrays.stream(values)

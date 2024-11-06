@@ -24,7 +24,7 @@ import static net.brlns.gdownloader.Language.*;
  * @author Gabriel / hstr0100 / vertx010
  */
 @Getter
-public enum AudioBitrateEnum implements ISettingsEnum{
+public enum AudioBitrateEnum implements ISettingsEnum {
     // TODO some containers can go way higher, account for that
     NO_AUDIO(0, ""),
     BITRATE_192(192, "192kbps"),
@@ -34,18 +34,18 @@ public enum AudioBitrateEnum implements ISettingsEnum{
     private final int value;
     private final String displayName;
 
-    private AudioBitrateEnum(int valueIn, String displayNameIn){
+    private AudioBitrateEnum(int valueIn, String displayNameIn) {
         value = valueIn;
         displayName = displayNameIn;
     }
 
     @Override
-    public String getDisplayName(){
+    public String getDisplayName() {
         return this == NO_AUDIO ? l10n("enums.audio.no_audio") : displayName;
     }
 
     @Override
-    public String getTranslationKey(){
+    public String getTranslationKey() {
         return "";
     }
 }

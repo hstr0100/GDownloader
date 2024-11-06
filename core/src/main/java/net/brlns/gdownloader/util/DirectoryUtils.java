@@ -31,37 +31,37 @@ import lombok.extern.slf4j.Slf4j;
  * @author Gabriel / hstr0100 / vertx010
  */
 @Slf4j
-public class DirectoryUtils{
+public class DirectoryUtils {
 
-    public static boolean deleteRecursively(Path directory){
-        if(!Files.exists(directory)){
+    public static boolean deleteRecursively(Path directory) {
+        if (!Files.exists(directory)) {
             return true;
         }
 
-        try(Stream<Path> dirStream = Files.walk(directory)){
+        try (Stream<Path> dirStream = Files.walk(directory)) {
             boolean success = dirStream
                 .sorted(Comparator.reverseOrder()) // Ensure deeper directories are deleted first
                 .allMatch(file -> {
-                    try{
+                    try {
                         return Files.deleteIfExists(file);
-                    }catch(IOException e){
+                    } catch (IOException e) {
                         log.error("Failed to delete: {}", file, e);
                         return false;
                     }
                 });
 
             return success;
-        }catch(IOException e){
+        } catch (IOException e) {
             log.error("Failed to delete: {}", directory, e);
             return false;
         }
     }
 
-    public static File getOrCreate(String dir, String... path){
+    public static File getOrCreate(String dir, String... path) {
         return getOrCreate(new File(dir), path);
     }
 
-    public static File getOrCreate(File dir, String... path){
+    public static File getOrCreate(File dir, String... path) {
         File file = new File(dir, String.join(File.separator, path));
         file.mkdirs();
 
@@ -71,9 +71,9 @@ public class DirectoryUtils{
     /**
      * Shenanigans to deal with heavily fail-prone filesystem operations on Windows
      */
-    private static int getHighestDirectoryNumber(String prefix, Path workDir){
+    private static int getHighestDirectoryNumber(String prefix, Path workDir) {
         List<String> directoryNames = getDirectoryNames(prefix, workDir);
-        if(directoryNames.isEmpty()){
+        if (directoryNames.isEmpty()) {
             return 0;
         }
 
@@ -83,16 +83,16 @@ public class DirectoryUtils{
             .orElse(0);
     }
 
-    public static Path getNewestDirectoryEntry(String prefix, Path workDir){
+    public static Path getNewestDirectoryEntry(String prefix, Path workDir) {
         int highest = getHighestDirectoryNumber(prefix, workDir);
 
         return Paths.get(workDir.toString(), prefix + highest);
     }
 
-    public static void deleteOlderDirectoryEntries(String prefix, Path workDir, int numberToDelete){
+    public static void deleteOlderDirectoryEntries(String prefix, Path workDir, int numberToDelete) {
         List<String> directoryNames = getDirectoryNames(prefix, workDir);
 
-        if(directoryNames.size() <= numberToDelete){
+        if (directoryNames.size() <= numberToDelete) {
             log.debug("No older directories to delete {} <= {}", directoryNames.size(), numberToDelete);
             return;
         }
@@ -101,28 +101,28 @@ public class DirectoryUtils{
 
         int highest = getHighestDirectoryNumber(prefix, workDir);
 
-        for(int i = 0; i < directoryNames.size() - numberToDelete; i++){
+        for (int i = 0; i < directoryNames.size() - numberToDelete; i++) {
             int number = extractNumber(directoryNames.get(i));
-            if(number < highest){
+            if (number < highest) {
                 deleteRecursively(
                     Paths.get(workDir.toString(), directoryNames.get(i)));
             }
         }
     }
 
-    public static Path createNewDirectoryEntry(String prefix, Path workDir) throws IOException{
+    public static Path createNewDirectoryEntry(String prefix, Path workDir) throws IOException {
         int highest = getHighestDirectoryNumber(prefix, workDir);
 
         return Files.createDirectory(Paths.get(workDir.toString(), prefix + (highest + 1)));
     }
 
-    private static List<String> getDirectoryNames(String prefix, Path workDir){
+    private static List<String> getDirectoryNames(String prefix, Path workDir) {
         List<String> directoryNames = new ArrayList<>();
 
         File dir = workDir.toFile();
-        if(dir.isDirectory()){
-            for(File file : dir.listFiles()){
-                if(file.isDirectory() && file.getName().startsWith(prefix)){
+        if (dir.isDirectory()) {
+            for (File file : dir.listFiles()) {
+                if (file.isDirectory() && file.getName().startsWith(prefix)) {
                     directoryNames.add(file.getName());
                 }
             }
@@ -131,7 +131,7 @@ public class DirectoryUtils{
         return directoryNames;
     }
 
-    private static int extractNumber(String directoryName){
+    private static int extractNumber(String directoryName) {
         return Integer.parseInt(directoryName.replaceAll("\\D+", ""));
     }
 

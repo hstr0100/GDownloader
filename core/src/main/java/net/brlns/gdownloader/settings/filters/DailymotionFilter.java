@@ -26,12 +26,12 @@ import lombok.EqualsAndHashCode;
 @Data
 @EqualsAndHashCode(callSuper = true)
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class DailymotionFilter extends GenericFilter{
+public class DailymotionFilter extends GenericFilter {
 
     public static final String ID = "dailymotion";
 
     @SuppressWarnings("this-escape")
-    public DailymotionFilter(){
+    public DailymotionFilter() {
         setId(ID);
         setFilterName("Dailymotion");
         setUrlRegex("^(https?:\\/\\/)?(www\\.)?dailymotion\\.com(\\/.*)?$");

@@ -27,45 +27,45 @@ import net.brlns.gdownloader.util.Nullable;
  * @author Gabriel / hstr0100 / vertx010
  */
 @Slf4j
-public class SelfUpdater extends AbstractGitUpdater{
+public class SelfUpdater extends AbstractGitUpdater {
 
     private static final String USER = "hstr0100";
     private static final String REPO = "GDownloader";
 
-    public SelfUpdater(GDownloader mainIn){
+    public SelfUpdater(GDownloader mainIn) {
         super(mainIn);
     }
 
     @Override
-    protected String getUser(){
+    protected String getUser() {
         return USER;
     }
 
     @Override
-    protected String getRepo(){
+    protected String getRepo() {
         return REPO;
     }
 
     @Override
     @Nullable
-    public String getBinaryName(){
+    public String getBinaryName() {
         return ArchVersionEnum.getArchVersion().getSelfBinary();
     }
 
     @Nullable
     @Override
-    protected String getRuntimeBinaryName(){
+    protected String getRuntimeBinaryName() {
         return "gdownloader_ota.zip";
     }
 
     @Nullable
     @Override
-    protected String getLockFileName(){
+    protected String getLockFileName() {
         return "ota_lock.txt";
     }
 
     @Override
-    protected File doDownload(String url, File workDir) throws Exception{
+    protected File doDownload(String url, File workDir) throws Exception {
         String fileName = getFilenameFromUrl(url);
 
         File zipPath = new File(workDir, fileName);
@@ -82,17 +82,17 @@ public class SelfUpdater extends AbstractGitUpdater{
     }
 
     @Override
-    public boolean isSupported(){
+    public boolean isSupported() {
         return !GDownloader.isFromJar();
     }
 
     @Override
-    protected void setExecutablePath(File executablePath){
+    protected void setExecutablePath(File executablePath) {
         // Not used
     }
 
     @Override
-    public String getName(){
+    public String getName() {
         return "GDownloader";
     }
 

@@ -4,10 +4,10 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class UrlFilterTest{
+class UrlFilterTest {
 
     @Test
-    void testYoutube(){
+    void testYoutube() {
         YoutubeFilter filter = new YoutubeFilter();
         assertTrue(filter.matches("youtube.com/watch?v=dQw4w9WgXcQ"));
         assertTrue(filter.matches("https://www.youtube.com/watch?v=dQw4w9WgXcQ"));
@@ -22,7 +22,7 @@ class UrlFilterTest{
     }
 
     @Test
-    void testYoutubePlaylist(){
+    void testYoutubePlaylist() {
         YoutubePlaylistFilter filter = new YoutubePlaylistFilter();
         assertTrue(filter.matches("https://www.youtube.com/playlist?list=PLFgquLnL59alCl_2TQvOiD5Vgm1hCaGSI"));
         assertTrue(filter.matches("https://www.youtube.com/watch?v=dQw4w9WgXcQ&list=PLFgquLnL59alCl_2TQvOiD5Vgm1hCaGSI"));
@@ -32,7 +32,7 @@ class UrlFilterTest{
     }
 
     @Test
-    void testTwitch(){
+    void testTwitch() {
         TwitchFilter filter = new TwitchFilter();
         assertTrue(filter.matches("https://www.twitch.tv/somechannel"));
         assertTrue(filter.matches("http://twitch.tv/somechannel"));
@@ -40,7 +40,7 @@ class UrlFilterTest{
     }
 
     @Test
-    void testFacebook(){
+    void testFacebook() {
         FacebookFilter filter = new FacebookFilter();
         assertTrue(filter.matches("https://www.facebook.com/somepage"));
         assertTrue(filter.matches("http://facebook.com/somepage"));
@@ -48,7 +48,7 @@ class UrlFilterTest{
     }
 
     @Test
-    void testX(){
+    void testX() {
         XFilter filter = new XFilter();
         assertTrue(filter.matches("https://www.twitter.com/someuser"));
         assertTrue(filter.matches("https://twitter.com/someuser"));
@@ -58,7 +58,7 @@ class UrlFilterTest{
     }
 
     @Test
-    void testCrunchyroll(){
+    void testCrunchyroll() {
         CrunchyrollFilter filter = new CrunchyrollFilter();
         assertTrue(filter.matches("https://www.crunchyroll.com/some-show"));
         assertTrue(filter.matches("http://crunchyroll.com/some-show"));
@@ -66,7 +66,7 @@ class UrlFilterTest{
     }
 
     @Test
-    void testDropout(){
+    void testDropout() {
         DropoutFilter filter = new DropoutFilter();
         assertTrue(filter.matches("dropout.tv/some-show"));
         assertTrue(filter.matches("https://dropout.tv/some-show"));
@@ -75,7 +75,7 @@ class UrlFilterTest{
     }
 
     @Test
-    void testReddit(){
+    void testReddit() {
         RedditFilter filter = new RedditFilter();
         assertTrue(filter.matches("reddit.com/r/somesubreddit"));
         assertTrue(filter.matches("www.reddit.com/r/somesubreddit"));
@@ -86,21 +86,21 @@ class UrlFilterTest{
     }
 
     @Test
-    void testGeneric(){
+    void testGeneric() {
         GenericFilter filter = new GenericFilter();
         assertFalse(filter.matches("https://www.youtube.com/watch?v=dQw4w9WgXcQ"));
         assertFalse(filter.matches("https://www.example.com"));
     }
 
     @Test
-    void testIsYoutubeChannel(){
+    void testIsYoutubeChannel() {
         assertTrue(YoutubeFilter.isYoutubeChannel("https://www.youtube.com/@somechannel"));
         assertTrue(YoutubeFilter.isYoutubeChannel("https://www.youtube.com/channel/UC123456"));
         assertFalse(YoutubeFilter.isYoutubeChannel("https://www.youtube.com/watch?v=dQw4w9WgXcQ"));
     }
 
     @Test
-    void testEdgeCases(){
+    void testEdgeCases() {
         YoutubeFilter filter = new YoutubeFilter();
         assertFalse(filter.matches(""));
 

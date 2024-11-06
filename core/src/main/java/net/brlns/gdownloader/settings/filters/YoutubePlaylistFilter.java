@@ -33,12 +33,12 @@ import static net.brlns.gdownloader.settings.enums.DownloadTypeEnum.*;
 @Data
 @EqualsAndHashCode(callSuper = true)
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class YoutubePlaylistFilter extends YoutubeFilter{
+public class YoutubePlaylistFilter extends YoutubeFilter {
 
     public static final String ID = "youtube_playlist";
 
     @SuppressWarnings("this-escape")
-    public YoutubePlaylistFilter(){
+    public YoutubePlaylistFilter() {
         setId(ID);
         setFilterName("Youtube Playlists");
         setUrlRegex("^(https?:\\/\\/)?(www\\.)?youtube\\.com.*(list=|\\/playlist).*$");
@@ -49,10 +49,10 @@ public class YoutubePlaylistFilter extends YoutubeFilter{
 
     @JsonIgnore
     @Override
-    protected List<String> buildArguments(DownloadTypeEnum typeEnum, GDownloader main, File savePath){
+    protected List<String> buildArguments(DownloadTypeEnum typeEnum, GDownloader main, File savePath) {
         List<String> arguments = super.buildArguments(typeEnum, main, savePath);
 
-        switch(typeEnum){
+        switch (typeEnum) {
             case ALL -> {
                 arguments.add("--yes-playlist");
             }

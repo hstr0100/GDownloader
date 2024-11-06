@@ -32,25 +32,25 @@ import static net.brlns.gdownloader.ui.themes.UIColors.*;
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-public class CustomScrollBarUI extends BasicScrollBarUI{
+public class CustomScrollBarUI extends BasicScrollBarUI {
 
     @Override
-    protected void configureScrollBarColors(){
+    protected void configureScrollBarColors() {
         thumbColor = color(SCROLL_BAR_FOREGROUND);
         trackColor = color(BACKGROUND);
     }
 
     @Override
-    protected JButton createDecreaseButton(int orientation){
+    protected JButton createDecreaseButton(int orientation) {
         return createDummyButton();
     }
 
     @Override
-    protected JButton createIncreaseButton(int orientation){
+    protected JButton createIncreaseButton(int orientation) {
         return createDummyButton();
     }
 
-    private JButton createDummyButton(){
+    private JButton createDummyButton() {
         JButton dummyButton = new JButton();
         dummyButton.setPreferredSize(new Dimension(0, 0));
         dummyButton.setMinimumSize(new Dimension(0, 0));
@@ -60,8 +60,8 @@ public class CustomScrollBarUI extends BasicScrollBarUI{
     }
 
     @Override
-    protected void paintThumb(Graphics g, JComponent c, Rectangle thumbBounds){
-        if(thumbBounds.isEmpty() || !scrollbar.isEnabled()){
+    protected void paintThumb(Graphics g, JComponent c, Rectangle thumbBounds) {
+        if (thumbBounds.isEmpty() || !scrollbar.isEnabled()) {
             return;
         }
 
@@ -75,8 +75,8 @@ public class CustomScrollBarUI extends BasicScrollBarUI{
     }
 
     @Override
-    protected void paintTrack(Graphics g, JComponent c, Rectangle trackBounds){
-        if(trackBounds.isEmpty() || !scrollbar.isEnabled()){
+    protected void paintTrack(Graphics g, JComponent c, Rectangle trackBounds) {
+        if (trackBounds.isEmpty() || !scrollbar.isEnabled()) {
             return;
         }
 
@@ -90,15 +90,15 @@ public class CustomScrollBarUI extends BasicScrollBarUI{
     }
 
     @Override
-    protected Dimension getMinimumThumbSize(){
+    protected Dimension getMinimumThumbSize() {
         return new Dimension(8, 8);
     }
 
     @Override
-    public Dimension getPreferredSize(JComponent c){
-        if(scrollbar.getOrientation() == JScrollBar.VERTICAL){
+    public Dimension getPreferredSize(JComponent c) {
+        if (scrollbar.getOrientation() == JScrollBar.VERTICAL) {
             return new Dimension(8, super.getPreferredSize(c).height);
-        }else{
+        } else {
             return new Dimension(super.getPreferredSize(c).width, 8);
         }
     }

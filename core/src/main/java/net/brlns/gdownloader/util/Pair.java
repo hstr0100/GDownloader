@@ -22,15 +22,15 @@ import lombok.Data;
  * @author Gabriel / hstr0100 / vertx010
  */
 @Data
-public class Pair<K, V>{
+public class Pair<K, V> {
 
     private K key;
     private V value;
 
-    public Pair(){
+    public Pair() {
     }
 
-    public Pair(K keyIn, V valueIn){
+    public Pair(K keyIn, V valueIn) {
         key = keyIn;
         value = valueIn;
     }

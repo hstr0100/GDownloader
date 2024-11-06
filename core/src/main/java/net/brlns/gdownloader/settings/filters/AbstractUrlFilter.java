@@ -65,33 +65,33 @@ import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
 
     @JsonSubTypes.Type(value = GenericFilter.class, name = GenericFilter.ID)
 })
-public abstract class AbstractUrlFilter{
+public abstract class AbstractUrlFilter {
 
     @JsonIgnore
     private static final List<Class<?>> DEFAULTS = new ArrayList<>();
 
-    static{
+    static {
         JsonSubTypes jsonSubTypes = AbstractUrlFilter.class.getAnnotation(JsonSubTypes.class);
 
-        if(jsonSubTypes != null){
+        if (jsonSubTypes != null) {
             JsonSubTypes.Type[] types = jsonSubTypes.value();
 
-            for(JsonSubTypes.Type type : types){
+            for (JsonSubTypes.Type type : types) {
                 DEFAULTS.add(type.value());
             }
         }
     }
 
     @JsonIgnore
-    public static List<AbstractUrlFilter> getDefaultUrlFilters(){
+    public static List<AbstractUrlFilter> getDefaultUrlFilters() {
         List<AbstractUrlFilter> filters = new ArrayList<>();
 
-        for(Class<?> filterClass : DEFAULTS){
-            try{
+        for (Class<?> filterClass : DEFAULTS) {
+            try {
                 AbstractUrlFilter filter = (AbstractUrlFilter)filterClass.getDeclaredConstructor().newInstance();
 
                 filters.add(filter);
-            }catch(Exception e){
+            } catch (Exception e) {
                 log.error("Error instantiating class.", e);
             }
         }
@@ -147,16 +147,16 @@ public abstract class AbstractUrlFilter{
     @JsonProperty("QualitySettings")
     private QualitySettings qualitySettings = QualitySettings.builder().build();
 
-    public AbstractUrlFilter(){
-        for(DownloadTypeEnum downloadType : DownloadTypeEnum.values()){
+    public AbstractUrlFilter() {
+        for (DownloadTypeEnum downloadType : DownloadTypeEnum.values()) {
             extraYtDlpArguments.put(downloadType, new ArrayList<>());
         }
     }
 
     @JsonIgnore
-    public String getDisplayName(){
+    public String getDisplayName() {
         String name = getFilterName();
-        if(name.isEmpty()){
+        if (name.isEmpty()) {
             log.error("Filter name was empty for class: {}", getClass());
         }
 
@@ -167,12 +167,12 @@ public abstract class AbstractUrlFilter{
     private Pattern _cachedPattern;
 
     @JsonIgnore
-    public boolean matches(String url){
-        if(urlRegex.isEmpty()){
+    public boolean matches(String url) {
+        if (urlRegex.isEmpty()) {
             return false;
         }
 
-        if(_cachedPattern == null){
+        if (_cachedPattern == null) {
             _cachedPattern = Pattern.compile(urlRegex);
         }
 
@@ -180,12 +180,12 @@ public abstract class AbstractUrlFilter{
     }
 
     @JsonIgnore
-    public List<String> getArguments(DownloadTypeEnum typeEnum, GDownloader main, File savePath){
+    public List<String> getArguments(DownloadTypeEnum typeEnum, GDownloader main, File savePath) {
         List<String> arguments = new ArrayList<>();
 
         arguments.addAll(buildArguments(typeEnum, main, savePath));
 
-        if(extraYtDlpArguments.containsKey(typeEnum)){
+        if (extraYtDlpArguments.containsKey(typeEnum)) {
             arguments.addAll(extraYtDlpArguments.get(typeEnum));
         }
 

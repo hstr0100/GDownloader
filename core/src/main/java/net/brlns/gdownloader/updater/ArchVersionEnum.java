@@ -25,7 +25,7 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Getter
 @Slf4j
-public enum ArchVersionEnum{
+public enum ArchVersionEnum {
     MAC_X86("yt-dlp_macos_legacy", null, null, OS.MAC),
     MAC_X64("yt-dlp_macos", null, null, OS.MAC),
     WINDOWS_X86("yt-dlp_x86.exe", null, null, OS.WINDOWS),
@@ -46,7 +46,7 @@ public enum ArchVersionEnum{
         String ytDlpBinaryIn,
         String ffmpegBinaryIn,
         String selfBinaryIn,
-        OS osIn){
+        OS osIn) {
 
         ytDlpBinary = ytDlpBinaryIn;
         ffmpegBinary = ffmpegBinaryIn;
@@ -55,39 +55,39 @@ public enum ArchVersionEnum{
         os = osIn;
     }
 
-    public static ArchVersionEnum getArchVersion(){
+    public static ArchVersionEnum getArchVersion() {
         ArchVersionEnum archVersion = null;
 
         String arch = System.getProperty("os.arch").toLowerCase(Locale.ENGLISH);
         String os = System.getProperty("os.name").toLowerCase(Locale.ENGLISH);
 
-        switch(arch){
+        switch (arch) {
             case "x86", "i386" -> {
-                if(os.contains("mac")){
+                if (os.contains("mac")) {
                     archVersion = ArchVersionEnum.MAC_X86;
-                }else if(os.contains("win")){
+                } else if (os.contains("win")) {
                     archVersion = ArchVersionEnum.WINDOWS_X86;
                 }
             }
 
             case "amd64", "x86_64" -> {
-                if(os.contains("nux")){
+                if (os.contains("nux")) {
                     archVersion = ArchVersionEnum.LINUX_X64;
-                }else if(os.contains("mac")){
+                } else if (os.contains("mac")) {
                     archVersion = ArchVersionEnum.MAC_X64;
-                }else if(os.contains("win")){
+                } else if (os.contains("win")) {
                     archVersion = ArchVersionEnum.WINDOWS_X64;
                 }
             }
 
             case "arm", "aarch32" -> {
-                if(os.contains("nux")){
+                if (os.contains("nux")) {
                     archVersion = ArchVersionEnum.LINUX_ARM;
                 }
             }
 
             case "arm64", "aarch64" -> {
-                if(os.contains("nux")){
+                if (os.contains("nux")) {
                     archVersion = ArchVersionEnum.LINUX_ARM64;
                 }
             }
@@ -97,14 +97,14 @@ public enum ArchVersionEnum{
             }
         }
 
-        if(archVersion == null){
+        if (archVersion == null) {
             throw new UnsupportedOperationException("Unsupported operating system: " + os + " " + arch);
         }
 
         return archVersion;
     }
 
-    public static enum OS{
+    public static enum OS {
         WINDOWS,
         LINUX,
         MAC;

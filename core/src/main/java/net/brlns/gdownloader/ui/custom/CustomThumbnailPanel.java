@@ -23,7 +23,7 @@ import javax.swing.JPanel;
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-public class CustomThumbnailPanel extends JPanel{
+public class CustomThumbnailPanel extends JPanel {
 
     private static final Font FONT = new Font("TimesRoman", Font.PLAIN, 16);
 
@@ -32,17 +32,17 @@ public class CustomThumbnailPanel extends JPanel{
     private String durationText;
 
     @SuppressWarnings("this-escape")
-    public CustomThumbnailPanel(){
+    public CustomThumbnailPanel() {
         setLayout(new BorderLayout());
     }
 
-    public void setImage(BufferedImage imageIn){
+    public void setImage(BufferedImage imageIn) {
         image = imageIn;
 
         repaint();
     }
 
-    public void setImageAndDuration(BufferedImage imageIn, long durationIn){
+    public void setImageAndDuration(BufferedImage imageIn, long durationIn) {
         removeAll();
 
         image = imageIn;
@@ -57,10 +57,10 @@ public class CustomThumbnailPanel extends JPanel{
     }
 
     @Override
-    protected void paintComponent(Graphics g){
+    protected void paintComponent(Graphics g) {
         super.paintComponent(g);
 
-        if(image != null){
+        if (image != null) {
             Graphics2D g2d = (Graphics2D)g.create();
 
             g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
@@ -85,7 +85,7 @@ public class CustomThumbnailPanel extends JPanel{
 
             g2d.drawImage(image, x, y, scaledWidth, scaledHeight, this);
 
-            if(durationText != null){
+            if (durationText != null) {
                 g2d.setFont(FONT);
                 g2d.setColor(Color.WHITE);
 

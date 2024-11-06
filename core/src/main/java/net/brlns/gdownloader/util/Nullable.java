@@ -31,6 +31,6 @@ import java.lang.annotation.Target;
     ElementType.PARAMETER,
     ElementType.LOCAL_VARIABLE
 })
-public @interface Nullable{
+public @interface Nullable {
 
 }

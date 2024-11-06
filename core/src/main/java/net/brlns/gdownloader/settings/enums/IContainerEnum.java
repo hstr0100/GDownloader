@@ -21,11 +21,11 @@ import java.util.Arrays;
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-public interface IContainerEnum{
+public interface IContainerEnum {
 
     String getValue();
 
-    public static <T extends Enum<T> & IContainerEnum> String[] getContainerValues(Class<T> enumClass){
+    public static <T extends Enum<T> & IContainerEnum> String[] getContainerValues(Class<T> enumClass) {
         T[] values = enumClass.getEnumConstants();
 
         return Arrays.stream(values)

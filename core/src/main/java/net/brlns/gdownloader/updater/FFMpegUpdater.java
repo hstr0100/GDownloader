@@ -31,45 +31,45 @@ import net.brlns.gdownloader.util.Nullable;
  * @author Gabriel / hstr0100 / vertx010
  */
 @Slf4j
-public class FFMpegUpdater extends AbstractGitUpdater{
+public class FFMpegUpdater extends AbstractGitUpdater {
 
     private static final String USER = "GyanD";
     private static final String REPO = "codexffmpeg";
 
-    public FFMpegUpdater(GDownloader mainIn){
+    public FFMpegUpdater(GDownloader mainIn) {
         super(mainIn);
     }
 
     @Override
-    protected String getUser(){
+    protected String getUser() {
         return USER;
     }
 
     @Override
-    protected String getRepo(){
+    protected String getRepo() {
         return REPO;
     }
 
     @Override
     @Nullable
-    public String getBinaryName(){
+    public String getBinaryName() {
         return ArchVersionEnum.getArchVersion().getFfmpegBinary();
     }
 
     @Nullable
     @Override
-    protected String getRuntimeBinaryName(){
+    protected String getRuntimeBinaryName() {
         return "ffmpeg";
     }
 
     @Nullable
     @Override
-    protected String getLockFileName(){
+    protected String getLockFileName() {
         return "ffmpeg_lock.txt";
     }
 
     @Override
-    protected File doDownload(String url, File workDir) throws Exception{
+    protected File doDownload(String url, File workDir) throws Exception {
         String fileName = getFilenameFromUrl(url);
 
         File zipPath = new File(workDir, fileName);
@@ -81,7 +81,7 @@ public class FFMpegUpdater extends AbstractGitUpdater{
         File outputFile = new File(workDir, getRuntimeBinaryName());
         log.info("Final path {}", outputFile);
 
-        try{
+        try {
             downloadFile(url, zipPath);
 
             notifyProgress(UpdateStatus.UNPACKING, 0);
@@ -94,8 +94,8 @@ public class FFMpegUpdater extends AbstractGitUpdater{
 
             Files.move(sourcePath, outputFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
             notifyProgress(UpdateStatus.UNPACKING, 100);
-        }finally{
-            if(zipPath.exists()){
+        } finally {
+            if (zipPath.exists()) {
                 zipPath.delete();
             }
 
@@ -106,17 +106,17 @@ public class FFMpegUpdater extends AbstractGitUpdater{
     }
 
     @Override
-    public boolean isSupported(){
+    public boolean isSupported() {
         return GDownloader.isWindows();
     }
 
     @Override
-    protected void setExecutablePath(File executablePath){
+    protected void setExecutablePath(File executablePath) {
         main.getDownloadManager().setFfmpegPath(executablePath);
     }
 
     @Override
-    public String getName(){
+    public String getName() {
         return "FFMPEG";
     }
 

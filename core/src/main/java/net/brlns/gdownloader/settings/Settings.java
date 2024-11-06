@@ -38,7 +38,7 @@ import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
 @Data
 @Slf4j
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class Settings{
+public class Settings {
 
     @JsonProperty("ConfigVersion")
     private int configVersion = 20;
@@ -158,18 +158,18 @@ public class Settings{
     @JsonProperty("UrlFilters")
     private List<AbstractUrlFilter> urlFilters = new ArrayList<>();
 
-    public Settings(){
+    public Settings() {
         urlFilters.addAll(AbstractUrlFilter.getDefaultUrlFilters());
     }
 
     @JsonIgnore
     @SuppressWarnings("deprecation")
-    public void doMigration(){
+    public void doMigration() {
         List<AbstractUrlFilter> defaultFilters = AbstractUrlFilter.getDefaultUrlFilters();
 
-        if(urlFilters.isEmpty()){
+        if (urlFilters.isEmpty()) {
             urlFilters.addAll(defaultFilters);
-        }else{
+        } else {
             defaultFilters.stream()
                 .filter(
                     filter -> urlFilters.stream()
@@ -178,7 +178,7 @@ public class Settings{
                 .forEach(urlFilters::add);
         }
 
-        for(Map.Entry<WebFilterEnum, QualitySettings> entry : qualitySettings.entrySet()){
+        for (Map.Entry<WebFilterEnum, QualitySettings> entry : qualitySettings.entrySet()) {
             WebFilterEnum key = entry.getKey();
             QualitySettings value = entry.getValue();
 
@@ -195,7 +195,7 @@ public class Settings{
         // Broken in Chromium
         // https://github.com/yt-dlp/yt-dlp/issues/7271
         // https://github.com/yt-dlp/yt-dlp/issues/10927
-        if(isReadCookies() && getBrowser() == BrowserEnum.FIREFOX){
+        if (isReadCookies() && getBrowser() == BrowserEnum.FIREFOX) {
             setReadCookiesFromBrowser(true);
         }
     }

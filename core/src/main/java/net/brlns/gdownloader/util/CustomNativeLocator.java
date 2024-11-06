@@ -10,10 +10,10 @@ import java.util.List;
  * Sourced from
  * https://github.com/beryx-gist/jnativehook-modular-demo/blob/main/src/main/java/org/jnativehook/example/CustomLocator.java
  */
-public class CustomNativeLocator implements NativeLibraryLocator{
+public class CustomNativeLocator implements NativeLibraryLocator {
 
     @Override
-    public Iterator<File> getLibraries(){
+    public Iterator<File> getLibraries() {
         String libName = System.getProperty("jnativehook.lib.name", "JNativeHook");
 
         String libNativeArch = NativeSystem.getArchitecture().toString().toLowerCase();
@@ -25,7 +25,7 @@ public class CustomNativeLocator implements NativeLibraryLocator{
         String libFilePath = baseDir + "/" + NativeSystem.getFamily().toString().toLowerCase() + '/' + libNativeArch + '/' + libNativeName;
 
         File libFile = new File(libFilePath);
-        if(!libFile.exists()){
+        if (!libFile.exists()) {
             throw new RuntimeException("Unable to locate JNI library at " + libFile.getPath() + "!\n");
         }
 

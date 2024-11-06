@@ -26,12 +26,12 @@ import lombok.EqualsAndHashCode;
 @Data
 @EqualsAndHashCode(callSuper = true)
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class ImgurFilter extends GenericFilter{
+public class ImgurFilter extends GenericFilter {
 
     public static final String ID = "imgur";
 
     @SuppressWarnings("this-escape")
-    public ImgurFilter(){
+    public ImgurFilter() {
         setId(ID);
         setFilterName("Imgur");
         setUrlRegex("^(https?:\\/\\/)?(www\\.)?imgur\\.com(\\/.*)?$");

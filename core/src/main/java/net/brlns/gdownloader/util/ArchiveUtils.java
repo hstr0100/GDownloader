@@ -31,33 +31,34 @@ import java.util.zip.ZipInputStream;
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-public class ArchiveUtils{
+public class ArchiveUtils {
 
-    public static void inflateZip(File file, Path destDir, boolean removeRoot, DoubleConsumer progressCallback) throws IOException{
-        if(Files.notExists(destDir)){
+    public static void inflateZip(File file, Path destDir, boolean removeRoot, DoubleConsumer progressCallback) throws IOException {
+        if (Files.notExists(destDir)) {
             Files.createDirectories(destDir);
         }
 
         int totalEntries = countEntries(file);
 
-        try(ZipInputStream zipIn = new ZipInputStream(new FileInputStream(file))){
+        try (
+            ZipInputStream zipIn = new ZipInputStream(new FileInputStream(file))) {
             ZipEntry entry;
             String topDirectoryName = null;
 
             int extractedEntries = 0;
 
-            while((entry = zipIn.getNextEntry()) != null){
-                if(topDirectoryName == null){
+            while ((entry = zipIn.getNextEntry()) != null) {
+                if (topDirectoryName == null) {
                     topDirectoryName = getTopDirectoryName(entry.getName());
 
-                    if(topDirectoryName == null){
+                    if (topDirectoryName == null) {
                         extractEntry(zipIn, entry.getName(), destDir);
                     }
-                }else{
+                } else {
                     String entryName = entry.getName();
                     entryName = entryName.replace("\\", "/");
 
-                    if(entryName.startsWith(topDirectoryName + "/") && removeRoot){
+                    if (entryName.startsWith(topDirectoryName + "/") && removeRoot) {
                         entryName = entryName.substring(topDirectoryName.length() + 1);
                     }
 
@@ -73,35 +74,35 @@ public class ArchiveUtils{
         }
     }
 
-    private static int countEntries(File file) throws IOException{
-        try(ZipFile zipFile = new ZipFile(file)){
+    private static int countEntries(File file) throws IOException {
+        try (ZipFile zipFile = new ZipFile(file)) {
             return zipFile.size();
         }
     }
 
     @Nullable
-    private static String getTopDirectoryName(String entryName){
+    private static String getTopDirectoryName(String entryName) {
         int separatorIndex = entryName.indexOf('/');
-        if(separatorIndex != -1){
+        if (separatorIndex != -1) {
             return entryName.substring(0, separatorIndex);
         }
 
         return null;
     }
 
-    private static void extractEntry(InputStream zipIn, String entryName, Path outputDir) throws IOException{
+    private static void extractEntry(InputStream zipIn, String entryName, Path outputDir) throws IOException {
         entryName = entryName.replace("\\", "/");
 
         Path outFile = outputDir.resolve(entryName).normalize();
-        if(!outFile.startsWith(outputDir)){
+        if (!outFile.startsWith(outputDir)) {
             throw new IOException("Zip entry is outside of the output dir: " + entryName);
         }
 
-        if(entryName.endsWith("/")){
+        if (entryName.endsWith("/")) {
             Files.createDirectories(outFile);
-        }else{
+        } else {
             Path parentDir = outFile.getParent();
-            if(parentDir != null && Files.notExists(parentDir)){
+            if (parentDir != null && Files.notExists(parentDir)) {
                 Files.createDirectories(parentDir);
             }
 

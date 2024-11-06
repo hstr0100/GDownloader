@@ -27,12 +27,12 @@ import lombok.EqualsAndHashCode;
 @Data
 @EqualsAndHashCode(callSuper = true)
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class CrunchyrollFilter extends GenericFilter{
+public class CrunchyrollFilter extends GenericFilter {
 
     public static final String ID = "crunchyroll";
 
     @SuppressWarnings("this-escape")
-    public CrunchyrollFilter(){
+    public CrunchyrollFilter() {
         setId(ID);
         setFilterName("Crunchyroll");
         setUrlRegex("^(https?:\\/\\/)?(www\\.)?crunchyroll\\.com(\\/.*)?$");
@@ -41,7 +41,7 @@ public class CrunchyrollFilter extends GenericFilter{
 
     @JsonIgnore
     @Override
-    public boolean areCookiesRequired(){
+    public boolean areCookiesRequired() {
         return true;
     }
 }

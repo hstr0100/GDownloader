@@ -26,12 +26,12 @@ import lombok.EqualsAndHashCode;
 @Data
 @EqualsAndHashCode(callSuper = true)
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class VimeoFilter extends GenericFilter{
+public class VimeoFilter extends GenericFilter {
 
     public static final String ID = "vimeo";
 
     @SuppressWarnings("this-escape")
-    public VimeoFilter(){
+    public VimeoFilter() {
         setId(ID);
         setFilterName("Vimeo");
         setUrlRegex("^(https?:\\/\\/)?(www\\.)?vimeo\\.com(\\/.*)?$");

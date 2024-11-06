@@ -27,12 +27,12 @@ import lombok.EqualsAndHashCode;
 @Data
 @EqualsAndHashCode(callSuper = true)
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class DropoutFilter extends GenericFilter{
+public class DropoutFilter extends GenericFilter {
 
     public static final String ID = "dropout";
 
     @SuppressWarnings("this-escape")
-    public DropoutFilter(){
+    public DropoutFilter() {
         setId(ID);
         setFilterName("Dropout");
         setUrlRegex("^(https?:\\/\\/)?(www\\.)?dropout\\.tv(\\/.*)?$");
@@ -41,7 +41,7 @@ public class DropoutFilter extends GenericFilter{
 
     @JsonIgnore
     @Override
-    public boolean areCookiesRequired(){
+    public boolean areCookiesRequired() {
         return true;
     }
 }

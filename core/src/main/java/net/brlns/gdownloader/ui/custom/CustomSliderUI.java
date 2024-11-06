@@ -29,21 +29,21 @@ import static net.brlns.gdownloader.ui.themes.UIColors.*;
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-public class CustomSliderUI extends BasicSliderUI{
+public class CustomSliderUI extends BasicSliderUI {
 
     private static final Font FONT = new Font("Arial", Font.PLAIN, 12);
 
-    public CustomSliderUI(JSlider slider){
+    public CustomSliderUI(JSlider slider) {
         super(slider);
     }
 
     @Override
-    protected Dimension getThumbSize(){
+    protected Dimension getThumbSize() {
         return new Dimension(20, 20);
     }
 
     @Override
-    public void paintTrack(Graphics g){
+    public void paintTrack(Graphics g) {
         Graphics2D g2d = (Graphics2D)g.create();
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
@@ -56,7 +56,7 @@ public class CustomSliderUI extends BasicSliderUI{
     }
 
     @Override
-    public void paintThumb(Graphics g){
+    public void paintThumb(Graphics g) {
         Graphics2D g2d = (Graphics2D)g.create();
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
@@ -68,30 +68,30 @@ public class CustomSliderUI extends BasicSliderUI{
     }
 
     @Override
-    public void paintTicks(Graphics g){
+    public void paintTicks(Graphics g) {
         Rectangle tickBounds = tickRect;
         g.setColor(color(SLIDER_FOREGROUND));
 
-        for(int i = slider.getMinimum(); i <= slider.getMaximum(); i += slider.getMajorTickSpacing()){
+        for (int i = slider.getMinimum(); i <= slider.getMaximum(); i += slider.getMajorTickSpacing()) {
             int x = xPositionForValue(i);
             g.drawLine(x, tickBounds.y, x, tickBounds.y + tickBounds.height);
         }
     }
 
     @Override
-    public void paintLabels(Graphics g){
+    public void paintLabels(Graphics g) {
         g.setFont(FONT);
         g.setColor(color(SLIDER_FOREGROUND));
 
         @SuppressWarnings("unchecked")
         Dictionary<Integer, JLabel> labels = (Dictionary<Integer, JLabel>)slider.getLabelTable();
 
-        if(labels != null){
+        if (labels != null) {
             Rectangle labelBounds = labelRect;
 
-            for(int i = slider.getMinimum(); i <= slider.getMaximum(); i += slider.getMajorTickSpacing()){
+            for (int i = slider.getMinimum(); i <= slider.getMaximum(); i += slider.getMajorTickSpacing()) {
                 JLabel label = labels.get(i);
-                if(label != null){
+                if (label != null) {
                     int x = xPositionForValue(i);
                     g.drawString(label.getText(), x - label.getBounds().width / 2,
                         labelBounds.y + labelBounds.height);
@@ -101,14 +101,14 @@ public class CustomSliderUI extends BasicSliderUI{
     }
 
     @Override
-    public void paint(Graphics g, JComponent c){
+    public void paint(Graphics g, JComponent c) {
         c.setBackground(color(BACKGROUND));
 
         super.paint(g, c);
     }
 
     @Override
-    protected void installDefaults(JSlider slider){
+    protected void installDefaults(JSlider slider) {
         super.installDefaults(slider);
 
         slider.setFocusable(false);

@@ -34,12 +34,12 @@ import static net.brlns.gdownloader.settings.enums.DownloadTypeEnum.*;
 @Data
 @EqualsAndHashCode(callSuper = true)
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class FacebookFilter extends GenericFilter{
+public class FacebookFilter extends GenericFilter {
 
     public static final String ID = "facebook";
 
     @SuppressWarnings("this-escape")
-    public FacebookFilter(){
+    public FacebookFilter() {
         setId(ID);
         setFilterName("Facebook");
         setUrlRegex("^(https?:\\/\\/)?(www\\.)?facebook\\.com(\\/.*)?$");
@@ -50,14 +50,14 @@ public class FacebookFilter extends GenericFilter{
 
     @JsonIgnore
     @Override
-    protected List<String> buildArguments(DownloadTypeEnum typeEnum, GDownloader main, File savePath){
+    protected List<String> buildArguments(DownloadTypeEnum typeEnum, GDownloader main, File savePath) {
         Settings config = main.getConfig();
 
         List<String> arguments = super.buildArguments(typeEnum, main, savePath);
 
-        switch(typeEnum){
+        switch (typeEnum) {
             case ALL -> {
-                if(!config.isRandomIntervalBetweenDownloads()){
+                if (!config.isRandomIntervalBetweenDownloads()) {
                     // In my experience, Facebook pretty much requires this. So we add it regardless of settings.
                     arguments.addAll(List.of(
                         "--max-sleep-interval",

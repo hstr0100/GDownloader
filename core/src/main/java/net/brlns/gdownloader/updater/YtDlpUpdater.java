@@ -25,55 +25,55 @@ import net.brlns.gdownloader.util.Nullable;
  * @author Gabriel / hstr0100 / vertx010
  */
 @Slf4j
-public class YtDlpUpdater extends AbstractGitUpdater{
+public class YtDlpUpdater extends AbstractGitUpdater {
 
     private static final String USER = "yt-dlp";
     private static final String REPO = "yt-dlp";
 
-    public YtDlpUpdater(GDownloader mainIn){
+    public YtDlpUpdater(GDownloader mainIn) {
         super(mainIn);
     }
 
     @Override
-    protected String getUser(){
+    protected String getUser() {
         return USER;
     }
 
     @Override
-    protected String getRepo(){
+    protected String getRepo() {
         return REPO;
     }
 
     @Override
     @Nullable
-    public String getBinaryName(){
+    public String getBinaryName() {
         return ArchVersionEnum.getArchVersion().getYtDlpBinary();
     }
 
     @Nullable
     @Override
-    protected String getRuntimeBinaryName(){
+    protected String getRuntimeBinaryName() {
         return getBinaryName();
     }
 
     @Nullable
     @Override
-    protected String getLockFileName(){
+    protected String getLockFileName() {
         return "ytdlp_lock.txt";
     }
 
     @Override
-    public boolean isSupported(){
+    public boolean isSupported() {
         return true;
     }
 
     @Override
-    protected void setExecutablePath(File executablePath){
+    protected void setExecutablePath(File executablePath) {
         main.getDownloadManager().setYtDlpPath(executablePath);
     }
 
     @Override
-    public String getName(){
+    public String getName() {
         return "YT-DLP";
     }
 

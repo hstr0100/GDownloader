@@ -24,30 +24,30 @@ import net.brlns.gdownloader.settings.enums.ThemeEnum;
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-public class ThemeProvider{
+public class ThemeProvider {
 
     private static final Map<ThemeEnum, AbstractTheme> THEMES = new HashMap<>();
 
     private static AbstractTheme CURRENT_THEME;
 
-    static{
+    static {
         THEMES.put(ThemeEnum.DARK, new DarkTheme());
         THEMES.put(ThemeEnum.LIGHT, new LightTheme());
     }
 
-    public static AbstractTheme getTheme(){
+    public static AbstractTheme getTheme() {
         assert CURRENT_THEME != null;
 
         return CURRENT_THEME;
     }
 
-    public static void setTheme(ThemeEnum themeEnum){
+    public static void setTheme(ThemeEnum themeEnum) {
         assert THEMES.containsKey(themeEnum);
 
         CURRENT_THEME = THEMES.get(themeEnum);
     }
 
-    public static Color color(UIColors color){
+    public static Color color(UIColors color) {
         return CURRENT_THEME.get(color);
     }
 }

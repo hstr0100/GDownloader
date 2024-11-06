@@ -31,13 +31,13 @@ import static net.brlns.gdownloader.ui.themes.UIColors.*;
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-public class CustomToolTip extends JToolTip{
+public class CustomToolTip extends JToolTip {
 
     @Override
-    public void updateUI(){
-        setUI(new BasicToolTipUI(){
+    public void updateUI() {
+        setUI(new BasicToolTipUI() {
             @Override
-            public void paint(Graphics g, JComponent c){
+            public void paint(Graphics g, JComponent c) {
                 Graphics2D g2d = (Graphics2D)g;
                 g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 g2d.setColor(color(TOOLTIP_BACKGROUND));
@@ -47,7 +47,7 @@ public class CustomToolTip extends JToolTip{
             }
 
             @Override
-            public Dimension getPreferredSize(JComponent c){
+            public Dimension getPreferredSize(JComponent c) {
                 FontMetrics fm = c.getFontMetrics(c.getFont());
                 String tipText = c.getToolTipText();
                 return new Dimension(fm.stringWidth(tipText) + 10, fm.getHeight() + 5);

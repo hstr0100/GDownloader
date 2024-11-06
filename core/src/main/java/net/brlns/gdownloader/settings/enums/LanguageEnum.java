@@ -23,30 +23,30 @@ import lombok.Getter;
  * @author Gabriel / hstr0100 / vertx010
  */
 @Getter
-public enum LanguageEnum implements ISettingsEnum{
+public enum LanguageEnum implements ISettingsEnum {
     ENGLISH(Locale.ENGLISH),
     BRAZIL_PORTUGUESE(Locale.of("pt", "BR")),
     MEXICAN_SPANISH(Locale.of("es", "MX"));
 
     private final Locale locale;
 
-    private LanguageEnum(Locale localeIn){
+    private LanguageEnum(Locale localeIn) {
         locale = localeIn;
     }
 
     @Override
-    public String getTranslationKey(){
+    public String getTranslationKey() {
         return "";
     }
 
     @Override
-    public String getDisplayName(){
+    public String getDisplayName() {
         return locale.getDisplayName(Locale.getDefault());
     }
 
-    public static LanguageEnum getLanguageEnumForLocale(Locale locale){
-        for(LanguageEnum languageEnum : LanguageEnum.values()){
-            if(languageEnum.getLocale().equals(locale)){
+    public static LanguageEnum getLanguageEnumForLocale(Locale locale) {
+        for (LanguageEnum languageEnum : LanguageEnum.values()) {
+            if (languageEnum.getLocale().equals(locale)) {
                 return languageEnum;
             }
         }

@@ -26,12 +26,12 @@ import lombok.EqualsAndHashCode;
 @Data
 @EqualsAndHashCode(callSuper = true)
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class RedditFilter extends GenericFilter{
+public class RedditFilter extends GenericFilter {
 
     public static final String ID = "reddit";
 
     @SuppressWarnings("this-escape")
-    public RedditFilter(){
+    public RedditFilter() {
         setId(ID);
         setFilterName("Reddit");
         setUrlRegex("^(https?:\\/\\/)?(www\\.|old\\.|new\\.)?reddit\\.com(\\/.*)?$");

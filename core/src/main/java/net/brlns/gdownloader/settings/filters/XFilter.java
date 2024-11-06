@@ -26,12 +26,12 @@ import lombok.EqualsAndHashCode;
 @Data
 @EqualsAndHashCode(callSuper = true)
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class XFilter extends GenericFilter{
+public class XFilter extends GenericFilter {
 
     public static final String ID = "x";
 
     @SuppressWarnings("this-escape")
-    public XFilter(){
+    public XFilter() {
         setId(ID);
         setFilterName("X/Twitter");
         setUrlRegex("^(https?:\\/\\/)?(www\\.)?(x|twitter)\\.com(\\/.*)?$");

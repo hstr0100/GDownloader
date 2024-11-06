@@ -22,7 +22,7 @@ import lombok.Getter;
  * @author Gabriel / hstr0100 / vertx010
  */
 @Getter
-public enum DownloadTypeEnum implements ISettingsEnum{
+public enum DownloadTypeEnum implements ISettingsEnum {
     ALL,
     // Downloads will also follow this specific order
     VIDEO,
@@ -31,12 +31,12 @@ public enum DownloadTypeEnum implements ISettingsEnum{
     THUMBNAILS;
 
     @Override
-    public String getTranslationKey(){
+    public String getTranslationKey() {
         return "";
     }
 
     @Override
-    public String getDisplayName(){
+    public String getDisplayName() {
         return name().toLowerCase();
     }
 }
