@@ -2,7 +2,7 @@ plugins {
     id 'java'
     id 'application'
     id 'org.beryx.jlink' version "$beryxPluginVersion"
-    id 'com.github.johnrengelman.shadow' version "$shadowPluginVersion"
+    id 'com.gradleup.shadow' version "$shadowPluginVersion"
     id 'org.gradlex.extra-java-module-info' version "$extraModuleInfoPluginVersion"
 }
 
@@ -33,14 +33,16 @@ application {
 
 dependencies {
     implementation project(path: ":twelvemonkeys", configuration: "moduleJar")
+    implementation "ch.qos.logback:logback-classic:$logbackVersion"
     implementation "com.github.kwhat:jnativehook:$jnativehookVersion"
-    implementation "org.slf4j:slf4j-api:$slf4jVersion"
-    compileOnly "org.projectlombok:lombok:$lombokVersion"
-    annotationProcessor "org.projectlombok:lombok:$lombokVersion"
     implementation "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"
     implementation "org.jsoup:jsoup:$jsoupVersion"
-    implementation "ch.qos.logback:logback-classic:$logbackVersion"
+    implementation "org.slf4j:slf4j-api:$slf4jVersion"
+
+    compileOnly "org.projectlombok:lombok:$lombokVersion"
+    annotationProcessor "org.projectlombok:lombok:$lombokVersion"
     testImplementation "org.junit.jupiter:junit-jupiter:$jupiterVersion"
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
 test {
@@ -125,7 +127,7 @@ task zipJpackageImage(type: Zip) {
 tasks.jpackage.finalizedBy zipJpackageImage
 
 jlink {
-    options = ['--strip-debug', '--compress', '2', '--no-header-files', '--no-man-pages']
+    options = ['--strip-debug', '--compress', 'zip-6', '--no-header-files', '--no-man-pages']
 
     launcher {
         name = 'GDownloader'

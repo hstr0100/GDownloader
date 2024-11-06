@@ -133,7 +133,7 @@ public final class GDownloader{
         File workDir = getWorkDirectory();
         configFile = new File(workDir, "config.json");
 
-        //TODO: move log rotate to utils
+        //TODO: move log rotation to utils
         File logFile = new File(workDir, "gdownloader_log.txt");
         File previousLogFile = new File(workDir, "gdownloader_log_previous.txt");
 
