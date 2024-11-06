@@ -30,25 +30,25 @@ import net.brlns.gdownloader.settings.enums.LanguageEnum;
  * @author Gabriel / hstr0100 / vertx010
  */
 @Slf4j
-public class Language{
+public class Language {
 
     private static ResourceBundle LANGUAGE_BUNDLE;
 
-    public static String l10n(String key, Object... args){
-        if(LANGUAGE_BUNDLE == null){
+    public static String l10n(String key, Object... args) {
+        if (LANGUAGE_BUNDLE == null) {
             throw new RuntimeException("Language was not initialized");
         }
 
         String pattern = LANGUAGE_BUNDLE.getString(key);
-        if(pattern == null){
+        if (pattern == null) {
             throw new RuntimeException("Unknown language key: " + key);
         }
 
         return MessageFormat.format(pattern, args);
     }
 
-    protected static void initLanguage(Settings config){
-        if(!config.isLanguageDefined()){
+    protected static void initLanguage(Settings config) {
+        if (!config.isLanguageDefined()) {
             Locale defaultLocale = Locale.getDefault();
             log.info("Detected system language: {}", defaultLocale);
 

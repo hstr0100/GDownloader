@@ -26,21 +26,21 @@ import lombok.extern.slf4j.Slf4j;
  * @author Gabriel / hstr0100 / vertx010
  */
 @Slf4j
-public class URLUtils{
+public class URLUtils {
 
     @Nullable
-    public static String getVideoId(String youtubeUrl){
-        try{
+    public static String getVideoId(String youtubeUrl) {
+        try {
             URL url = new URI(youtubeUrl).toURL();
             String host = url.getHost();
 
-            if(host != null && host.contains("youtube.com")){
+            if (host != null && host.contains("youtube.com")) {
                 String videoId = getParameter(url, "v");
-                if(videoId != null){
+                if (videoId != null) {
                     return videoId;
                 }
             }
-        }catch(Exception e){
+        } catch (Exception e) {
             log.debug("Invalid url {}", youtubeUrl, e.getLocalizedMessage());
         }
 
@@ -48,9 +48,9 @@ public class URLUtils{
     }
 
     @Nullable
-    public static String filterVideo(String youtubeUrl){
+    public static String filterVideo(String youtubeUrl) {
         String videoId = getVideoId(youtubeUrl);
-        if(videoId != null){
+        if (videoId != null) {
             return "https://www.youtube.com/watch?v=" + videoId;
         }
 
@@ -58,20 +58,20 @@ public class URLUtils{
     }
 
     @Nullable
-    public static String filterPlaylist(String youtubeUrl){
-        try{
+    public static String filterPlaylist(String youtubeUrl) {
+        try {
             URL url = new URI(youtubeUrl).toURL();
             String host = url.getHost();
 
-            if(host != null && host.contains("youtube.com")){
+            if (host != null && host.contains("youtube.com")) {
                 String videoId = getParameter(url, "list");
-                if(videoId != null){
+                if (videoId != null) {
                     return "https://www.youtube.com/playlist?list=" + videoId;
                 }
             }
 
             return null;
-        }catch(MalformedURLException | URISyntaxException e){
+        } catch (MalformedURLException | URISyntaxException e) {
             log.debug("Invalid url {} {}", youtubeUrl, e.getLocalizedMessage());
         }
 
@@ -79,14 +79,14 @@ public class URLUtils{
     }
 
     @Nullable
-    public static String getParameter(URL url, String parameterName){
+    public static String getParameter(URL url, String parameterName) {
         String query = url.getQuery();
 
-        if(query != null){
+        if (query != null) {
             String[] params = query.split("&");
-            for(String param : params){
+            for (String param : params) {
                 String[] keyValue = param.split("=");
-                if(keyValue.length == 2 && keyValue[0].equals(parameterName)){
+                if (keyValue.length == 2 && keyValue[0].equals(parameterName)) {
                     return keyValue[1];
                 }
             }
@@ -95,10 +95,10 @@ public class URLUtils{
         return null;
     }
 
-    public static String removeParameter(URL url, String parameterName) throws Exception{
+    public static String removeParameter(URL url, String parameterName) throws Exception {
         String query = url.getQuery();
 
-        if(query == null || query.isEmpty()){
+        if (query == null || query.isEmpty()) {
             return url.toString();
         }
 
@@ -112,12 +112,12 @@ public class URLUtils{
         return baseUrl + (newQuery.isEmpty() ? "" : "?" + newQuery);
     }
 
-    private static Map<String, String> parseQueryString(String query) throws UnsupportedEncodingException{
+    private static Map<String, String> parseQueryString(String query) throws UnsupportedEncodingException {
         Map<String, String> queryParams = new LinkedHashMap<>();
 
-        for(String pair : query.split("&")){
+        for (String pair : query.split("&")) {
             String[] parts = pair.split("=");
-            if(parts.length == 2){
+            if (parts.length == 2) {
                 String key = URLDecoder.decode(parts[0], "UTF-8");
                 String value = URLDecoder.decode(parts[1], "UTF-8");
                 queryParams.put(key, value);
@@ -127,11 +127,11 @@ public class URLUtils{
         return queryParams;
     }
 
-    private static String buildQueryString(Map<String, String> queryParams) throws UnsupportedEncodingException{
+    private static String buildQueryString(Map<String, String> queryParams) throws UnsupportedEncodingException {
         StringBuilder queryString = new StringBuilder();
 
-        for(Map.Entry<String, String> entry : queryParams.entrySet()){
-            if(queryString.length() > 0){
+        for (Map.Entry<String, String> entry : queryParams.entrySet()) {
+            if (queryString.length() > 0) {
                 queryString.append("&");
             }
 

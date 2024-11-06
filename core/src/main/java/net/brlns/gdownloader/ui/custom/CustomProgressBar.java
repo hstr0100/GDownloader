@@ -25,7 +25,7 @@ import net.brlns.gdownloader.util.Nullable;
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-public class CustomProgressBar extends JPanel{
+public class CustomProgressBar extends JPanel {
 
     private static final Font FONT = new Font("Dialog", Font.BOLD, 14);
 
@@ -42,12 +42,12 @@ public class CustomProgressBar extends JPanel{
     @Getter
     private int value = 0;
 
-    public CustomProgressBar(){
+    public CustomProgressBar() {
         this(null);
     }
 
     @SuppressWarnings("this-escape")
-    public CustomProgressBar(@Nullable Color textColorIn){
+    public CustomProgressBar(@Nullable Color textColorIn) {
         textColor = textColorIn;
 
         setPreferredSize(new Dimension(300, 20));
@@ -55,7 +55,7 @@ public class CustomProgressBar extends JPanel{
     }
 
     @Override
-    protected void paintComponent(Graphics g){
+    protected void paintComponent(Graphics g) {
         super.paintComponent(g);
 
         Graphics2D g2d = (Graphics2D)g;
@@ -69,7 +69,7 @@ public class CustomProgressBar extends JPanel{
         int width = (int)(getWidth() * (value / 100.0));
         g2d.fillRect(0, 0, width, getHeight());
 
-        if(stringPainted){
+        if (stringPainted) {
             g2d.setColor(textColor);
             g2d.setFont(FONT);
             FontMetrics fm = g2d.getFontMetrics();
@@ -79,19 +79,19 @@ public class CustomProgressBar extends JPanel{
         }
     }
 
-    public void setValue(int valueIn){
+    public void setValue(int valueIn) {
         value = valueIn;
 
         repaint();
     }
 
-    public void setString(String stringIn){
+    public void setString(String stringIn) {
         string = stringIn;
 
         repaint();
     }
 
-    public void setTextColor(Color textColorIn){
+    public void setTextColor(Color textColorIn) {
         textColor = textColorIn;
 
         repaint();

@@ -26,12 +26,12 @@ import lombok.EqualsAndHashCode;
 @Data
 @EqualsAndHashCode(callSuper = true)
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class PatreonFilter extends GenericFilter{
+public class PatreonFilter extends GenericFilter {
 
     public static final String ID = "patreon";
 
     @SuppressWarnings("this-escape")
-    public PatreonFilter(){
+    public PatreonFilter() {
         setId(ID);
         setFilterName("Patreon");
         setUrlRegex("^(https?:\\/\\/)?(www\\.)?patreon\\.com(\\/.*)?$");

@@ -73,52 +73,52 @@ import static net.brlns.gdownloader.Language.*;
 import static net.brlns.gdownloader.settings.enums.DownloadTypeEnum.*;
 import static net.brlns.gdownloader.util.URLUtils.*;
 
-//TODO media converter
-//TODO implement CD Ripper
-//TODO d&d files for conversion to different formats, we already have ffmpeg anyway
+// TODO media converter
+// TODO implement CD Ripper
+// TODO d&d files for conversion to different formats, we already have ffmpeg anyway
 //
-//TODO max simultaneous downloads should be independent per website
-//TODO silence unnecessary debug messages
-//TODO investigate adding AppImage build
-//TODO we should only grab clipboard AFTER the toggle button is clicked
-//TODO scale on resolution DPI
-//TODO save last window size in config
-//TODO keep older versions of ytdlp and retry failed downloads against them
-//TODO Advanced users can edit the config.json directly to add extra yt-dlp arguments like proxy settings. but maybe expose those settings to the ui.
-//TODO verify checksums during updates, add bouncycastle, check signatures
-//TODO write a component factory for GUIManager
-//TODO git actions build for different platforms
-//FEEDBACK Should choose to download video and audio independently on each card
-//TODO maybe add notifications for each toggled toolbar option
-//DROPPED check updates on a timer, but do not ever restart when anything is in the queue.
-//TODO individual 'retry failed download' button
-//TODO --no-playlist when single video option is active
-//TODO Artifacting seems to be happening on the scroll pane with AMD video cards
-//TODO open a window asking which videos in a playlist to download or not
-//TODO RearrangeableDeque's offerLast should be linked to the cards in the UI
-//TODO Better visual eye candy for when dragging cards
-//TODO Add setting to allow the user to manually specify the target codec for audio transcoding? currently it defaults to aac.
-//TODO Add 'Clear Completed Downloads' button.
-//TODO Javadoc, a whole lot of it.
-//TODO Refactor this very class. Separate some logic into different methods.
-//TODO Twitch settings purposefully default to suboptimal quality due to huge file sizes. Maybe consider adding a warning about this in the GUI.
-//TODO Split GUI into a different subproject from core logic.
-//TODO Investigate screen reader support (https://www.nvaccess.org/download/)
-//TODO Send notifications when a NO_METHOD is triggered, explaining why it was triggered.
-//TODO Test downloading sections of a livestream (currently it gets stuck on status PREPARING). Note: it also leaves a zombie ffmpeg process behind dealing with the hls stream.
-//TODO The issue above is a yt-dlp bug https://github.com/yt-dlp/yt-dlp/issues/7927
-//TODO Add a viewer for log files.
-//TODO Implement rate-limiting options internally; the way it's currently implemented does not account for concurrent or non-playlist downloads.
-//TODO Notify the user whenever a setting that requires restart was changed.
-//TODO Quit lingering ffmpeg processes spawned by yt-dlp
-//TODO Verify which exceptions are important to display to the user via GDownloader::handleException
-//TODO Add an url ignore list / Allow filters to be disabled
-//Off to a bootcamp, project on pause
+// TODO max simultaneous downloads should be independent per website
+// TODO silence unnecessary debug messages
+// TODO investigate adding AppImage build
+// TODO we should only grab clipboard AFTER the toggle button is clicked
+// TODO scale on resolution DPI
+// TODO save last window size in config
+// TODO keep older versions of ytdlp and retry failed downloads against them
+// TODO Advanced users can edit the config.json directly to add extra yt-dlp arguments like proxy settings. but maybe expose those settings to the ui.
+// TODO verify checksums during updates, add bouncycastle, check signatures
+// TODO write a component factory for GUIManager
+// TODO git actions build for different platforms
+// FEEDBACK Should choose to download video and audio independently on each card
+// TODO maybe add notifications for each toggled toolbar option
+// DROPPED check updates on a timer, but do not ever restart when anything is in the queue.
+// TODO individual 'retry failed download' button
+// TODO --no-playlist when single video option is active
+// TODO Artifacting seems to be happening on the scroll pane with AMD video cards
+// TODO open a window asking which videos in a playlist to download or not
+// TODO RearrangeableDeque's offerLast should be linked to the cards in the UI
+// TODO Better visual eye candy for when dragging cards
+// TODO Add setting to allow the user to manually specify the target codec for audio transcoding? currently it defaults to aac.
+// TODO Add 'Clear Completed Downloads' button.
+// TODO Javadoc, a whole lot of it.
+// TODO Refactor this very class. Separate some logic into different methods.
+// TODO Twitch settings purposefully default to suboptimal quality due to huge file sizes. Maybe consider adding a warning about this in the GUI.
+// TODO Split GUI into a different subproject from core logic.
+// TODO Investigate screen reader support (https:// www.nvaccess.org/download/)
+// TODO Send notifications when a NO_METHOD is triggered, explaining why it was triggered.
+// TODO Test downloading sections of a livestream (currently it gets stuck on status PREPARING). Note: it also leaves a zombie ffmpeg process behind dealing with the hls stream.
+// TODO The issue above is a yt-dlp bug https:// github.com/yt-dlp/yt-dlp/issues/7927
+// TODO Add a viewer for log files.
+// TODO Implement rate-limiting options internally; the way it's currently implemented does not account for concurrent or non-playlist downloads.
+// TODO Notify the user whenever a setting that requires restart was changed.
+// TODO Quit lingering ffmpeg processes spawned by yt-dlp
+// TODO Verify which exceptions are important to display to the user via GDownloader::handleException
+// TODO Add an url ignore list / Allow filters to be disabled
+// Off to a bootcamp, project on pause
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
 @Slf4j
-public class YtDlpDownloader{
+public class YtDlpDownloader {
 
     private static final int MAX_DOWNLOAD_RETRIES = 10;
 
@@ -153,35 +153,35 @@ public class YtDlpDownloader{
     @Setter
     private File ffmpegPath = null;
 
-    public YtDlpDownloader(GDownloader mainIn){
+    public YtDlpDownloader(GDownloader mainIn) {
         main = mainIn;
 
         processMonitor = Executors.newSingleThreadExecutor();
         processMonitor.submit(() -> {
-            while(!Thread.currentThread().isInterrupted()){
-                for(QueueEntry entry : runningQueue){
-                    if(!downloadsRunning.get() || entry.getCancelHook().get()){
+            while (!Thread.currentThread().isInterrupted()) {
+                for (QueueEntry entry : runningQueue) {
+                    if (!downloadsRunning.get() || entry.getCancelHook().get()) {
                         Process process = entry.getProcess();
 
-                        if(process != null && process.isAlive()){
-                            if(main.getConfig().isDebugMode()){
+                        if (process != null && process.isAlive()) {
+                            if (main.getConfig().isDebugMode()) {
                                 log.debug("Process Monitor is stopping {}", entry.getUrl());
                             }
 
-                            try{
+                            try {
                                 tryStopProcess(process);
-                            }catch(InterruptedException e){
+                            } catch (InterruptedException e) {
                                 log.error("Interrupted", e);
-                            }catch(Exception e){
+                            } catch (Exception e) {
                                 log.error("Failed to stop process", e);
                             }
                         }
                     }
                 }
 
-                try{
+                try {
                     Thread.sleep(300);
-                }catch(InterruptedException e){
+                } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     break;
                 }
@@ -189,27 +189,27 @@ public class YtDlpDownloader{
         });
     }
 
-    public boolean isBlocked(){
+    public boolean isBlocked() {
         return downloadsBlocked.get();
     }
 
-    public void block(){
+    public void block() {
         downloadsBlocked.set(true);
 
         fireListeners();
     }
 
-    public void unblock(){
+    public void unblock() {
         downloadsBlocked.set(false);
 
         fireListeners();
     }
 
-    public void registerListener(Consumer<YtDlpDownloader> consumer){
+    public void registerListener(Consumer<YtDlpDownloader> consumer) {
         listeners.add(consumer);
     }
 
-    private boolean isGarbageUrl(String inputUrl){
+    private boolean isGarbageUrl(String inputUrl) {
         return inputUrl.contains("ytimg")
             || inputUrl.contains("ggpht")
             || inputUrl.endsWith("youtube.com/")
@@ -218,14 +218,14 @@ public class YtDlpDownloader{
             || inputUrl.endsWith(".webp");
     }
 
-    public CompletableFuture<Boolean> captureUrl(@Nullable String inputUrl, boolean force){
+    public CompletableFuture<Boolean> captureUrl(@Nullable String inputUrl, boolean force) {
         return captureUrl(inputUrl, force, main.getConfig().getPlaylistDownloadOption());
     }
 
-    public CompletableFuture<Boolean> captureUrl(@Nullable String inputUrl, boolean force, PlayListOptionEnum playlistOption){
+    public CompletableFuture<Boolean> captureUrl(@Nullable String inputUrl, boolean force, PlayListOptionEnum playlistOption) {
         CompletableFuture<Boolean> future = new CompletableFuture<>();
 
-        if(downloadsBlocked.get() || ytDlpPath == null || inputUrl == null || isGarbageUrl(inputUrl) || capturedLinks.contains(inputUrl)){
+        if (downloadsBlocked.get() || ytDlpPath == null || inputUrl == null || isGarbageUrl(inputUrl) || capturedLinks.contains(inputUrl)) {
             future.complete(false);
             return future;
         }
@@ -233,31 +233,31 @@ public class YtDlpDownloader{
         Optional<AbstractUrlFilter> filterOptional = getFilterForUrl(inputUrl,
             main.getConfig().isCaptureAnyLinks() || force);
 
-        if(!filterOptional.isPresent()){
+        if (!filterOptional.isPresent()) {
             log.error("No filter found for url: {}. Ignoring.", inputUrl);
             future.complete(false);
             return future;
         }
 
         AbstractUrlFilter filter = filterOptional.get();
-        if(main.getConfig().isDebugMode()){
+        if (main.getConfig().isDebugMode()) {
             log.debug("URL: {} matched {}", inputUrl, filter);
         }
 
-        if(!filter.canAcceptUrl(inputUrl, main)){
+        if (!filter.canAcceptUrl(inputUrl, main)) {
             log.info("Filter {} has denied to accept url {}; Verify settings.", filter, inputUrl);
             future.complete(false);
             return future;
         }
 
         String filteredUrl;
-        //TODO: move these to the appropriate classes.
-        if(filter instanceof YoutubePlaylistFilter){
-            switch(playlistOption){
+        // TODO: move these to the appropriate classes.
+        if (filter instanceof YoutubePlaylistFilter) {
+            switch (playlistOption) {
                 case DOWNLOAD_PLAYLIST: {
                     filteredUrl = filterPlaylist(inputUrl);
 
-                    if(filteredUrl != null){
+                    if (filteredUrl != null) {
                         capturedPlaylists.add(filteredUrl);
                     }
 
@@ -267,19 +267,19 @@ public class YtDlpDownloader{
                 case DOWNLOAD_SINGLE: {
                     String playlist = filterPlaylist(inputUrl);
 
-                    if(playlist != null){
+                    if (playlist != null) {
                         capturedPlaylists.add(playlist);
                     }
 
                     String video = filterVideo(inputUrl);
 
-                    if(main.getConfig().isDebugMode()){
+                    if (main.getConfig().isDebugMode()) {
                         log.debug("Video url is {}", video);
                     }
 
-                    if(video != null && video.contains("?v=") && !video.contains("list=")){
+                    if (video != null && video.contains("?v=") && !video.contains("list=")) {
                         return captureUrl(video, force);
-                    }else{
+                    } else {
                         future.complete(false);
                         return future;
                     }
@@ -289,22 +289,22 @@ public class YtDlpDownloader{
                 default: {
                     String playlist = filterPlaylist(inputUrl);
 
-                    if(playlist == null){
+                    if (playlist == null) {
                         future.complete(false);
                         return future;
                     }
 
-                    if(!capturedPlaylists.contains(playlist)){
+                    if (!capturedPlaylists.contains(playlist)) {
                         DialogButton playlistDialogOption = new DialogButton(PlayListOptionEnum.DOWNLOAD_PLAYLIST.getDisplayName(),
                             (boolean setDefault) -> {
-                                if(setDefault){
+                                if (setDefault) {
                                     main.getConfig().setPlaylistDownloadOption(PlayListOptionEnum.DOWNLOAD_PLAYLIST);
                                     main.updateConfig();
                                 }
 
                                 captureUrl(playlist, force, PlayListOptionEnum.DOWNLOAD_PLAYLIST)
                                     .whenComplete((Boolean result, Throwable e) -> {
-                                        if(e != null){
+                                        if (e != null) {
                                             main.handleException(e);
                                         }
 
@@ -314,14 +314,14 @@ public class YtDlpDownloader{
 
                         DialogButton singleDialogOption = new DialogButton(PlayListOptionEnum.DOWNLOAD_SINGLE.getDisplayName(),
                             (boolean setDefault) -> {
-                                if(setDefault){
+                                if (setDefault) {
                                     main.getConfig().setPlaylistDownloadOption(PlayListOptionEnum.DOWNLOAD_SINGLE);
                                     main.updateConfig();
                                 }
 
                                 captureUrl(inputUrl, force, PlayListOptionEnum.DOWNLOAD_SINGLE)
                                     .whenComplete((Boolean result, Throwable e) -> {
-                                        if(e != null){
+                                        if (e != null) {
                                             main.handleException(e);
                                         }
 
@@ -342,37 +342,37 @@ public class YtDlpDownloader{
                             singleDialogOption);
 
                         return future;
-                    }else{
-                        //TODO I'm assuming this is a wanted behavior - having subsequent links being treated as individual videos
-                        //It's odd that you'd download a whole playlist and then an individual video from it though, maybe investigate use cases
+                    } else {
+                        // TODO I'm assuming this is a wanted behavior - having subsequent links being treated as individual videos
+                        // It's odd that you'd download a whole playlist and then an individual video from it though, maybe investigate use cases
                         String video = filterVideo(inputUrl);
 
-                        if(main.getConfig().isDebugMode()){
+                        if (main.getConfig().isDebugMode()) {
                             log.debug("Individual video url is {}", video);
                         }
 
-                        if(video != null && video.contains("?v=") && !video.contains("list=")){
+                        if (video != null && video.contains("?v=") && !video.contains("list=")) {
                             return captureUrl(video, force);
-                        }else{
+                        } else {
                             future.complete(false);
                             return future;
                         }
                     }
                 }
             }
-        }else if(filter instanceof YoutubeFilter){
+        } else if (filter instanceof YoutubeFilter) {
             filteredUrl = filterVideo(inputUrl);
-        }else{
+        } else {
             filteredUrl = inputUrl;
         }
 
-        if(filteredUrl == null){
+        if (filteredUrl == null) {
             log.error("Filtered url was null.");
             future.complete(false);
             return future;
         }
 
-        if(capturedLinks.add(filteredUrl)){
+        if (capturedLinks.add(filteredUrl)) {
             capturedLinks.add(inputUrl);
 
             log.info("Captured {}", inputUrl);
@@ -413,11 +413,11 @@ public class YtDlpDownloader{
             ));
 
             mediaCard.setOnDrag((targetIndex) -> {
-                if(downloadDeque.contains(queueEntry)){
-                    try{
+                if (downloadDeque.contains(queueEntry)) {
+                    try {
                         downloadDeque.moveToPosition(queueEntry,
                             Math.clamp(targetIndex, 0, downloadDeque.size() - 1));
-                    }catch(Exception e){
+                    } catch (Exception e) {
                         main.handleException(e, false);
                     }
                 }
@@ -432,7 +432,7 @@ public class YtDlpDownloader{
             downloadDeque.offerLast(queueEntry);
             fireListeners();
 
-            if(main.getConfig().isAutoDownloadStart() && !downloadsRunning.get()){
+            if (main.getConfig().isAutoDownloadStart() && !downloadsRunning.get()) {
                 startDownloads();
             }
 
@@ -444,19 +444,19 @@ public class YtDlpDownloader{
         return future;
     }
 
-    private Optional<AbstractUrlFilter> getFilterForUrl(String url, boolean allowAnyLink){
+    private Optional<AbstractUrlFilter> getFilterForUrl(String url, boolean allowAnyLink) {
         AbstractUrlFilter filter = null;
 
-        for(AbstractUrlFilter filterNeedle : main.getConfig().getUrlFilters()){
-            if(filterNeedle.matches(url)){
+        for (AbstractUrlFilter filterNeedle : main.getConfig().getUrlFilters()) {
+            if (filterNeedle.matches(url)) {
                 filter = filterNeedle;
                 break;
             }
         }
 
-        if(filter == null && allowAnyLink){
-            for(AbstractUrlFilter filterNeedle : main.getConfig().getUrlFilters()){
-                if(filterNeedle.getId().equals(GenericFilter.ID)){
+        if (filter == null && allowAnyLink) {
+            for (AbstractUrlFilter filterNeedle : main.getConfig().getUrlFilters()) {
+                if (filterNeedle.getId().equals(GenericFilter.ID)) {
                     filter = filterNeedle;
                     break;
                 }
@@ -466,59 +466,59 @@ public class YtDlpDownloader{
         return Optional.ofNullable(filter);
     }
 
-    public boolean isRunning(){
+    public boolean isRunning() {
         return downloadsRunning.get();
     }
 
-    public void toggleDownloads(){
-        if(!isRunning()){
+    public void toggleDownloads() {
+        if (!isRunning()) {
             startDownloads();
-        }else{
+        } else {
             stopDownloads();
         }
     }
 
-    public void startDownloads(){
-        if(!downloadsBlocked.get()){
+    public void startDownloads() {
+        if (!downloadsBlocked.get()) {
             downloadsRunning.set(true);
 
             fireListeners();
         }
     }
 
-    public void stopDownloads(){
+    public void stopDownloads() {
         downloadsRunning.set(false);
 
         fireListeners();
     }
 
-    private void fireListeners(){
-        for(Consumer<YtDlpDownloader> listener : listeners){
+    private void fireListeners() {
+        for (Consumer<YtDlpDownloader> listener : listeners) {
             listener.accept(this);
         }
     }
 
-    public int getQueueSize(){
+    public int getQueueSize() {
         return downloadDeque.size();
     }
 
-    public int getDownloadsRunning(){
+    public int getDownloadsRunning() {
         return runningDownloads.get();
     }
 
-    public int getFailedDownloads(){
+    public int getFailedDownloads() {
         return failedDownloads.size();
     }
 
-    public int getCompletedDownloads(){
+    public int getCompletedDownloads() {
         return completedDownloads.size();
     }
 
-    public void retryFailedDownloads(){
+    public void retryFailedDownloads() {
         QueueEntry entry;
-        while((entry = failedDownloads.poll()) != null){
+        while ((entry = failedDownloads.poll()) != null) {
             entry.updateStatus(DownloadStatus.QUEUED, l10n("gui.download_status.not_started"));
-            entry.resetRetryCounter();//Normaly we want the retry count to stick around, but not in this case.
+            entry.resetRetryCounter();// Normaly we want the retry count to stick around, but not in this case.
             entry.reset();
 
             downloadDeque.offerLast(entry);
@@ -529,40 +529,39 @@ public class YtDlpDownloader{
         fireListeners();
     }
 
-    public void clearQueue(){
+    public void clearQueue() {
         capturedLinks.clear();
         capturedPlaylists.clear();
 
-        //Active downloads are intentionally immune to this.
+        // Active downloads are intentionally immune to this.
         QueueEntry entry;
-        while((entry = downloadDeque.poll()) != null){
+        while ((entry = downloadDeque.poll()) != null) {
             main.getGuiManager().removeMediaCard(entry.getMediaCard().getId());
-            //downloadDeque.remove(entry);
 
-            if(!entry.isRunning()){
+            if (!entry.isRunning()) {
                 entry.clean();
             }
         }
 
-        while((entry = failedDownloads.poll()) != null){
+        while ((entry = failedDownloads.poll()) != null) {
             main.getGuiManager().removeMediaCard(entry.getMediaCard().getId());
 
-            if(!entry.isRunning()){
+            if (!entry.isRunning()) {
                 entry.clean();
             }
         }
 
-        while((entry = completedDownloads.poll()) != null){
+        while ((entry = completedDownloads.poll()) != null) {
             main.getGuiManager().removeMediaCard(entry.getMediaCard().getId());
         }
 
         fireListeners();
     }
 
-    private void queryVideo(QueueEntry queueEntry){
+    private void queryVideo(QueueEntry queueEntry) {
         main.getGlobalThreadPool().submitWithPriority(() -> {
-            try{
-                if(queueEntry.getCancelHook().get()){
+            try {
+                if (queueEntry.getCancelHook().get()) {
                     return;
                 }
 
@@ -578,7 +577,7 @@ public class YtDlpDownloader{
                     queueEntry.getUrl()
                 ));
 
-                if(main.getConfig().isReadCookiesFromBrowser()){
+                if (main.getConfig().isReadCookiesFromBrowser()) {
                     arguments.addAll(List.of(
                         "--cookies-from-browser",
                         main.getBrowserForCookies().getName()
@@ -588,7 +587,7 @@ public class YtDlpDownloader{
                 List<String> list = GDownloader.readOutput(
                     arguments.stream().toArray(String[]::new));
 
-                if(main.getConfig().isDebugMode()){
+                if (main.getConfig().isDebugMode()) {
                     long what = System.currentTimeMillis() - start;
                     double on = 1000L * 365.25 * 24 * 60 * 60 * 1000;
                     double earth = (what / on) * 100;
@@ -597,8 +596,8 @@ public class YtDlpDownloader{
                         what, String.format("%.12f", earth));
                 }
 
-                for(String line : list){
-                    if(!line.startsWith("{")){
+                for (String line : list) {
+                    if (!line.startsWith("{")) {
                         continue;
                     }
 
@@ -607,27 +606,26 @@ public class YtDlpDownloader{
                     queueEntry.setVideoInfo(info);
                     break;
                 }
-            }catch(Exception e){
+            } catch (Exception e) {
                 log.error("Failed to parse json, yt-dlp returned malformed data for url {}", queueEntry.getUrl(), e);
-            }finally{
-                if(queueEntry.getDownloadStatus() == DownloadStatus.QUERYING){
+            } finally {
+                if (queueEntry.getDownloadStatus() == DownloadStatus.QUERYING) {
                     queueEntry.updateStatus(DownloadStatus.QUEUED, l10n("gui.download_status.not_started"));
                 }
             }
         }, 1);
     }
 
-    public void processQueue(){
-        while(downloadsRunning.get() && !downloadDeque.isEmpty()){
-            if(runningDownloads.get() >= main.getConfig().getMaxSimultaneousDownloads()){
+    public void processQueue() {
+        while (downloadsRunning.get() && !downloadDeque.isEmpty()) {
+            if (runningDownloads.get() >= main.getConfig().getMaxSimultaneousDownloads()) {
                 break;
             }
 
             QueueEntry entry = downloadDeque.poll();
-            //downloadDeque.remove(entry);
 
             MediaCard mediaCard = entry.getMediaCard();
-            if(mediaCard.isClosed()){
+            if (mediaCard.isClosed()) {
                 break;
             }
 
@@ -635,7 +633,7 @@ public class YtDlpDownloader{
             fireListeners();
 
             main.getGlobalThreadPool().submitWithPriority(() -> {
-                if(!downloadsRunning.get()){
+                if (!downloadsRunning.get()) {
                     downloadDeque.offerFirst(entry);
 
                     runningDownloads.decrementAndGet();
@@ -643,18 +641,18 @@ public class YtDlpDownloader{
                     return;
                 }
 
-                try{
+                try {
                     AbstractUrlFilter filter = entry.getFilter();
 
-                    if(filter.areCookiesRequired() && !main.getConfig().isReadCookiesFromBrowser()){
-                        //TODO: Visual cue
+                    if (filter.areCookiesRequired() && !main.getConfig().isReadCookiesFromBrowser()) {
+                        // TODO: Visual cue
                         log.warn("Cookies are required for this website {}", entry.getOriginalUrl());
                     }
 
                     boolean downloadAudio = main.getConfig().isDownloadAudio();
                     boolean downloadVideo = main.getConfig().isDownloadVideo();
 
-                    if(!downloadAudio && !downloadVideo){
+                    if (!downloadAudio && !downloadVideo) {
                         entry.updateStatus(DownloadStatus.NO_METHOD, l10n("enums.download_status.no_method.video_tip"));
                         entry.reset();
 
@@ -662,7 +660,7 @@ public class YtDlpDownloader{
 
                         log.error("{} - No option to download.", filter);
 
-                        if(downloadDeque.size() <= 1){
+                        if (downloadDeque.size() <= 1) {
                             stopDownloads();
                         }
 
@@ -673,7 +671,7 @@ public class YtDlpDownloader{
 
                     AudioBitrateEnum audioBitrate = quality.getAudioBitrate();
 
-                    if(!downloadVideo && downloadAudio && audioBitrate == AudioBitrateEnum.NO_AUDIO){
+                    if (!downloadVideo && downloadAudio && audioBitrate == AudioBitrateEnum.NO_AUDIO) {
                         entry.updateStatus(DownloadStatus.NO_METHOD, l10n("enums.download_status.no_method.audio_tip"));
                         entry.reset();
 
@@ -681,7 +679,7 @@ public class YtDlpDownloader{
 
                         log.error("{} - No audio quality selected, but was set to download audio only.", filter);
 
-                        if(downloadDeque.size() <= 1){
+                        if (downloadDeque.size() <= 1) {
                             stopDownloads();
                         }
 
@@ -703,14 +701,14 @@ public class YtDlpDownloader{
                         "-i"
                     ));
 
-                    if(ffmpegPath != null){
+                    if (ffmpegPath != null) {
                         genericArguments.addAll(List.of(
                             "--ffmpeg-location",
                             ffmpegPath.getAbsolutePath()
                         ));
                     }
 
-                    if(!main.getConfig().isRespectYtDlpConfigFile()){
+                    if (!main.getConfig().isRespectYtDlpConfigFile()) {
                         genericArguments.add("--ignore-config");
                     }
 
@@ -718,18 +716,18 @@ public class YtDlpDownloader{
 
                     boolean wasStopped = false;
 
-                    try{
+                    try {
                         runningQueue.offer(entry);
 
-                        for(DownloadTypeEnum type : DownloadTypeEnum.values()){
-                            if(type == ALL
-                                //Intentionally not doing a fresh check for isDownloadVideo() here.
-                                //Mostly prevents an impossibly rare scenario where the user could have disabled all download possibilities after the sanity checks.
-                                //It would not hurt anything if they did, however, they would end up with a 'completed' download that did not in fact download anything.
+                        for (DownloadTypeEnum type : DownloadTypeEnum.values()) {
+                            if (type == ALL
+                                // Intentionally not doing a fresh check for isDownloadVideo() here.
+                                // Mostly prevents an impossibly rare scenario where the user could have disabled all download possibilities after the sanity checks.
+                                // It would not hurt anything if they did, however, they would end up with a 'completed' download that did not in fact download anything.
                                 || type == VIDEO && !downloadVideo
                                 || type == AUDIO && !main.getConfig().isDownloadAudio()
                                 || type == SUBTITLES && !main.getConfig().isDownloadSubtitles()
-                                || type == THUMBNAILS && !main.getConfig().isDownloadThumbnails()){
+                                || type == THUMBNAILS && !main.getConfig().isDownloadThumbnails()) {
                                 continue;
                             }
 
@@ -738,7 +736,7 @@ public class YtDlpDownloader{
                             List<String> downloadArguments = filter.getArguments(type, main, tmpPath);
                             arguments.addAll(downloadArguments);
 
-                            if(main.getConfig().isDebugMode()){
+                            if (main.getConfig().isDebugMode()) {
                                 log.debug("ALL {}: Type {} ({}): {}",
                                     genericArguments,
                                     type,
@@ -748,13 +746,13 @@ public class YtDlpDownloader{
 
                             Pair<Integer, String> result = processDownload(entry, arguments);
 
-                            //TODO: This code block is so deep it could probably find oil down there already.
-                            if(result != null){
-                                if(result.getKey() != 0){
-                                    if(!entry.getCancelHook().get()){
-                                        if(type == VIDEO || type == AUDIO){
-                                            if(!main.getConfig().isAutoDownloadRetry()
-                                                || entry.getRetryCounter().incrementAndGet() > MAX_DOWNLOAD_RETRIES){
+                            // TODO: This code block is so deep it could probably find oil down there already.
+                            if (result != null) {
+                                if (result.getKey() != 0) {
+                                    if (!entry.getCancelHook().get()) {
+                                        if (type == VIDEO || type == AUDIO) {
+                                            if (!main.getConfig().isAutoDownloadRetry()
+                                                || entry.getRetryCounter().incrementAndGet() > MAX_DOWNLOAD_RETRIES) {
 
                                                 log.info("Download of {} failed, all retry attempts failed.",
                                                     entry.getUrl());
@@ -763,7 +761,7 @@ public class YtDlpDownloader{
                                                 entry.reset();
 
                                                 failedDownloads.offer(entry);
-                                            }else{
+                                            } else {
                                                 log.info("Download of {} failed, retrying ({}/{})",
                                                     entry.getUrl(),
                                                     entry.getRetryCounter().get(),
@@ -774,10 +772,10 @@ public class YtDlpDownloader{
 
                                                 downloadDeque.offerFirst(entry);
                                             }
-                                        }else{
-                                            //These can be treated as low priority downloads since thumbnails
-                                            //and subtitles are already embedded by default, if they fail we just move on.
-                                            //For now, downloading only subs or thumbs is not supported.
+                                        } else {
+                                            // These can be treated as low priority downloads since thumbnails
+                                            // and subtitles are already embedded by default, if they fail we just move on.
+                                            // For now, downloading only subs or thumbs is not supported.
                                             log.error("Failed to download {}: {}", type, result.getValue());
                                             continue;
                                         }
@@ -786,24 +784,25 @@ public class YtDlpDownloader{
                                     fireListeners();
                                     return;
                                 }
-                            }else{
+                            } else {
                                 wasStopped = true;
                             }
                         }
-                    }finally{
+                    } finally {
                         runningQueue.remove(entry);
                     }
 
-                    if(!downloadsRunning.get() || wasStopped){
+                    if (!downloadsRunning.get() || wasStopped) {
                         entry.updateStatus(DownloadStatus.STOPPED, l10n("gui.download_status.not_started"));
                         entry.reset();
 
                         downloadDeque.offerFirst(entry);
                         fireListeners();
-                    }else if(!entry.getCancelHook().get()){
+                    } else if (!entry.getCancelHook().get()) {
                         Map<String, Runnable> rightClickOptions = new TreeMap<>();
 
-                        try(Stream<Path> dirStream = Files.walk(tmpPath.toPath())){
+                        try (
+                            Stream<Path> dirStream = Files.walk(tmpPath.toPath())) {
                             dirStream.forEach(path -> {
                                 String fileName = path.getFileName().toString().toLowerCase();
 
@@ -812,43 +811,43 @@ public class YtDlpDownloader{
                                 boolean isSubtitle = fileName.endsWith("." + quality.getSubtitleContainer().getValue());
                                 boolean isThumbnail = fileName.endsWith("." + quality.getThumbnailContainer().getValue());
 
-                                if(isAudio || isVideo
+                                if (isAudio || isVideo
                                     || isSubtitle && main.getConfig().isDownloadSubtitles()
-                                    || isThumbnail && main.getConfig().isDownloadThumbnails()){
+                                    || isThumbnail && main.getConfig().isDownloadThumbnails()) {
 
                                     Path relativePath = tmpPath.toPath().relativize(path);
                                     Path targetPath = finalPath.toPath().resolve(relativePath);
 
-                                    try{
+                                    try {
                                         Files.createDirectories(targetPath.getParent());
                                         Files.copy(path, targetPath, StandardCopyOption.REPLACE_EXISTING);
                                         entry.getFinalMediaFiles().add(targetPath.toFile());
 
-                                        if(isVideo){
+                                        if (isVideo) {
                                             rightClickOptions.put(
                                                 l10n("gui.play_video"),
                                                 () -> entry.play(VideoContainerEnum.class));
                                         }
 
-                                        if(isAudio){
+                                        if (isAudio) {
                                             rightClickOptions.put(
                                                 l10n("gui.play_audio"),
                                                 () -> entry.play(AudioContainerEnum.class));
                                         }
 
-                                        if(isThumbnail){
+                                        if (isThumbnail) {
                                             rightClickOptions.put(
                                                 l10n("gui.view_thumbnail"),
                                                 () -> entry.play(ThumbnailContainerEnum.class));
                                         }
 
                                         log.info("Copied file: {}", path.getFileName());
-                                    }catch(IOException e){
+                                    } catch (IOException e) {
                                         log.error("Failed to copy file: {}", path.getFileName(), e);
                                     }
                                 }
                             });
-                        }catch(IOException e){
+                        } catch (IOException e) {
                             log.error("Failed to list files", e);
                         }
 
@@ -875,20 +874,20 @@ public class YtDlpDownloader{
 
                         completedDownloads.offer(entry);
                         fireListeners();
-                    }else{
+                    } else {
                         log.error("Unexpected download state");
                     }
-                }catch(Exception e){
+                } catch (Exception e) {
                     log.error("Failed to download", e);
 
                     entry.updateStatus(DownloadStatus.FAILED, e.getLocalizedMessage());
                     entry.reset();
 
-                    downloadDeque.offerLast(entry);//Retry later
+                    downloadDeque.offerLast(entry);// Retry later
                     fireListeners();
 
                     main.handleException(e);
-                }finally{
+                } finally {
                     entry.getRunning().set(false);
 
                     runningDownloads.decrementAndGet();
@@ -897,13 +896,13 @@ public class YtDlpDownloader{
             }, 10);
         }
 
-        if(downloadsRunning.get() && runningDownloads.get() == 0){
+        if (downloadsRunning.get() && runningDownloads.get() == 0) {
             stopDownloads();
         }
     }
 
     @Nullable
-    private Pair<Integer, String> processDownload(QueueEntry entry, List<String> arguments) throws Exception{
+    private Pair<Integer, String> processDownload(QueueEntry entry, List<String> arguments) throws Exception {
         long start = System.currentTimeMillis();
 
         List<String> finalArgs = new ArrayList<>(arguments);
@@ -918,27 +917,28 @@ public class YtDlpDownloader{
         boolean downloadStarted = false;
         String lastOutput = "";
 
-        try(ReadableByteChannel stdInput = Channels.newChannel(process.getInputStream())){
+        try (
+            ReadableByteChannel stdInput = Channels.newChannel(process.getInputStream())) {
             ByteBuffer buffer = ByteBuffer.allocate(4096);
             StringBuilder output = new StringBuilder();
             char prevChar = '\0';
 
-            while(downloadsRunning.get() && !entry.getCancelHook().get() && process.isAlive()){
-                if(Thread.currentThread().isInterrupted()){
+            while (downloadsRunning.get() && !entry.getCancelHook().get() && process.isAlive()) {
+                if (Thread.currentThread().isInterrupted()) {
                     process.destroy();
                     throw new InterruptedException("Download interrupted");
                 }
 
                 buffer.clear();
                 int bytesRead = stdInput.read(buffer);
-                if(bytesRead > 0){
+                if (bytesRead > 0) {
                     buffer.flip();
 
-                    while(buffer.hasRemaining()){
+                    while (buffer.hasRemaining()) {
                         char ch = (char)buffer.get();
                         output.append(ch);
 
-                        if(ch == '\n' || (ch == '\r' && prevChar != '\n')){
+                        if (ch == '\n' || (ch == '\r' && prevChar != '\n')) {
                             lastOutput = output.toString().replace("\n", "");
                             output.setLength(0);
                         }
@@ -946,13 +946,13 @@ public class YtDlpDownloader{
                         prevChar = ch;
                     }
 
-                    if(lastOutput.contains("[download]") && !lastOutput.contains("Destination:")){
+                    if (lastOutput.contains("[download]") && !lastOutput.contains("Destination:")) {
                         String[] parts = lastOutput.split("\\s+");
-                        for(String part : parts){
-                            if(part.endsWith("%")){
+                        for (String part : parts) {
+                            if (part.endsWith("%")) {
                                 double percent = Double.parseDouble(part.replace("%", ""));
-                                if(percent > lastPercentage || percent < 5
-                                    || Math.abs(percent - lastPercentage) > 10){
+                                if (percent > lastPercentage || percent < 5
+                                    || Math.abs(percent - lastPercentage) > 10) {
                                     entry.getMediaCard().setPercentage(percent);
                                     lastPercentage = percent;
                                 }
@@ -961,14 +961,14 @@ public class YtDlpDownloader{
 
                         entry.updateStatus(DownloadStatus.DOWNLOADING, lastOutput.replace("[download] ", ""));
                         downloadStarted = true;
-                    }else{
-                        if(main.getConfig().isDebugMode()){
+                    } else {
+                        if (main.getConfig().isDebugMode()) {
                             log.debug("[{}] - {}", entry.getDownloadId(), lastOutput);
                         }
 
-                        if(downloadStarted){
+                        if (downloadStarted) {
                             entry.updateStatus(DownloadStatus.PROCESSING, lastOutput);
-                        }else{
+                        } else {
                             entry.updateStatus(DownloadStatus.PREPARING, lastOutput);
                         }
                     }
@@ -979,39 +979,39 @@ public class YtDlpDownloader{
 
             long stopped = System.currentTimeMillis() - start;
 
-            if(!downloadsRunning.get() || entry.getCancelHook().get()){
-                if(main.getConfig().isDebugMode()){
+            if (!downloadsRunning.get() || entry.getCancelHook().get()) {
+                if (main.getConfig().isDebugMode()) {
                     log.debug("Download process halted after {}ms.", stopped);
                 }
 
                 return null;
-            }else{
+            } else {
                 int exitCode = process.waitFor();
-                if(main.getConfig().isDebugMode()){
+                if (main.getConfig().isDebugMode()) {
                     log.debug("Download process took {}ms", stopped);
                 }
 
                 return new Pair<>(exitCode, lastOutput);
             }
-        }catch(IOException e){
+        } catch (IOException e) {
             log.info("IO error: {}", e.getMessage());
 
             return null;
-        }finally{
-            //Our ProcessMonitor will take care of closing the underlying process.
+        } finally {
+            // Our ProcessMonitor will take care of closing the underlying process.
         }
     }
 
-    private void tryStopProcess(Process process) throws InterruptedException{
-        if(process.isAlive()){
+    private void tryStopProcess(Process process) throws InterruptedException {
+        if (process.isAlive()) {
             long quitTimer = System.currentTimeMillis();
 
-            //First try to politely ask the process to excuse itself.
+            // First try to politely ask the process to excuse itself.
             process.destroy();
 
-            if(!process.waitFor(5, TimeUnit.SECONDS)){
+            if (!process.waitFor(5, TimeUnit.SECONDS)) {
                 log.warn("Process did not terminate in time, forcefully stopping it.");
-                //Time's up. I guess asking nicely wasn't in the cards.
+                // Time's up. I guess asking nicely wasn't in the cards.
                 process.destroyForcibly();
             }
 
@@ -1020,15 +1020,15 @@ public class YtDlpDownloader{
         }
     }
 
-    private static String truncate(String input, int length){
-        if(input.length() > length){
+    private static String truncate(String input, int length) {
+        if (input.length() > length) {
             input = input.substring(0, length - 3) + "...";
         }
 
         return input;
     }
 
-    private static String getHumanReadableFileSize(long bytes){
+    private static String getHumanReadableFileSize(long bytes) {
         assert bytes >= 0 && bytes < Long.MAX_VALUE : "Invalid argument. Expected valid positive long";
 
         String[] units = {"B", "KB", "MB", "GB", "TB", "EB"};
@@ -1036,7 +1036,7 @@ public class YtDlpDownloader{
 
         double size = (double)bytes;
 
-        while(size >= 1024 && unitIndex < units.length - 1){
+        while (size >= 1024 && unitIndex < units.length - 1) {
             size /= 1024;
             unitIndex++;
         }
@@ -1045,7 +1045,7 @@ public class YtDlpDownloader{
     }
 
     @Getter
-    private enum DownloadStatus implements ISettingsEnum{
+    private enum DownloadStatus implements ISettingsEnum {
         QUERYING("enums.download_status.querying"),
         STOPPED("enums.download_status.stopped"),
         QUEUED("enums.download_status.queued"),
@@ -1059,13 +1059,13 @@ public class YtDlpDownloader{
 
         private final String translationKey;
 
-        private DownloadStatus(String translationKeyIn){
+        private DownloadStatus(String translationKeyIn) {
             translationKey = translationKeyIn;
         }
     }
 
     @Data
-    private static class QueueEntry{
+    private static class QueueEntry {
 
         private final GDownloader main;
 
@@ -1089,14 +1089,14 @@ public class YtDlpDownloader{
 
         private AtomicInteger retryCounter = new AtomicInteger();
 
-        public void openUrl(){
+        public void openUrl() {
             main.openUrlInBrowser(originalUrl);
         }
 
-        public <T extends Enum<T> & IContainerEnum> void play(Class<T> container){
-            if(!finalMediaFiles.isEmpty()){
-                for(File file : finalMediaFiles){
-                    if(!file.exists()){
+        public <T extends Enum<T> & IContainerEnum> void play(Class<T> container) {
+            if (!finalMediaFiles.isEmpty()) {
+                for (File file : finalMediaFiles) {
+                    if (!file.exists()) {
                         continue;
                     }
 
@@ -1104,8 +1104,8 @@ public class YtDlpDownloader{
 
                     String[] values = IContainerEnum.getContainerValues(container);
 
-                    for(String value : values){
-                        if(fileName.endsWith("." + value)){
+                    for (String value : values) {
+                        if (fileName.endsWith("." + value)) {
                             main.open(file);
                             return;
                         }
@@ -1116,7 +1116,7 @@ public class YtDlpDownloader{
             main.openDownloadsDirectory();
         }
 
-        public void copyUrlToClipboard(){
+        public void copyUrlToClipboard() {
             StringSelection stringSelection = new StringSelection(originalUrl);
             Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
             clipboard.setContents(stringSelection, null);
@@ -1130,15 +1130,15 @@ public class YtDlpDownloader{
             );
         }
 
-        public void deleteMediaFiles(){
+        public void deleteMediaFiles() {
             boolean success = false;
 
-            for(File file : finalMediaFiles){
-                try{
-                    if(Files.deleteIfExists(file.toPath())){
+            for (File file : finalMediaFiles) {
+                try {
+                    if (Files.deleteIfExists(file.toPath())) {
                         success = true;
                     }
-                }catch(IOException e){
+                } catch (IOException e) {
                     main.handleException(e);
                 }
             }
@@ -1152,38 +1152,38 @@ public class YtDlpDownloader{
             );
         }
 
-        public boolean isRunning(){
+        public boolean isRunning() {
             return running.get();
         }
 
-        public void clean(){
-            if(tmpDirectory != null && tmpDirectory.exists()){
+        public void clean() {
+            if (tmpDirectory != null && tmpDirectory.exists()) {
                 DirectoryUtils.deleteRecursively(tmpDirectory.toPath());
             }
         }
 
-        public void close(){
+        public void close() {
             resetRetryCounter();
 
             cancelHook.set(true);
 
-            if(process != null){
+            if (process != null) {
                 process.destroy();
             }
 
             clean();
         }
 
-        public void reset(){
+        public void reset() {
             cancelHook.set(false);
             process = null;
         }
 
-        public void resetRetryCounter(){
+        public void resetRetryCounter() {
             retryCounter.set(0);
         }
 
-        public void setVideoInfo(VideoInfo videoInfoIn){
+        public void setVideoInfo(VideoInfo videoInfoIn) {
             videoInfo = videoInfoIn;
 
             Optional<BufferedImage> optional = videoInfo.supportedThumbnails()
@@ -1196,28 +1196,28 @@ public class YtDlpDownloader{
             optional.ifPresentOrElse(
                 img -> mediaCard.setThumbnailAndDuration(img, videoInfoIn.getDuration()),
                 () -> {
-                    if(main.getConfig().isDebugMode()){
+                    if (main.getConfig().isDebugMode()) {
                         log.error("Failed to load a valid thumbnail");
                     }
                 }
             );
         }
 
-        private Optional<BufferedImage> tryLoadThumbnail(String url){
-            try{
-                if(main.getConfig().isDebugMode()){
+        private Optional<BufferedImage> tryLoadThumbnail(String url) {
+            try {
+                if (main.getConfig().isDebugMode()) {
                     log.debug("Trying to load thumbnail {}", url);
                 }
 
                 BufferedImage img = ImageIO.read(new URI(url).toURL());
 
-                if(img != null){
+                if (img != null) {
                     return Optional.of(img);
-                }else if(main.getConfig().isDebugMode()){
+                } else if (main.getConfig().isDebugMode()) {
                     log.error("ImageIO.read returned null for {}", url);
                 }
-            }catch(IOException | URISyntaxException e){
-                if(main.getConfig().isDebugMode()){
+            } catch (IOException | URISyntaxException e) {
+                if (main.getConfig().isDebugMode()) {
                     log.error("ImageIO.read exception {}", url, e);
                 }
             }
@@ -1225,8 +1225,8 @@ public class YtDlpDownloader{
             return Optional.empty();
         }
 
-        private String getTitle(){
-            if(videoInfo != null && !videoInfo.getTitle().isEmpty()){
+        private String getTitle() {
+            if (videoInfo != null && !videoInfo.getTitle().isEmpty()) {
                 return truncate(videoInfo.getTitle(), 40);
             }
 
@@ -1235,12 +1235,12 @@ public class YtDlpDownloader{
                 .replace("www.", ""), 30);
         }
 
-        private Optional<String> getDisplaySize(){
-            if(videoInfo != null){
+        private Optional<String> getDisplaySize() {
+            if (videoInfo != null) {
                 long size = videoInfo.getFilesizeApprox();
 
-                //For this, we consider 0 as null.
-                if(size > 0 && size < Long.MAX_VALUE){
+                // For this, we consider 0 as null.
+                if (size > 0 && size < Long.MAX_VALUE) {
                     return Optional.of(getHumanReadableFileSize(size));
                 }
             }
@@ -1248,11 +1248,11 @@ public class YtDlpDownloader{
             return Optional.empty();
         }
 
-        public void updateStatus(DownloadStatus status, String text){
+        public void updateStatus(DownloadStatus status, String text) {
             String topText = filter.getDisplayName();
 
             Optional<String> size = getDisplaySize();
-            if(size.isPresent()){
+            if (size.isPresent()) {
                 topText += " (~" + size.get() + ")";
             }
 
@@ -1261,10 +1261,10 @@ public class YtDlpDownloader{
 
             mediaCard.setTooltip(text);
 
-            if(status != downloadStatus){
+            if (status != downloadStatus) {
                 downloadStatus = status;
 
-                switch(status){
+                switch (status) {
                     case QUERYING:
                         mediaCard.setPercentage(100);
                         mediaCard.setProgressBarTextAndColors(status.getDisplayName(), Color.MAGENTA);
@@ -1300,7 +1300,7 @@ public class YtDlpDownloader{
                     default:
                         throw new RuntimeException("Unhandled status: " + status);
                 }
-            }else if(status == DownloadStatus.DOWNLOADING){
+            } else if (status == DownloadStatus.DOWNLOADING) {
                 mediaCard.setProgressBarText(status.getDisplayName() + ": " + mediaCard.getPercentage() + "%");
             }
         }
@@ -1310,7 +1310,7 @@ public class YtDlpDownloader{
     @NoArgsConstructor
     @JsonIgnoreProperties(ignoreUnknown = true)
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    public static class Thumbnail{
+    public static class Thumbnail {
 
         @JsonProperty("url")
         private String url;
@@ -1334,7 +1334,7 @@ public class YtDlpDownloader{
     @Data
     @NoArgsConstructor
     @JsonIgnoreProperties(ignoreUnknown = true)
-    public static class VideoInfo{
+    public static class VideoInfo {
 
         @JsonProperty("id")
         private String id;
@@ -1349,10 +1349,10 @@ public class YtDlpDownloader{
         private List<Thumbnail> thumbnails = new ArrayList<>();
 
         @JsonIgnore
-        private Stream<String> supportedThumbnails(){
+        private Stream<String> supportedThumbnails() {
             Stream.Builder<String> builder = Stream.builder();
 
-            if(thumbnail != null && thumbnail.matches("^https?://.*")){
+            if (thumbnail != null && thumbnail.matches("^https?://.*")) {
                 builder.add(thumbnail);
             }
 
@@ -1364,7 +1364,7 @@ public class YtDlpDownloader{
                 .map(Thumbnail::getUrl)
                 .forEach(builder::add);
 
-            //Add WebP thumbnails last
+            // Add WebP thumbnails last
             thumbnails.stream()
                 .filter(thumb -> thumb.getUrl() != null && thumb.getUrl().matches("^https?://.*\\.webp$"))
                 .sorted(Comparator.comparingInt(Thumbnail::getPreference).reversed())
@@ -1395,9 +1395,9 @@ public class YtDlpDownloader{
 
         @JsonIgnore
         @Nullable
-        //TODO: implement
-        public LocalDate getUploadDateAsLocalDate(){
-            if(uploadDate != null && !uploadDate.isEmpty()){
+        // TODO: implement
+        public LocalDate getUploadDateAsLocalDate() {
+            if (uploadDate != null && !uploadDate.isEmpty()) {
                 DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd");
                 return LocalDate.parse(uploadDate, formatter);
             }

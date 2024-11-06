@@ -25,7 +25,7 @@ import lombok.Getter;
  * @author Gabriel / hstr0100 / vertx010
  */
 @Getter
-public enum ResolutionEnum implements ISettingsEnum{
+public enum ResolutionEnum implements ISettingsEnum {
     RES_144(144, "144p"),
     RES_240(240, "240p"),
     RES_360(360, "360p"),
@@ -37,22 +37,22 @@ public enum ResolutionEnum implements ISettingsEnum{
     private final int value;
     private final String displayName;
 
-    private ResolutionEnum(int valueIn, String displayNameIn){
+    private ResolutionEnum(int valueIn, String displayNameIn) {
         value = valueIn;
         displayName = displayNameIn;
     }
 
     @Override
-    public String getTranslationKey(){
+    public String getTranslationKey() {
         return "";
     }
 
-    public boolean isResolutionValid(ResolutionEnum minResolution, ResolutionEnum maxResolution){
+    public boolean isResolutionValid(ResolutionEnum minResolution, ResolutionEnum maxResolution) {
         return minResolution.getValue() <= maxResolution.getValue();
     }
 
-    public ResolutionEnum getValidMin(ResolutionEnum min){
-        if(isResolutionValid(min, this)){
+    public ResolutionEnum getValidMin(ResolutionEnum min) {
+        if (isResolutionValid(min, this)) {
             return min;
         }
 
@@ -63,8 +63,8 @@ public enum ResolutionEnum implements ISettingsEnum{
         return result.orElse(min);
     }
 
-    public ResolutionEnum getValidMax(ResolutionEnum max){
-        if(isResolutionValid(this, max)){
+    public ResolutionEnum getValidMax(ResolutionEnum max) {
+        if (isResolutionValid(this, max)) {
             return max;
         }
 

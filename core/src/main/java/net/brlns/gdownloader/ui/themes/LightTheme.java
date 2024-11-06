@@ -23,14 +23,14 @@ import static net.brlns.gdownloader.ui.themes.UIColors.*;
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-public class LightTheme extends AbstractTheme{
+public class LightTheme extends AbstractTheme {
 
-    public LightTheme(){
+    public LightTheme() {
         super();
     }
 
     @Override
-    protected void initColors(){
+    protected void initColors() {
         put(ICON, new Color(128, 128, 128));
         put(ICON_ACTIVE, new Color(56, 192, 251));
         put(ICON_INACTIVE, new Color(239, 83, 80));
@@ -67,12 +67,12 @@ public class LightTheme extends AbstractTheme{
     }
 
     @Override
-    public String getAppIconPath(){
+    public String getAppIconPath() {
         return "/assets/app_icon_light.png";
     }
 
     @Override
-    public String getTrayIconPath(){
+    public String getTrayIconPath() {
         return "/assets/tray_icon_light.png";
     }
 }

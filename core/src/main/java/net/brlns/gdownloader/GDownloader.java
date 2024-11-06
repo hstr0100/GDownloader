@@ -83,12 +83,12 @@ import static net.brlns.gdownloader.Language.*;
  * @author Gabriel / hstr0100 / vertx010
  */
 @Slf4j
-public final class GDownloader{
+public final class GDownloader {
 
     /**
      * Constants and application states
      */
-    public static final String REGISTRY_APP_NAME = "GDownloader";//Changing this might result in orphaned registry keys.
+    public static final String REGISTRY_APP_NAME = "GDownloader";// Changing this might result in orphaned registry keys.
 
     public static final String CACHE_DIRETORY_NAME = "tmp";
     public static final String OLD_CACHE_DIRETORY_NAME = "gdownloader_cache";
@@ -128,17 +128,17 @@ public final class GDownloader{
 
     private final AtomicBoolean restartRequested = new AtomicBoolean(false);
 
-    public GDownloader(){
-        //Initialize the config file
+    public GDownloader() {
+        // Initialize the config file
         File workDir = getWorkDirectory();
         configFile = new File(workDir, "config.json");
 
-        //TODO: move log rotation to utils
+        // TODO: move log rotation to utils
         File logFile = new File(workDir, "gdownloader_log.txt");
         File previousLogFile = new File(workDir, "gdownloader_log_previous.txt");
 
-        if(logFile.exists()){
-            if(previousLogFile.exists()){
+        if (logFile.exists()) {
+            if (previousLogFile.exists()) {
                 previousLogFile.delete();
             }
 
@@ -147,19 +147,19 @@ public final class GDownloader{
 
         LoggerUtils.setLogFile(logFile);
 
-        if(!configFile.exists()){
+        if (!configFile.exists()) {
             config = new Settings();
             updateConfig();
         }
 
-        try{
+        try {
             config = OBJECT_MAPPER.readValue(configFile, Settings.class);
             config.doMigration();
-        }catch(IOException e){
+        } catch (IOException e) {
             config = new Settings();
             updateConfig();
 
-            //We have to init the language to display the exception.
+            // We have to init the language to display the exception.
             Language.initLanguage(config);
 
             handleException(e, true);
@@ -167,7 +167,7 @@ public final class GDownloader{
 
         log.info("Loaded config file");
 
-        if(config.isDebugMode()){
+        if (config.isDebugMode()) {
             printDebugInformation();
         }
 
@@ -183,21 +183,21 @@ public final class GDownloader{
 
         ThemeProvider.setTheme(config.getTheme());
 
-        if(!config.isUseSystemFont()){
+        if (!config.isUseSystemFont()) {
             setUIFont(new FontUIResource("Dialog", Font.BOLD, config.getFontSize()));
-        }else{
+        } else {
             setUIFontSize(config.getFontSize());
         }
 
         clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
         tray = SystemTray.getSystemTray();
 
-        try{
+        try {
             downloadManager = new YtDlpDownloader(this);
 
             guiManager = new GUIManager(this);
 
-            //Register to the system tray
+            // Register to the system tray
             Image image = Toolkit.getDefaultToolkit().createImage(
                 getClass().getResource(guiManager.getCurrentTrayIconPath()));
 
@@ -205,7 +205,7 @@ public final class GDownloader{
             trayIcon.setImageAutoSize(true);
 
             trayIcon.addActionListener((ActionEvent e) -> {
-                if(initialized){
+                if (initialized) {
                     guiManager.createAndShowGUI();
                 }
             });
@@ -216,8 +216,8 @@ public final class GDownloader{
             updaters.add(new YtDlpUpdater(this));
             updaters.add(new FFMpegUpdater(this));
 
-            if(config.isDebugMode()){
-                for(AbstractGitUpdater updater : updaters){
+            if (config.isDebugMode()) {
+                for (AbstractGitUpdater updater : updaters) {
                     updater.registerListener((status, progress) -> {
                         log.info("UPDATER {}: Status: {} Progress: {}",
                             updater.getClass().getName(), status, String.format("%.1f", progress));
@@ -227,30 +227,30 @@ public final class GDownloader{
 
             updateStartupStatus();
 
-            GlobalScreen.addNativeKeyListener(new NativeKeyListener(){
+            GlobalScreen.addNativeKeyListener(new NativeKeyListener() {
                 @Override
-                public void nativeKeyPressed(NativeKeyEvent e){
-                    try{
-                        if((e.getModifiers() & NativeKeyEvent.CTRL_MASK) != 0
-                            && e.getKeyCode() == NativeKeyEvent.VC_C){
+                public void nativeKeyPressed(NativeKeyEvent e) {
+                    try {
+                        if ((e.getModifiers() & NativeKeyEvent.CTRL_MASK) != 0
+                            && e.getKeyCode() == NativeKeyEvent.VC_C) {
                             resetClipboard();
 
-                            //TODO check how the clipboard deals with concurrency
+                            // TODO check how the clipboard deals with concurrency
                             updateClipboard();
                         }
-                    }catch(Exception ex){
+                    } catch (Exception ex) {
                         handleException(ex);
                     }
                 }
 
                 @Override
-                public void nativeKeyReleased(NativeKeyEvent e){
-                    //Not implemented
+                public void nativeKeyReleased(NativeKeyEvent e) {
+                    // Not implemented
                 }
 
                 @Override
-                public void nativeKeyTyped(NativeKeyEvent e){
-                    //Not implemented
+                public void nativeKeyTyped(NativeKeyEvent e) {
+                    // Not implemented
                 }
             });
 
@@ -275,44 +275,44 @@ public final class GDownloader{
             scheduler.scheduleAtFixedRate(processClipboard, 0, 50, TimeUnit.MILLISECONDS);
 
             initialized = true;
-            //SysTray is daemon
+            // SysTray is daemon and will hold the program open after main exits.
 
             globalThreadPool.submitWithPriority(() -> {
                 clearCache();
             }, 100);
-        }catch(Exception e){
+        } catch (Exception e) {
             handleException(e);
         }
     }
 
-    private int calculateThreadPoolSize(Settings config){
+    private int calculateThreadPoolSize(Settings config) {
         int cores = Runtime.getRuntime().availableProcessors();
 
         int extraThreads = 1;
-        //We add up to 4 extra threads for clipboard management and the updater.
-        if(config.isMonitorClipboardForLinks()){
+        // We add up to 4 extra threads for clipboard management and the updater.
+        if (config.isMonitorClipboardForLinks()) {
             extraThreads = Math.clamp(cores, 1, 4);
         }
 
         return config.getMaxSimultaneousDownloads() + extraThreads;
     }
 
-    public void clearCache(){
+    public void clearCache() {
         clearCache(false);
     }
 
-    public void clearCache(boolean notify){
+    public void clearCache(boolean notify) {
         downloadManager.stopDownloads();
 
-        //A shorter cache dir name might benefit NTFS filesystems.
+        // A shorter cache dir name might benefit NTFS filesystems.
         File cachePath = new File(getDownloadsDirectory(), CACHE_DIRETORY_NAME);
         DirectoryUtils.deleteRecursively(cachePath.toPath());
 
-        //We have to get rid of the old cache dir if it exists.
+        // We have to get rid of the old cache dir if it exists.
         File oldCachePath = new File(getDownloadsDirectory(), OLD_CACHE_DIRETORY_NAME);
         DirectoryUtils.deleteRecursively(oldCachePath.toPath());
 
-        if(notify){
+        if (notify) {
             guiManager.showMessage(
                 l10n("gui.clear_cache.notification_title"),
                 l10n("gui.clear_cache.cleared"),
@@ -323,17 +323,17 @@ public final class GDownloader{
         }
     }
 
-    public void initUi(){
+    public void initUi() {
         guiManager.createAndShowGUI();
     }
 
-    public boolean checkForUpdates(){
+    public boolean checkForUpdates() {
         return checkForUpdates(true);
     }
 
-    public boolean checkForUpdates(boolean userInitiated){
-        if(userInitiated){
-            if(downloadManager.isBlocked()){//This means we are already checking for updates
+    public boolean checkForUpdates(boolean userInitiated) {
+        if (userInitiated) {
+            if (downloadManager.isBlocked()) {// This means we are already checking for updates
                 return false;
             }
 
@@ -351,21 +351,21 @@ public final class GDownloader{
 
         CountDownLatch latch = new CountDownLatch(updaters.size());
 
-        for(AbstractGitUpdater updater : updaters){
-            if(updater.isSupported()){
+        for (AbstractGitUpdater updater : updaters) {
+            if (updater.isSupported()) {
                 globalThreadPool.submitWithPriority(() -> {
-                    try{
+                    try {
                         log.error("Starting updater " + updater.getClass().getName());
                         updater.check(userInitiated);
-                    }catch(NoFallbackAvailableException e){
+                    } catch (NoFallbackAvailableException e) {
                         log.error("Updater for " + updater.getClass().getName() + " failed and no fallback is available. Your OS might be unsupported.");
-                    }catch(Exception e){
+                    } catch (Exception e) {
                         handleException(e);
-                    }finally{
+                    } finally {
                         latch.countDown();
                     }
                 }, 5);
-            }else{
+            } else {
                 log.info("Updater " + updater.getClass().getName() + " is not supported in this platform or runtime method.");
 
                 latch.countDown();
@@ -373,9 +373,9 @@ public final class GDownloader{
         }
 
         globalThreadPool.submitWithPriority(() -> {
-            try{
+            try {
                 latch.await();
-            }catch(InterruptedException e){
+            } catch (InterruptedException e) {
                 log.error("Interrupted", e);
             }
 
@@ -383,14 +383,14 @@ public final class GDownloader{
 
             boolean updated = false;
 
-            for(AbstractGitUpdater updater : updaters){
-                if(updater.isUpdated()){
+            for (AbstractGitUpdater updater : updaters) {
+                if (updater.isUpdated()) {
                     updated = true;
                     break;
                 }
             }
 
-            if(userInitiated){
+            if (userInitiated) {
                 guiManager.showMessage(
                     l10n("gui.update.notification_title"),
                     l10n(updated
@@ -402,9 +402,9 @@ public final class GDownloader{
                 );
             }
 
-            for(AbstractGitUpdater updater : updaters){
-                if(updater instanceof SelfUpdater selfUpdater){
-                    if(selfUpdater.isUpdated()){
+            for (AbstractGitUpdater updater : updaters) {
+                if (updater instanceof SelfUpdater selfUpdater) {
+                    if (selfUpdater.isUpdated()) {
                         log.info("Restarting to apply updates.");
                         restart();
                         break;
@@ -412,10 +412,10 @@ public final class GDownloader{
                 }
             }
 
-            if(downloadManager.getYtDlpPath() == null || !downloadManager.getYtDlpPath().exists()){
+            if (downloadManager.getYtDlpPath() == null || !downloadManager.getYtDlpPath().exists()) {
                 log.error("Failed to initialize YT-DLP, the program cannot continue. Exitting...");
 
-                if(!userInitiated){
+                if (!userInitiated) {
                     System.exit(0);
                 }
             }
@@ -429,7 +429,7 @@ public final class GDownloader{
     /**
      * Builds the system tray menu.
      */
-    private PopupMenu buildPopupMenu(){
+    private PopupMenu buildPopupMenu() {
         PopupMenu popup = new PopupMenu();
 
         popup.add(buildMenuItem(l10n("gui.toggle_downloads"), (ActionEvent e) -> {
@@ -460,39 +460,39 @@ public final class GDownloader{
     /**
      * Helper for building system tray menu entries.
      */
-    private MenuItem buildMenuItem(String name, ActionListener actionListener){
+    private MenuItem buildMenuItem(String name, ActionListener actionListener) {
         MenuItem menuItem = new MenuItem(name);
         menuItem.addActionListener(actionListener);
 
         return menuItem;
     }
 
-    public void openDownloadsDirectory(){
+    public void openDownloadsDirectory() {
         open(getOrCreateDownloadsDirectory());
     }
 
-    public void open(File file){
-        try{
+    public void open(File file) {
+        try {
             Desktop desktop = Desktop.getDesktop();
 
-            if(file.exists()){
+            if (file.exists()) {
                 desktop.open(file);
-            }else{
+            } else {
                 log.error("File not found: {}", file);
             }
-        }catch(Exception e){
+        } catch (Exception e) {
             handleException(e);
         }
     }
 
-    public void openUrlInBrowser(String urlIn){
-        try{
+    public void openUrlInBrowser(String urlIn) {
+        try {
             URL url = new URI(urlIn).toURL();
 
-            if(Desktop.isDesktopSupported()){
+            if (Desktop.isDesktopSupported()) {
                 Desktop desktop = Desktop.getDesktop();
 
-                if(desktop.isSupported(Desktop.Action.BROWSE)){
+                if (desktop.isSupported(Desktop.Action.BROWSE)) {
                     desktop.browse(url.toURI());
                     return;
                 }
@@ -501,48 +501,48 @@ public final class GDownloader{
             String os = System.getProperty("os.name").toLowerCase();
             Runtime runtime = Runtime.getRuntime();
 
-            if(os.contains("mac")){
-                runtime.exec(new String[]{"open", url.toString()});
-            }else if(os.contains("nix") || os.contains("nux")){
+            if (os.contains("mac")) {
+                runtime.exec(new String[] {"open", url.toString()});
+            } else if (os.contains("nix") || os.contains("nux")) {
                 String[] browsers = {"xdg-open", "firefox", "google-chrome"};
                 boolean success = false;
 
-                for(String browser : browsers){
-                    try{
-                        runtime.exec(new String[]{browser, url.toString()});
+                for (String browser : browsers) {
+                    try {
+                        runtime.exec(new String[] {browser, url.toString()});
                         success = true;
                         break;
-                    }catch(IOException e){
-                        //Continue to the next browser
+                    } catch (IOException e) {
+                        // Continue to the next browser
                     }
                 }
 
-                if(!success){
+                if (!success) {
                     throw new RuntimeException("No suitable browser found to open the URL.");
                 }
-            }else if(os.contains("win")){
-                runtime.exec(new String[]{"rundll32", "url.dll,FileProtocolHandler", url.toString()});
-            }else{
+            } else if (os.contains("win")) {
+                runtime.exec(new String[] {"rundll32", "url.dll,FileProtocolHandler", url.toString()});
+            } else {
                 throw new UnsupportedOperationException("Unsupported operating system: " + os);
             }
-        }catch(Exception e){
+        } catch (Exception e) {
             handleException(e);
         }
     }
 
     private static BrowserEnum _cachedBrowser;
 
-    public BrowserEnum getBrowserForCookies(){
-        if(_cachedBrowser != null){
+    public BrowserEnum getBrowserForCookies() {
+        if (_cachedBrowser != null) {
             return _cachedBrowser;
         }
 
-        if(config.getBrowser() == BrowserEnum.UNSET){
+        if (config.getBrowser() == BrowserEnum.UNSET) {
             String os = System.getProperty("os.name").toLowerCase();
             String browserName = "";
 
-            try{
-                if(os.contains("win")){
+            try {
+                if (os.contains("win")) {
                     List<String> output = readOutput(
                         "reg",
                         "query",
@@ -553,20 +553,20 @@ public final class GDownloader{
 
                     log.info("Default browser: {}", output);
 
-                    for(String line : output){
-                        if(line.isEmpty() || !line.contains("REG_SZ")){
+                    for (String line : output) {
+                        if (line.isEmpty() || !line.contains("REG_SZ")) {
                             continue;
                         }
 
                         BrowserEnum browserEnum = BrowserEnum.getBrowserForName(line);
 
-                        if(browserEnum != BrowserEnum.UNSET){
+                        if (browserEnum != BrowserEnum.UNSET) {
                             log.debug("Selected: {}", browserEnum);
                             browserName = browserEnum.getName();
                             break;
                         }
                     }
-                }else if(os.contains("mac")){
+                } else if (os.contains("mac")) {
                     List<String> output = readOutput(
                             "bash",
                             "-c",
@@ -575,124 +575,125 @@ public final class GDownloader{
                     log.info("Default browser: {}", output);
 
                     browserName = output.getFirst();
-                }else if(os.contains("nix") || os.contains("nux")){
+                } else if (os.contains("nix") || os.contains("nux")) {
                     List<String> output = readOutput("xdg-settings", "get", "default-web-browser");
 
                     log.info("Default browser: {}", output);
 
-                    for(String line : output){
-                        if(!line.isEmpty()){
+                    for (String line : output) {
+                        if (!line.isEmpty()) {
                             browserName = line.trim();
                             break;
                         }
                     }
                 }
-            }catch(Exception e){
+            } catch (Exception e) {
                 log.error("Error querying for browser", e);
             }
 
             BrowserEnum browser = BrowserEnum.getBrowserForName(browserName);
 
-            if(browser == BrowserEnum.UNSET){
-                _cachedBrowser = GDownloader.isWindows()
-                    ? BrowserEnum.CHROME : BrowserEnum.FIREFOX;//It's the status quo isn't it
-            }else{
+            if (browser == BrowserEnum.UNSET) {// Everything failed, let's try to take a guess and hope for the best.
+                _cachedBrowser = GDownloader.isWindows() ? BrowserEnum.CHROME
+                    : GDownloader.isMac() ? BrowserEnum.SAFARI
+                    : BrowserEnum.FIREFOX;
+            } else {
                 _cachedBrowser = browser;
             }
-        }else{
+        } else {
             _cachedBrowser = config.getBrowser();
         }
 
         return _cachedBrowser;
     }
 
-    //TODO: this could be moved to the settings class itself.
-    public void updateConfig(){
+    // TODO: this could be moved to the settings class itself.
+    public void updateConfig() {
         updateConfig(config);
     }
 
     /**
      * Writes changes made to the Settings class to disk.
      */
-    public void updateConfig(Settings configIn){
-        try{
+    public void updateConfig(Settings configIn) {
+        try {
             JsonNode jsonNode = OBJECT_MAPPER.valueToTree(configIn);
 
             OBJECT_MAPPER.readerForUpdating(config).readValue(jsonNode);
 
             OBJECT_MAPPER.writerWithDefaultPrettyPrinter().writeValue(configFile, configIn);
 
-            if(configIn.getBrowser() != _cachedBrowser && _cachedBrowser != null){
+            if (configIn.getBrowser() != _cachedBrowser && _cachedBrowser != null) {
                 _cachedBrowser = null;
 
-                if(config.isDebugMode()){
+                if (config.isDebugMode()) {
                     log.debug("Cached browser changed to {}", configIn.getBrowser());
                 }
             }
 
-            if(globalThreadPool != null){
+            if (globalThreadPool != null) {
                 int threads = calculateThreadPoolSize(configIn);
 
-                if(globalThreadPool.getCorePoolSize() != threads
-                    || globalThreadPool.getMaximumPoolSize() != threads){
+                if (globalThreadPool.getCorePoolSize() != threads
+                    || globalThreadPool.getMaximumPoolSize() != threads) {
                     globalThreadPool.resize(threads, threads);
 
-                    if(config.isDebugMode()){
+                    if (config.isDebugMode()) {
                         log.debug("Resized global thread pool to {} threads", threads);
                     }
                 }
             }
 
             LoggerUtils.setDebugLogLevel(configIn.isDebugMode());
-        }catch(IOException e){
+        } catch (IOException e) {
             handleException(e);
         }
     }
 
     @Nullable
-    private List<String> getLaunchCommand(){
+    private List<String> getLaunchCommand() {
         List<String> launchString = null;
 
         String jarLocation = getJarLocation();
-        if(jarLocation != null){
+        if (jarLocation != null) {
             String javaHome = System.getProperty("java.home");
 
-            if(javaHome == null || javaHome.isEmpty()){
+            if (javaHome == null || javaHome.isEmpty()) {
                 javaHome = System.getenv("JAVA_HOME");
             }
 
-            if(javaHome != null && !javaHome.isEmpty()){
-                if(!javaHome.endsWith(File.separator)){
+            if (javaHome != null && !javaHome.isEmpty()) {
+                if (!javaHome.endsWith(File.separator)) {
                     javaHome = javaHome + File.separator;
                 }
 
                 String javaPath;
                 String os = System.getProperty("os.name").toLowerCase();
-                if(os.contains("win")){
+                if (os.contains("win")) {
                     javaPath = javaHome + "bin" + File.separator + "javaw.exe";
-                }else{
+                } else {
                     javaPath = javaHome + "bin" + File.separator + "java";
                 }
 
                 String jarString = new File(jarLocation).getAbsolutePath();
 
                 launchString = List.of(javaPath, "-jar", jarString);
-            }else{
+            } else {
                 log.error("Runtime type is .jar but JAVA_HOME is not set. Cannot restart program if necessary.");
             }
         }
 
-        if(launchString == null && launcher != null){
+        if (launchString == null && launcher != null) {
             launchString = List.of(launcher);
         }
 
         String jpackageAppPath = System.getProperty("jpackage.app-path");
 
-        if(launchString == null && jpackageAppPath != null){
+        if (launchString == null && jpackageAppPath != null) {
             launchString = List.of(jpackageAppPath);
         }
 
-        if(launchString == null || launchString.isEmpty()){
+        if (launchString == null || launchString.isEmpty()) {
             return null;
         }
 
@@ -701,20 +702,20 @@ public final class GDownloader{
         return launchString;
     }
 
-    public void restart(){
+    public void restart() {
         restartRequested.set(true);
 
         System.exit(0);
     }
 
-    public boolean isRestartRequested(){
+    public boolean isRestartRequested() {
         return restartRequested.get();
     }
 
-    public void launchNewInstance(){
+    public void launchNewInstance() {
         List<String> launchString = getLaunchCommand();
 
-        if(launchString == null || launchString.isEmpty()){
+        if (launchString == null || launchString.isEmpty()) {
             log.error("Cannot restart, binary location is unknown.");
             return;
         }
@@ -724,10 +725,10 @@ public final class GDownloader{
         ProcessBuilder processBuilder = new ProcessBuilder(launchString);
         processBuilder.environment().remove("_JPACKAGE_LAUNCHER");
 
-        try{
+        try {
             processBuilder.start();
             log.info("New instance launched with command: {}", launchString);
-        }catch(IOException e){
+        } catch (IOException e) {
             log.error("Cannot restart, IO error", e);
         }
     }
@@ -735,20 +736,20 @@ public final class GDownloader{
     /**
      * Toggles the status of automatic startup
      */
-    public void updateStartupStatus(){
-        try{
+    public void updateStartupStatus() {
+        try {
             boolean currentStatus = config.isAutoStart();
 
             List<String> launchString = getLaunchCommand();
 
             log.debug("Launch command is: {}", launchString);
 
-            if(launchString == null || launchString.isEmpty()){
+            if (launchString == null || launchString.isEmpty()) {
                 log.error("Cannot locate runtime binary.");
                 return;
             }
 
-            if(isWindows()){
+            if (isWindows()) {
                 ProcessBuilder checkBuilder = new ProcessBuilder("reg", "query",
                     "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run",
                     "/v", REGISTRY_APP_NAME);
@@ -760,7 +761,7 @@ public final class GDownloader{
 
                 log.debug("Check startup status: {}", checkExitValue);
 
-                if(checkExitValue == 0 && !currentStatus){
+                if (checkExitValue == 0 && !currentStatus) {
                     ProcessBuilder deleteBuilder = new ProcessBuilder("reg", "delete",
                         "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run",
                         "/v", REGISTRY_APP_NAME, "/f");
@@ -768,15 +769,15 @@ public final class GDownloader{
                     Process updateProcess = deleteBuilder.start();
                     updateProcess.waitFor();
 
-                    if(config.isDebugMode()){
+                    if (config.isDebugMode()) {
                         int updateExitValue = updateProcess.exitValue();
-                        if(updateExitValue == 0){
+                        if (updateExitValue == 0) {
                             log.info("Startup entry updated successfully.");
-                        }else{
+                        } else {
                             log.error("Failed to update startup entry.");
                         }
                     }
-                }else if(checkExitValue != 0 && currentStatus){
+                } else if (checkExitValue != 0 && currentStatus) {
                     List<String> regArgs = new ArrayList<>(List.of("reg", "add",
                         "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run",
                         "/v", REGISTRY_APP_NAME,
@@ -789,15 +790,15 @@ public final class GDownloader{
                     StringBuilder builder = new StringBuilder();
                     builder.append("\"");
 
-                    for(String arg : programArgs){
-                        if(arg.contains(File.separator)){
+                    for (String arg : programArgs) {
+                        if (arg.contains(File.separator)) {
                             builder.append("\\\"").append(arg).append("\\\"").append(" ");
-                        }else{
+                        } else {
                             builder.append(arg).append(" ");
                         }
                     }
 
-                    if(builder.charAt(builder.length() - 1) == ' '){
+                    if (builder.charAt(builder.length() - 1) == ' ') {
                         builder.deleteCharAt(builder.length() - 1);
                     }
 
@@ -811,27 +812,28 @@ public final class GDownloader{
                     Process process = createBuilder.start();
                     int exitCode = process.waitFor();
 
-                    if(config.isDebugMode()){
+                    if (config.isDebugMode()) {
                         log.info("Program args: {}", programArgs);
                         log.info("Startup command args: {}", regArgs);
 
-                        if(exitCode == 0){
+                        if (exitCode == 0) {
                             log.info("Registry entry added successfully.");
-                        }else{
+                        } else {
                             log.error("Failed to add registry entry. Exit code: {} Command list: {}",
                                 exitCode, createBuilder.command());
                         }
                     }
                 }
-            }else if(isLinux()){
+            } else if (isLinux()) {
                 File autostartDirectory = DirectoryUtils.getOrCreate(System.getProperty("user.home"), "/.config/autostart");
 
                 File desktopFile = new File(autostartDirectory, REGISTRY_APP_NAME + ".desktop");
-                if(!desktopFile.exists() && currentStatus){
+                if (!desktopFile.exists() && currentStatus) {
                     Path iconPath = getWorkDirectory().toPath().resolve("icon.png");
-                    if(!iconPath.toFile().exists()){
-                        try(InputStream imageStream = getClass().getResourceAsStream(guiManager.getCurrentAppIconPath())){
-                            if(imageStream == null){
+                    if (!iconPath.toFile().exists()) {
+                        try (
+                            InputStream imageStream = getClass().getResourceAsStream(guiManager.getCurrentAppIconPath())) {
+                            if (imageStream == null) {
                                 throw new FileNotFoundException("Resource not found: " + guiManager.getCurrentAppIconPath());
                             }
 
@@ -839,25 +841,25 @@ public final class GDownloader{
                         }
                     }
 
-                    //We almost give no thoughts to whitespaces on linux, but they can happen.
+                    // We almost give no thoughts to whitespaces on linux, but they can happen.
                     List<String> programArgs = new ArrayList<>(launchString);
                     programArgs.add("--no-gui");
 
                     StringBuilder builder = new StringBuilder();
 
-                    for(String arg : programArgs){
-                        if(arg.contains(" ")){
+                    for (String arg : programArgs) {
+                        if (arg.contains(" ")) {
                             builder.append("\"").append(arg).append("\"").append(" ");
-                        }else{
+                        } else {
                             builder.append(arg).append(" ");
                         }
                     }
 
-                    if(builder.charAt(builder.length() - 1) == ' '){
+                    if (builder.charAt(builder.length() - 1) == ' ') {
                         builder.deleteCharAt(builder.length() - 1);
                     }
 
-                    try(FileWriter writer = new FileWriter(desktopFile)){
+                    try (FileWriter writer = new FileWriter(desktopFile)) {
                         writer.write("[Desktop Entry]\n");
                         writer.write("Categories=Network;\n");
                         writer.write("Comment=Start " + REGISTRY_APP_NAME + "\n");
@@ -879,41 +881,41 @@ public final class GDownloader{
                     Files.setPosixFilePermissions(desktopFile.toPath(), permissions);
 
                     log.info("Registered as a startup program.");
-                }else if(desktopFile.exists() && !currentStatus){
+                } else if (desktopFile.exists() && !currentStatus) {
                     Files.delete(desktopFile.toPath());
 
                     log.info("Startup entry removed.");
                 }
-            }else{
+            } else {
                 log.error("Unsupported operation.");
             }
-        }catch(Exception e){
+        } catch (Exception e) {
             handleException(e);
         }
     }
 
-    public File getOrCreateDownloadsDirectory(){
+    public File getOrCreateDownloadsDirectory() {
         return getDownloadsDirectory(true);
     }
 
-    public File getDownloadsDirectory(){
+    public File getDownloadsDirectory() {
         return getDownloadsDirectory(false);
     }
 
-    public File getDownloadsDirectory(boolean create){
+    public File getDownloadsDirectory(boolean create) {
         File file;
-        if(!config.getDownloadsPath().isEmpty()){
+        if (!config.getDownloadsPath().isEmpty()) {
             file = new File(config.getDownloadsPath());
-        }else{
-            if(isPortable()){
+        } else {
+            if (isPortable()) {
                 file = new File(getDownloadsPath());
-            }else{
+            } else {
                 file = new File(getDownloadsPath(), REGISTRY_APP_NAME);
             }
         }
 
-        if(create){
-            if(!file.exists()){
+        if (create) {
+            if (!file.exists()) {
                 file.mkdirs();
             }
         }
@@ -924,19 +926,19 @@ public final class GDownloader{
     /**
      * Returns the Downloads path used as default save location.
      */
-    private String getDownloadsPath(){
-        if(isPortable()){
+    private String getDownloadsPath() {
+        if (isPortable()) {
             File portableDirectory = getPortableRuntimeDirectory();
 
             return portableDirectory.toPath() + File.separator + "Downloads";
-        }else{
+        } else {
             return System.getProperty("user.home") + File.separator + "Downloads";
         }
     }
 
-    public void setDownloadsPath(File newDir){
+    public void setDownloadsPath(File newDir) {
         File oldDir = getDownloadsDirectory();
-        if(!oldDir.equals(newDir)){
+        if (!oldDir.equals(newDir)) {
             downloadManager.stopDownloads();
 
             DirectoryUtils.deleteRecursively(oldDir.toPath());
@@ -947,57 +949,57 @@ public final class GDownloader{
         updateConfig();
     }
 
-    //TODO refactor clipboard
-    public void resetClipboard(){
-        for(FlavorType type : new HashSet<>(lastClipboardState.keySet())){
+    // TODO refactor clipboard
+    public void resetClipboard() {
+        for (FlavorType type : new HashSet<>(lastClipboardState.keySet())) {
             lastClipboardState.put(type, "reset");
         }
     }
 
-    public boolean updateClipboard(){
+    public boolean updateClipboard() {
         return updateClipboard(null, false);
     }
 
-    public boolean updateClipboard(Transferable transferable, boolean force){
+    public boolean updateClipboard(Transferable transferable, boolean force) {
         boolean success = false;
 
-        if(config.isMonitorClipboardForLinks() || force){
-            if(transferable == null){
+        if (config.isMonitorClipboardForLinks() || force) {
+            if (transferable == null) {
                 transferable = clipboard.getContents(null);
             }
 
-            if(transferable == null){
+            if (transferable == null) {
                 return false;
             }
 
-            if(transferable.isDataFlavorSupported(FlavorType.STRING.getFlavor())){
-                try{
+            if (transferable.isDataFlavorSupported(FlavorType.STRING.getFlavor())) {
+                try {
                     String data = (String)transferable.getTransferData(FlavorType.STRING.getFlavor());
 
-                    if(!force){
+                    if (!force) {
                         processClipboardData(FlavorType.STRING, data);
-                    }else{
+                    } else {
                         handleClipboardInput(data, force);
                     }
 
                     success = true;
-                }catch(UnsupportedFlavorException | IOException e){
+                } catch (UnsupportedFlavorException | IOException e) {
                     log.warn("Cannot obtain transfer data");
                 }
             }
 
-            if(transferable.isDataFlavorSupported(FlavorType.HTML.getFlavor())){
-                try{
+            if (transferable.isDataFlavorSupported(FlavorType.HTML.getFlavor())) {
+                try {
                     String data = (String)transferable.getTransferData(FlavorType.HTML.getFlavor());
 
-                    if(!force){
+                    if (!force) {
                         processClipboardData(FlavorType.HTML, data);
-                    }else{
+                    } else {
                         handleClipboardInput(data, force);
                     }
 
                     success = true;
-                }catch(UnsupportedFlavorException | IOException e){
+                } catch (UnsupportedFlavorException | IOException e) {
                     log.warn("Cannot obtain transfer data");
                 }
             }
@@ -1006,21 +1008,21 @@ public final class GDownloader{
         return success;
     }
 
-    private void handleClipboardInput(String data, boolean force){
-        if(downloadManager.isBlocked()){
+    private void handleClipboardInput(String data, boolean force) {
+        if (downloadManager.isBlocked()) {
             return;
         }
 
         globalThreadPool.submitWithPriority(() -> {
             List<CompletableFuture<Boolean>> list = new ArrayList<>();
 
-            for(String url : extractUrlsFromString(data)){
-                if(url.startsWith("http")){
+            for (String url : extractUrlsFromString(data)) {
+                if (url.startsWith("http")) {
                     list.add(downloadManager.captureUrl(url, force));
                 }
 
-                //Small extra utility
-                if(config.isLogMagnetLinks() && url.startsWith("magnet")){
+                // Small extra utility
+                if (config.isLogMagnetLinks() && url.startsWith("magnet")) {
                     logUrl(url, "magnets");
                 }
             }
@@ -1034,14 +1036,14 @@ public final class GDownloader{
                     .map(CompletableFuture::join)
                     .collect(Collectors.toList());
 
-                for(boolean result : results){
-                    if(result){
+                for (boolean result : results) {
+                    if (result) {
                         captured++;
                     }
                 }
 
-                if(captured > 0){
-                    if(config.isDisplayLinkCaptureNotifications()){
+                if (captured > 0) {
+                    if (config.isDisplayLinkCaptureNotifications()) {
                         guiManager.showMessage(
                             l10n("gui.clipboard_monitor.captured_title"),
                             l10n("gui.clipboard_monitor.captured", captured),
@@ -1051,30 +1053,30 @@ public final class GDownloader{
                         );
                     }
 
-                    //If notications are off, requesting focus could probably also be an undesired behavior,
-                    //However, I think we should keep at least this one visual cue.
+                    // If notications are off, requesting focus could probably also be an undesired behavior,
+                    // However, I think we should keep at least this one visual cue.
                     guiManager.requestFocus();
                 }
             });
 
-            try{
+            try {
                 futures.get(1l, TimeUnit.MINUTES);
-            }catch(InterruptedException | ExecutionException e){
+            } catch (InterruptedException | ExecutionException e) {
                 handleException(e);
-            }catch(TimeoutException e){
+            } catch (TimeoutException e) {
                 log.warn("Timed out waiting for futures");
             }
         }, 20);
     }
 
-    private void processClipboardData(FlavorType flavorType, String data){
-        if(!lastClipboardState.containsKey(flavorType)){
+    private void processClipboardData(FlavorType flavorType, String data) {
+        if (!lastClipboardState.containsKey(flavorType)) {
             lastClipboardState.put(flavorType, "");
         }
 
         String last = lastClipboardState.get(flavorType);
 
-        if(!last.equals(data)){
+        if (!last.equals(data)) {
             lastClipboardState.put(flavorType, data);
 
             handleClipboardInput(data, false);
@@ -1083,24 +1085,24 @@ public final class GDownloader{
 
     private static final Object _logSync = new Object();
 
-    private void logUrl(String format, String file, Object... params){
+    private void logUrl(String format, String file, Object... params) {
         FormattingTuple ft = MessageFormatter.arrayFormat(format, params);
         String message = ft.getMessage();
 
-        synchronized(_logSync){
-            try(FileWriter fw = new FileWriter(getOrCreateDownloadsDirectory()
+        synchronized (_logSync) {
+            try (FileWriter fw = new FileWriter(getOrCreateDownloadsDirectory()
                 .toPath().resolve(file + ".txt").toFile(), true);
-                PrintWriter pw = new PrintWriter(fw)){
-                for(String str : message.split("\n")){
+                 PrintWriter pw = new PrintWriter(fw)) {
+                for (String str : message.split("\n")) {
                     pw.println(str);
                 }
-            }catch(IOException e){
+            } catch (IOException e) {
                 log.warn("Cannot log to file", e);
             }
         }
     }
 
-    private Set<String> extractUrlsFromString(String content){
+    private Set<String> extractUrlsFromString(String content) {
         Set<String> result = new HashSet<>();
 
         Document doc = Jsoup.parse(content);
@@ -1108,19 +1110,19 @@ public final class GDownloader{
         Elements links = doc.select("a[href]");
         Elements media = doc.select("[src]");
 
-        if(config.isDebugMode()){
+        if (config.isDebugMode()) {
             log.debug("Found {} Links and {} Media", links.size(), media.size());
         }
 
-        if(links.isEmpty() && media.isEmpty()){
+        if (links.isEmpty() && media.isEmpty()) {
             String regex = "(http[^\\s]*|magnet:[^\\s]*)(?=\\s|$|http|magnet:)";
             Pattern pattern = Pattern.compile(regex);
             Matcher matcher = pattern.matcher(content);
 
-            while(matcher.find()){
+            while (matcher.find()) {
                 String url = matcher.group(1);
 
-                if(isValidURL(url)){
+                if (isValidURL(url)) {
                     result.add(url);
                 }
             }
@@ -1137,7 +1139,7 @@ public final class GDownloader{
         return result;
     }
 
-    private void printDebugInformation(){
+    private void printDebugInformation() {
         log.info("System Properties:");
         Properties properties = System.getProperties();
         properties.forEach((key, value) -> log.info("{}: {}", key, value));
@@ -1148,10 +1150,10 @@ public final class GDownloader{
 
         log.info("Code Source: {}", GDownloader.class.getProtectionDomain().getCodeSource().getLocation());
 
-        try{
+        try {
             Path codeSourcePath = Paths.get(GDownloader.class.getProtectionDomain().getCodeSource().getLocation().toURI());
             log.info("Code source path: {}", codeSourcePath);
-        }catch(URISyntaxException e){
+        } catch (URISyntaxException e) {
             log.warn("URI syntax error", e);
         }
 
@@ -1168,14 +1170,14 @@ public final class GDownloader{
         log.info("Number of available processor cores: {}", cores);
     }
 
-    public final void handleException(Throwable e){
+    public final void handleException(Throwable e) {
         handleException(e, true);
     }
 
-    public final void handleException(Throwable e, boolean displayToUser){
+    public final void handleException(Throwable e, boolean displayToUser) {
         log.error("An exception has been caught", e);
 
-        if(displayToUser){
+        if (displayToUser) {
             guiManager.showMessage(
                 l10n("gui.error_popup_title"),
                 l10n("gui.error_popup", e.getLocalizedMessage()),
@@ -1185,70 +1187,71 @@ public final class GDownloader{
         }
     }
 
-    public static List<String> readOutput(String... command) throws IOException, InterruptedException{
+    public static List<String> readOutput(String... command) throws IOException, InterruptedException {
         ProcessBuilder processBuilder = new ProcessBuilder(command);
         processBuilder.redirectErrorStream(true);
         Process process = processBuilder.start();
 
         List<String> list = new ArrayList<>();
-        try(BufferedReader in = new BufferedReader(new InputStreamReader(process.getInputStream()))){
+        try (
+            BufferedReader in = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
             String line;
-            while((line = in.readLine()) != null){
+            while ((line = in.readLine()) != null) {
                 list.add(line);
             }
         }
 
         int exitCode = process.waitFor();
-        if(exitCode != 0){
+        if (exitCode != 0) {
             log.warn("Failed command for {}", Arrays.toString(command));
         }
 
         return list;
     }
 
-    private static boolean isValidURL(String urlString){
-        try{
+    private static boolean isValidURL(String urlString) {
+        try {
             new URI(urlString).toURL();
             return true;
-        }catch(Exception e){
+        } catch (Exception e) {
             return false;
         }
     }
 
-    public static boolean isFromJar(){
+    public static boolean isFromJar() {
         return getJarLocation() != null;
     }
 
     @Nullable
-    private static String getJarLocation(){
-        try{
+    private static String getJarLocation() {
+        try {
             URI jarPath = GDownloader.class.getProtectionDomain().getCodeSource().getLocation().toURI();
 
-            if(jarPath.toString().endsWith(".jar")){
+            if (jarPath.toString().endsWith(".jar")) {
                 return new File(jarPath).getAbsolutePath();
             }
-        }catch(URISyntaxException e){
-            //Ignore
+        } catch (URISyntaxException e) {
+            // Ignore
         }
 
         return null;
     }
 
-    private static File getPortableRuntimeDirectory(){
+    private static File getPortableRuntimeDirectory() {
         assert isPortable() : "Call not supported when not in portable mode";
 
         String appPath = launcher;
 
-        //Give preference to the main executable's path; otherwise, fallback to its own.
-        if(appPath == null){
+        // Give preference to the main executable's path; otherwise, fallback to its own.
+        if (appPath == null) {
             appPath = System.getProperty("jpackage.app-path");
         }
 
-        if(appPath != null){
+        if (appPath != null) {
             File appFile = new File(appPath);
             File parentDir = appFile.getParentFile();
 
-            if(parentDir != null){
+            if (parentDir != null) {
                 log.info("Portable runtime directory: {}", parentDir.getAbsolutePath());
                 return parentDir;
             }
@@ -1259,29 +1262,29 @@ public final class GDownloader{
 
     private static File _cachedWorkDir;
 
-    public static File getWorkDirectory(){
-        if(_cachedWorkDir == null){
+    public static File getWorkDirectory() {
+        if (_cachedWorkDir == null) {
             Path appDir;
 
-            if(isPortable()){
+            if (isPortable()) {
                 File portableDirectory = getPortableRuntimeDirectory();
 
                 appDir = Paths.get(portableDirectory.getAbsolutePath(), "Internal");
-            }else{
+            } else {
                 String os = System.getProperty("os.name").toLowerCase();
                 String userHome = System.getProperty("user.home");
 
-                if(os.contains("win")){
+                if (os.contains("win")) {
                     String appData = System.getenv("APPDATA");
 
-                    if(appData != null){
+                    if (appData != null) {
                         appDir = Paths.get(appData, REGISTRY_APP_NAME);
-                    }else{
+                    } else {
                         appDir = Paths.get(userHome, "AppData", "Roaming", REGISTRY_APP_NAME);
                     }
-                }else if(os.contains("mac")){
+                } else if (os.contains("mac")) {
                     appDir = Paths.get(userHome, "Library", "Application Support", REGISTRY_APP_NAME);
-                }else{
+                } else {
                     appDir = Paths.get(userHome, "." + REGISTRY_APP_NAME.toLowerCase());
                 }
             }
@@ -1292,103 +1295,103 @@ public final class GDownloader{
         return _cachedWorkDir;
     }
 
-    public static boolean isMac(){
+    public static boolean isMac() {
         String osName = System.getProperty("os.name").toLowerCase();
         return osName.contains("mac");
     }
 
-    public static boolean isWindows(){
+    public static boolean isWindows() {
         String osName = System.getProperty("os.name").toLowerCase();
         return osName.contains("windows");
     }
 
-    public static boolean isLinux(){
+    public static boolean isLinux() {
         String osName = System.getProperty("os.name").toLowerCase();
         return osName.contains("nux");
     }
 
-    public static File getPortableLockFilePath(){
+    public static File getPortableLockFilePath() {
         return new File(System.getProperty("java.home"), "portable.lock");
     }
 
-    public static boolean isFlaggedAsPortable(){
+    public static boolean isFlaggedAsPortable() {
         String appPath = System.getProperty("jpackage.app-path");
 
-        //Updates are portable versions, but we don't want those to run in portable mode unless explicity determined by the --portable flag.
-        if(appPath != null && appPath.contains(UpdaterBootstrap.PREFIX)){
+        // Updates are portable versions, but we don't want those to run in portable mode unless explicity determined by the --portable flag.
+        if (appPath != null && appPath.contains(UpdaterBootstrap.PREFIX)) {
             return false;
         }
 
         return getPortableLockFilePath().exists();
     }
 
-    public static void main(String[] args){
+    public static void main(String[] args) {
         boolean noGui = false;
         int uiScale = 1;
         boolean fromOta = false;
 
-        for(int i = 0; i < args.length; i++){
-            if(args[i].equalsIgnoreCase("--no-gui")){
+        for (int i = 0; i < args.length; i++) {
+            if (args[i].equalsIgnoreCase("--no-gui")) {
                 noGui = true;
             }
 
-            if(args[i].equalsIgnoreCase("--force-ui-scale")){
-                uiScale = Integer.parseInt(args[++i]);//Purposefully fail on bad arguments
+            if (args[i].equalsIgnoreCase("--force-ui-scale")) {
+                uiScale = Integer.parseInt(args[++i]);// Purposefully fail on bad arguments
             }
 
-            if(args[i].equalsIgnoreCase("--from-ota")){
+            if (args[i].equalsIgnoreCase("--from-ota")) {
                 log.info("Sucessfully updated from ota");
                 fromOta = true;
             }
 
-            if(args[i].equalsIgnoreCase("--launcher")){
+            if (args[i].equalsIgnoreCase("--launcher")) {
                 launcher = args[++i];
             }
 
-            if(args[i].equalsIgnoreCase("--portable")){
+            if (args[i].equalsIgnoreCase("--portable")) {
                 portable = true;
                 log.info("Running in portable mode. (Found --portable argument)");
             }
         }
 
-        if(!portable){
+        if (!portable) {
             portable = isFlaggedAsPortable();
 
-            if(portable){
+            if (portable) {
                 log.info("Running in portable mode. (Found lock file)");
             }
         }
 
         UpdaterBootstrap.tryOta(args, fromOta);
 
-        System.setProperty("sun.java2d.uiScale", String.valueOf(uiScale));//Does not accept double
+        System.setProperty("sun.java2d.uiScale", String.valueOf(uiScale));// Does not accept double
         System.setProperty("sun.java2d.opengl", "true");
 
-        if(SystemTray.isSupported()){
+        if (SystemTray.isSupported()) {
             log.info("Starting...");
 
-            try{
+            try {
                 UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-            }catch(Exception e){
-                //Default to Java's look and feel
+            } catch (Exception e) {
+                // Default to Java's look and feel
             }
 
-            try{
+            try {
                 Desktop.getDesktop().enableSuddenTermination();
                 Desktop.getDesktop().setQuitStrategy(QuitStrategy.CLOSE_ALL_WINDOWS);
-            }catch(Exception e){
-                //Not windows
+            } catch (Exception e) {
+                // Not windows
             }
 
-            try{
+            try {
                 GlobalScreen.registerNativeHook();
 
-                //Get the logger for "com.github.kwhat.jnativehook" and set the level to off.
+                // Get the logger for "com.github.kwhat.jnativehook" and set the level to off.
                 Logger logger = Logger.getLogger(GlobalScreen.class.getPackage().getName());
                 logger.setLevel(Level.OFF);
 
                 logger.setUseParentHandlers(false);
-            }catch(NativeHookException e){
+            } catch (NativeHookException e) {
                 log.error("There was a problem registering the native hook.", e);
 
                 System.exit(1);
@@ -1396,7 +1399,7 @@ public final class GDownloader{
 
             GDownloader instance = new GDownloader();
 
-            if(!noGui){
+            if (!noGui) {
                 instance.initUi();
             }
 
@@ -1407,13 +1410,13 @@ public final class GDownloader{
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                 instance.clearCache();
 
-                try{
+                try {
                     GlobalScreen.unregisterNativeHook();
-                }catch(NativeHookException e){
+                } catch (NativeHookException e) {
                     log.error("There was a problem unregistering the native hook.", e);
                 }
 
-                if(instance.isRestartRequested()){
+                if (instance.isRestartRequested()) {
                     instance.launchNewInstance();
                 }
             }));
@@ -1421,32 +1424,32 @@ public final class GDownloader{
             Thread.setDefaultUncaughtExceptionHandler((Thread t, Throwable e) -> {
                 instance.handleException(e);
             });
-        }else{
+        } else {
             System.err.println("System tray not supported???? did you run this on a calculator?");
         }
     }
 
-    public static void setUIFont(FontUIResource fontResource){
+    public static void setUIFont(FontUIResource fontResource) {
         UIManager.getDefaults().keys().asIterator()
             .forEachRemaining(key -> {
                 Object value = UIManager.get(key);
 
-                if(key.toString().contains("FileChooser")){
+                if (key.toString().contains("FileChooser")) {
                     return;
                 }
 
-                if(value instanceof FontUIResource){
+                if (value instanceof FontUIResource) {
                     UIManager.put(key, fontResource);
                 }
             });
     }
 
-    public static void setUIFontSize(int size){
+    public static void setUIFontSize(int size) {
         UIManager.getDefaults().keys().asIterator()
             .forEachRemaining(key -> {
                 Object value = UIManager.get(key);
 
-                if(value instanceof FontUIResource resource){
+                if (value instanceof FontUIResource resource) {
                     Font newFont = resource.deriveFont((float)size);
 
                     UIManager.put(key, new FontUIResource(newFont));
@@ -1455,13 +1458,13 @@ public final class GDownloader{
     }
 
     @Getter
-    public static enum FlavorType{
+    public static enum FlavorType {
         STRING(DataFlavor.stringFlavor),
         HTML(DataFlavor.selectionHtmlFlavor);
 
         private final DataFlavor flavor;
 
-        private FlavorType(DataFlavor flavorIn){
+        private FlavorType(DataFlavor flavorIn) {
             flavor = flavorIn;
         }
     }

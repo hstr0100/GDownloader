@@ -29,10 +29,10 @@ import static net.brlns.gdownloader.ui.themes.UIColors.*;
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-public class CustomMenuButton extends JButton{
+public class CustomMenuButton extends JButton {
 
     @SuppressWarnings("this-escape")
-    public CustomMenuButton(String text){
+    public CustomMenuButton(String text) {
         super(text);
 
         setForeground(color(FOREGROUND));
@@ -42,14 +42,14 @@ public class CustomMenuButton extends JButton{
         setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         setHorizontalAlignment(SwingConstants.LEFT);
 
-        addMouseListener(new MouseAdapter(){
+        addMouseListener(new MouseAdapter() {
             @Override
-            public void mouseEntered(MouseEvent e){
+            public void mouseEntered(MouseEvent e) {
                 setBackground(color(MEDIA_CARD_HOVER));
             }
 
             @Override
-            public void mouseExited(MouseEvent e){
+            public void mouseExited(MouseEvent e) {
                 setBackground(color(MEDIA_CARD));
             }
         });
@@ -58,12 +58,12 @@ public class CustomMenuButton extends JButton{
     }
 
     @Override
-    protected void paintComponent(Graphics g){
-        if(getModel().isPressed()){
+    protected void paintComponent(Graphics g) {
+        if (getModel().isPressed()) {
             g.setColor(color(MENU_ITEM_PRESSED));
-        }else if(getModel().isArmed() || getModel().isRollover()){
+        } else if (getModel().isArmed() || getModel().isRollover()) {
             g.setColor(color(MENU_ITEM_ARMED));
-        }else{
+        } else {
             g.setColor(getBackground());
         }
 

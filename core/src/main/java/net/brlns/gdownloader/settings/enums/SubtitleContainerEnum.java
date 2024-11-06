@@ -19,23 +19,23 @@ package net.brlns.gdownloader.settings.enums;
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-public enum SubtitleContainerEnum implements ISettingsEnum, IContainerEnum{
+public enum SubtitleContainerEnum implements ISettingsEnum, IContainerEnum {
     SRT,
     ASS,
     VTT;
 
     @Override
-    public String getValue(){
+    public String getValue() {
         return name().toLowerCase();
     }
 
     @Override
-    public String getTranslationKey(){
+    public String getTranslationKey() {
         return "";
     }
 
     @Override
-    public String getDisplayName(){
+    public String getDisplayName() {
         return name().toLowerCase();
     }
 }

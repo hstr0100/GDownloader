@@ -31,10 +31,10 @@ import static net.brlns.gdownloader.ui.themes.UIColors.*;
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-public class CustomComboBoxUI extends BasicComboBoxUI{
+public class CustomComboBoxUI extends BasicComboBoxUI {
 
     @Override
-    protected JButton createArrowButton(){
+    protected JButton createArrowButton() {
         JButton button = new JButton();
         button.setText("▼");
         button.setBackground(color(COMBO_BOX_BUTTON_FOREGROUND));
@@ -45,20 +45,20 @@ public class CustomComboBoxUI extends BasicComboBoxUI{
     }
 
     @Override
-    protected void installListeners(){
+    protected void installListeners() {
         super.installListeners();
 
         LookAndFeel.uninstallBorder(comboBox);
 
-        comboBox.addFocusListener(new FocusAdapter(){
+        comboBox.addFocusListener(new FocusAdapter() {
             @Override
-            public void focusGained(FocusEvent e){
+            public void focusGained(FocusEvent e) {
                 comboBox.setBackground(color(COMBO_BOX_SELECTION_BACKGROUND));
                 comboBox.setForeground(color(COMBO_BOX_SELECTION_FOREGROUND));
             }
 
             @Override
-            public void focusLost(FocusEvent e){
+            public void focusLost(FocusEvent e) {
                 comboBox.setBackground(color(COMBO_BOX_BACKGROUND));
                 comboBox.setForeground(color(COMBO_BOX_FOREGROUND));
             }
@@ -66,19 +66,19 @@ public class CustomComboBoxUI extends BasicComboBoxUI{
     }
 
     @Override
-    protected ListCellRenderer<Object> createRenderer(){
-        return new DefaultListCellRenderer(){
+    protected ListCellRenderer<Object> createRenderer() {
+        return new DefaultListCellRenderer() {
             @Override
-            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus){
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
                 Component component = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-                if(isSelected){
+                if (isSelected) {
                     component.setBackground(color(COMBO_BOX_SELECTION_BACKGROUND));
                     component.setForeground(color(COMBO_BOX_SELECTION_FOREGROUND));
-                }else if(cellHasFocus){
+                } else if (cellHasFocus) {
                     //TODO
                     setBackground(Color.LIGHT_GRAY.darker());
                     setForeground(Color.BLACK);
-                }else{
+                } else {
                     component.setBackground(color(COMBO_BOX_BACKGROUND));
                     component.setForeground(color(COMBO_BOX_FOREGROUND));
                 }
@@ -89,7 +89,7 @@ public class CustomComboBoxUI extends BasicComboBoxUI{
     }
 
     @Override
-    public void paintCurrentValueBackground(Graphics g, Rectangle bounds, boolean hasFocus){
+    public void paintCurrentValueBackground(Graphics g, Rectangle bounds, boolean hasFocus) {
         Color oldColor = g.getColor();
         g.setColor(comboBox.hasFocus() ? color(COMBO_BOX_SELECTION_BACKGROUND) : color(COMBO_BOX_BACKGROUND));
         g.fillRect(bounds.x, bounds.y, bounds.width, bounds.height);

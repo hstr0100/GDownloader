@@ -22,13 +22,13 @@ import lombok.Getter;
  * @author Gabriel / hstr0100 / vertx010
  */
 @Getter
-public enum ThemeEnum implements ISettingsEnum{
+public enum ThemeEnum implements ISettingsEnum {
     DARK("enums.theme.dark"),
     LIGHT("enums.theme.light");
 
     private final String translationKey;
 
-    private ThemeEnum(String translationKeyIn){
+    private ThemeEnum(String translationKeyIn) {
         translationKey = translationKeyIn;
     }
 }

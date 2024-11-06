@@ -26,7 +26,7 @@ import net.brlns.gdownloader.util.Nullable;
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-public class CustomButton extends JButton{
+public class CustomButton extends JButton {
 
     @Getter
     @Setter
@@ -38,7 +38,7 @@ public class CustomButton extends JButton{
 
     @SuppressWarnings("this-escape")
     public CustomButton(@Nullable String text,
-        Color hoverBackgroundColorIn, Color pressedBackgroundColorIn){
+        Color hoverBackgroundColorIn, Color pressedBackgroundColorIn) {
         super(text);
 
         hoverBackgroundColor = hoverBackgroundColorIn;
@@ -48,12 +48,12 @@ public class CustomButton extends JButton{
     }
 
     @Override
-    protected void paintComponent(Graphics g){
-        if(getModel().isPressed()){
+    protected void paintComponent(Graphics g) {
+        if (getModel().isPressed()) {
             g.setColor(pressedBackgroundColor);
-        }else if(getModel().isRollover()){
+        } else if (getModel().isRollover()) {
             g.setColor(hoverBackgroundColor);
-        }else{
+        } else {
             g.setColor(getBackground());
         }
 
@@ -63,7 +63,7 @@ public class CustomButton extends JButton{
     }
 
     @Override
-    public void setContentAreaFilled(boolean b){
+    public void setContentAreaFilled(boolean b) {
 
     }
 }

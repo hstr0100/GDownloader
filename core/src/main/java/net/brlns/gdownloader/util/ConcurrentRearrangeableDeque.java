@@ -23,21 +23,21 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-public class ConcurrentRearrangeableDeque<T> extends ArrayDeque<T>{
+public class ConcurrentRearrangeableDeque<T> extends ArrayDeque<T> {
 
     private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
-    public void moveToPosition(T item, int newPosition){
+    public void moveToPosition(T item, int newPosition) {
         lock.writeLock().lock();
 
-        try{
-            if(!this.contains(item)){
+        try {
+            if (!this.contains(item)) {
                 throw new IllegalArgumentException("Item not found in the deque.");
             }
 
             this.remove(item);
 
-            if(newPosition < 0 || newPosition > this.size()){
+            if (newPosition < 0 || newPosition > this.size()) {
                 throw new IndexOutOfBoundsException("New position out of bounds.");
             }
 
@@ -45,8 +45,8 @@ public class ConcurrentRearrangeableDeque<T> extends ArrayDeque<T>{
             ArrayDeque<T> tempDeque = new ArrayDeque<>();
 
             int index = 0;
-            while(it.hasNext()){
-                if(index == newPosition){
+            while (it.hasNext()) {
+                if (index == newPosition) {
                     tempDeque.add(item);
                 }
 
@@ -54,131 +54,131 @@ public class ConcurrentRearrangeableDeque<T> extends ArrayDeque<T>{
                 index++;
             }
 
-            if(newPosition == this.size()){
+            if (newPosition == this.size()) {
                 tempDeque.add(item);
             }
 
             this.clear();
             this.addAll(tempDeque);
-        }finally{
+        } finally {
             lock.writeLock().unlock();
         }
     }
 
-    public void swap(T item1, T item2){
+    public void swap(T item1, T item2) {
         lock.writeLock().lock();
 
-        try{
-            if(!this.contains(item1) || !this.contains(item2)){
+        try {
+            if (!this.contains(item1) || !this.contains(item2)) {
                 throw new IllegalArgumentException("One or both items not found in the deque.");
             }
 
             ArrayDeque<T> tempDeque = new ArrayDeque<>();
 
-            for(T item : this){
-                if(item.equals(item1)){
+            for (T item : this) {
+                if (item.equals(item1)) {
                     tempDeque.add(item2);
-                }else if(item.equals(item2)){
+                } else if (item.equals(item2)) {
                     tempDeque.add(item1);
-                }else{
+                } else {
                     tempDeque.add(item);
                 }
             }
 
             this.clear();
             this.addAll(tempDeque);
-        }finally{
+        } finally {
             lock.writeLock().unlock();
         }
     }
 
     @Override
-    public boolean offer(T item){
+    public boolean offer(T item) {
         lock.writeLock().lock();
 
-        try{
+        try {
             return super.offer(item);
-        }finally{
+        } finally {
             lock.writeLock().unlock();
         }
     }
 
     @Override
-    public boolean offerLast(T item){
+    public boolean offerLast(T item) {
         lock.writeLock().lock();
 
-        try{
+        try {
             return super.offerLast(item);
-        }finally{
+        } finally {
             lock.writeLock().unlock();
         }
     }
 
     @Override
-    public T peek(){
+    public T peek() {
         lock.readLock().lock();
 
-        try{
+        try {
             return super.peek();
-        }finally{
+        } finally {
             lock.readLock().unlock();
         }
     }
 
     @Override
-    public T poll(){
+    public T poll() {
         lock.writeLock().lock();
 
-        try{
+        try {
             return super.poll();
-        }finally{
+        } finally {
             lock.writeLock().unlock();
         }
     }
 
     @Override
-    public boolean remove(Object o){
+    public boolean remove(Object o) {
         lock.writeLock().lock();
 
-        try{
+        try {
             return super.remove(o);
-        }finally{
+        } finally {
             lock.writeLock().unlock();
         }
     }
 
     @Override
-    public int size(){
+    public int size() {
         lock.readLock().lock();
 
-        try{
+        try {
             return super.size();
-        }finally{
+        } finally {
             lock.readLock().unlock();
         }
     }
 
     @Override
-    public boolean isEmpty(){
+    public boolean isEmpty() {
         lock.readLock().lock();
 
-        try{
+        try {
             return super.isEmpty();
-        }finally{
+        } finally {
             lock.readLock().unlock();
         }
     }
 
     @Override
-    public boolean contains(Object obj){
+    public boolean contains(Object obj) {
         lock.readLock().lock();
 
-        try{
+        try {
             return super.contains(obj);
-        }finally{
+        } finally {
             lock.readLock().unlock();
         }
     }
 
-    //TODO UnsupportedOperationException for the rest
+    // TODO UnsupportedOperationException for the rest of the overridable methods
 }

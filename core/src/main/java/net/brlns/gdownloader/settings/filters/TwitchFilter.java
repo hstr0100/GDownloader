@@ -36,12 +36,12 @@ import static net.brlns.gdownloader.settings.enums.DownloadTypeEnum.*;
 @Data
 @EqualsAndHashCode(callSuper = true)
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class TwitchFilter extends GenericFilter{
+public class TwitchFilter extends GenericFilter {
 
     public static final String ID = "twitch";
 
     @SuppressWarnings("this-escape")
-    public TwitchFilter(){
+    public TwitchFilter() {
         setId(ID);
         setFilterName("Twitch");
         setUrlRegex("^(https?:\\/\\/)?(www\\.)?twitch\\.tv(\\/.*)?$");
@@ -57,10 +57,10 @@ public class TwitchFilter extends GenericFilter{
 
     @JsonIgnore
     @Override
-    protected List<String> buildArguments(DownloadTypeEnum typeEnum, GDownloader main, File savePath){
+    protected List<String> buildArguments(DownloadTypeEnum typeEnum, GDownloader main, File savePath) {
         List<String> arguments = super.buildArguments(typeEnum, main, savePath);
 
-        switch(typeEnum){
+        switch (typeEnum) {
             case ALL -> {
                 arguments.addAll(List.of(
                     "--verbose",
@@ -69,7 +69,7 @@ public class TwitchFilter extends GenericFilter{
                 ));
             }
             case VIDEO -> {
-                if(isEmbedThumbnailAndMetadata()){
+                if (isEmbedThumbnailAndMetadata()) {
                     arguments.addAll(List.of(
                         "--parse-metadata",
                         ":%(?P<is_live>)"

@@ -24,7 +24,7 @@ import static net.brlns.gdownloader.Language.*;
  * @author Gabriel / hstr0100 / vertx010
  */
 @Getter
-public enum BrowserEnum implements ISettingsEnum{
+public enum BrowserEnum implements ISettingsEnum {
     UNSET("", ""),
     CHROME("chrome", "Google Chrome", "chromium"),
     FIREFOX("firefox", "Firefox"),
@@ -40,37 +40,37 @@ public enum BrowserEnum implements ISettingsEnum{
 
     private final String displayName;
 
-    private BrowserEnum(String nameIn, String displayNameIn, String... aliasesIn){
+    private BrowserEnum(String nameIn, String displayNameIn, String... aliasesIn) {
         name = nameIn;
         displayName = displayNameIn;
         aliases = aliasesIn;
     }
 
     @Override
-    public String getDisplayName(){
+    public String getDisplayName() {
         return this == UNSET ? l10n("enums.browser.default_browser") : displayName;
     }
 
     @Override
-    public String getTranslationKey(){
+    public String getTranslationKey() {
         return "";
     }
 
-    public static BrowserEnum getBrowserForName(String name){
+    public static BrowserEnum getBrowserForName(String name) {
         name = name.toLowerCase();
 
-        for(BrowserEnum browser : BrowserEnum.values()){
-            if(browser == BrowserEnum.UNSET){
+        for (BrowserEnum browser : BrowserEnum.values()) {
+            if (browser == BrowserEnum.UNSET) {
                 continue;
             }
 
-            if(name.contains(browser.getName())
-                || browser.getName().contains(name)){
+            if (name.contains(browser.getName())
+                || browser.getName().contains(name)) {
                 return browser;
             }
 
-            for(String alias : browser.getAliases()){
-                if(name.contains(alias) || alias.contains(name)){
+            for (String alias : browser.getAliases()) {
+                if (name.contains(alias) || alias.contains(name)) {
                     return browser;
                 }
             }

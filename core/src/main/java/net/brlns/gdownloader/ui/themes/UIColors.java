@@ -19,7 +19,7 @@ package net.brlns.gdownloader.ui.themes;
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-public enum UIColors{
+public enum UIColors {
     ICON,
     ICON_ACTIVE,
     ICON_INACTIVE,

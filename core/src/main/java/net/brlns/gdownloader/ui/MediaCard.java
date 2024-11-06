@@ -37,7 +37,7 @@ import static net.brlns.gdownloader.ui.GUIManager.runOnEDT;
  */
 @Data
 @Slf4j
-public class MediaCard{
+public class MediaCard {
 
     private final int id;
 
@@ -59,15 +59,15 @@ public class MediaCard{
     protected static final int THUMBNAIL_WIDTH = 170;
     protected static final int THUMBNAIL_HEIGHT = (int)(THUMBNAIL_WIDTH / 16.0 * 9.0);
 
-    public void close(){
+    public void close() {
         closed = true;
 
-        if(onClose != null){
+        if (onClose != null) {
             onClose.run();
         }
     }
 
-    protected void scaleThumbnail(double factor){
+    protected void scaleThumbnail(double factor) {
         Dimension dimension = new Dimension(
             (int)(MediaCard.THUMBNAIL_WIDTH * factor),
             (int)(MediaCard.THUMBNAIL_HEIGHT * factor));
@@ -78,25 +78,25 @@ public class MediaCard{
         });
     }
 
-    public void setTooltip(String tooltipText){
+    public void setTooltip(String tooltipText) {
         runOnEDT(() -> {
             mediaLabel.setToolTipText(tooltipText);
         });
     }
 
-    public void setThumbnailTooltip(String tooltipText){
+    public void setThumbnailTooltip(String tooltipText) {
         runOnEDT(() -> {
             thumbnailPanel.setToolTipText(tooltipText);
         });
     }
 
-    public void setLabel(String... label){
+    public void setLabel(String... label) {
         runOnEDT(() -> {
             mediaLabel.setText(GUIManager.wrapText(51, label));
         });
     }
 
-    public void setPercentage(double percentageIn){
+    public void setPercentage(double percentageIn) {
         percentage = percentageIn;
 
         runOnEDT(() -> {
@@ -104,17 +104,17 @@ public class MediaCard{
         });
     }
 
-    public void setProgressBarText(String text){
+    public void setProgressBarText(String text) {
         runOnEDT(() -> {
             progressBar.setString(text);
         });
     }
 
-    public void setProgressBarTextAndColors(String text, Color backgroundColor){
+    public void setProgressBarTextAndColors(String text, Color backgroundColor) {
         setProgressBarTextAndColors(text, backgroundColor, Color.WHITE);
     }
 
-    public void setProgressBarTextAndColors(String text, Color backgroundColor, Color textColor){
+    public void setProgressBarTextAndColors(String text, Color backgroundColor, Color textColor) {
         runOnEDT(() -> {
             progressBar.setString(text);
             progressBar.setForeground(backgroundColor);
@@ -122,7 +122,7 @@ public class MediaCard{
         });
     }
 
-    public void setThumbnailAndDuration(BufferedImage img, long duration){
+    public void setThumbnailAndDuration(BufferedImage img, long duration) {
         runOnEDT(() -> {
             thumbnailPanel.setImageAndDuration(img, duration);
         });

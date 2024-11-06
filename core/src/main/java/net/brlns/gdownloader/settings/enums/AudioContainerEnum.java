@@ -19,7 +19,7 @@ package net.brlns.gdownloader.settings.enums;
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-public enum AudioContainerEnum implements ISettingsEnum, IContainerEnum{
+public enum AudioContainerEnum implements ISettingsEnum, IContainerEnum {
     MP3,
     AAC,
     WAV,
@@ -30,17 +30,17 @@ public enum AudioContainerEnum implements ISettingsEnum, IContainerEnum{
     VORBIS;
 
     @Override
-    public String getValue(){
+    public String getValue() {
         return name().toLowerCase();
     }
 
     @Override
-    public String getTranslationKey(){
+    public String getTranslationKey() {
         return "";
     }
 
     @Override
-    public String getDisplayName(){
+    public String getDisplayName() {
         return name().toLowerCase();
     }
 }

@@ -21,23 +21,23 @@ import java.util.concurrent.*;
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-public class PriorityThreadPoolExecutor extends ThreadPoolExecutor{
+public class PriorityThreadPoolExecutor extends ThreadPoolExecutor {
 
-    public PriorityThreadPoolExecutor(int corePoolSize, int maximumPoolSize, long keepAliveTime, TimeUnit unit){
+    public PriorityThreadPoolExecutor(int corePoolSize, int maximumPoolSize, long keepAliveTime, TimeUnit unit) {
         super(corePoolSize, maximumPoolSize, keepAliveTime, unit, new PriorityBlockingQueue<>());
     }
 
     @Override
-    public <T> Future<T> submit(Callable<T> task){
+    public <T> Future<T> submit(Callable<T> task) {
         return submitWithPriority(task, 0);
     }
 
     @Override
-    public Future<?> submit(Runnable task){
+    public Future<?> submit(Runnable task) {
         return submitWithPriority(task, null, 0);
     }
 
-    public <T> Future<T> submitWithPriority(Callable<T> task, int priority){
+    public <T> Future<T> submitWithPriority(Callable<T> task, int priority) {
         PriorityTask<T> priorityTask = new PriorityTask<>(task, priority);
 
         execute(priorityTask);
@@ -45,7 +45,7 @@ public class PriorityThreadPoolExecutor extends ThreadPoolExecutor{
         return priorityTask;
     }
 
-    public <T> Future<T> submitWithPriority(Runnable task, T result, int priority){
+    public <T> Future<T> submitWithPriority(Runnable task, T result, int priority) {
         PriorityTask<T> priorityTask = new PriorityTask<>(task, result, priority);
 
         execute(priorityTask);
@@ -53,11 +53,11 @@ public class PriorityThreadPoolExecutor extends ThreadPoolExecutor{
         return priorityTask;
     }
 
-    public Future<?> submitWithPriority(Runnable task, int priority){
+    public Future<?> submitWithPriority(Runnable task, int priority) {
         return submitWithPriority(task, null, priority);
     }
 
-    public void resize(int newCorePoolSize, int newMaxPoolSize){
+    public void resize(int newCorePoolSize, int newMaxPoolSize) {
         int currentMaxPoolSize = getMaximumPoolSize();
 
         int tempSize = Math.min(currentMaxPoolSize, newMaxPoolSize);
@@ -69,22 +69,22 @@ public class PriorityThreadPoolExecutor extends ThreadPoolExecutor{
         setCorePoolSize(newCorePoolSize);
     }
 
-    private class PriorityTask<V> extends FutureTask<V> implements Comparable<PriorityTask<V>>{
+    private class PriorityTask<V> extends FutureTask<V> implements Comparable<PriorityTask<V>> {
 
         private final int priority;
 
-        public PriorityTask(Callable<V> callable, int priority){
+        public PriorityTask(Callable<V> callable, int priority) {
             super(callable);
             this.priority = priority;
         }
 
-        public PriorityTask(Runnable runnable, V result, int priority){
+        public PriorityTask(Runnable runnable, V result, int priority) {
             super(runnable, result);
             this.priority = priority;
         }
 
         @Override
-        public int compareTo(PriorityTask<V> o){
+        public int compareTo(PriorityTask<V> o) {
             return Integer.compare(o.priority, this.priority);
         }
     }

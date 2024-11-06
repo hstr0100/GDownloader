@@ -59,11 +59,11 @@ import static net.brlns.gdownloader.ui.themes.UIColors.*;
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-//TODO add custom tooltip to all buttons
+// TODO add custom tooltip to all buttons
 @Slf4j
-public final class GUIManager{
+public final class GUIManager {
 
-    static{
+    static {
         ToolTipManager.sharedInstance().setInitialDelay(0);
         ToolTipManager.sharedInstance().setDismissDelay(5000);
         ToolTipManager.sharedInstance().setEnabled(true);
@@ -93,11 +93,11 @@ public final class GUIManager{
 
     private final SettingsPanel settingsPanel;
 
-    //TODO
+    // TODO
     @Getter
     private final double uiScale;
 
-    public GUIManager(GDownloader mainIn){
+    public GUIManager(GDownloader mainIn) {
         main = mainIn;
 
         uiScale = Math.clamp(mainIn.getConfig().getUiScale(), 0.5, 3.0);
@@ -114,43 +114,43 @@ public final class GUIManager{
         UIManager.put("ComboBox.borderPaintsFocus", Boolean.FALSE);
     }
 
-    public String getCurrentAppIconPath(){
+    public String getCurrentAppIconPath() {
         return ThemeProvider.getTheme().getAppIconPath();
     }
 
-    public String getCurrentTrayIconPath(){
+    public String getCurrentTrayIconPath() {
         return ThemeProvider.getTheme().getTrayIconPath();
     }
 
-    public Image getAppIcon() throws IOException{
+    public Image getAppIcon() throws IOException {
         Image icon = ImageIO.read(getClass().getResource(getCurrentAppIconPath()));
 
         return icon;
     }
 
-    public void displaySettingsPanel(){
+    public void displaySettingsPanel() {
         settingsPanel.createAndShowGUI();
     }
 
-    public void createAndShowGUI(){
+    public void createAndShowGUI() {
         runOnEDT(() -> {
             setUpAppWindow();
 
             appWindow.setVisible(true);
 
-            if((appWindow.getExtendedState() & Frame.ICONIFIED) == 1){
+            if ((appWindow.getExtendedState() & Frame.ICONIFIED) == 1) {
                 appWindow.setExtendedState(JFrame.ICONIFIED);
                 appWindow.setExtendedState(JFrame.NORMAL);
             }
         });
     }
 
-    public void requestFocus(){
+    public void requestFocus() {
         runOnEDT(() -> {
             appWindow.requestFocus();
 
-            if((appWindow.getExtendedState() & Frame.ICONIFIED) != 1){
-                if(!appWindow.isVisible()){
+            if ((appWindow.getExtendedState() & Frame.ICONIFIED) != 1) {
+                if (!appWindow.isVisible()) {
                     appWindow.setVisible(true);
                 }
 
@@ -160,9 +160,9 @@ public final class GUIManager{
         });
     }
 
-    public void refreshAppWindow(){
+    public void refreshAppWindow() {
         runOnEDT(() -> {
-            if(appWindow == null){
+            if (appWindow == null) {
                 throw new RuntimeException("Called before initialization");
             }
 
@@ -171,9 +171,9 @@ public final class GUIManager{
         });
     }
 
-    public void closeAppWindow(){
+    public void closeAppWindow() {
         runOnEDT(() -> {
-            if(appWindow != null){
+            if (appWindow != null) {
                 appWindow.setVisible(false);
 
                 adjustMessageWindowPosition();
@@ -181,10 +181,10 @@ public final class GUIManager{
         });
     }
 
-    private void setUpAppWindow(){
+    private void setUpAppWindow() {
         assert SwingUtilities.isEventDispatchThread();
 
-        if(appWindow == null){
+        if (appWindow == null) {
             // note to self, tooltips only show up when focused
             String version = System.getProperty("jpackage.app-version");
 
@@ -193,43 +193,43 @@ public final class GUIManager{
 
             //appWindow.setResizable(false);
             //appWindow.setUndecorated(true);
-            try{
+            try {
                 appWindow.setIconImage(getAppIcon());
-            }catch(IOException e){
+            } catch (IOException e) {
                 main.handleException(e);
             }
 
             appWindow.addWindowStateListener((WindowEvent e) -> {
-                if((e.getNewState() & JFrame.MAXIMIZED_BOTH) == JFrame.MAXIMIZED_BOTH){
+                if ((e.getNewState() & JFrame.MAXIMIZED_BOTH) == JFrame.MAXIMIZED_BOTH) {
                     appWindow.setAlwaysOnTop(false);
-                }else{
+                } else {
                     appWindow.setAlwaysOnTop(main.getConfig().isKeepWindowAlwaysOnTop());
                 }
 
                 adjustMediaCards();
             });
 
-            appWindow.addWindowListener(new WindowAdapter(){
+            appWindow.addWindowListener(new WindowAdapter() {
                 @Override
-                public void windowClosing(WindowEvent e){
+                public void windowClosing(WindowEvent e) {
                     adjustMessageWindowPosition();
                 }
 
                 @Override
-                public void windowIconified(WindowEvent e){
+                public void windowIconified(WindowEvent e) {
                     adjustMessageWindowPosition();
                 }
 
                 @Override
-                public void windowDeiconified(WindowEvent e){
+                public void windowDeiconified(WindowEvent e) {
                     adjustMessageWindowPosition();
                 }
             });
 
             KeyboardFocusManager manager = KeyboardFocusManager.getCurrentKeyboardFocusManager();
             manager.addKeyEventDispatcher((KeyEvent e) -> {
-                if(e.getID() == KeyEvent.KEY_PRESSED){
-                    if((e.getKeyCode() == KeyEvent.VK_V) && ((e.getModifiersEx() & KeyEvent.CTRL_DOWN_MASK) != 0)){
+                if (e.getID() == KeyEvent.KEY_PRESSED) {
+                    if ((e.getKeyCode() == KeyEvent.VK_V) && ((e.getModifiersEx() & KeyEvent.CTRL_DOWN_MASK) != 0)) {
                         main.resetClipboard();
 
                         main.updateClipboard(null, true);
@@ -274,16 +274,16 @@ public final class GUIManager{
 
             appWindow.add(mainPanel);
 
-            appWindow.addComponentListener(new ComponentAdapter(){
+            appWindow.addComponentListener(new ComponentAdapter() {
                 @Override
-                public void componentResized(ComponentEvent e){
+                public void componentResized(ComponentEvent e) {
                     adjustMediaCards();
                 }
             });
         }
     }
 
-    private void adjustWindowSize(){
+    private void adjustWindowSize() {
         assert SwingUtilities.isEventDispatchThread();
 
         appWindow.setSize(658, 370);
@@ -297,7 +297,7 @@ public final class GUIManager{
         int windowY = screenSize.height - appWindow.getHeight() - taskbarHeight - 10;
 
         int minHeight = screenSize.height - appWindow.getHeight() - taskbarHeight - 10;
-        if(windowY < minHeight){
+        if (windowY < minHeight) {
             appWindow.setSize(appWindow.getWidth(), screenSize.height - minHeight);
             windowY = minHeight;
         }
@@ -305,7 +305,7 @@ public final class GUIManager{
         appWindow.setLocation(windowX, windowY);
     }
 
-    private JPanel createToolbar(){
+    private JPanel createToolbar() {
         JPanel topPanel = new JPanel(new GridBagLayout());
         topPanel.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0));
         topPanel.setBackground(color(BACKGROUND));
@@ -357,7 +357,8 @@ public final class GUIManager{
         buttonPanel.add(createToggleButton(
             (state) -> loadIcon("/assets/copy-link.png", state ? ICON_ACTIVE : ICON_INACTIVE),
             (state) -> loadIcon("/assets/copy-link.png", ICON_HOVER),
-            (state) -> state ? "gui.stop_clipboard_monitor.tooltip"
+            (state) -> state
+                ? "gui.stop_clipboard_monitor.tooltip"
                 : "gui.start_clipboard_monitor.tooltip",
             main.getConfig()::isMonitorClipboardForLinks,
             () -> {
@@ -377,7 +378,8 @@ public final class GUIManager{
         buttonPanel.add(createToggleButton(
             (state) -> loadIcon("/assets/mp3.png", state ? ICON_ACTIVE : ICON_INACTIVE),
             (state) -> loadIcon("/assets/mp3.png", ICON_HOVER),
-            (state) -> state ? "gui.dont_download_audio.tooltip"
+            (state) -> state
+                ? "gui.dont_download_audio.tooltip"
                 : "gui.download_audio.tooltip",
             main.getConfig()::isDownloadAudio,
             () -> {
@@ -389,7 +391,8 @@ public final class GUIManager{
         buttonPanel.add(createToggleButton(
             (state) -> loadIcon("/assets/mp4.png", state ? ICON_ACTIVE : ICON_INACTIVE),
             (state) -> loadIcon("/assets/mp4.png", ICON_HOVER),
-            (state) -> state ? "gui.dont_download_video.tooltip"
+            (state) -> state
+                ? "gui.dont_download_video.tooltip"
                 : "gui.download_video.tooltip",
             main.getConfig()::isDownloadVideo,
             () -> {
@@ -400,24 +403,25 @@ public final class GUIManager{
 
         buttonPanel.add(createToggleDownloadsButton(
             (state) -> {
-                if(state){
+                if (state) {
                     return loadIcon("/assets/pause.png", ICON);
-                }else{
-                    if(main.getDownloadManager().getQueueSize() > 0){
+                } else {
+                    if (main.getDownloadManager().getQueueSize() > 0) {
                         return loadIcon("/assets/play.png", QUEUE_ACTIVE_ICON);
-                    }else{
+                    } else {
                         return loadIcon("/assets/play.png", ICON);
                     }
                 }
             },
             (state) -> {
-                if(state){
+                if (state) {
                     return loadIcon("/assets/pause.png", ICON_HOVER);
-                }else{
+                } else {
                     return loadIcon("/assets/play.png", ICON_HOVER);
                 }
             },
-            (state) -> state ? "gui.stop_downloads.tooltip"
+            (state) -> state
+                ? "gui.stop_downloads.tooltip"
                 : "gui.start_downloads.tooltip",
             main.getDownloadManager()::isRunning,
             () -> {
@@ -449,7 +453,7 @@ public final class GUIManager{
         return topPanel;
     }
 
-    private void addStatusLabel(JPanel statusPanel, UIColors textColor, StatusLabelUpdater updater){
+    private void addStatusLabel(JPanel statusPanel, UIColors textColor, StatusLabelUpdater updater) {
         JLabel statusLabel = new JLabel("");
         statusLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 5));
         statusLabel.setForeground(color(textColor));
@@ -462,7 +466,7 @@ public final class GUIManager{
             });
         };
 
-        //Run once to set an initial state.
+        // Run once to set an initial state.
         consumer.accept(main.getDownloadManager());
         main.getDownloadManager().registerListener(consumer);
 
@@ -473,7 +477,7 @@ public final class GUIManager{
         Function<Boolean, ImageIcon> icon,
         Function<Boolean, ImageIcon> hoverIcon,
         Function<Boolean, String> tooltip,
-        Supplier<Boolean> watch, Runnable toggler){
+        Supplier<Boolean> watch, Runnable toggler) {
 
         JButton button = createToggleButton(icon, hoverIcon, tooltip, watch, toggler);
 
@@ -493,7 +497,7 @@ public final class GUIManager{
         Function<Boolean, ImageIcon> icon,
         Function<Boolean, ImageIcon> hoverIcon,
         Function<Boolean, String> tooltip,
-        Supplier<Boolean> watch, Runnable toggler){
+        Supplier<Boolean> watch, Runnable toggler) {
 
         JButton button = new JButton(icon.apply(watch.get()));
         button.setUI(new BasicButtonUI());
@@ -501,9 +505,9 @@ public final class GUIManager{
         button.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
         button.setContentAreaFilled(false);
         button.setBorderPainted(false);
-        button.addMouseListener(new MouseAdapter(){
+        button.addMouseListener(new MouseAdapter() {
             @Override
-            public void mouseEntered(MouseEvent e){
+            public void mouseEntered(MouseEvent e) {
                 boolean state = watch.get();
 
                 button.setIcon(hoverIcon.apply(state));
@@ -511,7 +515,7 @@ public final class GUIManager{
             }
 
             @Override
-            public void mouseExited(MouseEvent e){
+            public void mouseExited(MouseEvent e) {
                 boolean state = watch.get();
 
                 button.setIcon(icon.apply(state));
@@ -535,22 +539,22 @@ public final class GUIManager{
         return button;
     }
 
-    protected JButton createButton(ImageIcon icon, ImageIcon hoverIcon, String tooltipText, ActionListener actionListener){
+    protected JButton createButton(ImageIcon icon, ImageIcon hoverIcon, String tooltipText, ActionListener actionListener) {
         JButton button = new JButton(icon);
         button.setUI(new BasicButtonUI());
         button.setFocusPainted(false);
         button.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
         button.setContentAreaFilled(false);
         button.setBorderPainted(false);
-        button.addMouseListener(new MouseAdapter(){
+        button.addMouseListener(new MouseAdapter() {
             @Override
-            public void mouseEntered(MouseEvent e){
+            public void mouseEntered(MouseEvent e) {
                 button.setIcon(hoverIcon);
                 button.setToolTipText(l10n(tooltipText));
             }
 
             @Override
-            public void mouseExited(MouseEvent e){
+            public void mouseExited(MouseEvent e) {
                 button.setIcon(icon);
                 button.setToolTipText(l10n(tooltipText));
             }
@@ -566,7 +570,7 @@ public final class GUIManager{
     }
 
     private JButton createDialogButton(String text, UIColors backgroundColor,
-        UIColors textColor, UIColors hoverColor){
+        UIColors textColor, UIColors hoverColor) {
         CustomButton button = new CustomButton(text,
             color(hoverColor),
             color(hoverColor).brighter());
@@ -579,8 +583,8 @@ public final class GUIManager{
         return button;
     }
 
-    private JPanel getOrCreateEmptyQueuePanel(){
-        if(emptyQueuePanel != null){
+    private JPanel getOrCreateEmptyQueuePanel() {
+        if (emptyQueuePanel != null) {
             return emptyQueuePanel;
         }
 
@@ -595,8 +599,8 @@ public final class GUIManager{
         return emptyQueuePanel;
     }
 
-    private JPanel getOrCreateUpdaterPanel(){
-        if(updaterPanel != null){
+    private JPanel getOrCreateUpdaterPanel() {
+        if (updaterPanel != null) {
             return updaterPanel;
         }
 
@@ -625,8 +629,8 @@ public final class GUIManager{
         spacerPanel.setPreferredSize(new Dimension(1, 20));
         updaterPanel.add(spacerPanel, gbc);
 
-        for(AbstractGitUpdater updater : main.getUpdaters()){
-            if(!updater.isSupported()){
+        for (AbstractGitUpdater updater : main.getUpdaters()) {
+            if (!updater.isSupported()) {
                 continue;
             }
 
@@ -672,7 +676,7 @@ public final class GUIManager{
 
             updater.registerListener((status, progress) -> {
                 runOnEDT(() -> {
-                    switch(status){
+                    switch (status) {
                         case CHECKING -> {
                             progressBar.setValue((int)progress);
                             progressBar.setString(status.getDisplayName() + ": " + String.format("%.1f", progress) + "%");
@@ -708,14 +712,14 @@ public final class GUIManager{
         return updaterPanel;
     }
 
-    private void updateQueuePanelMessage(){
+    private void updateQueuePanelMessage() {
         runOnEDT(() -> {
             JPanel panel = getOrCreateEmptyQueuePanel();
 
             Component firstComponent = panel.getComponent(0);
 
-            if(!main.getDownloadManager().isBlocked()){
-                if(!(firstComponent instanceof JLabel)){
+            if (!main.getDownloadManager().isBlocked()) {
+                if (!(firstComponent instanceof JLabel)) {
                     panel.removeAll();
 
                     JLabel label = new JLabel("", SwingConstants.CENTER);
@@ -727,8 +731,8 @@ public final class GUIManager{
                 label.setText(main.getConfig().isMonitorClipboardForLinks()
                     ? l10n("gui.empty_queue")
                     : l10n("gui.empty_queue.enable_clipboard"));
-            }else{
-                if(!(firstComponent instanceof JPanel)){
+            } else {
+                if (!(firstComponent instanceof JPanel)) {
                     panel.removeAll();
                 }
 
@@ -741,15 +745,15 @@ public final class GUIManager{
     }
 
     public void showConfirmDialog(String title, String message, int timeoutMs,
-        DialogButton onClose, DialogButton... buttons){
+        DialogButton onClose, DialogButton... buttons) {
 
         runOnEDT(() -> {
-            JDialog dialog = new JDialog(appWindow, title, Dialog.ModalityType.APPLICATION_MODAL){
+            JDialog dialog = new JDialog(appWindow, title, Dialog.ModalityType.APPLICATION_MODAL) {
                 private boolean actionPerformed = false;
 
                 @Override
-                public void dispose(){
-                    if(!actionPerformed){
+                public void dispose() {
+                    if (!actionPerformed) {
                         actionPerformed = true;
 
                         onClose.getAction().accept(false);
@@ -759,15 +763,15 @@ public final class GUIManager{
                 }
             };
 
-            dialog.setAlwaysOnTop(true);//TODO: We might wanna consider just bringing this to top but not pinning it there. Java doesn't directly support this but there are workarounds.
+            dialog.setAlwaysOnTop(true);// TODO: We might want to consider just bringing this to top but not pinning it there. Java doesn't directly support this but there are workarounds.
             dialog.setSize(500, 300);
             dialog.setResizable(false);
             dialog.setLocationRelativeTo(null);
             dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
 
-            try{
+            try {
                 dialog.setIconImage(getAppIcon());
-            }catch(IOException e){
+            } catch (IOException e) {
                 main.handleException(e);
             }
 
@@ -800,7 +804,7 @@ public final class GUIManager{
             buttonPanel.setBackground(color(SIDE_PANEL_SELECTED));
             buttonPanel.setOpaque(false);
 
-            for(DialogButton dialogButton : buttons){
+            for (DialogButton dialogButton : buttons) {
                 JButton button = createDialogButton(
                     dialogButton.getTitle(),
                     BUTTON_BACKGROUND,
@@ -827,26 +831,26 @@ public final class GUIManager{
             //dialogProgressBar.setBorderPainted(false);
             dialogProgressBar.setPreferredSize(new Dimension(dialog.getWidth() - 10, 7));
 
-            Timer timer = new Timer(50, new ActionListener(){
+            Timer timer = new Timer(50, new ActionListener() {
                 int elapsed = 0;
 
                 @Override
-                public void actionPerformed(ActionEvent e){
+                public void actionPerformed(ActionEvent e) {
                     elapsed += 50;
 
                     int progress = 100 - (elapsed * 100) / timeoutMs;
                     dialogProgressBar.setValue(progress);
 
-                    if(elapsed >= timeoutMs){
+                    if (elapsed >= timeoutMs) {
                         ((Timer)e.getSource()).stop();
                         dialog.dispose();
                     }
                 }
             });
 
-            dialog.addWindowListener(new WindowAdapter(){
+            dialog.addWindowListener(new WindowAdapter() {
                 @Override
-                public void windowOpened(WindowEvent e){
+                public void windowOpened(WindowEvent e) {
                     timer.start();
                 }
             });
@@ -861,28 +865,28 @@ public final class GUIManager{
         });
     }
 
-    public void showMessage(String title, String message, int durationMillis, MessageType messageType, boolean playTone){
-        if(main.getConfig().isDebugMode()){
+    public void showMessage(String title, String message, int durationMillis, MessageType messageType, boolean playTone) {
+        if (main.getConfig().isDebugMode()) {
             log.info("Popup {}: {} - {}", messageType, title, message);
         }
 
         messageQueue.add(new Message(title, message, durationMillis, messageType, playTone));
 
-        if(!isShowingMessage.get()){
+        if (!isShowingMessage.get()) {
             displayNextMessage();
         }
     }
 
-    private void displayNextMessage(){
+    private void displayNextMessage() {
         runOnEDT(() -> {
-            if(messageWindow != null){
+            if (messageWindow != null) {
                 messageWindow.setVisible(false);
                 messageWindow.dispose();
 
                 messageWindow = null;
             }
 
-            if(messageQueue.isEmpty()){
+            if (messageQueue.isEmpty()) {
                 isShowingMessage.set(false);
                 return;
             }
@@ -898,7 +902,7 @@ public final class GUIManager{
 
             Color titleColor;
             Color textColor;
-            switch(nextMessage.getMessageType()){
+            switch (nextMessage.getMessageType()) {
                 case ERROR -> {
                     titleColor = Color.RED;
                     textColor = Color.GRAY;
@@ -936,9 +940,9 @@ public final class GUIManager{
 
             panel.add(titlePanel, BorderLayout.NORTH);
 
-            panel.addMouseListener(new MouseAdapter(){
+            panel.addMouseListener(new MouseAdapter() {
                 @Override
-                public void mousePressed(MouseEvent e){
+                public void mousePressed(MouseEvent e) {
                     cancelHook.set(true);
                 }
             });
@@ -961,17 +965,17 @@ public final class GUIManager{
             //messageProgressBar.setBorderPainted(false);
             messageProgressBar.setPreferredSize(new Dimension(messageWindow.getWidth() - 10, 5));
 
-            Timer timer = new Timer(50, new ActionListener(){
+            Timer timer = new Timer(50, new ActionListener() {
                 int elapsed = 0;
 
                 @Override
-                public void actionPerformed(ActionEvent e){
+                public void actionPerformed(ActionEvent e) {
                     elapsed += 50;
 
                     int progress = 100 - (elapsed * 100) / nextMessage.getDurationMillis();
                     messageProgressBar.setValue(progress);
 
-                    if(elapsed >= nextMessage.getDurationMillis() || cancelHook.get()){
+                    if (elapsed >= nextMessage.getDurationMillis() || cancelHook.get()) {
                         ((Timer)e.getSource()).stop();
 
                         displayNextMessage();
@@ -990,13 +994,13 @@ public final class GUIManager{
 
             timer.start();
 
-            if(nextMessage.isPlayTone() && main.getConfig().isPlaySounds()){
+            if (nextMessage.isPlayTone() && main.getConfig().isPlaySounds()) {
                 AudioEngine.playNotificationTone();
             }
         });
     }
 
-    private void updateMessageWindowSize(){
+    private void updateMessageWindowSize() {
         assert SwingUtilities.isEventDispatchThread();
 
         int newHeight = calculateMessageWindowHeight();
@@ -1010,7 +1014,7 @@ public final class GUIManager{
         int windowY = screenSize.height - messageWindow.getHeight() - taskbarHeight - 10;
 
         int minHeight = screenSize.height - messageWindow.getHeight() - taskbarHeight - 10;
-        if(windowY < minHeight){
+        if (windowY < minHeight) {
             messageWindow.setSize(messageWindow.getWidth(), screenSize.height - minHeight);
             windowY = minHeight;
         }
@@ -1018,10 +1022,10 @@ public final class GUIManager{
         messageWindow.setLocation(windowX, windowY);
     }
 
-    private void adjustMessageWindowPosition(){
+    private void adjustMessageWindowPosition() {
         assert SwingUtilities.isEventDispatchThread();
 
-        if(messageWindow != null){
+        if (messageWindow != null) {
             Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
             //Insets screenInsets = Toolkit.getDefaultToolkit().getScreenInsets(messageWindow.getGraphicsConfiguration());
             //int taskbarHeight = screenInsets.bottom;
@@ -1031,9 +1035,9 @@ public final class GUIManager{
 
             messageWindow.setLocation(newX, newY);
 
-            //TODO check if the window is actually on top
-            if(appWindow != null && appWindow.isVisible() && (appWindow.getExtendedState() & Frame.ICONIFIED) != 1){
-                if(messageWindow.getBounds().intersects(appWindow.getBounds())){
+            // TODO check if the window is actually on top
+            if (appWindow != null && appWindow.isVisible() && (appWindow.getExtendedState() & Frame.ICONIFIED) != 1) {
+                if (messageWindow.getBounds().intersects(appWindow.getBounds())) {
                     newY = appWindow.getY() - messageWindow.getHeight() - 10;
 
                     messageWindow.setLocation(newX, newY);
@@ -1042,30 +1046,30 @@ public final class GUIManager{
         }
     }
 
-    private int calculateMessageWindowHeight(){
+    private int calculateMessageWindowHeight() {
         assert SwingUtilities.isEventDispatchThread();
 
         int totalHeight = 0;
-        if(messagePanel != null){
-            for(Component comp : messagePanel.getComponents()){
+        if (messagePanel != null) {
+            for (Component comp : messagePanel.getComponents()) {
                 totalHeight += comp.getPreferredSize().height;
             }
-        }else{
+        } else {
             totalHeight = 10;
         }
 
         return Math.min(totalHeight + 110, 220);
     }
 
-    private void adjustMediaCards(){
+    private void adjustMediaCards() {
         assert SwingUtilities.isEventDispatchThread();
 
         double factor = 1;
-        if(appWindow.getExtendedState() == JFrame.MAXIMIZED_BOTH){
+        if (appWindow.getExtendedState() == JFrame.MAXIMIZED_BOTH) {
             factor = 1.20;
         }
 
-        for(MediaCard card : mediaCards.values()){
+        for (MediaCard card : mediaCards.values()) {
             card.scaleThumbnail(factor);
         }
 
@@ -1073,7 +1077,7 @@ public final class GUIManager{
         queuePanel.repaint();
     }
 
-    public MediaCard addMediaCard(boolean video, String... mediaLabel){
+    public MediaCard addMediaCard(boolean video, String... mediaLabel) {
         int id = mediaCardId.incrementAndGet();
 
         JPanel card = new JPanel();
@@ -1088,7 +1092,7 @@ public final class GUIManager{
         gbc.insets = new Insets(10, 10, 10, 10);
         gbc.fill = GridBagConstraints.BOTH;
 
-        //Dragidy-draggy-nub-thingy
+        // Dragidy-draggy-nub-thingy
         JPanel dragPanel = new JPanel(new BorderLayout());
         dragPanel.setPreferredSize(new Dimension(24, 24));
         dragPanel.setMinimumSize(new Dimension(24, 24));
@@ -1107,7 +1111,7 @@ public final class GUIManager{
         gbc.weighty = 0;
         card.add(dragPanel, gbc);
 
-        //Thumbnail
+        // Thumbnail
         CustomThumbnailPanel thumbnailPanel = new CustomThumbnailPanel();
         thumbnailPanel.setPreferredSize(new Dimension(MediaCard.THUMBNAIL_WIDTH, MediaCard.THUMBNAIL_HEIGHT));
         thumbnailPanel.setMinimumSize(new Dimension(MediaCard.THUMBNAIL_WIDTH, MediaCard.THUMBNAIL_HEIGHT));
@@ -1171,42 +1175,42 @@ public final class GUIManager{
 
         card.setTransferHandler(new PanelTransferHandler());
 
-        MouseAdapter listener = new MouseAdapter(){
+        MouseAdapter listener = new MouseAdapter() {
             private long lastClick = System.currentTimeMillis();
 
             @Override
-            public void mousePressed(MouseEvent e){
+            public void mousePressed(MouseEvent e) {
                 Component component = e.getComponent();
 
-                if(component.equals(dragLabel)){
+                if (component.equals(dragLabel)) {
                     TransferHandler handler = card.getTransferHandler();
 
-                    if(handler != null){//peace of mind
+                    if (handler != null) {// peace of mind
                         handler.exportAsDrag(card, e, MOVE);
                     }
                 }
             }
 
             @Override
-            public void mouseClicked(MouseEvent e){
-                if(SwingUtilities.isLeftMouseButton(e)){
-                    if(mediaCard.getOnLeftClick() != null && (System.currentTimeMillis() - lastClick) > 50){
+            public void mouseClicked(MouseEvent e) {
+                if (SwingUtilities.isLeftMouseButton(e)) {
+                    if (mediaCard.getOnLeftClick() != null && (System.currentTimeMillis() - lastClick) > 50) {
                         mediaCard.getOnLeftClick().run();
 
                         lastClick = System.currentTimeMillis();
                     }
-                }else if(SwingUtilities.isRightMouseButton(e)){
+                } else if (SwingUtilities.isRightMouseButton(e)) {
                     showMediaCardRightClickMenu(card, mediaCard.getRightClickMenu(), e.getX(), e.getY());
                 }
             }
 
             @Override
-            public void mouseEntered(MouseEvent e){
+            public void mouseEntered(MouseEvent e) {
                 card.setBackground(color(MEDIA_CARD_HOVER));
             }
 
             @Override
-            public void mouseExited(MouseEvent e){
+            public void mouseExited(MouseEvent e) {
                 card.setBackground(color(MEDIA_CARD));
             }
         };
@@ -1222,7 +1226,7 @@ public final class GUIManager{
         runOnEDT(() -> {
             setUpAppWindow();
 
-            if(!appWindow.isVisible()){
+            if (!appWindow.isVisible()) {
                 appWindow.setVisible(true);
             }
 
@@ -1239,16 +1243,16 @@ public final class GUIManager{
         return mediaCard;
     }
 
-    public void removeMediaCard(int id){
+    public void removeMediaCard(int id) {
         MediaCard mediaCard = mediaCards.remove(id);
 
-        if(mediaCard != null){
+        if (mediaCard != null) {
             mediaCard.close();
 
             runOnEDT(() -> {
                 queuePanel.remove(mediaCard.getPanel());
 
-                if(mediaCards.isEmpty()){
+                if (mediaCards.isEmpty()) {
                     queuePanel.add(getOrCreateEmptyQueuePanel(), BorderLayout.CENTER);
                 }
 
@@ -1258,10 +1262,10 @@ public final class GUIManager{
         }
     }
 
-    private void showMediaCardRightClickMenu(JPanel parentPanel, Map<String, Runnable> actions, int x, int y){
+    private void showMediaCardRightClickMenu(JPanel parentPanel, Map<String, Runnable> actions, int x, int y) {
         assert SwingUtilities.isEventDispatchThread();
 
-        if(actions.isEmpty()){
+        if (actions.isEmpty()) {
             return;
         }
 
@@ -1274,7 +1278,7 @@ public final class GUIManager{
         JWindow popupWindow = new JWindow();
         popupWindow.setLayout(new BorderLayout());
 
-        for(Map.Entry<String, Runnable> entry : actions.entrySet()){
+        for (Map.Entry<String, Runnable> entry : actions.entrySet()) {
             JButton button = new CustomMenuButton(entry.getKey());
 
             button.addActionListener(e -> {
@@ -1291,14 +1295,14 @@ public final class GUIManager{
         Point locationOnScreen = parentPanel.getLocationOnScreen();
         popupWindow.setLocation(locationOnScreen.x + x, locationOnScreen.y + y);
 
-        AWTEventListener globalMouseListener = new AWTEventListener(){
+        AWTEventListener globalMouseListener = new AWTEventListener() {
             @Override
-            public void eventDispatched(AWTEvent event){
-                if(event.getID() == MouseEvent.MOUSE_CLICKED){
+            public void eventDispatched(AWTEvent event) {
+                if (event.getID() == MouseEvent.MOUSE_CLICKED) {
                     MouseEvent me = (MouseEvent)event;
                     Component component = SwingUtilities.getDeepestComponentAt(me.getComponent(), me.getX(), me.getY());
 
-                    if(component == null || !SwingUtilities.isDescendingFrom(component, popupWindow)){
+                    if (component == null || !SwingUtilities.isDescendingFrom(component, popupWindow)) {
                         popupWindow.dispose();
                         Toolkit.getDefaultToolkit().removeAWTEventListener(this);
                     }
@@ -1308,9 +1312,9 @@ public final class GUIManager{
 
         Toolkit.getDefaultToolkit().addAWTEventListener(globalMouseListener, AWTEvent.MOUSE_EVENT_MASK);
 
-        popupWindow.addWindowListener(new WindowAdapter(){
+        popupWindow.addWindowListener(new WindowAdapter() {
             @Override
-            public void windowClosed(WindowEvent e){
+            public void windowClosed(WindowEvent e) {
                 Toolkit.getDefaultToolkit().removeAWTEventListener(globalMouseListener);
             }
         });
@@ -1319,7 +1323,7 @@ public final class GUIManager{
     }
 
     @Data
-    private static class ImageCacheKey{
+    private static class ImageCacheKey {
 
         private final String path;
         private final Color color;
@@ -1328,35 +1332,36 @@ public final class GUIManager{
 
     private final Map<ImageCacheKey, ImageIcon> _imageCache = new HashMap<>();
 
-    public ImageIcon loadIcon(String path, UIColors color){
+    public ImageIcon loadIcon(String path, UIColors color) {
         return loadIcon(path, color, 36);
     }
 
-    public ImageIcon loadIcon(String path, UIColors color, int scale){
+    public ImageIcon loadIcon(String path, UIColors color, int scale) {
         Color themeColor = color(color);
         ImageCacheKey key = new ImageCacheKey(path, themeColor, scale);
 
-        synchronized(_imageCache){
-            if(_imageCache.containsKey(key)){
+        synchronized (_imageCache) {
+            if (_imageCache.containsKey(key)) {
                 return _imageCache.get(key);
             }
         }
 
-        try(InputStream resourceStream = GUIManager.class.getResourceAsStream(path)){
+        try (
+            InputStream resourceStream = GUIManager.class.getResourceAsStream(path)) {
             BufferedImage originalImage = ImageIO.read(resourceStream);
-            if(originalImage == null){
+            if (originalImage == null) {
                 throw new IOException("Failed to load image: " + path);
             }
 
             WritableRaster raster = originalImage.getRaster();
 
-            for(int y = 0; y < originalImage.getHeight(); y++){
-                for(int x = 0; x < originalImage.getWidth(); x++){
+            for (int y = 0; y < originalImage.getHeight(); y++) {
+                for (int x = 0; x < originalImage.getWidth(); x++) {
                     int[] pixel = raster.getPixel(x, y, (int[])null);
 
                     int alpha = pixel[3];
 
-                    if(alpha != 0){
+                    if (alpha != 0) {
                         pixel[0] = themeColor.getRed();
                         pixel[1] = themeColor.getGreen();
                         pixel[2] = themeColor.getBlue();
@@ -1371,23 +1376,23 @@ public final class GUIManager{
 
             ImageIcon icon = new ImageIcon(image);
 
-            synchronized(_imageCache){
+            synchronized (_imageCache) {
                 _imageCache.put(key, icon);
             }
 
             return icon;
-        }catch(Exception e){
+        } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
 
-    //https://stackoverflow.com/questions/5147768/scroll-jscrollpane-to-bottom
-    private static void scrollToBottom(JScrollPane scrollPane){
+    // https://stackoverflow.com/questions/5147768/scroll-jscrollpane-to-bottom
+    private static void scrollToBottom(JScrollPane scrollPane) {
         JScrollBar verticalBar = scrollPane.getVerticalScrollBar();
 
-        verticalBar.addAdjustmentListener(new AdjustmentListener(){
+        verticalBar.addAdjustmentListener(new AdjustmentListener() {
             @Override
-            public void adjustmentValueChanged(AdjustmentEvent e){
+            public void adjustmentValueChanged(AdjustmentEvent e) {
                 Adjustable adjustable = e.getAdjustable();
                 adjustable.setValue(adjustable.getMaximum());
                 verticalBar.removeAdjustmentListener(this);
@@ -1395,53 +1400,52 @@ public final class GUIManager{
         });
     }
 
-    protected static String wrapText(int maxLineLength, String... lines){
-        if(maxLineLength < 20){
+    protected static String wrapText(int maxLineLength, String... lines) {
+        if (maxLineLength < 20) {
             throw new IllegalArgumentException("Line length too short" + maxLineLength);
         }
 
         StringBuilder wrappedText = new StringBuilder();
 
-        for(String text : lines){
+        for (String text : lines) {
             text = text.replace("\n", "<br>");
 
-            for(String line : text.split("<br>")){
-                //String cutWord = line.substring(0, maxLineLength - 3) + "...";
-                if(line.length() > maxLineLength){
+            for (String line : text.split("<br>")) {
+                if (line.length() > maxLineLength) {
                     int count = 0;
 
-                    for(int i = 0; i < line.length(); i++){
+                    for (int i = 0; i < line.length(); i++) {
                         char c = line.charAt(i);
                         wrappedText.append(c);
 
-                        if(++count == maxLineLength){
+                        if (++count == maxLineLength) {
                             wrappedText.append("<br>");
                             count = 0;
                         }
                     }
-                }else{
+                } else {
                     String[] words = line.split(" ");
                     int lineLength = 0;
 
-                    for(String word : words){
-                        if(lineLength + word.length() > maxLineLength){
+                    for (String word : words) {
+                        if (lineLength + word.length() > maxLineLength) {
                             wrappedText.append("<br>").append(word).append(" ");
                             lineLength = word.length() + 1; // reset lineLength
-                        }else{
+                        } else {
                             wrappedText.append(word).append(" ");
                             lineLength += word.length() + 1;
                         }
                     }
                 }
 
-                if(!wrappedText.toString().trim().endsWith("<br>")){
+                if (!wrappedText.toString().trim().endsWith("<br>")) {
                     wrappedText.append("<br>");
                 }
             }
         }
 
         String result = wrappedText.toString().trim();
-        if(result.endsWith("<br>")){
+        if (result.endsWith("<br>")) {
             result = result.substring(0, result.length() - 4);
         }
 
@@ -1455,22 +1459,22 @@ public final class GUIManager{
      *
      * @param runnable the {@link Runnable} to be executed on the Event Dispatch Thread
      */
-    protected static void runOnEDT(Runnable runnable){
-        if(SwingUtilities.isEventDispatchThread()){
+    protected static void runOnEDT(Runnable runnable) {
+        if (SwingUtilities.isEventDispatchThread()) {
             runnable.run();
-        }else{
+        } else {
             SwingUtilities.invokeLater(runnable);
         }
     }
 
-    public static enum MessageType{
+    public static enum MessageType {
         ERROR,
         WARNING,
         INFO
     }
 
     @Data
-    private static class Message{
+    private static class Message {
 
         private final String title;
         private final String message;
@@ -1481,29 +1485,29 @@ public final class GUIManager{
     }
 
     @FunctionalInterface
-    public interface ButtonFunction{
+    public interface ButtonFunction {
 
         void accept(boolean selected);
     }
 
     @FunctionalInterface
-    public interface StatusLabelUpdater{
+    public interface StatusLabelUpdater {
 
         String updateText(YtDlpDownloader downloadManager);
     }
 
     @Data
-    public static class DialogButton{
+    public static class DialogButton {
 
         private final String title;
         private final ButtonFunction action;
     }
 
-    private boolean tryHandleDrop(Transferable transferable){
+    private boolean tryHandleDrop(Transferable transferable) {
         return main.updateClipboard(transferable, true);
     }
 
-    private class PanelDropTargetListener implements DropTargetListener{
+    private class PanelDropTargetListener implements DropTargetListener {
 
         private final Timer scrollTimer = new Timer(50, (ActionEvent e) -> {
             Point mouseLocation = MouseInfo.getPointerInfo().getLocation();
@@ -1512,41 +1516,41 @@ public final class GUIManager{
             Rectangle rect = queueScrollPane.getViewport().getViewRect();
             int tolerance = 100;
 
-            if(mouseLocation.y < tolerance && rect.y > 0){
+            if (mouseLocation.y < tolerance && rect.y > 0) {
                 queueScrollPane.getVerticalScrollBar().setValue(
                     queueScrollPane.getVerticalScrollBar().getValue() - 30);
-            }else if(mouseLocation.y > rect.height - tolerance
-                && rect.y + rect.height < queueScrollPane.getViewport().getView().getHeight()){
+            } else if (mouseLocation.y > rect.height - tolerance
+                && rect.y + rect.height < queueScrollPane.getViewport().getView().getHeight()) {
                 queueScrollPane.getVerticalScrollBar().setValue(
                     queueScrollPane.getVerticalScrollBar().getValue() + 30);
             }
         });
 
         @Override
-        public void dragEnter(DropTargetDragEvent dtde){
+        public void dragEnter(DropTargetDragEvent dtde) {
             scrollTimer.start();
         }
 
         @Override
-        public void dragOver(DropTargetDragEvent dtde){
-            //Not implemented
+        public void dragOver(DropTargetDragEvent dtde) {
+            // Not implemented
         }
 
         @Override
-        public void dropActionChanged(DropTargetDragEvent dtde){
-            //Not implemented
+        public void dropActionChanged(DropTargetDragEvent dtde) {
+            // Not implemented
         }
 
         @Override
-        public void dragExit(DropTargetEvent dte){
+        public void dragExit(DropTargetEvent dte) {
             scrollTimer.stop();
         }
 
         @Override
-        public void drop(DropTargetDropEvent dtde){
+        public void drop(DropTargetDropEvent dtde) {
             scrollTimer.stop();
 
-            try{
+            try {
                 dtde.acceptDrop(DnDConstants.ACTION_COPY_OR_MOVE);
 
                 Transferable transferable = dtde.getTransferable();
@@ -1554,7 +1558,7 @@ public final class GUIManager{
                 boolean result = tryHandleDrop(transferable);
 
                 dtde.dropComplete(result);
-            }catch(Exception e){
+            } catch (Exception e) {
                 main.handleException(e);
 
                 dtde.dropComplete(false);
@@ -1562,19 +1566,19 @@ public final class GUIManager{
         }
     }
 
-    private class PanelTransferHandler extends TransferHandler{
+    private class PanelTransferHandler extends TransferHandler {
 
         @Override
-        public int getSourceActions(JComponent c){
+        public int getSourceActions(JComponent c) {
             return MOVE;
         }
 
         @Override
-        protected Transferable createTransferable(JComponent c){
+        protected Transferable createTransferable(JComponent c) {
             JPanel panel = (JPanel)c;
             MediaCard card = (MediaCard)panel.getClientProperty("MEDIA_CARD");
 
-            if(card != null){
+            if (card != null) {
                 return new MediaCardTransferable(card);
             }
 
@@ -1582,46 +1586,46 @@ public final class GUIManager{
         }
 
         @Override
-        public boolean canImport(TransferSupport support){
+        public boolean canImport(TransferSupport support) {
             return support.isDataFlavorSupported(MEDIA_CARD_FLAVOR) || support.isDataFlavorSupported(DataFlavor.stringFlavor);
         }
 
         @Override
-        public boolean importData(TransferSupport support){
-            if(!canImport(support)){
+        public boolean importData(TransferSupport support) {
+            if (!canImport(support)) {
                 return false;
             }
 
-            try{
+            try {
                 Transferable transferable = support.getTransferable();
 
-                if(transferable.isDataFlavorSupported(DataFlavor.stringFlavor)){
+                if (transferable.isDataFlavorSupported(DataFlavor.stringFlavor)) {
                     return tryHandleDrop(transferable);
                 }
 
-                if(transferable.isDataFlavorSupported(MEDIA_CARD_FLAVOR)){
+                if (transferable.isDataFlavorSupported(MEDIA_CARD_FLAVOR)) {
                     MediaCard card = (MediaCard)transferable.getTransferData(MEDIA_CARD_FLAVOR);
 
                     JPanel sourcePanel = card.getPanel();
 
-                    if(sourcePanel != null){
+                    if (sourcePanel != null) {
                         Component dropTarget = support.getComponent();
 
                         Rectangle windowBounds = appWindow.getBounds();
                         Point dropLocation = dropTarget.getLocationOnScreen();
 
-                        if(windowBounds.contains(dropLocation) && dropTarget instanceof JPanel jPanel){
+                        if (windowBounds.contains(dropLocation) && dropTarget instanceof JPanel jPanel) {
                             runOnEDT(() -> {
                                 int targetIndex = getComponentIndex(jPanel);
 
-                                if(main.getConfig().isDebugMode()){
+                                if (main.getConfig().isDebugMode()) {
                                     log.debug("Drop target index is {}", targetIndex);
                                 }
 
-                                if(card.getOnDrag() != null){
+                                if (card.getOnDrag() != null) {
                                     int validIndex = getValidComponentIndex(jPanel);
 
-                                    if(main.getConfig().isDebugMode()){
+                                    if (main.getConfig().isDebugMode()) {
                                         log.debug("Valid target index is {}", validIndex);
                                     }
 
@@ -1638,17 +1642,17 @@ public final class GUIManager{
                         }
                     }
                 }
-            }catch(Exception e){
+            } catch (Exception e) {
                 main.handleException(e, false);
             }
 
             return false;
         }
 
-        private int getComponentIndex(JPanel component){
+        private int getComponentIndex(JPanel component) {
             Component[] components = queuePanel.getComponents();
-            for(int i = 0; i < components.length; i++){
-                if(components[i] == component){
+            for (int i = 0; i < components.length; i++) {
+                if (components[i] == component) {
                     return i;
                 }
             }
@@ -1656,19 +1660,19 @@ public final class GUIManager{
             return -1;
         }
 
-        private int getValidComponentIndex(JPanel componentIn){
+        private int getValidComponentIndex(JPanel componentIn) {
             int index = 0;
-            for(Component component : queuePanel.getComponents()){
+            for (Component component : queuePanel.getComponents()) {
                 MediaCard card = (MediaCard)((JPanel)component).getClientProperty("MEDIA_CARD");
-                if(card == null){
+                if (card == null) {
                     throw new IllegalStateException("Media card not defined for " + component.getName());
                 }
 
-                if(component == componentIn){
+                if (component == componentIn) {
                     return index;
                 }
 
-                if(card.getValidateDropTarget().get()){
+                if (card.getValidateDropTarget().get()) {
                     index++;
                 }
             }
@@ -1676,27 +1680,27 @@ public final class GUIManager{
             return -1;
         }
 
-        private static class MediaCardTransferable implements Transferable{
+        private static class MediaCardTransferable implements Transferable {
 
             private final MediaCard card;
 
-            public MediaCardTransferable(MediaCard card){
+            public MediaCardTransferable(MediaCard card) {
                 this.card = card;
             }
 
             @Override
-            public DataFlavor[] getTransferDataFlavors(){
-                return new DataFlavor[]{MEDIA_CARD_FLAVOR};
+            public DataFlavor[] getTransferDataFlavors() {
+                return new DataFlavor[] {MEDIA_CARD_FLAVOR};
             }
 
             @Override
-            public boolean isDataFlavorSupported(DataFlavor flavor){
+            public boolean isDataFlavorSupported(DataFlavor flavor) {
                 return MEDIA_CARD_FLAVOR.equals(flavor);
             }
 
             @Override
-            public Object getTransferData(DataFlavor flavor) throws UnsupportedFlavorException, IOException{
-                if(!MEDIA_CARD_FLAVOR.equals(flavor)){
+            public Object getTransferData(DataFlavor flavor) throws UnsupportedFlavorException, IOException {
+                if (!MEDIA_CARD_FLAVOR.equals(flavor)) {
                     throw new UnsupportedFlavorException(flavor);
                 }
 

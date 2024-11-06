@@ -28,7 +28,7 @@ import net.brlns.gdownloader.settings.filters.*;
  */
 @Getter
 @Deprecated
-public enum WebFilterEnum implements ISettingsEnum{
+public enum WebFilterEnum implements ISettingsEnum {
     YOUTUBE(YoutubeFilter.ID),
     YOUTUBE_PLAYLIST(YoutubePlaylistFilter.ID),
     TWITCH(TwitchFilter.ID),
@@ -41,17 +41,17 @@ public enum WebFilterEnum implements ISettingsEnum{
 
     private final String id;
 
-    private WebFilterEnum(String idIn){
+    private WebFilterEnum(String idIn) {
         id = idIn;
     }
 
     @Override
-    public String getDisplayName(){
+    public String getDisplayName() {
         return "";
     }
 
     @Override
-    public String getTranslationKey(){
+    public String getTranslationKey() {
         return "";
     }
 }

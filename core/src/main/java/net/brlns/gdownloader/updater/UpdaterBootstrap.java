@@ -44,51 +44,51 @@ import static net.brlns.gdownloader.util.LockUtils.*;
  * @author Gabriel / hstr0100 / vertx010
  */
 @Slf4j
-public class UpdaterBootstrap{
+public class UpdaterBootstrap {
 
     public static final String PREFIX = "gdownloader_ota_runtime_";
 
-    public static void tryOta(String[] args, boolean fromOta){
+    public static void tryOta(String[] args, boolean fromOta) {
         Path workDir = GDownloader.getWorkDirectory().toPath();
         String appPath = getAppPath();
-        if(appPath == null){
+        if (appPath == null) {
             log.error("Ota not available for platform");
             return;
         }
 
         String version = getVersion();
-        if(version == null){
+        if (version == null) {
             log.error("Ota not available, not running from jpackage");
             return;
         }
 
         Path path = Paths.get(workDir.toString(), "gdownloader_ota.zip");
-        if(!Files.exists(path)){
+        if (!Files.exists(path)) {
             Path runtimePath = getNewestDirectoryEntry(PREFIX, workDir);
 
             String launchCommand = getLaunchCommand();
 
-            if(fromOta || launchCommand != null && launchCommand.contains(PREFIX)){
+            if (fromOta || launchCommand != null && launchCommand.contains(PREFIX)) {
                 log.info("Current running image is from ota {} v{}", runtimePath, version);
                 return;
-            }else{
+            } else {
                 log.info("No ota file found, trying to locate current runtime");
             }
 
-            if(!Files.exists(runtimePath)){
+            if (!Files.exists(runtimePath)) {
                 log.info("No ota runtimes found, running current version.");
                 return;
             }
 
-            //This is a backwards-compatible check
-            if(!diskLockExistsAndIsNewer(workDir, version)){
+            // This is a backwards-compatible check
+            if (!diskLockExistsAndIsNewer(workDir, version)) {
                 log.info("Ota runtime on disk is not newer, running current version. (v{})", version);
                 return;
             }
 
             File binary = new File(runtimePath.toFile(), appPath);
 
-            if(!binary.exists() || !binary.canExecute()){
+            if (!binary.exists() || !binary.canExecute()) {
                 log.error("Cannot open or execute {}", binary.getAbsolutePath());
                 return;
             }
@@ -97,53 +97,53 @@ public class UpdaterBootstrap{
             arguments.add(binary.getAbsolutePath());
             arguments.add("--from-ota");
 
-            if(launchCommand != null){
+            if (launchCommand != null) {
                 arguments.add("--launcher");
                 arguments.add(launchCommand);
             }
 
-            //Older portable versions already have a broken updater,
-            //so introducing this change should not affect anything.
-            if(GDownloader.isPortable()){
+            // Older portable versions already have a broken updater,
+            // so introducing this change should not affect anything.
+            if (GDownloader.isPortable()) {
                 arguments.add("--portable");
             }
 
             arguments.addAll(List.of(args));
             log.info("Launching {}", arguments);
 
-            try{//Attempt to hand it off to the new version
+            try {// Attempt to hand it off to the new version
                 ProcessBuilder processBuilder = new ProcessBuilder(arguments);
-                processBuilder.redirectErrorStream(true);//TODO: low-prio: look into why all of the output is coming from the error stream.
+                processBuilder.redirectErrorStream(true);// TODO: low-prio: look into why all of the output is coming from the error stream.
 
-                //It took quite some brain cycles to figure out why the portable versions were failing to launch updates.
-                //Turns out we need to get rid of this conflicting env variable.
+                // It took quite some brain cycles to figure out why the portable versions were failing to launch updates.
+                // Turns out we need to get rid of this conflicting env variable.
                 processBuilder.environment().remove("_JPACKAGE_LAUNCHER");
 
                 Process process = processBuilder.start();
 
-                try(BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(process.getInputStream()))){
+                try (BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(process.getInputStream()))) {
                     String line;
-                    while((line = reader.readLine()) != null){
+                    while ((line = reader.readLine()) != null) {
                         log.info("Output: {}", line);
 
-                        if(line.contains("Starting...")){
+                        if (line.contains("Starting...")) {
                             log.info("Launched successfully, handing off");
                             System.exit(0);
                         }
                     }
-                }catch(Exception e){
+                } catch (Exception e) {
                     log.error("Input stream exception", e);
                 }
 
                 int exitCode = process.waitFor();
                 log.error("Cannot restart for update, process exited with code: {}", exitCode);
-            }catch(IOException | InterruptedException e){
+            } catch (IOException | InterruptedException e) {
                 log.error("Cannot restart for update", e);
             }
-        }else{
-            try{
-                if(diskLockExistsAndIsNewer(workDir, version)){
+        } else {
+            try {
+                if (diskLockExistsAndIsNewer(workDir, version)) {
                     Path zipOutputPath = Paths.get(workDir.toString(), "tmp_ota_zip");
                     log.info("Zip out path {}", zipOutputPath);
 
@@ -169,33 +169,33 @@ public class UpdaterBootstrap{
 
                     log.info("Ota complete, restarting");
                     tryOta(args, false);
-                }else{
+                } else {
                     log.error("Disk version is older or the same, deleting ota update and remaining in the current version (v{}).", version);
                     Files.delete(path);
                 }
-            }catch(IOException e){
+            } catch (IOException e) {
                 log.error("Cannot procceed, IO error with ota file {}", path, e);
             }
         }
     }
 
     @Nullable
-    protected static String getVersion(){
+    protected static String getVersion() {
         return System.getProperty("jpackage.app-version");
     }
 
     @Nullable
-    protected static String getLaunchCommand(){
+    protected static String getLaunchCommand() {
         return System.getProperty("jpackage.app-path");
     }
 
     @Nullable
-    private static String getAppPath(){
-        if(GDownloader.isWindows()){
+    private static String getAppPath() {
+        if (GDownloader.isWindows()) {
             return GDownloader.REGISTRY_APP_NAME + ".exe";
-        }else if(GDownloader.isLinux()){
+        } else if (GDownloader.isLinux()) {
             return "bin" + File.separator + GDownloader.REGISTRY_APP_NAME;
-        }else{//Macn't
+        } else {// Macn't
             return null;
         }
     }

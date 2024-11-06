@@ -31,10 +31,10 @@ import static net.brlns.gdownloader.ui.themes.UIColors.*;
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-public class CustomCheckBoxUI extends BasicCheckBoxUI{
+public class CustomCheckBoxUI extends BasicCheckBoxUI {
 
     @Override
-    public void installUI(JComponent c){
+    public void installUI(JComponent c) {
         super.installUI(c);
 
         JCheckBox checkBox = (JCheckBox)c;
@@ -46,21 +46,21 @@ public class CustomCheckBoxUI extends BasicCheckBoxUI{
         checkBox.setIcon(new CustomCheckBoxIcon());
         checkBox.setSelectedIcon(new CustomCheckBoxIcon());
 
-        checkBox.addMouseListener(new MouseAdapter(){
+        checkBox.addMouseListener(new MouseAdapter() {
             @Override
-            public void mouseEntered(MouseEvent e){
+            public void mouseEntered(MouseEvent e) {
                 checkBox.repaint();
             }
 
             @Override
-            public void mouseExited(MouseEvent e){
+            public void mouseExited(MouseEvent e) {
                 checkBox.repaint();
             }
         });
     }
 
     @Override
-    public void paint(Graphics g, JComponent c){
+    public void paint(Graphics g, JComponent c) {
         AbstractButton b = (AbstractButton)c;
         Graphics2D g2 = (Graphics2D)g;
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
@@ -68,12 +68,12 @@ public class CustomCheckBoxUI extends BasicCheckBoxUI{
         super.paint(g2, c);
     }
 
-    private class CustomCheckBoxIcon implements Icon{
+    private class CustomCheckBoxIcon implements Icon {
 
         private static final int SIZE = 16;
 
         @Override
-        public void paintIcon(Component c, Graphics g, int x, int y){
+        public void paintIcon(Component c, Graphics g, int x, int y) {
             AbstractButton button = (AbstractButton)c;
             ButtonModel model = button.getModel();
 
@@ -81,20 +81,20 @@ public class CustomCheckBoxUI extends BasicCheckBoxUI{
                 ? color(CHECK_BOX_HOVER)
                 : color(SLIDER_FOREGROUND));
 
-            if(model.isSelected()){
+            if (model.isSelected()) {
                 g.fillOval(x, y, SIZE, SIZE);
-            }else{
+            } else {
                 g.drawOval(x, y, SIZE - 1, SIZE - 1);
             }
         }
 
         @Override
-        public int getIconWidth(){
+        public int getIconWidth() {
             return SIZE;
         }
 
         @Override
-        public int getIconHeight(){
+        public int getIconHeight() {
             return SIZE;
         }
     }

@@ -38,12 +38,12 @@ import static net.brlns.gdownloader.Language.*;
 @Data
 @EqualsAndHashCode(callSuper = true)
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class GenericFilter extends AbstractUrlFilter{
+public class GenericFilter extends AbstractUrlFilter {
 
     public static final String ID = "default";
 
     @SuppressWarnings("this-escape")
-    public GenericFilter(){
+    public GenericFilter() {
         setId(ID);
         setVideoNamePattern("%(title).60s (%(resolution)s).%(ext)s");
         setAudioNamePattern(getVideoNamePattern().replace("%(resolution)s", "%(audio_bitrate)s"));
@@ -52,9 +52,9 @@ public class GenericFilter extends AbstractUrlFilter{
 
     @JsonIgnore
     @Override
-    public String getDisplayName(){
+    public String getDisplayName() {
         String name = getFilterName();
-        if(name.isEmpty()){
+        if (name.isEmpty()) {
             name = l10n("enums.web_filter.default");
         }
 
@@ -63,23 +63,23 @@ public class GenericFilter extends AbstractUrlFilter{
 
     @JsonIgnore
     @Override
-    protected List<String> buildArguments(DownloadTypeEnum typeEnum, GDownloader main, File savePath){
+    protected List<String> buildArguments(DownloadTypeEnum typeEnum, GDownloader main, File savePath) {
         Settings config = main.getConfig();
         QualitySettings quality = getQualitySettings();
         AudioBitrateEnum audioBitrate = quality.getAudioBitrate();
 
         List<String> arguments = new ArrayList<>();
 
-        switch(typeEnum){
+        switch (typeEnum) {
             case ALL -> {
-                //For backwards compatibility. This should have been a list.
-                for(String arg : config.getExtraYtDlpArguments().split(" ")){
-                    if(!arg.isEmpty()){
+                // For backwards compatibility. This should have been a list.
+                for (String arg : config.getExtraYtDlpArguments().split(" ")) {
+                    if (!arg.isEmpty()) {
                         arguments.add(arg);
                     }
                 }
 
-                if(config.isRandomIntervalBetweenDownloads()){
+                if (config.isRandomIntervalBetweenDownloads()) {
                     arguments.addAll(List.of(
                         "--max-sleep-interval",
                         "45",
@@ -88,20 +88,20 @@ public class GenericFilter extends AbstractUrlFilter{
                     ));
                 }
 
-                if(config.isReadCookiesFromBrowser()){
+                if (config.isReadCookiesFromBrowser()) {
                     arguments.addAll(List.of(
                         "--cookies-from-browser",
                         main.getBrowserForCookies().getName()
                     ));
                 }
 
-                if(GDownloader.isWindows()){
-                    //NTFS shenanigans ahead
-                    //TODO: query registry for longpath support status
+                if (GDownloader.isWindows()) {
+                    // NTFS shenanigans ahead
+                    // TODO: query registry for longpath support status
                     arguments.addAll(List.of(
                         "--windows-filenames",
                         "--trim-filenames",
-                        String.valueOf(240)//Give some extra room for fragment files
+                        String.valueOf(240)// Give some extra room for fragment files
                     ));
                 }
             }
@@ -117,14 +117,14 @@ public class GenericFilter extends AbstractUrlFilter{
                     videoContainer.getValue()
                 ));
 
-                if(isEmbedThumbnailAndMetadata()){
+                if (isEmbedThumbnailAndMetadata()) {
                     arguments.addAll(List.of(
                         "--embed-thumbnail",
                         "--embed-metadata",
                         "--embed-chapters"
                     ));
 
-                    switch(quality.getVideoContainer()){
+                    switch (quality.getVideoContainer()) {
                         case MKV, MP4, WEBM ->
                             arguments.addAll(List.of(
                                 "--embed-subs",
@@ -134,16 +134,16 @@ public class GenericFilter extends AbstractUrlFilter{
                     }
                 }
 
-                if(config.isTranscodeAudioToAAC()){
+                if (config.isTranscodeAudioToAAC()) {
                     arguments.addAll(List.of(
                         "--postprocessor-args",
-                        //Opus is not supported by some native video players
+                        // Opus is not supported by some native video players
                         "ffmpeg:-c:a aac -b:a " + (audioBitrate == AudioBitrateEnum.NO_AUDIO ? 320 : audioBitrate.getValue()) + "k"
                     ));
                 }
             }
             case AUDIO -> {
-                if(audioBitrate != AudioBitrateEnum.NO_AUDIO){
+                if (audioBitrate != AudioBitrateEnum.NO_AUDIO) {
                     String audioPatternWithBitrate = getAudioNamePattern()
                         .replace("%(audio_bitrate)s", audioBitrate.getValue() + "kbps");
 
@@ -159,7 +159,7 @@ public class GenericFilter extends AbstractUrlFilter{
                         audioBitrate.getValue() + "k"
                     ));
 
-                    if(isEmbedThumbnailAndMetadata()){
+                    if (isEmbedThumbnailAndMetadata()) {
                         arguments.addAll(List.of(
                             "--embed-thumbnail",
                             "--embed-metadata"
@@ -198,13 +198,13 @@ public class GenericFilter extends AbstractUrlFilter{
 
     @JsonIgnore
     @Override
-    public boolean areCookiesRequired(){
+    public boolean areCookiesRequired() {
         return false;
     }
 
     @JsonIgnore
     @Override
-    public boolean canAcceptUrl(String url, GDownloader main){
+    public boolean canAcceptUrl(String url, GDownloader main) {
         return true;
     }
 

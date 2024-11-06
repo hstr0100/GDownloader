@@ -34,7 +34,7 @@ import net.brlns.gdownloader.settings.enums.*;
 @AllArgsConstructor
 @NoArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class QualitySettings{
+public class QualitySettings {
 
     @Builder.Default
     @JsonProperty("QualitySelector")
@@ -73,18 +73,18 @@ public class QualitySettings{
     @JsonProperty("ThumbnailContainer")
     private ThumbnailContainerEnum thumbnailContainer = ThumbnailContainerEnum.PNG;
 
-    //TODO this needs some work
+    // TODO this needs some work
     @JsonIgnore
-    public String buildQualitySelector(){
+    public String buildQualitySelector() {
         return "(" + selector.getValue() + "[height>=" + minHeight.getValue() + "][height<=" + maxHeight.getValue() + "][ext=" + videoContainer.getValue() + "][fps=" + fps.getValue() + "]+bestaudio/"
             + selector.getValue() + "[height>=" + minHeight.getValue() + "][height<=" + maxHeight.getValue() + "][ext=" + videoContainer.getValue() + "]+bestaudio/"
             + selector.getValue() + "[ext=" + videoContainer.getValue() + "]+bestaudio/"
             + selector.getValue() + "+bestaudio/best)";
     }
 
-    //TODO
+    // TODO
     @JsonIgnore
-    public String getTranscodingOptions(){
+    public String getTranscodingOptions() {
         return "res:" + maxHeight.getValue() + ",fps,ext,codec:vp9.2";
     }
 }

@@ -52,7 +52,7 @@ import static net.brlns.gdownloader.util.LockUtils.*;
  * @author Gabriel / hstr0100 / vertx010
  */
 @Slf4j
-public abstract class AbstractGitUpdater{
+public abstract class AbstractGitUpdater {
 
     private static final HttpClient client = HttpClient.newBuilder()
         .followRedirects(HttpClient.Redirect.ALWAYS)
@@ -67,15 +67,15 @@ public abstract class AbstractGitUpdater{
     @Getter
     private boolean updated = false;
 
-    public AbstractGitUpdater(GDownloader mainIn){
+    public AbstractGitUpdater(GDownloader mainIn) {
         main = mainIn;
     }
 
-    public void registerListener(ProgressListener listener){
+    public void registerListener(ProgressListener listener) {
         listeners.add(listener);
     }
 
-    public void unregisterListener(ProgressListener listener){
+    public void unregisterListener(ProgressListener listener) {
         listeners.remove(listener);
     }
 
@@ -98,20 +98,20 @@ public abstract class AbstractGitUpdater{
 
     protected abstract void setExecutablePath(File executablePath);
 
-    protected void finishUpdate(File executablePath){
+    protected void finishUpdate(File executablePath) {
         setExecutablePath(executablePath);
 
         notifyStatus(UpdateStatus.DONE);
     }
 
-    protected void tryFallback(File workDir) throws NoFallbackAvailableException, Exception{
+    protected void tryFallback(File workDir) throws NoFallbackAvailableException, Exception {
         String fileName = getRuntimeBinaryName();
 
-        if(fileName != null){
+        if (fileName != null) {
             File lock = new File(workDir, getLockFileName());
 
             File binaryFile = new File(workDir, fileName);
-            if(binaryFile.exists() && lockExists(lock)){
+            if (binaryFile.exists() && lockExists(lock)) {
                 finishUpdate(binaryFile);
                 log.info("Selected previous installation as fallback {}", getRepo());
                 return;
@@ -123,29 +123,29 @@ public abstract class AbstractGitUpdater{
         throw new NoFallbackAvailableException();
     }
 
-    public final void check(boolean force) throws Exception{
+    public final void check(boolean force) throws Exception {
         doUpdateCheck(force);
 
-        if(_internalLastStatus != UpdateStatus.DONE && _internalLastStatus != UpdateStatus.FAILED){
+        if (_internalLastStatus != UpdateStatus.DONE && _internalLastStatus != UpdateStatus.FAILED) {
             throw new IllegalStateException("Exitted without notifying either status DONE or FAILED, final status was: " + _internalLastStatus);
         }
     }
 
-    protected void doUpdateCheck(boolean force) throws Exception{
+    protected void doUpdateCheck(boolean force) throws Exception {
         updated = false;
 
         notifyProgress(UpdateStatus.CHECKING, 0);
 
         File workDir = GDownloader.getWorkDirectory();
 
-        if(!main.getConfig().isAutomaticUpdates() && !force){
+        if (!main.getConfig().isAutomaticUpdates() && !force) {
             log.info("Automatic updates are disabled {}", getRepo());
 
             tryFallback(workDir);
             return;
         }
 
-        if(getBinaryName() == null){
+        if (getBinaryName() == null) {
             log.error("Cannot update, no binary configured for {}", getRepo());
 
             tryFallback(workDir);
@@ -154,15 +154,15 @@ public abstract class AbstractGitUpdater{
 
         Pair<String, String> tag = null;
 
-        try{
+        try {
             tag = getLatestReleaseTag();
-        }catch(Exception e){
+        } catch (Exception e) {
             log.error("HTTP error for {}", getRepo(), e);
         }
 
         notifyProgress(UpdateStatus.CHECKING, 50);
 
-        if(tag == null){
+        if (tag == null) {
             log.error("Release tag was null {}", getRepo());
 
             tryFallback(workDir);
@@ -171,7 +171,7 @@ public abstract class AbstractGitUpdater{
 
         String url = tag.getValue();
 
-        if(url == null){
+        if (url == null) {
             log.error("No {} binary for platform", getRepo());
 
             tryFallback(workDir);
@@ -185,16 +185,16 @@ public abstract class AbstractGitUpdater{
 
         File lock = new File(workDir, getLockFileName());
 
-        if(!lock.exists() && this instanceof SelfUpdater){
+        if (!lock.exists() && this instanceof SelfUpdater) {
             String version = UpdaterBootstrap.getVersion();
 
-            if(version != null){
+            if (version != null) {
                 createLock(lock, getLockTag("v" + version));
             }
         }
 
-        if(binaryPath.exists() || this instanceof SelfUpdater){
-            if(checkLock(lock, lockTag)){
+        if (binaryPath.exists() || this instanceof SelfUpdater) {
+            if (checkLock(lock, lockTag)) {
                 finishUpdate(binaryPath);
 
                 log.info("{} is up to date", getRepo());
@@ -203,17 +203,17 @@ public abstract class AbstractGitUpdater{
         }
 
         Path tmpDir = null;
-        if(binaryPath.exists()){
+        if (binaryPath.exists()) {
             tmpDir = Paths.get(workDir.getAbsolutePath(), "old");
 
-            if(!Files.exists(tmpDir)){
+            if (!Files.exists(tmpDir)) {
                 Files.createDirectories(tmpDir);
             }
 
             Files.move(binaryPath.toPath(), tmpDir.resolve(binaryPath.getName()), StandardCopyOption.REPLACE_EXISTING);
         }
 
-        try{
+        try {
             log.info("Starting download {}", getRepo());
 
             notifyProgress(UpdateStatus.CHECKING, 100);
@@ -226,24 +226,24 @@ public abstract class AbstractGitUpdater{
 
             finishUpdate(path);
             log.info("Downloaded {}", path);
-        }catch(Exception e){
+        } catch (Exception e) {
             log.error("Failed to update {}", getRepo(), e);
 
-            if(tmpDir != null){
+            if (tmpDir != null) {
                 notifyStatus(UpdateStatus.FAILED);
 
                 Files.move(tmpDir.resolve(binaryPath.getName()), binaryPath.toPath(), StandardCopyOption.REPLACE_EXISTING);
-            }else{
+            } else {
                 tryFallback(workDir);
             }
-        }finally{
-            if(binaryPath.exists()){
+        } finally {
+            if (binaryPath.exists()) {
                 makeExecutable(binaryPath.toPath());
             }
         }
     }
 
-    protected File doDownload(String url, File workDir) throws Exception{
+    protected File doDownload(String url, File workDir) throws Exception {
         String fileName = getFilenameFromUrl(url);
 
         File outputFile = new File(workDir, fileName);
@@ -254,9 +254,10 @@ public abstract class AbstractGitUpdater{
     }
 
     @Nullable
-    protected File copyResource(String resource, File targetFile) throws IOException{
-        try(InputStream initialStream = getClass().getResourceAsStream(resource)){
-            if(initialStream == null){
+    protected File copyResource(String resource, File targetFile) throws IOException {
+        try (
+            InputStream initialStream = getClass().getResourceAsStream(resource)) {
+            if (initialStream == null) {
                 log.error("Resource not available: " + resource);
                 return null;
             }
@@ -273,7 +274,7 @@ public abstract class AbstractGitUpdater{
     }
 
     @Nullable
-    protected Pair<String, String> getLatestReleaseTag() throws IOException, InterruptedException{
+    protected Pair<String, String> getLatestReleaseTag() throws IOException, InterruptedException {
         String apiUrl = String.format("https://api.github.com/repos/%s/%s/releases/latest", getUser(), getRepo());
 
         HttpRequest request = HttpRequest.newBuilder()
@@ -288,19 +289,18 @@ public abstract class AbstractGitUpdater{
         JsonNode jsonNode = GDownloader.OBJECT_MAPPER.readTree(response.body());
 
         JsonNode tagName = jsonNode.get("tag_name");
-        if(tagName == null){
+        if (tagName == null) {
             return null;
         }
 
         Iterator<JsonNode> assets = jsonNode.get("assets").elements();
 
-        while(assets.hasNext()){
+        while (assets.hasNext()) {
             JsonNode asset = assets.next();
 
-            //If there is no key, there is no download url
             String downloadUrl = asset.get("browser_download_url").asText();
 
-            if(downloadUrl.endsWith(getBinaryName())){
+            if (downloadUrl.endsWith(getBinaryName())) {
                 return new Pair<>(tagName.asText(), downloadUrl);
             }
         }
@@ -308,11 +308,11 @@ public abstract class AbstractGitUpdater{
         return null;
     }
 
-    protected String getFilenameFromUrl(String url){
+    protected String getFilenameFromUrl(String url) {
         return Paths.get(URI.create(url).getPath()).getFileName().toString();
     }
 
-    protected void downloadFile(String urlIn, File outputFile) throws IOException, InterruptedException{
+    protected void downloadFile(String urlIn, File outputFile) throws IOException, InterruptedException {
         notifyProgress(UpdateStatus.DOWNLOADING, 0);
 
         log.info("Downloading {} -> {}", urlIn, outputFile);
@@ -324,22 +324,22 @@ public abstract class AbstractGitUpdater{
 
         HttpResponse<InputStream> response = client.send(request, BodyHandlers.ofInputStream());
 
-        if(response.statusCode() == 200){
+        if (response.statusCode() == 200) {
             int bufferSize = 8192;
             long totalBytes = response.headers().firstValueAsLong("Content-Length").orElse(-1L);
             long downloadedBytes = 0;
 
-            try(InputStream inputStream = response.body();
-                BufferedOutputStream bos = new BufferedOutputStream(Files.newOutputStream(outputFile.toPath()), bufferSize)){
+            try (InputStream inputStream = response.body();
+                 BufferedOutputStream bos = new BufferedOutputStream(Files.newOutputStream(outputFile.toPath()), bufferSize)) {
 
                 byte[] buffer = new byte[bufferSize];
                 int bytesRead;
 
-                while((bytesRead = inputStream.read(buffer)) != -1){
+                while ((bytesRead = inputStream.read(buffer)) != -1) {
                     bos.write(buffer, 0, bytesRead);
                     downloadedBytes += bytesRead;
 
-                    if(totalBytes > 0){
+                    if (totalBytes > 0) {
                         double progress = (double)downloadedBytes * 100 / totalBytes;
                         notifyProgress(UpdateStatus.DOWNLOADING, progress);
                     }
@@ -347,47 +347,48 @@ public abstract class AbstractGitUpdater{
 
                 notifyProgress(UpdateStatus.DOWNLOADING, 100);
             }
-        }else{
+        } else {
             throw new IOException("Failed to download file: " + urlIn + ": " + response.statusCode());
         }
     }
 
     private UpdateStatus _internalLastStatus;
 
-    protected void notifyStatus(UpdateStatus status){
+    protected void notifyStatus(UpdateStatus status) {
         notifyProgress(status, 0);
     }
 
-    protected void notifyProgress(UpdateStatus status, double progress){
+    protected void notifyProgress(UpdateStatus status, double progress) {
         _internalLastStatus = status;
 
-        for(ProgressListener listener : listeners){
+        for (ProgressListener listener : listeners) {
             listener.update(status, progress);
         }
     }
 
-    public static void makeExecutable(Path path) throws IOException{
-        if(!GDownloader.isWindows()){
-            if(Files.isDirectory(path)){
+    public static void makeExecutable(Path path) throws IOException {
+        if (!GDownloader.isWindows()) {
+            if (Files.isDirectory(path)) {
                 Set<PosixFilePermission> dirPermissions = PosixFilePermissions.fromString("rwxr-xr-x");
                 Files.setPosixFilePermissions(path, dirPermissions);
 
-                try(DirectoryStream<Path> stream = Files.newDirectoryStream(path)){
-                    for(Path entry : stream){
+                try (
+                    DirectoryStream<Path> stream = Files.newDirectoryStream(path)) {
+                    for (Path entry : stream) {
                         makeExecutable(entry);
                     }
                 }
-            }else if(Files.isRegularFile(path)){
+            } else if (Files.isRegularFile(path)) {
                 Set<PosixFilePermission> filePermissions = PosixFilePermissions.fromString("rwxr-xr-x");
                 Files.setPosixFilePermissions(path, filePermissions);
-            }else{
+            } else {
                 throw new IOException("The path provided is neither a file nor a directory.");
             }
         }
     }
 
     @Getter
-    public enum UpdateStatus implements ISettingsEnum{
+    public enum UpdateStatus implements ISettingsEnum {
         CHECKING("enums.update_status.checking"),
         DOWNLOADING("enums.update_status.downloading"),
         UNPACKING("enums.update_status.unpacking"),
@@ -396,13 +397,13 @@ public abstract class AbstractGitUpdater{
 
         private final String translationKey;
 
-        private UpdateStatus(String translationKeyIn){
+        private UpdateStatus(String translationKeyIn) {
             translationKey = translationKeyIn;
         }
     }
 
     @FunctionalInterface
-    public static interface ProgressListener{
+    public static interface ProgressListener {
 
         void update(UpdateStatus status, double progress);
 

@@ -22,15 +22,15 @@ import java.util.concurrent.LinkedBlockingQueue;
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-public class LinkedIterableBlockingQueue<E> extends LinkedBlockingQueue<E>{
+public class LinkedIterableBlockingQueue<E> extends LinkedBlockingQueue<E> {
 
     @Override
-    public Iterator<E> iterator(){
-        synchronized(this){
-            while(isEmpty()){
-                try{
+    public Iterator<E> iterator() {
+        synchronized (this) {
+            while (isEmpty()) {
+                try {
                     wait();
-                }catch(InterruptedException e){
+                } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     throw new IllegalStateException("Interrupted", e);
                 }
@@ -41,11 +41,11 @@ public class LinkedIterableBlockingQueue<E> extends LinkedBlockingQueue<E>{
     }
 
     @Override
-    public boolean offer(E e){
+    public boolean offer(E e) {
         boolean added = super.offer(e);
 
-        if(added){
-            synchronized(this){
+        if (added) {
+            synchronized (this) {
                 notifyAll();
             }
         }
@@ -54,12 +54,12 @@ public class LinkedIterableBlockingQueue<E> extends LinkedBlockingQueue<E>{
     }
 
     @Override
-    public boolean remove(Object o){
+    public boolean remove(Object o) {
         boolean removed;
 
-        synchronized(this){
+        synchronized (this) {
             removed = super.remove(o);
-            if(removed){
+            if (removed) {
                 notifyAll();
             }
         }

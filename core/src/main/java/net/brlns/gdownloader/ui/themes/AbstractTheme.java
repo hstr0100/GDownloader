@@ -23,32 +23,32 @@ import java.util.Map;
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-public abstract class AbstractTheme{
+public abstract class AbstractTheme {
 
     private final Map<UIColors, Color> colors = new HashMap<>();
 
     @SuppressWarnings("this-escape")
-    public AbstractTheme(){
+    public AbstractTheme() {
         init();
     }
 
-    private void init(){
+    private void init() {
         initColors();
 
-        for(UIColors color : UIColors.values()){
-            if(!colors.containsKey(color)){
+        for (UIColors color : UIColors.values()) {
+            if (!colors.containsKey(color)) {
                 throw new RuntimeException("Color key " + color + " not defined");
             }
         }
     }
 
-    protected void put(UIColors key, Color color){
+    protected void put(UIColors key, Color color) {
         assert !colors.containsKey(key);
 
         colors.put(key, color);
     }
 
-    public Color get(UIColors color){
+    public Color get(UIColors color) {
         return colors.get(color);
     }
 
