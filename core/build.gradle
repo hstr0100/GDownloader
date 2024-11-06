@@ -47,6 +47,10 @@ test {
     useJUnitPlatform()
 }
 
+run {
+    enableAssertions = true
+}
+
 extraJavaModuleInfo {
     failOnMissingModuleInfo = true
 

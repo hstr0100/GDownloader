@@ -131,7 +131,7 @@ public class SettingsPanel{
     }
 
     public void createAndShowGUI(){
-        SwingUtilities.invokeLater(() -> {
+        Runnable createFrame = () -> {
             if(frame != null){
                 frame.setVisible(true);
                 frame.setExtendedState(JFrame.NORMAL);
@@ -393,7 +393,13 @@ public class SettingsPanel{
             cardLayout.show(contentPanel, String.valueOf(0));
 
             frame.setVisible(true);
-        });
+        };
+
+        if(SwingUtilities.isEventDispatchThread()){
+            createFrame.run();
+        }else{
+            SwingUtilities.invokeLater(createFrame);
+        }
     }
 
     private <T extends Enum<T> & ISettingsEnum> void addComboBox(JPanel panel,

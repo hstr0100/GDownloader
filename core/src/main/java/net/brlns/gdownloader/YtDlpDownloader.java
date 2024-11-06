@@ -1124,7 +1124,7 @@ public class YtDlpDownloader{
             main.getGuiManager().showMessage(
                 l10n("gui.copy_url.notification_title"),
                 l10n("gui.copy_url.copied"),
-                3500,
+                2000,
                 GUIManager.MessageType.INFO,
                 false
             );
@@ -1146,7 +1146,7 @@ public class YtDlpDownloader{
             main.getGuiManager().showMessage(
                 l10n("gui.delete_files.notification_title"),
                 success ? l10n("gui.delete_files.deleted") : l10n("gui.delete_files.no_files"),
-                3500,
+                3000,
                 GUIManager.MessageType.INFO,
                 false
             );

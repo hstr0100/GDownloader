@@ -315,7 +315,7 @@ public final class GDownloader{
             guiManager.showMessage(
                 l10n("gui.clear_cache.notification_title"),
                 l10n("gui.clear_cache.cleared"),
-                3500,
+                2000,
                 GUIManager.MessageType.INFO,
                 false
             );
@@ -342,7 +342,7 @@ public final class GDownloader{
             guiManager.showMessage(
                 l10n("gui.update.notification_title"),
                 l10n("gui.update.checking"),
-                3500,
+                2000,
                 GUIManager.MessageType.INFO,
                 false
             );
@@ -395,7 +395,7 @@ public final class GDownloader{
                     l10n(updated
                         ? "gui.update.new_updates_installed"
                         : "gui.update.updated"),
-                    2500,
+                    2000,
                     GUIManager.MessageType.INFO,
                     false
                 );
@@ -1044,7 +1044,7 @@ public final class GDownloader{
                         guiManager.showMessage(
                             l10n("gui.clipboard_monitor.captured_title"),
                             l10n("gui.clipboard_monitor.captured", captured),
-                            2500,
+                            1500,
                             MessageType.INFO,
                             false
                         );

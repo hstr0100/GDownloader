@@ -133,9 +133,9 @@ public final class GUIManager{
     }
 
     public void createAndShowGUI(){
-        setUpAppWindow();
-
         SwingUtilities.invokeLater(() -> {
+            setUpAppWindow();
+
             appWindow.setVisible(true);
 
             if((appWindow.getExtendedState() & Frame.ICONIFIED) == 1){
@@ -182,105 +182,105 @@ public final class GUIManager{
     }
 
     private void setUpAppWindow(){
-        SwingUtilities.invokeLater(() -> {
-            if(appWindow == null){
-                // note to self, tooltips only show up when focused
-                String version = System.getProperty("jpackage.app-version");
+        assert SwingUtilities.isEventDispatchThread();
 
-                appWindow = new JFrame(GDownloader.REGISTRY_APP_NAME + (version != null ? " v" + version : ""));
-                refreshAppWindow();
+        if(appWindow == null){
+            // note to self, tooltips only show up when focused
+            String version = System.getProperty("jpackage.app-version");
 
-                //appWindow.setResizable(false);
-                //appWindow.setUndecorated(true);
-                try{
-                    appWindow.setIconImage(getAppIcon());
-                }catch(IOException e){
-                    main.handleException(e);
+            appWindow = new JFrame(GDownloader.REGISTRY_APP_NAME + (version != null ? " v" + version : ""));
+            refreshAppWindow();
+
+            //appWindow.setResizable(false);
+            //appWindow.setUndecorated(true);
+            try{
+                appWindow.setIconImage(getAppIcon());
+            }catch(IOException e){
+                main.handleException(e);
+            }
+
+            appWindow.addWindowStateListener((WindowEvent e) -> {
+                if((e.getNewState() & JFrame.MAXIMIZED_BOTH) == JFrame.MAXIMIZED_BOTH){
+                    appWindow.setAlwaysOnTop(false);
+                }else{
+                    appWindow.setAlwaysOnTop(main.getConfig().isKeepWindowAlwaysOnTop());
                 }
 
-                appWindow.addWindowStateListener((WindowEvent e) -> {
-                    if((e.getNewState() & JFrame.MAXIMIZED_BOTH) == JFrame.MAXIMIZED_BOTH){
-                        appWindow.setAlwaysOnTop(false);
-                    }else{
-                        appWindow.setAlwaysOnTop(main.getConfig().isKeepWindowAlwaysOnTop());
-                    }
+                adjustMediaCards();
+            });
 
+            appWindow.addWindowListener(new WindowAdapter(){
+                @Override
+                public void windowClosing(WindowEvent e){
+                    adjustMessageWindowPosition();
+                }
+
+                @Override
+                public void windowIconified(WindowEvent e){
+                    adjustMessageWindowPosition();
+                }
+
+                @Override
+                public void windowDeiconified(WindowEvent e){
+                    adjustMessageWindowPosition();
+                }
+            });
+
+            KeyboardFocusManager manager = KeyboardFocusManager.getCurrentKeyboardFocusManager();
+            manager.addKeyEventDispatcher((KeyEvent e) -> {
+                if(e.getID() == KeyEvent.KEY_PRESSED){
+                    if((e.getKeyCode() == KeyEvent.VK_V) && ((e.getModifiersEx() & KeyEvent.CTRL_DOWN_MASK) != 0)){
+                        main.resetClipboard();
+
+                        main.updateClipboard(null, true);
+                    }
+                }
+
+                return false;
+            });
+
+            adjustWindowSize();
+
+            adjustMessageWindowPosition();
+
+            JPanel mainPanel = new JPanel(new BorderLayout());
+            mainPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+            mainPanel.setBackground(color(BACKGROUND));
+
+            JPanel headerPanel = new JPanel(new BorderLayout());
+            headerPanel.setBackground(color(BACKGROUND));
+            headerPanel.add(createToolbar(), BorderLayout.SOUTH);
+            mainPanel.add(headerPanel, BorderLayout.NORTH);
+
+            queuePanel = new JPanel();
+            queuePanel.setLayout(new BoxLayout(queuePanel, BoxLayout.Y_AXIS));
+            queuePanel.setBackground(color(BACKGROUND));
+
+            new DropTarget(appWindow, new PanelDropTargetListener());
+
+            queuePanel.add(getOrCreateEmptyQueuePanel(), BorderLayout.CENTER);
+            updateQueuePanelMessage();
+
+            queueScrollPane = new JScrollPane(queuePanel);
+            queueScrollPane.getVerticalScrollBar().setUI(new CustomScrollBarUI());
+            queueScrollPane.getHorizontalScrollBar().setUI(new CustomScrollBarUI());
+            queueScrollPane.setBorder(BorderFactory.createEmptyBorder());
+            queueScrollPane.setBackground(color(BACKGROUND));
+            //queueScrollPane.getViewport().setBackground(color(BACKGROUND));
+            queueScrollPane.getVerticalScrollBar().setUnitIncrement(4);
+            queueScrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+            queueScrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
+            mainPanel.add(queueScrollPane, BorderLayout.CENTER);
+
+            appWindow.add(mainPanel);
+
+            appWindow.addComponentListener(new ComponentAdapter(){
+                @Override
+                public void componentResized(ComponentEvent e){
                     adjustMediaCards();
-                });
-
-                appWindow.addWindowListener(new WindowAdapter(){
-                    @Override
-                    public void windowClosing(WindowEvent e){
-                        adjustMessageWindowPosition();
-                    }
-
-                    @Override
-                    public void windowIconified(WindowEvent e){
-                        adjustMessageWindowPosition();
-                    }
-
-                    @Override
-                    public void windowDeiconified(WindowEvent e){
-                        adjustMessageWindowPosition();
-                    }
-                });
-
-                KeyboardFocusManager manager = KeyboardFocusManager.getCurrentKeyboardFocusManager();
-                manager.addKeyEventDispatcher((KeyEvent e) -> {
-                    if(e.getID() == KeyEvent.KEY_PRESSED){
-                        if((e.getKeyCode() == KeyEvent.VK_V) && ((e.getModifiersEx() & KeyEvent.CTRL_DOWN_MASK) != 0)){
-                            main.resetClipboard();
-
-                            main.updateClipboard(null, true);
-                        }
-                    }
-
-                    return false;
-                });
-
-                adjustWindowSize();
-
-                adjustMessageWindowPosition();
-
-                JPanel mainPanel = new JPanel(new BorderLayout());
-                mainPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
-                mainPanel.setBackground(color(BACKGROUND));
-
-                JPanel headerPanel = new JPanel(new BorderLayout());
-                headerPanel.setBackground(color(BACKGROUND));
-                headerPanel.add(createToolbar(), BorderLayout.SOUTH);
-                mainPanel.add(headerPanel, BorderLayout.NORTH);
-
-                queuePanel = new JPanel();
-                queuePanel.setLayout(new BoxLayout(queuePanel, BoxLayout.Y_AXIS));
-                queuePanel.setBackground(color(BACKGROUND));
-
-                new DropTarget(appWindow, new PanelDropTargetListener());
-
-                queuePanel.add(getOrCreateEmptyQueuePanel(), BorderLayout.CENTER);
-                updateQueuePanelMessage();
-
-                queueScrollPane = new JScrollPane(queuePanel);
-                queueScrollPane.getVerticalScrollBar().setUI(new CustomScrollBarUI());
-                queueScrollPane.getHorizontalScrollBar().setUI(new CustomScrollBarUI());
-                queueScrollPane.setBorder(BorderFactory.createEmptyBorder());
-                queueScrollPane.setBackground(color(BACKGROUND));
-                //queueScrollPane.getViewport().setBackground(color(BACKGROUND));
-                queueScrollPane.getVerticalScrollBar().setUnitIncrement(4);
-                queueScrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-                queueScrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
-                mainPanel.add(queueScrollPane, BorderLayout.CENTER);
-
-                appWindow.add(mainPanel);
-
-                appWindow.addComponentListener(new ComponentAdapter(){
-                    @Override
-                    public void componentResized(ComponentEvent e){
-                        adjustMediaCards();
-                    }
-                });
-            }
-        });
+                }
+            });
+        }
     }
 
     private void adjustWindowSize(){
@@ -1342,8 +1342,10 @@ public final class GUIManager{
         Color themeColor = color(color);
         ImageCacheKey key = new ImageCacheKey(path, themeColor, scale);
 
-        if(_imageCache.containsKey(key)){
-            return _imageCache.get(key);
+        synchronized(_imageCache){
+            if(_imageCache.containsKey(key)){
+                return _imageCache.get(key);
+            }
         }
 
         try(InputStream resourceStream = GUIManager.class.getResourceAsStream(path)){
@@ -1375,7 +1377,9 @@ public final class GUIManager{
 
             ImageIcon icon = new ImageIcon(image);
 
-            _imageCache.put(key, icon);
+            synchronized(_imageCache){
+                _imageCache.put(key, icon);
+            }
 
             return icon;
         }catch(Exception e){
