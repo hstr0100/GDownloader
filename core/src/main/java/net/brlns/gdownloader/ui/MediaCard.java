@@ -25,11 +25,12 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
-import javax.swing.SwingUtilities;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.ui.custom.CustomProgressBar;
 import net.brlns.gdownloader.ui.custom.CustomThumbnailPanel;
+
+import static net.brlns.gdownloader.ui.GUIManager.runOnEDT;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -71,32 +72,26 @@ public class MediaCard{
             (int)(MediaCard.THUMBNAIL_WIDTH * factor),
             (int)(MediaCard.THUMBNAIL_HEIGHT * factor));
 
-        Runnable updateSize = () -> {
+        runOnEDT(() -> {
             thumbnailPanel.setPreferredSize(dimension);
             thumbnailPanel.setMinimumSize(dimension);
-        };
-
-        if(SwingUtilities.isEventDispatchThread()){
-            updateSize.run();
-        }else{
-            SwingUtilities.invokeLater(updateSize);
-        }
+        });
     }
 
     public void setTooltip(String tooltipText){
-        SwingUtilities.invokeLater(() -> {
+        runOnEDT(() -> {
             mediaLabel.setToolTipText(tooltipText);
         });
     }
 
     public void setThumbnailTooltip(String tooltipText){
-        SwingUtilities.invokeLater(() -> {
+        runOnEDT(() -> {
             thumbnailPanel.setToolTipText(tooltipText);
         });
     }
 
     public void setLabel(String... label){
-        SwingUtilities.invokeLater(() -> {
+        runOnEDT(() -> {
             mediaLabel.setText(GUIManager.wrapText(51, label));
         });
     }
@@ -104,13 +99,13 @@ public class MediaCard{
     public void setPercentage(double percentageIn){
         percentage = percentageIn;
 
-        SwingUtilities.invokeLater(() -> {
+        runOnEDT(() -> {
             progressBar.setValue((int)percentageIn);
         });
     }
 
     public void setProgressBarText(String text){
-        SwingUtilities.invokeLater(() -> {
+        runOnEDT(() -> {
             progressBar.setString(text);
         });
     }
@@ -120,7 +115,7 @@ public class MediaCard{
     }
 
     public void setProgressBarTextAndColors(String text, Color backgroundColor, Color textColor){
-        SwingUtilities.invokeLater(() -> {
+        runOnEDT(() -> {
             progressBar.setString(text);
             progressBar.setForeground(backgroundColor);
             progressBar.setTextColor(textColor);
@@ -128,7 +123,7 @@ public class MediaCard{
     }
 
     public void setThumbnailAndDuration(BufferedImage img, long duration){
-        SwingUtilities.invokeLater(() -> {
+        runOnEDT(() -> {
             thumbnailPanel.setImageAndDuration(img, duration);
         });
     }

@@ -133,7 +133,7 @@ public final class GUIManager{
     }
 
     public void createAndShowGUI(){
-        SwingUtilities.invokeLater(() -> {
+        runOnEDT(() -> {
             setUpAppWindow();
 
             appWindow.setVisible(true);
@@ -146,7 +146,7 @@ public final class GUIManager{
     }
 
     public void requestFocus(){
-        SwingUtilities.invokeLater(() -> {
+        runOnEDT(() -> {
             appWindow.requestFocus();
 
             if((appWindow.getExtendedState() & Frame.ICONIFIED) != 1){
@@ -161,7 +161,7 @@ public final class GUIManager{
     }
 
     public void refreshAppWindow(){
-        SwingUtilities.invokeLater(() -> {
+        runOnEDT(() -> {
             if(appWindow == null){
                 throw new RuntimeException("Called before initialization");
             }
@@ -172,7 +172,7 @@ public final class GUIManager{
     }
 
     public void closeAppWindow(){
-        SwingUtilities.invokeLater(() -> {
+        runOnEDT(() -> {
             if(appWindow != null){
                 appWindow.setVisible(false);
 
@@ -349,7 +349,7 @@ public final class GUIManager{
         buttonPanel.add(retryButton);
 
         main.getDownloadManager().registerListener((YtDlpDownloader downloadManager) -> {
-            SwingUtilities.invokeLater(() -> {
+            runOnEDT(() -> {
                 retryButton.setVisible(downloadManager.getFailedDownloads() != 0);
             });
         });
@@ -457,7 +457,7 @@ public final class GUIManager{
         statusLabel.setVerticalAlignment(SwingConstants.CENTER);
 
         Consumer<YtDlpDownloader> consumer = (downloadManager) -> {
-            SwingUtilities.invokeLater(() -> {
+            runOnEDT(() -> {
                 statusLabel.setText(updater.updateText(downloadManager));
             });
         };
@@ -480,7 +480,7 @@ public final class GUIManager{
         main.getDownloadManager().registerListener((YtDlpDownloader downloadManager) -> {
             boolean state = downloadManager.isRunning();
 
-            SwingUtilities.invokeLater(() -> {
+            runOnEDT(() -> {
                 button.setIcon(icon.apply(state));
                 button.setToolTipText(l10n(tooltip.apply(state)));
             });
@@ -671,7 +671,7 @@ public final class GUIManager{
             updaterPanel.add(updaterRowPanel, gbc);
 
             updater.registerListener((status, progress) -> {
-                SwingUtilities.invokeLater(() -> {
+                runOnEDT(() -> {
                     switch(status){
                         case CHECKING -> {
                             progressBar.setValue((int)progress);
@@ -709,7 +709,7 @@ public final class GUIManager{
     }
 
     private void updateQueuePanelMessage(){
-        Runnable updatePanel = () -> {
+        runOnEDT(() -> {
             JPanel panel = getOrCreateEmptyQueuePanel();
 
             Component firstComponent = panel.getComponent(0);
@@ -737,19 +737,13 @@ public final class GUIManager{
 
             panel.revalidate();
             panel.repaint();
-        };
-
-        if(SwingUtilities.isEventDispatchThread()){
-            updatePanel.run();
-        }else{
-            SwingUtilities.invokeLater(updatePanel);
-        }
+        });
     }
 
     public void showConfirmDialog(String title, String message, int timeoutMs,
         DialogButton onClose, DialogButton... buttons){
 
-        SwingUtilities.invokeLater(() -> {
+        runOnEDT(() -> {
             JDialog dialog = new JDialog(appWindow, title, Dialog.ModalityType.APPLICATION_MODAL){
                 private boolean actionPerformed = false;
 
@@ -880,7 +874,7 @@ public final class GUIManager{
     }
 
     private void displayNextMessage(){
-        SwingUtilities.invokeLater(() -> {
+        runOnEDT(() -> {
             if(messageWindow != null){
                 messageWindow.setVisible(false);
                 messageWindow.dispose();
@@ -1225,7 +1219,7 @@ public final class GUIManager{
 
         mediaCards.put(id, mediaCard);
 
-        SwingUtilities.invokeLater(() -> {
+        runOnEDT(() -> {
             setUpAppWindow();
 
             if(!appWindow.isVisible()){
@@ -1251,7 +1245,7 @@ public final class GUIManager{
         if(mediaCard != null){
             mediaCard.close();
 
-            SwingUtilities.invokeLater(() -> {
+            runOnEDT(() -> {
                 queuePanel.remove(mediaCard.getPanel());
 
                 if(mediaCards.isEmpty()){
@@ -1454,6 +1448,21 @@ public final class GUIManager{
         return "<html>" + result + "</html>";
     }
 
+    /**
+     * Executes the given {@link Runnable} on the Event Dispatch Thread (EDT).
+     * If the current thread is the EDT, the {@code runnable} will be executed immediately.
+     * Otherwise, it will be scheduled to run later on the EDT using {@link SwingUtilities#invokeLater}.
+     *
+     * @param runnable the {@link Runnable} to be executed on the Event Dispatch Thread
+     */
+    protected static void runOnEDT(Runnable runnable){
+        if(SwingUtilities.isEventDispatchThread()){
+            runnable.run();
+        }else{
+            SwingUtilities.invokeLater(runnable);
+        }
+    }
+
     public static enum MessageType{
         ERROR,
         WARNING,
@@ -1602,7 +1611,7 @@ public final class GUIManager{
                         Point dropLocation = dropTarget.getLocationOnScreen();
 
                         if(windowBounds.contains(dropLocation) && dropTarget instanceof JPanel jPanel){
-                            SwingUtilities.invokeLater(() -> {
+                            runOnEDT(() -> {
                                 int targetIndex = getComponentIndex(jPanel);
 
                                 if(main.getConfig().isDebugMode()){

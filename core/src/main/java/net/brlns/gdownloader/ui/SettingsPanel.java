@@ -47,6 +47,7 @@ import net.brlns.gdownloader.ui.custom.CustomSliderUI;
 import net.brlns.gdownloader.ui.themes.UIColors;
 
 import static net.brlns.gdownloader.Language.*;
+import static net.brlns.gdownloader.ui.GUIManager.runOnEDT;
 import static net.brlns.gdownloader.ui.themes.ThemeProvider.*;
 import static net.brlns.gdownloader.ui.themes.UIColors.*;
 
@@ -131,7 +132,7 @@ public class SettingsPanel{
     }
 
     public void createAndShowGUI(){
-        Runnable createFrame = () -> {
+        runOnEDT(() -> {
             if(frame != null){
                 frame.setVisible(true);
                 frame.setExtendedState(JFrame.NORMAL);
@@ -393,13 +394,7 @@ public class SettingsPanel{
             cardLayout.show(contentPanel, String.valueOf(0));
 
             frame.setVisible(true);
-        };
-
-        if(SwingUtilities.isEventDispatchThread()){
-            createFrame.run();
-        }else{
-            SwingUtilities.invokeLater(createFrame);
-        }
+        });
     }
 
     private <T extends Enum<T> & ISettingsEnum> void addComboBox(JPanel panel,
