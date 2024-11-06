@@ -1,9 +1,9 @@
 plugins {
-    id 'java'
-    id 'application'
-    id 'org.beryx.jlink' version "$beryxPluginVersion"
-    id 'com.gradleup.shadow' version "$shadowPluginVersion"
-    id 'org.gradlex.extra-java-module-info' version "$extraModuleInfoPluginVersion"
+    id('java')
+    id('application')
+    id('org.beryx.jlink') version "$beryxPluginVersion"
+    id('com.gradleup.shadow') version "$shadowPluginVersion"
+    id('org.gradlex.extra-java-module-info') version "$extraModuleInfoPluginVersion"
 }
 
 version = rootProject.version
@@ -19,30 +19,34 @@ java {
     targetCompatibility = JavaVersion.VERSION_21
 
     toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
+        languageVersion.set(JavaLanguageVersion.of(21))
     }
 
-	modularity.inferModulePath = true
+    // There seems to be no consensus whatsoever on whether to use .set() or =.
+    // Personally, I prefer = for consistency, and .set() for a cleaner-looking syntax.
+    // Perhaps we can settle on a mix of both approaches.
+
+    modularity.inferModulePath.set(true)
 }
 
 application {
-    mainClass = 'net.brlns.gdownloader.GDownloader'
-    mainModule = 'net.brlns.gdownloader'
+    mainClass.set('net.brlns.gdownloader.GDownloader')
+    mainModule.set('net.brlns.gdownloader')
     applicationDefaultJvmArgs = ['--add-exports=java.management/sun.management=ALL-UNNAMED']
 }
 
 dependencies {
-    implementation project(path: ":twelvemonkeys", configuration: "moduleJar")
-    implementation "ch.qos.logback:logback-classic:$logbackVersion"
-    implementation "com.github.kwhat:jnativehook:$jnativehookVersion"
-    implementation "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"
-    implementation "org.jsoup:jsoup:$jsoupVersion"
-    implementation "org.slf4j:slf4j-api:$slf4jVersion"
+    implementation(project(path: ':twelvemonkeys', configuration: 'moduleJar'))
+    implementation("ch.qos.logback:logback-classic:$logbackVersion")
+    implementation("com.github.kwhat:jnativehook:$jnativehookVersion")
+    implementation("com.fasterxml.jackson.core:jackson-databind:$jacksonVersion")
+    implementation("org.jsoup:jsoup:$jsoupVersion")
+    implementation("org.slf4j:slf4j-api:$slf4jVersion")
 
-    compileOnly "org.projectlombok:lombok:$lombokVersion"
-    annotationProcessor "org.projectlombok:lombok:$lombokVersion"
-    testImplementation "org.junit.jupiter:junit-jupiter:$jupiterVersion"
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    compileOnly("org.projectlombok:lombok:$lombokVersion")
+    annotationProcessor("org.projectlombok:lombok:$lombokVersion")
+    testImplementation("org.junit.jupiter:junit-jupiter:$jupiterVersion")
+    testRuntimeOnly('org.junit.platform:junit-platform-launcher')
 }
 
 test {
@@ -54,21 +58,21 @@ run {
 }
 
 extraJavaModuleInfo {
-    failOnMissingModuleInfo = true
+    failOnMissingModuleInfo.set(true)
 
     module("twelvemonkeys-$twelvemonkeysVersion-all.jar", 'com.twelvemonkeys.imageio') {
-        requiresStatic 'java.desktop'
+        requiresStatic('java.desktop')
 
-        exports 'com.twelvemonkeys.imageio.stream'
-        exports 'com.twelvemonkeys.imageio.color'
-        exports 'com.twelvemonkeys.imageio.plugins.jpeg'
-        exports 'com.twelvemonkeys.imageio.plugins.webp'
-        exports 'com.twelvemonkeys.imageio.plugins.tiff'
+        exports('com.twelvemonkeys.imageio.stream')
+        exports('com.twelvemonkeys.imageio.color')
+        exports('com.twelvemonkeys.imageio.plugins.jpeg')
+        exports('com.twelvemonkeys.imageio.plugins.webp')
+        exports('com.twelvemonkeys.imageio.plugins.tiff')
     }
 }
 
 tasks.withType(JavaCompile).configureEach {
-    options.compilerArgs += ['-Xlint:all,-serial,-processing,-missing-explicit-ctor']
+    options.compilerArgs.addAll(['-Xlint:all,-serial,-processing,-missing-explicit-ctor'])
 }
 
 jar {
@@ -91,7 +95,7 @@ shadowJar {
     mergeServiceFiles()
 }
 
-//Workaround for https://github.com/gradle/gradle/issues/26155 and https://github.com/johnrengelman/shadow/issues/882
+// Workaround for https://github.com/gradle/gradle/issues/26155 and https://github.com/johnrengelman/shadow/issues/882
 tasks.named('shadowJar') { shadowJar ->
     inputs.files(project.configurations.runtimeClasspath)
     configurations = []
@@ -111,7 +115,7 @@ task zipJpackageImage(type: Zip) {
     archiveFileName.set(fileName)
     destinationDirectory.set(file("$buildDir/jpackage"))
 
-    //A less-than-stellar but functional way to detect that the program is running in portable mode.
+    // A less-than-stellar but functional way to detect that the program is running in portable mode.
     doFirst {
         def basePath = os.isWindows() ? "$buildDir/jpackage/${rootProject.name}" :
                        os.isLinux() ? "$buildDir/jpackage/${rootProject.name}/lib" :
@@ -150,7 +154,7 @@ jlink {
             '--app-version', version
         ]
 
-        //For now lets just assume Windows for arm is not a thing yet
+        // For now lets just assume Windows for arm is not a thing yet
         def architecture = System.getProperty("os.arch").contains("64") ? "x64" : "x86"
 
         if (os.isWindows()) {
@@ -165,7 +169,7 @@ jlink {
                 '--win-shortcut'
             ]
         } else if (os.isLinux()) {
-            //AppImage not yet supported by jpackage
+            // AppImage not yet supported by jpackage
             installerType = 'deb'
             installerOptions += [
                 '--resource-dir', "build/jpackage/${rootProject.name}/lib/app",
@@ -186,13 +190,15 @@ jlink {
 }
 
 tasks.jpackage.doFirst {
-    def basePath = os.isWindows() ? rootProject.name : os.isLinux() ? "${rootProject.name}/lib" : "${rootProject.name}.app/Contents"
+    def basePath = os.isWindows() ? rootProject.name :
+                   os.isLinux() ? "${rootProject.name}/lib" :
+                   "${rootProject.name}.app/Contents"
 
     copy {
         from('src/main/resources/assets/launcher')
-        include "GDownloader.png"
-        include "GDownloader.icns"
-        include "GDownloader.ico"
+        include('GDownloader.png')
+        include('GDownloader.icns')
+        include('GDownloader.ico')
         into("$buildDir/jpackage/$basePath/app")
     }
 }
@@ -203,7 +209,7 @@ configurations {
 
 tasks.jlink.doLast {
     configurations.resolvableImplementation.files.findAll { f ->
-        f.name.contains "jnativehook"
+        f.name.contains('jnativehook')
     }.each { nativeJar ->
         def destDir = file("$imageDir/bin/native-libs")
         delete(destDir)
@@ -211,7 +217,7 @@ tasks.jlink.doLast {
 
         def baseLibPath = 'com/github/kwhat/jnativehook/lib'
         def zt = zipTree(nativeJar).matching {
-            include "$baseLibPath/**"
+            include("$baseLibPath/**")
         }
 
         def expandedPath = zt.asFileTree.tree.mirror.dir.path

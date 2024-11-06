@@ -1,6 +1,6 @@
 plugins {
-    id 'java-library'
-    id 'com.gradleup.shadow' version "$shadowPluginVersion"
+    id('java-library')
+    id('com.gradleup.shadow') version "$shadowPluginVersion"
 }
 
 version = twelvemonkeysVersion
