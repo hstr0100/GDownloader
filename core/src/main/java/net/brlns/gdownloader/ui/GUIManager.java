@@ -357,7 +357,8 @@ public final class GUIManager {
         buttonPanel.add(createToggleButton(
             (state) -> loadIcon("/assets/copy-link.png", state ? ICON_ACTIVE : ICON_INACTIVE),
             (state) -> loadIcon("/assets/copy-link.png", ICON_HOVER),
-            (state) -> state ? "gui.stop_clipboard_monitor.tooltip"
+            (state) -> state
+                ? "gui.stop_clipboard_monitor.tooltip"
                 : "gui.start_clipboard_monitor.tooltip",
             main.getConfig()::isMonitorClipboardForLinks,
             () -> {
@@ -377,7 +378,8 @@ public final class GUIManager {
         buttonPanel.add(createToggleButton(
             (state) -> loadIcon("/assets/mp3.png", state ? ICON_ACTIVE : ICON_INACTIVE),
             (state) -> loadIcon("/assets/mp3.png", ICON_HOVER),
-            (state) -> state ? "gui.dont_download_audio.tooltip"
+            (state) -> state
+                ? "gui.dont_download_audio.tooltip"
                 : "gui.download_audio.tooltip",
             main.getConfig()::isDownloadAudio,
             () -> {
@@ -389,7 +391,8 @@ public final class GUIManager {
         buttonPanel.add(createToggleButton(
             (state) -> loadIcon("/assets/mp4.png", state ? ICON_ACTIVE : ICON_INACTIVE),
             (state) -> loadIcon("/assets/mp4.png", ICON_HOVER),
-            (state) -> state ? "gui.dont_download_video.tooltip"
+            (state) -> state
+                ? "gui.dont_download_video.tooltip"
                 : "gui.download_video.tooltip",
             main.getConfig()::isDownloadVideo,
             () -> {
@@ -417,7 +420,8 @@ public final class GUIManager {
                     return loadIcon("/assets/play.png", ICON_HOVER);
                 }
             },
-            (state) -> state ? "gui.stop_downloads.tooltip"
+            (state) -> state
+                ? "gui.stop_downloads.tooltip"
                 : "gui.start_downloads.tooltip",
             main.getDownloadManager()::isRunning,
             () -> {
