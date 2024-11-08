@@ -27,7 +27,7 @@ import net.brlns.gdownloader.util.Nullable;
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-public class TextDnDHandler implements ITransferHandler {
+public class TextDnDHandler implements IDnDHandler {
 
     protected final GUIManager manager;
 

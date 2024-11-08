@@ -30,7 +30,7 @@ import net.brlns.gdownloader.ui.MediaCard;
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-public class MediaCardDnDHandler implements ITransferHandler {
+public class MediaCardDnDHandler implements IDnDHandler {
 
     private static final DataFlavor MEDIA_CARD_FLAVOR = new DataFlavor(MediaCard.class, "MediaCard");
 

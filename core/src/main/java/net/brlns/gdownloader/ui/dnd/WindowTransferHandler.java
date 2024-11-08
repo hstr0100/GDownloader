@@ -32,7 +32,7 @@ import net.brlns.gdownloader.util.Nullable;
 @Slf4j
 public class WindowTransferHandler extends TransferHandler {
 
-    private final List<ITransferHandler> dndHandlers = new ArrayList<>();
+    private final List<IDnDHandler> dndHandlers = new ArrayList<>();
 
     public WindowTransferHandler(GUIManager manager) {
         dndHandlers.add(new TextDnDHandler(manager));
@@ -41,7 +41,7 @@ public class WindowTransferHandler extends TransferHandler {
 
     @Override
     public int getSourceActions(JComponent c) {
-        for (ITransferHandler handler : dndHandlers) {
+        for (IDnDHandler handler : dndHandlers) {
             int sourceActions = handler.getSourceActions(c);
             if (sourceActions != NONE) {
                 return sourceActions;
@@ -54,7 +54,7 @@ public class WindowTransferHandler extends TransferHandler {
     @Override
     @Nullable
     protected Transferable createTransferable(JComponent c) {
-        for (ITransferHandler handler : dndHandlers) {
+        for (IDnDHandler handler : dndHandlers) {
             Transferable transferable = handler.createTransferable(c);
             if (transferable != null) {
                 return transferable;
@@ -66,7 +66,7 @@ public class WindowTransferHandler extends TransferHandler {
 
     @Override
     public boolean canImport(TransferSupport support) {
-        for (ITransferHandler handler : dndHandlers) {
+        for (IDnDHandler handler : dndHandlers) {
             if (handler.canImport(support)) {
                 return true;
             }
@@ -77,7 +77,7 @@ public class WindowTransferHandler extends TransferHandler {
 
     @Override
     public boolean importData(TransferSupport support) {
-        for (ITransferHandler handler : dndHandlers) {
+        for (IDnDHandler handler : dndHandlers) {
             if (!handler.canImport(support)) {
                 continue;
             }

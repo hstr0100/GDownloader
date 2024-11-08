@@ -957,7 +957,7 @@ public final class GDownloader {
     }
 
     public boolean tryHandleDnD(Transferable transferable) {
-        return updateClipboard(transferable, true);// Here we use force because DND or CTRL+V is considered manual user input.
+        return updateClipboard(transferable, true);// Here we use force because DnD or CTRL+V is considered manual user input.
     }
 
     public boolean updateClipboard() {

@@ -24,7 +24,7 @@ import net.brlns.gdownloader.util.Nullable;
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-public interface ITransferHandler {
+public interface IDnDHandler {
 
     int getSourceActions(JComponent c);
 
