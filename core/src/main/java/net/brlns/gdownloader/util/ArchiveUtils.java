@@ -31,7 +31,7 @@ import java.util.zip.ZipInputStream;
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-public class ArchiveUtils {
+public final class ArchiveUtils {
 
     public static void inflateZip(File file, Path destDir, boolean removeRoot, DoubleConsumer progressCallback) throws IOException {
         if (Files.notExists(destDir)) {

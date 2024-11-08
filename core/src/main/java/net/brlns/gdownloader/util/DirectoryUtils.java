@@ -31,7 +31,7 @@ import lombok.extern.slf4j.Slf4j;
  * @author Gabriel / hstr0100 / vertx010
  */
 @Slf4j
-public class DirectoryUtils {
+public final class DirectoryUtils {
 
     public static boolean deleteRecursively(Path directory) {
         if (!Files.exists(directory)) {

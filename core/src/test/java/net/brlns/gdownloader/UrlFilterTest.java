@@ -1,3 +1,4 @@
+package net.brlns.gdownloader;
 
 import net.brlns.gdownloader.settings.filters.*;
 import org.junit.jupiter.api.Test;

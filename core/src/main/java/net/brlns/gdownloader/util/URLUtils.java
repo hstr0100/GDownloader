@@ -26,7 +26,7 @@ import lombok.extern.slf4j.Slf4j;
  * @author Gabriel / hstr0100 / vertx010
  */
 @Slf4j
-public class URLUtils {
+public final class URLUtils {
 
     @Nullable
     public static String getVideoId(String youtubeUrl) {

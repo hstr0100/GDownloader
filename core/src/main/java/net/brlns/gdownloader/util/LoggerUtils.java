@@ -33,7 +33,7 @@ import org.slf4j.LoggerFactory;
  * @author Gabriel / hstr0100 / vertx010
  */
 @Slf4j
-public class LoggerUtils {
+public final class LoggerUtils {
 
     private static final String LOG_PATTERN = "%d{yyyy-MM-dd HH:mm:ss} %-5level %logger{36} - %msg%n";
 

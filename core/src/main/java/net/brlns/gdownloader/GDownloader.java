@@ -956,6 +956,10 @@ public final class GDownloader {
         }
     }
 
+    public boolean tryHandleDnD(Transferable transferable) {
+        return updateClipboard(transferable, true);// Here we use force because DND or CTRL+V is considered manual user input.
+    }
+
     public boolean updateClipboard() {
         return updateClipboard(null, false);
     }
@@ -985,6 +989,10 @@ public final class GDownloader {
                     success = true;
                 } catch (UnsupportedFlavorException | IOException e) {
                     log.warn("Cannot obtain transfer data");
+
+                    if (config.isDebugMode()) {
+                        log.error("Exception", e);
+                    }
                 }
             }
 
@@ -1001,6 +1009,10 @@ public final class GDownloader {
                     success = true;
                 } catch (UnsupportedFlavorException | IOException e) {
                     log.warn("Cannot obtain transfer data");
+
+                    if (config.isDebugMode()) {
+                        log.error("Exception", e);
+                    }
                 }
             }
         }
@@ -1206,7 +1218,7 @@ public final class GDownloader {
             log.warn("Failed command for {}", Arrays.toString(command));
         }
 
-        return list;
+        return Collections.unmodifiableList(list);
     }
 
     private static boolean isValidURL(String urlString) {
