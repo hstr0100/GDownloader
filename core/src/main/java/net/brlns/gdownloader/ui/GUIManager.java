@@ -354,7 +354,10 @@ public final class GUIManager {
 
         main.getDownloadManager().registerListener((YtDlpDownloader downloadManager) -> {
             runOnEDT(() -> {
-                retryButton.setVisible(downloadManager.getFailedDownloads() != 0);
+                boolean shouldBeVisible = downloadManager.getFailedDownloads() != 0;
+                if (retryButton.isVisible() != shouldBeVisible) {
+                    retryButton.setVisible(shouldBeVisible);
+                }
             });
         });
 
