@@ -156,12 +156,7 @@ public class SettingsPanel {
             frame.setLayout(new BorderLayout());
             frame.setResizable(false);
             frame.setLocationRelativeTo(null);
-
-            try {
-                frame.setIconImage(main.getGuiManager().getAppIcon());
-            } catch (IOException e) {
-                main.handleException(e);
-            }
+            frame.setIconImage(main.getGuiManager().getAppIcon());
 
             sidebarPanel = new JPanel();
             sidebarPanel.setBackground(color(SIDE_PANEL));

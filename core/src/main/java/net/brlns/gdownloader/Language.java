@@ -36,12 +36,12 @@ public class Language {
 
     public static String l10n(String key, Object... args) {
         if (LANGUAGE_BUNDLE == null) {
-            throw new RuntimeException("Language was not initialized");
+            throw new IllegalStateException("Language was not initialized");
         }
 
         String pattern = LANGUAGE_BUNDLE.getString(key);
         if (pattern == null) {
-            throw new RuntimeException("Unknown language key: " + key);
+            throw new IllegalArgumentException("Unknown language key: " + key);
         }
 
         return MessageFormat.format(pattern, args);

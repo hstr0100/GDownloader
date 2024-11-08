@@ -17,7 +17,6 @@
 package net.brlns.gdownloader.ui;
 
 import java.awt.*;
-import java.awt.dnd.DnDConstants;
 import java.awt.dnd.DragSource;
 import java.awt.dnd.DropTarget;
 import java.awt.event.*;
@@ -51,6 +50,7 @@ import net.brlns.gdownloader.ui.dnd.WindowTransferHandler;
 import net.brlns.gdownloader.ui.themes.ThemeProvider;
 import net.brlns.gdownloader.ui.themes.UIColors;
 import net.brlns.gdownloader.updater.AbstractGitUpdater;
+import net.brlns.gdownloader.util.Nullable;
 
 import static net.brlns.gdownloader.Language.*;
 import static net.brlns.gdownloader.ui.themes.ThemeProvider.*;
@@ -118,8 +118,15 @@ public final class GUIManager {
         return ThemeProvider.getTheme().getTrayIconPath();
     }
 
-    public Image getAppIcon() throws IOException {
-        Image icon = ImageIO.read(getClass().getResource(getCurrentAppIconPath()));
+    @Nullable
+    public Image getAppIcon() {
+        Image icon = null;
+
+        try {
+            icon = ImageIO.read(getClass().getResource(getCurrentAppIconPath()));
+        } catch (IOException e) {
+            main.handleException(e);
+        }
 
         return icon;
     }
@@ -189,11 +196,7 @@ public final class GUIManager {
 
             //appWindow.setResizable(false);
             //appWindow.setUndecorated(true);
-            try {
-                appWindow.setIconImage(getAppIcon());
-            } catch (IOException e) {
-                main.handleException(e);
-            }
+            appWindow.setIconImage(getAppIcon());
 
             appWindow.addWindowStateListener((WindowEvent e) -> {
                 if ((e.getNewState() & JFrame.MAXIMIZED_BOTH) == JFrame.MAXIMIZED_BOTH) {
@@ -765,12 +768,7 @@ public final class GUIManager {
             dialog.setResizable(false);
             dialog.setLocationRelativeTo(null);
             dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
-
-            try {
-                dialog.setIconImage(getAppIcon());
-            } catch (IOException e) {
-                main.handleException(e);
-            }
+            dialog.setIconImage(getAppIcon());
 
             JPanel panel = new JPanel(new BorderLayout());
             panel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));

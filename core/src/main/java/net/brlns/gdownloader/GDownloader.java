@@ -956,15 +956,15 @@ public final class GDownloader {
         }
     }
 
-    public boolean tryHandleDnD(Transferable transferable) {
-        return updateClipboard(transferable, true);// Here we use force because DnD or CTRL+V is considered manual user input.
+    public boolean tryHandleDnD(@Nullable Transferable transferable) {
+        return updateClipboard(transferable, true);// Here we use force because DnD and CTRL+V are considered manual user input.
     }
 
     public boolean updateClipboard() {
         return updateClipboard(null, false);
     }
 
-    public boolean updateClipboard(Transferable transferable, boolean force) {
+    public boolean updateClipboard(@Nullable Transferable transferable, boolean force) {
         boolean success = false;
 
         if (config.isMonitorClipboardForLinks() || force) {
@@ -988,7 +988,7 @@ public final class GDownloader {
 
                     success = true;
                 } catch (UnsupportedFlavorException | IOException e) {
-                    log.warn("Cannot obtain transfer data");
+                    log.warn("Cannot obtain string transfer data");
 
                     if (config.isDebugMode()) {
                         log.error("Exception", e);
@@ -1008,7 +1008,7 @@ public final class GDownloader {
 
                     success = true;
                 } catch (UnsupportedFlavorException | IOException e) {
-                    log.warn("Cannot obtain transfer data");
+                    log.warn("Cannot obtain html transfer data");
 
                     if (config.isDebugMode()) {
                         log.error("Exception", e);
