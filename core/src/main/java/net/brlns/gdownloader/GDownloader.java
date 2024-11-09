@@ -358,7 +358,8 @@ public final class GDownloader {
                         log.error("Starting updater " + updater.getClass().getName());
                         updater.check(userInitiated);
                     } catch (NoFallbackAvailableException e) {
-                        log.error("Updater for " + updater.getClass().getName() + " failed and no fallback is available. Your OS might be unsupported.");
+                        log.error("Updater for " + updater.getClass().getName()
+                            + " failed and no fallback is available. Your OS might be unsupported.");
                     } catch (Exception e) {
                         handleException(e);
                     } finally {
@@ -1163,7 +1164,8 @@ public final class GDownloader {
         log.info("Code Source: {}", GDownloader.class.getProtectionDomain().getCodeSource().getLocation());
 
         try {
-            Path codeSourcePath = Paths.get(GDownloader.class.getProtectionDomain().getCodeSource().getLocation().toURI());
+            Path codeSourcePath = Paths.get(GDownloader.class.getProtectionDomain()
+                .getCodeSource().getLocation().toURI());
             log.info("Code source path: {}", codeSourcePath);
         } catch (URISyntaxException e) {
             log.warn("URI syntax error", e);

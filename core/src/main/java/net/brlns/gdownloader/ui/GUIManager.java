@@ -170,7 +170,8 @@ public final class GUIManager {
             }
 
             appWindow.setAlwaysOnTop(main.getConfig().isKeepWindowAlwaysOnTop());
-            appWindow.setDefaultCloseOperation(main.getConfig().isExitOnClose() ? JFrame.EXIT_ON_CLOSE : JFrame.HIDE_ON_CLOSE);
+            appWindow.setDefaultCloseOperation(main.getConfig().isExitOnClose()
+                ? JFrame.EXIT_ON_CLOSE : JFrame.HIDE_ON_CLOSE);
         });
     }
 
@@ -228,7 +229,8 @@ public final class GUIManager {
             KeyboardFocusManager manager = KeyboardFocusManager.getCurrentKeyboardFocusManager();
             manager.addKeyEventDispatcher((KeyEvent e) -> {
                 if (e.getID() == KeyEvent.KEY_PRESSED) {
-                    if ((e.getKeyCode() == KeyEvent.VK_V) && ((e.getModifiersEx() & KeyEvent.CTRL_DOWN_MASK) != 0)) {
+                    if ((e.getModifiersEx() & KeyEvent.CTRL_DOWN_MASK) != 0
+                        && e.getKeyCode() == KeyEvent.VK_V) {
                         main.resetClipboard();
 
                         main.updateClipboard(null, true);
@@ -352,7 +354,7 @@ public final class GUIManager {
         retryButton.setVisible(false);
         buttonPanel.add(retryButton);
 
-        main.getDownloadManager().registerListener((YtDlpDownloader downloadManager) -> {
+        main.getDownloadManager().registerListener((downloadManager) -> {
             runOnEDT(() -> {
                 boolean shouldBeVisible = downloadManager.getFailedDownloads() != 0;
                 if (retryButton.isVisible() != shouldBeVisible) {
@@ -378,7 +380,7 @@ public final class GUIManager {
             }
         ));
 
-        main.getDownloadManager().registerListener((YtDlpDownloader downloadManager) -> {
+        main.getDownloadManager().registerListener((downloadManager) -> {
             updateQueuePanelMessage();
         });
 
@@ -484,7 +486,7 @@ public final class GUIManager {
 
         JButton button = createToggleButton(icon, hoverIcon, tooltip, watch, toggler);
 
-        main.getDownloadManager().registerListener((YtDlpDownloader downloadManager) -> {
+        main.getDownloadManager().registerListener((downloadManager) -> {
             boolean state = downloadManager.isRunning();
 
             runOnEDT(() -> {
@@ -542,7 +544,8 @@ public final class GUIManager {
         return button;
     }
 
-    protected JButton createButton(ImageIcon icon, ImageIcon hoverIcon, String tooltipText, ActionListener actionListener) {
+    protected JButton createButton(ImageIcon icon, ImageIcon hoverIcon,
+        String tooltipText, ActionListener actionListener) {
         JButton button = new JButton(icon);
         button.setUI(new BasicButtonUI());
         button.setFocusPainted(false);
@@ -737,9 +740,8 @@ public final class GUIManager {
             } else {
                 if (!(firstComponent instanceof JPanel)) {
                     panel.removeAll();
+                    panel.add(getOrCreateUpdaterPanel(), BorderLayout.CENTER);
                 }
-
-                panel.add(getOrCreateUpdaterPanel(), BorderLayout.CENTER);
             }
 
             panel.revalidate();
@@ -766,7 +768,9 @@ public final class GUIManager {
                 }
             };
 
-            dialog.setAlwaysOnTop(true);// TODO: We might want to consider just bringing this to top but not pinning it there. Java doesn't directly support this but there are workarounds.
+            // TODO: We might want to consider just bringing this dialog to top but not pinning it there.
+            // Java doesn't directly support this but there are workarounds.
+            dialog.setAlwaysOnTop(true);
             dialog.setSize(500, 300);
             dialog.setResizable(false);
             dialog.setLocationRelativeTo(null);
@@ -863,7 +867,8 @@ public final class GUIManager {
         });
     }
 
-    public void showMessage(String title, String message, int durationMillis, MessageType messageType, boolean playTone) {
+    public void showMessage(String title, String message, int durationMillis,
+        MessageType messageType, boolean playTone) {
         if (main.getConfig().isDebugMode()) {
             log.info("Popup {}: {} - {}", messageType, title, message);
         }

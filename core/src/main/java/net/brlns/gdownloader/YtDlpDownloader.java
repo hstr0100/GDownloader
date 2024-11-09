@@ -210,6 +210,7 @@ public class YtDlpDownloader {
         listeners.add(consumer);
     }
 
+    // TODO: Proper blacklist
     private boolean isGarbageUrl(String inputUrl) {
         return inputUrl.contains("ytimg")
             || inputUrl.contains("ggpht")
@@ -226,7 +227,8 @@ public class YtDlpDownloader {
     public CompletableFuture<Boolean> captureUrl(@Nullable String inputUrl, boolean force, PlayListOptionEnum playlistOption) {
         CompletableFuture<Boolean> future = new CompletableFuture<>();
 
-        if (downloadsBlocked.get() || ytDlpPath == null || inputUrl == null || isGarbageUrl(inputUrl) || capturedLinks.contains(inputUrl)) {
+        if (downloadsBlocked.get() || ytDlpPath == null || inputUrl == null 
+            || isGarbageUrl(inputUrl) || capturedLinks.contains(inputUrl)) {
             future.complete(false);
             return future;
         }
@@ -634,15 +636,12 @@ public class YtDlpDownloader {
             fireListeners();
 
             main.getGlobalThreadPool().submitWithPriority(() -> {
-                if (!downloadsRunning.get()) {
-                    downloadDeque.offerFirst(entry);
-
-                    runningDownloads.decrementAndGet();
-                    fireListeners();
-                    return;
-                }
-
                 try {
+                    if (!downloadsRunning.get()) {
+                        downloadDeque.offerFirst(entry);
+                        return;
+                    }
+
                     AbstractUrlFilter filter = entry.getFilter();
 
                     if (filter.areCookiesRequired() && !main.getConfig().isReadCookiesFromBrowser()) {
@@ -753,20 +752,22 @@ public class YtDlpDownloader {
                                     if (!entry.getCancelHook().get()) {
                                         if (type == VIDEO || type == AUDIO) {
                                             if (!main.getConfig().isAutoDownloadRetry()
-                                                || entry.getRetryCounter().incrementAndGet() > MAX_DOWNLOAD_RETRIES) {
+                                                || entry.getRetryCounter().incrementAndGet() > MAX_DOWNLOAD_RETRIES
+                                                || result.getValue().contains("Unsupported URL")) {
 
-                                                log.info("Download of {} failed, all retry attempts failed.",
-                                                    entry.getUrl());
+                                                log.error("Download of {} failed, all retry attempts failed.: {}",
+                                                    entry.getUrl(), result.getValue());
 
                                                 entry.updateStatus(DownloadStatus.FAILED, result.getValue());
                                                 entry.reset();
 
                                                 failedDownloads.offer(entry);
                                             } else {
-                                                log.info("Download of {} failed, retrying ({}/{})",
+                                                log.warn("Download of {} failed, retrying ({}/{}): {}",
                                                     entry.getUrl(),
                                                     entry.getRetryCounter().get(),
-                                                    MAX_DOWNLOAD_RETRIES);
+                                                    MAX_DOWNLOAD_RETRIES,
+                                                    result.getValue());
 
                                                 entry.updateStatus(DownloadStatus.STOPPED, l10n("gui.download_status.not_started"));
                                                 entry.reset();
