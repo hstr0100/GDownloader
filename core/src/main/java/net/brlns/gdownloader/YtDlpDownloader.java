@@ -227,7 +227,7 @@ public class YtDlpDownloader {
     public CompletableFuture<Boolean> captureUrl(@Nullable String inputUrl, boolean force, PlayListOptionEnum playlistOption) {
         CompletableFuture<Boolean> future = new CompletableFuture<>();
 
-        if (downloadsBlocked.get() || ytDlpPath == null || inputUrl == null 
+        if (downloadsBlocked.get() || ytDlpPath == null || inputUrl == null
             || isGarbageUrl(inputUrl) || capturedLinks.contains(inputUrl)) {
             future.complete(false);
             return future;
@@ -522,7 +522,7 @@ public class YtDlpDownloader {
         while ((entry = failedDownloads.poll()) != null) {
             entry.updateStatus(DownloadStatus.QUEUED, l10n("gui.download_status.not_started"));
             entry.resetRetryCounter();// Normaly we want the retry count to stick around, but not in this case.
-            entry.reset();
+            entry.resetForRestart();
 
             downloadDeque.offerLast(entry);
         }
@@ -654,7 +654,7 @@ public class YtDlpDownloader {
 
                     if (!downloadAudio && !downloadVideo) {
                         entry.updateStatus(DownloadStatus.NO_METHOD, l10n("enums.download_status.no_method.video_tip"));
-                        entry.reset();
+                        entry.resetForRestart();
 
                         failedDownloads.offer(entry);
 
@@ -673,7 +673,7 @@ public class YtDlpDownloader {
 
                     if (!downloadVideo && downloadAudio && audioBitrate == AudioBitrateEnum.NO_AUDIO) {
                         entry.updateStatus(DownloadStatus.NO_METHOD, l10n("enums.download_status.no_method.audio_tip"));
-                        entry.reset();
+                        entry.resetForRestart();
 
                         failedDownloads.offer(entry);
 
@@ -746,48 +746,56 @@ public class YtDlpDownloader {
 
                             Pair<Integer, String> result = processDownload(entry, arguments);
 
-                            // TODO: This code block is so deep it could probably find oil down there already.
-                            if (result != null) {
-                                if (result.getKey() != 0) {
-                                    if (!entry.getCancelHook().get()) {
-                                        if (type == VIDEO || type == AUDIO) {
-                                            if (!main.getConfig().isAutoDownloadRetry()
-                                                || entry.getRetryCounter().incrementAndGet() > MAX_DOWNLOAD_RETRIES
-                                                || result.getValue().contains("Unsupported URL")) {
-
-                                                log.error("Download of {} failed, all retry attempts failed.: {}",
-                                                    entry.getUrl(), result.getValue());
-
-                                                entry.updateStatus(DownloadStatus.FAILED, result.getValue());
-                                                entry.reset();
-
-                                                failedDownloads.offer(entry);
-                                            } else {
-                                                log.warn("Download of {} failed, retrying ({}/{}): {}",
-                                                    entry.getUrl(),
-                                                    entry.getRetryCounter().get(),
-                                                    MAX_DOWNLOAD_RETRIES,
-                                                    result.getValue());
-
-                                                entry.updateStatus(DownloadStatus.STOPPED, l10n("gui.download_status.not_started"));
-                                                entry.reset();
-
-                                                downloadDeque.offerFirst(entry);
-                                            }
-                                        } else {
-                                            // These can be treated as low priority downloads since thumbnails
-                                            // and subtitles are already embedded by default, if they fail we just move on.
-                                            // For now, downloading only subs or thumbs is not supported.
-                                            log.error("Failed to download {}: {}", type, result.getValue());
-                                            continue;
-                                        }
-                                    }
-
-                                    fireListeners();
-                                    return;
-                                }
-                            } else {
+                            if (result == null) {
                                 wasStopped = true;
+                                continue;
+                            }
+
+                            if (result.getKey() != 0) {
+                                if (entry.getCancelHook().get()) {
+                                    continue;
+                                }
+
+                                String errorMessage = result.getValue();
+
+                                if (type != VIDEO && type != AUDIO) {
+                                    // These can be treated as low priority downloads since thumbnails
+                                    // and subtitles are already embedded by default, if they fail we just move on.
+                                    // For now, downloading only subs or thumbs is not supported.
+                                    log.error("Failed to download {}: {}", type, errorMessage);
+                                    continue;
+                                }
+
+                                if (!main.getConfig().isAutoDownloadRetry()
+                                    || entry.getRetryCounter().incrementAndGet() > MAX_DOWNLOAD_RETRIES
+                                    || errorMessage.contains("Unsupported URL")) {
+
+                                    log.error("Download of {} failed, all retry attempts failed.: {}",
+                                        entry.getUrl(), errorMessage);
+
+                                    entry.updateStatus(DownloadStatus.FAILED, errorMessage);
+                                    entry.resetForRestart();
+
+                                    mediaCard.getRightClickMenu().put(
+                                        l10n("gui.copy_error_message"),
+                                        () -> entry.copyTextToClipboard(errorMessage));
+
+                                    failedDownloads.offer(entry);
+                                } else {
+                                    log.warn("Download of {} failed, retrying ({}/{}): {}",
+                                        entry.getUrl(),
+                                        entry.getRetryCounter().get(),
+                                        MAX_DOWNLOAD_RETRIES,
+                                        errorMessage);
+
+                                    entry.updateStatus(DownloadStatus.STOPPED, l10n("gui.download_status.not_started"));
+                                    entry.resetForRestart();
+
+                                    downloadDeque.offerFirst(entry);
+                                }
+
+                                fireListeners();
+                                return;
                             }
                         }
                     } finally {
@@ -796,7 +804,7 @@ public class YtDlpDownloader {
 
                     if (!downloadsRunning.get() || wasStopped) {
                         entry.updateStatus(DownloadStatus.STOPPED, l10n("gui.download_status.not_started"));
-                        entry.reset();
+                        entry.resetForRestart();
 
                         downloadDeque.offerFirst(entry);
                         fireListeners();
@@ -863,7 +871,7 @@ public class YtDlpDownloader {
                             l10n("gui.restart_download"),
                             () -> {
                                 entry.updateStatus(DownloadStatus.QUEUED, l10n("gui.download_status.not_started"));
-                                entry.reset();
+                                entry.resetForRestart();
 
                                 completedDownloads.remove(entry);
                                 downloadDeque.offerLast(entry);
@@ -883,7 +891,7 @@ public class YtDlpDownloader {
                     log.error("Failed to download", e);
 
                     entry.updateStatus(DownloadStatus.FAILED, e.getLocalizedMessage());
-                    entry.reset();
+                    entry.resetForRestart();
 
                     downloadDeque.offerLast(entry);// Retry later
                     fireListeners();
@@ -1118,18 +1126,22 @@ public class YtDlpDownloader {
             main.openDownloadsDirectory();
         }
 
-        public void copyUrlToClipboard() {
-            StringSelection stringSelection = new StringSelection(originalUrl);
+        public void copyTextToClipboard(String text) {
+            StringSelection stringSelection = new StringSelection(text);
             Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
             clipboard.setContents(stringSelection, null);
 
             main.getGuiManager().showMessage(
-                l10n("gui.copy_url.notification_title"),
-                l10n("gui.copy_url.copied"),
+                l10n("gui.copied_to_clipboard.notification_title"),
+                text,
                 2000,
                 GUIManager.MessageType.INFO,
                 false
             );
+        }
+
+        public void copyUrlToClipboard() {
+            copyTextToClipboard(originalUrl);
         }
 
         public void deleteMediaFiles() {
@@ -1176,7 +1188,7 @@ public class YtDlpDownloader {
             clean();
         }
 
-        public void reset() {
+        public void resetForRestart() {
             cancelHook.set(false);
             process = null;
         }
