@@ -30,7 +30,7 @@ import net.brlns.gdownloader.settings.enums.AudioBitrateEnum;
 import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.settings.enums.VideoContainerEnum;
 
-import static net.brlns.gdownloader.Language.*;
+import static net.brlns.gdownloader.lang.Language.*;
 
 /**
  * @author Gabriel / hstr0100 / vertx010

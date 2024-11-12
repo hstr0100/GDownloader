@@ -45,7 +45,7 @@ import net.brlns.gdownloader.ui.custom.CustomScrollBarUI;
 import net.brlns.gdownloader.ui.custom.CustomSliderUI;
 import net.brlns.gdownloader.ui.themes.UIColors;
 
-import static net.brlns.gdownloader.Language.*;
+import static net.brlns.gdownloader.lang.Language.*;
 import static net.brlns.gdownloader.ui.GUIManager.runOnEDT;
 import static net.brlns.gdownloader.ui.themes.ThemeProvider.*;
 import static net.brlns.gdownloader.ui.themes.UIColors.*;

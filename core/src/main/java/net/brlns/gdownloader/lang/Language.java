@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package net.brlns.gdownloader;
+package net.brlns.gdownloader.lang;
 
 import java.text.MessageFormat;
 import java.util.Locale;
@@ -47,7 +47,11 @@ public class Language {
         return MessageFormat.format(pattern, args);
     }
 
-    protected static void initLanguage(Settings config) {
+    public static void initLanguage(Settings config) {
+        if (LANGUAGE_BUNDLE != null) {
+            throw new IllegalStateException("Cannot initialize language twice");
+        }
+
         if (!config.isLanguageDefined()) {
             Locale defaultLocale = Locale.getDefault();
             log.info("Detected system language: {}", defaultLocale);

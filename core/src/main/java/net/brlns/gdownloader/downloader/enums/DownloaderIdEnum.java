@@ -14,33 +14,13 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package net.brlns.gdownloader.settings.enums;
-
-import lombok.Getter;
-
-import static net.brlns.gdownloader.lang.Language.*;
+package net.brlns.gdownloader.downloader.enums;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-@Getter
-public enum FPSEnum implements ISettingsEnum {
-    FPS_30(30),
-    FPS_60(60);
+public enum DownloaderIdEnum {
 
-    private final int value;
+    YT_DLP;
 
-    private FPSEnum(int valueIn) {
-        value = valueIn;
-    }
-
-    @Override
-    public String getDisplayName() {
-        return l10n("enums.fps", value);
-    }
-
-    @Override
-    public String getTranslationKey() {
-        return "";
-    }
 }

@@ -14,33 +14,24 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package net.brlns.gdownloader.settings.enums;
+package net.brlns.gdownloader.downloader.structs;
 
-import lombok.Getter;
-
-import static net.brlns.gdownloader.lang.Language.*;
+import java.util.BitSet;
+import lombok.AllArgsConstructor;
+import lombok.Data;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-@Getter
-public enum FPSEnum implements ISettingsEnum {
-    FPS_30(30),
-    FPS_60(60);
+@Data
+@AllArgsConstructor
+public class DownloadResult {
 
-    private final int value;
+    private final BitSet flags;
+    private final String lastOutput;
 
-    private FPSEnum(int valueIn) {
-        value = valueIn;
-    }
-
-    @Override
-    public String getDisplayName() {
-        return l10n("enums.fps", value);
-    }
-
-    @Override
-    public String getTranslationKey() {
-        return "";
+    public DownloadResult(BitSet flagsIn) {
+        flags = flagsIn;
+        lastOutput = "";
     }
 }

@@ -14,33 +14,38 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package net.brlns.gdownloader.settings.enums;
+package net.brlns.gdownloader.downloader.structs;
 
-import lombok.Getter;
-
-import static net.brlns.gdownloader.lang.Language.*;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-@Getter
-public enum FPSEnum implements ISettingsEnum {
-    FPS_30(30),
-    FPS_60(60);
+@Data
+@NoArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class Thumbnail {
 
-    private final int value;
+    @JsonProperty("url")
+    private String url;
 
-    private FPSEnum(int valueIn) {
-        value = valueIn;
-    }
+    @JsonProperty("preference")
+    private int preference;
 
-    @Override
-    public String getDisplayName() {
-        return l10n("enums.fps", value);
-    }
+    @JsonProperty("id")
+    private String id;
 
-    @Override
-    public String getTranslationKey() {
-        return "";
-    }
+    @JsonProperty("height")
+    private int height;
+
+    @JsonProperty("width")
+    private int width;
+
+    @JsonProperty("resolution")
+    private String resolution;
 }

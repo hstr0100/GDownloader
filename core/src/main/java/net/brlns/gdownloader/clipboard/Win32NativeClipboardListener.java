@@ -31,7 +31,7 @@ public class Win32NativeClipboardListener extends AbstractClipboardListener {
     private final AtomicInteger lastClipboardSequenceNumber = new AtomicInteger(-1);
 
     @Override
-    public boolean detectClipboardChange() {
+    protected boolean detectClipboardChange() {
         int currentSequenceNumber = User32.INSTANCE.GetClipboardSequenceNumber();
 
         int previousValue = lastClipboardSequenceNumber.get();

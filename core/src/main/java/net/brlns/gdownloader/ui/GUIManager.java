@@ -42,7 +42,7 @@ import lombok.Data;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
-import net.brlns.gdownloader.YtDlpDownloader;
+import net.brlns.gdownloader.downloader.DownloadManager;
 import net.brlns.gdownloader.ui.custom.*;
 import net.brlns.gdownloader.ui.dnd.WindowDragSourceListener;
 import net.brlns.gdownloader.ui.dnd.WindowDropTargetListener;
@@ -52,7 +52,7 @@ import net.brlns.gdownloader.ui.themes.UIColors;
 import net.brlns.gdownloader.updater.AbstractGitUpdater;
 import net.brlns.gdownloader.util.Nullable;
 
-import static net.brlns.gdownloader.Language.*;
+import static net.brlns.gdownloader.lang.Language.*;
 import static net.brlns.gdownloader.ui.themes.ThemeProvider.*;
 import static net.brlns.gdownloader.ui.themes.UIColors.*;
 
@@ -462,7 +462,7 @@ public final class GUIManager {
         statusLabel.setHorizontalAlignment(SwingConstants.LEFT);
         statusLabel.setVerticalAlignment(SwingConstants.CENTER);
 
-        Consumer<YtDlpDownloader> consumer = (downloadManager) -> {
+        Consumer<DownloadManager> consumer = (downloadManager) -> {
             runOnEDT(() -> {
                 statusLabel.setText(updater.updateText(downloadManager));
             });
@@ -1555,7 +1555,7 @@ public final class GUIManager {
     @FunctionalInterface
     public interface StatusLabelUpdater {
 
-        String updateText(YtDlpDownloader downloadManager);
+        String updateText(DownloadManager downloadManager);
     }
 
     @Data

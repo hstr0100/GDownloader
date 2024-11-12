@@ -19,6 +19,7 @@ package net.brlns.gdownloader.updater;
 import java.io.File;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
+import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.util.Nullable;
 
 /**
@@ -69,7 +70,7 @@ public class YtDlpUpdater extends AbstractGitUpdater {
 
     @Override
     protected void setExecutablePath(File executablePath) {
-        main.getDownloadManager().setYtDlpPath(executablePath);
+        main.getDownloadManager().setExecutablePath(DownloaderIdEnum.YT_DLP, executablePath);
     }
 
     @Override

@@ -42,7 +42,7 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
 
-import static net.brlns.gdownloader.Language.l10n;
+import static net.brlns.gdownloader.lang.Language.l10n;
 
 /**
  * Java does not provide a reliable way to detect clipboard changes.
