@@ -24,6 +24,7 @@ import java.util.List;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import net.brlns.gdownloader.GDownloader;
+import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.settings.QualitySettings;
 import net.brlns.gdownloader.settings.Settings;
 import net.brlns.gdownloader.settings.enums.AudioBitrateEnum;
@@ -63,134 +64,141 @@ public class GenericFilter extends AbstractUrlFilter {
 
     @JsonIgnore
     @Override
-    protected List<String> buildArguments(DownloadTypeEnum typeEnum, GDownloader main, File savePath) {
+    protected List<String> buildArguments(DownloaderIdEnum downloaderId, DownloadTypeEnum typeEnum, GDownloader main, File savePath) {
         Settings config = main.getConfig();
         QualitySettings quality = getQualitySettings();
         AudioBitrateEnum audioBitrate = quality.getAudioBitrate();
 
         List<String> arguments = new ArrayList<>();
 
-        switch (typeEnum) {
-            case ALL -> {
-                // For backwards compatibility. This should have been a list.
-                for (String arg : config.getExtraYtDlpArguments().split(" ")) {
-                    if (!arg.isEmpty()) {
-                        arguments.add(arg);
-                    }
-                }
+        switch (downloaderId) {
+            case YT_DLP -> {
+                switch (typeEnum) {
+                    case ALL -> {
+                        // For backwards compatibility. This should have been a list.
+                        for (String arg : config.getExtraYtDlpArguments().split(" ")) {
+                            if (!arg.isEmpty()) {
+                                arguments.add(arg);
+                            }
+                        }
 
-                if (config.isRandomIntervalBetweenDownloads()) {
-                    arguments.addAll(List.of(
-                        "--max-sleep-interval",
-                        "45",
-                        "--min-sleep-interval",
-                        "25"
-                    ));
-                }
-
-                if (config.isReadCookiesFromBrowser()) {
-                    arguments.addAll(List.of(
-                        "--cookies-from-browser",
-                        main.getBrowserForCookies().getName()
-                    ));
-                }
-
-                if (GDownloader.isWindows()) {
-                    // NTFS shenanigans ahead
-                    // TODO: query registry for longpath support status
-                    arguments.addAll(List.of(
-                        "--windows-filenames",
-                        "--trim-filenames",
-                        String.valueOf(240)// Give some extra room for fragment files
-                    ));
-                }
-            }
-            case VIDEO -> {
-                VideoContainerEnum videoContainer = quality.getVideoContainer();
-
-                arguments.addAll(List.of(
-                    "-o",
-                    savePath.getAbsolutePath() + "/" + getVideoNamePattern(),
-                    "-f",
-                    getQualitySettings().buildQualitySelector(),
-                    "--merge-output-format",
-                    videoContainer.getValue()
-                ));
-
-                if (isEmbedThumbnailAndMetadata()) {
-                    arguments.addAll(List.of(
-                        "--embed-thumbnail",
-                        "--embed-metadata",
-                        "--embed-chapters"
-                    ));
-
-                    switch (quality.getVideoContainer()) {
-                        case MKV, MP4, WEBM ->
+                        if (config.isRandomIntervalBetweenDownloads()) {
                             arguments.addAll(List.of(
-                                "--embed-subs",
-                                "--sub-langs",
-                                "all,-live_chat"
+                                "--max-sleep-interval",
+                                "45",
+                                "--min-sleep-interval",
+                                "25"
                             ));
+                        }
+
+                        if (config.isReadCookiesFromBrowser()) {
+                            arguments.addAll(List.of(
+                                "--cookies-from-browser",
+                                main.getBrowserForCookies().getName()
+                            ));
+                        }
+
+                        if (GDownloader.isWindows()) {
+                            // NTFS shenanigans ahead
+                            // TODO: query registry for longpath support status
+                            arguments.addAll(List.of(
+                                "--windows-filenames",
+                                "--trim-filenames",
+                                String.valueOf(240)// Give some extra room for fragment files
+                            ));
+                        }
                     }
-                }
+                    case VIDEO -> {
+                        VideoContainerEnum videoContainer = quality.getVideoContainer();
 
-                if (config.isTranscodeAudioToAAC()) {
-                    arguments.addAll(List.of(
-                        "--postprocessor-args",
-                        // Opus is not supported by some native video players
-                        "ffmpeg:-c:a aac -b:a " + (audioBitrate == AudioBitrateEnum.NO_AUDIO ? 320 : audioBitrate.getValue()) + "k"
-                    ));
-                }
-            }
-            case AUDIO -> {
-                if (audioBitrate != AudioBitrateEnum.NO_AUDIO) {
-                    String audioPatternWithBitrate = getAudioNamePattern()
-                        .replace("%(audio_bitrate)s", audioBitrate.getValue() + "kbps");
-
-                    arguments.addAll(List.of(
-                        "-o",
-                        savePath.getAbsolutePath() + "/" + audioPatternWithBitrate,
-                        "-f",
-                        "bestaudio",
-                        "--extract-audio",
-                        "--audio-format",
-                        quality.getAudioContainer().getValue(),
-                        "--audio-quality",
-                        audioBitrate.getValue() + "k"
-                    ));
-
-                    if (isEmbedThumbnailAndMetadata()) {
                         arguments.addAll(List.of(
-                            "--embed-thumbnail",
-                            "--embed-metadata"
+                            "-o",
+                            savePath.getAbsolutePath() + "/" + getVideoNamePattern(),
+                            "-f",
+                            getQualitySettings().buildQualitySelector(),
+                            "--merge-output-format",
+                            videoContainer.getValue()
+                        ));
+
+                        if (isEmbedThumbnailAndMetadata()) {
+                            arguments.addAll(List.of(
+                                "--embed-thumbnail",
+                                "--embed-metadata",
+                                "--embed-chapters"
+                            ));
+
+                            switch (quality.getVideoContainer()) {
+                                case MKV, MP4, WEBM ->
+                                    arguments.addAll(List.of(
+                                        "--embed-subs",
+                                        "--sub-langs",
+                                        "all,-live_chat"
+                                    ));
+                            }
+                        }
+
+                        if (config.isTranscodeAudioToAAC()) {
+                            arguments.addAll(List.of(
+                                "--postprocessor-args",
+                                // Opus is not supported by some native video players
+                                "ffmpeg:-c:a aac -b:a " + (audioBitrate == AudioBitrateEnum.NO_AUDIO ? 320 : audioBitrate.getValue()) + "k"
+                            ));
+                        }
+                    }
+                    case AUDIO -> {
+                        if (audioBitrate != AudioBitrateEnum.NO_AUDIO) {
+                            String audioPatternWithBitrate = getAudioNamePattern()
+                                .replace("%(audio_bitrate)s", audioBitrate.getValue() + "kbps");
+
+                            arguments.addAll(List.of(
+                                "-o",
+                                savePath.getAbsolutePath() + "/" + audioPatternWithBitrate,
+                                "-f",
+                                "bestaudio",
+                                "--extract-audio",
+                                "--audio-format",
+                                quality.getAudioContainer().getValue(),
+                                "--audio-quality",
+                                audioBitrate.getValue() + "k"
+                            ));
+
+                            if (isEmbedThumbnailAndMetadata()) {
+                                arguments.addAll(List.of(
+                                    "--embed-thumbnail",
+                                    "--embed-metadata"
+                                ));
+                            }
+                        }
+                    }
+                    case THUMBNAILS -> {
+                        arguments.addAll(List.of(
+                            "-o",
+                            savePath.getAbsolutePath() + "/" + getVideoNamePattern(),
+                            "--write-thumbnail",
+                            "--skip-download",
+                            "--convert-thumbnails",
+                            quality.getThumbnailContainer().getValue()
                         ));
                     }
+                    case SUBTITLES -> {
+                        arguments.addAll(List.of(
+                            "-o",
+                            savePath.getAbsolutePath() + "/" + getVideoNamePattern(),
+                            "--all-subs",
+                            "--skip-download",
+                            "--sub-format",
+                            quality.getSubtitleContainer().getValue(),
+                            "--convert-subs",
+                            quality.getSubtitleContainer().getValue()
+                        ));
+                    }
+                    default ->
+                        throw new IllegalArgumentException();
                 }
             }
-            case THUMBNAILS -> {
-                arguments.addAll(List.of(
-                    "-o",
-                    savePath.getAbsolutePath() + "/" + getVideoNamePattern(),
-                    "--write-thumbnail",
-                    "--skip-download",
-                    "--convert-thumbnails",
-                    quality.getThumbnailContainer().getValue()
-                ));
+            default -> {
+
             }
-            case SUBTITLES -> {
-                arguments.addAll(List.of(
-                    "-o",
-                    savePath.getAbsolutePath() + "/" + getVideoNamePattern(),
-                    "--all-subs",
-                    "--skip-download",
-                    "--sub-format",
-                    quality.getSubtitleContainer().getValue(),
-                    "--convert-subs",
-                    quality.getSubtitleContainer().getValue()
-                ));
-            }
-            default ->
-                throw new IllegalArgumentException();
         }
 
         return arguments;

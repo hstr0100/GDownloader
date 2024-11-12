@@ -31,6 +31,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
+import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.settings.QualitySettings;
 import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
 
@@ -180,20 +181,27 @@ public abstract class AbstractUrlFilter {
     }
 
     @JsonIgnore
-    public List<String> getArguments(DownloadTypeEnum typeEnum, GDownloader main, File savePath) {
+    public List<String> getArguments(DownloaderIdEnum downloaderId, DownloadTypeEnum typeEnum, GDownloader main, File savePath) {
         List<String> arguments = new ArrayList<>();
 
-        arguments.addAll(buildArguments(typeEnum, main, savePath));
+        arguments.addAll(buildArguments(downloaderId, typeEnum, main, savePath));
 
-        if (extraYtDlpArguments.containsKey(typeEnum)) {
-            arguments.addAll(extraYtDlpArguments.get(typeEnum));
+        switch (downloaderId) {
+            case YT_DLP -> {
+                if (extraYtDlpArguments.containsKey(typeEnum)) {
+                    arguments.addAll(extraYtDlpArguments.get(typeEnum));
+                }
+            }
+            default -> {
+                log.warn("Unhandled downloader id {}", downloaderId);
+            }
         }
 
         return arguments;
     }
 
     @JsonIgnore
-    protected abstract List<String> buildArguments(DownloadTypeEnum typeEnum, GDownloader main, File savePath);
+    protected abstract List<String> buildArguments(DownloaderIdEnum downloaderId, DownloadTypeEnum typeEnum, GDownloader main, File savePath);
 
     @JsonIgnore
     public abstract boolean areCookiesRequired();

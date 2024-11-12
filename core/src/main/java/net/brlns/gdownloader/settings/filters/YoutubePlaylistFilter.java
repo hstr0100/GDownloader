@@ -23,6 +23,7 @@ import java.util.List;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import net.brlns.gdownloader.GDownloader;
+import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
 
 import static net.brlns.gdownloader.settings.enums.DownloadTypeEnum.*;
@@ -49,12 +50,19 @@ public class YoutubePlaylistFilter extends YoutubeFilter {
 
     @JsonIgnore
     @Override
-    protected List<String> buildArguments(DownloadTypeEnum typeEnum, GDownloader main, File savePath) {
-        List<String> arguments = super.buildArguments(typeEnum, main, savePath);
+    protected List<String> buildArguments(DownloaderIdEnum downloaderId, DownloadTypeEnum typeEnum, GDownloader main, File savePath) {
+        List<String> arguments = super.buildArguments(downloaderId, typeEnum, main, savePath);
 
-        switch (typeEnum) {
-            case ALL -> {
-                arguments.add("--yes-playlist");
+        switch (downloaderId) {
+            case YT_DLP -> {
+                switch (typeEnum) {
+                    case ALL -> {
+                        arguments.add("--yes-playlist");
+                    }
+                }
+            }
+            default -> {
+
             }
         }
 

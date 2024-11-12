@@ -187,7 +187,7 @@ public class YtDlpDownloader extends AbstractDownloader {
             genericArguments.add("--ignore-config");
         }
 
-        genericArguments.addAll(filter.getArguments(ALL, main, tmpPath));
+        genericArguments.addAll(filter.getArguments(getDownloaderId(), ALL, main, tmpPath));
 
         boolean success = false;
         String lastOutput = "";
@@ -203,7 +203,7 @@ public class YtDlpDownloader extends AbstractDownloader {
 
             List<String> arguments = new ArrayList<>(genericArguments);
 
-            List<String> downloadArguments = filter.getArguments(type, main, tmpPath);
+            List<String> downloadArguments = filter.getArguments(getDownloaderId(), type, main, tmpPath);
             arguments.addAll(downloadArguments);
 
             if (main.getConfig().isDebugMode()) {
