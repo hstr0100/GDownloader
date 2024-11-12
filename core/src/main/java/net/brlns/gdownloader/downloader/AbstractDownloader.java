@@ -119,7 +119,7 @@ public abstract class AbstractDownloader {
 
                 Thread.sleep(100);
             }
-            
+
             entry.getDownloadStarted().set(false);
 
             long stopped = System.currentTimeMillis() - start;

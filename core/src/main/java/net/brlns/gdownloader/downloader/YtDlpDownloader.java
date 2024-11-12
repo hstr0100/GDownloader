@@ -21,13 +21,16 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.TreeMap;
 import java.util.stream.Stream;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
-import net.brlns.gdownloader.downloader.enums.DownloadFlagsEnum;
 import net.brlns.gdownloader.downloader.enums.DownloadStatusEnum;
 import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.downloader.structs.DownloadResult;
@@ -42,6 +45,7 @@ import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
 import net.brlns.gdownloader.util.DirectoryUtils;
 import net.brlns.gdownloader.util.Pair;
 
+import static net.brlns.gdownloader.downloader.enums.DownloadFlagsEnum.*;
 import static net.brlns.gdownloader.lang.Language.*;
 import static net.brlns.gdownloader.settings.enums.DownloadTypeEnum.*;
 
@@ -142,26 +146,20 @@ public class YtDlpDownloader extends AbstractDownloader {
 
     @Override
     protected DownloadResult tryDownload(QueueEntry entry) throws Exception {
-        BitSet flags = new BitSet();
-
         AbstractUrlFilter filter = entry.getFilter();
 
         boolean downloadAudio = main.getConfig().isDownloadAudio();
         boolean downloadVideo = main.getConfig().isDownloadVideo();
 
         if (!downloadAudio && !downloadVideo) {
-            DownloadFlagsEnum.NO_METHOD.set(flags);
-            DownloadFlagsEnum.NO_METHOD_VIDEO.set(flags);
-            return new DownloadResult(flags);
+            return new DownloadResult(combineFlags(FLAG_NO_METHOD, FLAG_NO_METHOD_VIDEO));
         }
 
         QualitySettings quality = filter.getQualitySettings();
         AudioBitrateEnum audioBitrate = quality.getAudioBitrate();
 
         if (!downloadVideo && downloadAudio && audioBitrate == AudioBitrateEnum.NO_AUDIO) {
-            DownloadFlagsEnum.NO_METHOD.set(flags);
-            DownloadFlagsEnum.NO_METHOD_AUDIO.set(flags);
-            return new DownloadResult(flags);
+            return new DownloadResult(combineFlags(FLAG_NO_METHOD, FLAG_NO_METHOD_AUDIO));
         }
 
         File finalPath = main.getOrCreateDownloadsDirectory();
@@ -217,21 +215,18 @@ public class YtDlpDownloader extends AbstractDownloader {
             Pair<Integer, String> result = processDownload(entry, arguments);
 
             if (result == null || entry.getCancelHook().get()) {
-                DownloadFlagsEnum.STOPPED.set(flags);
-                return new DownloadResult(flags);
+                return new DownloadResult(FLAG_STOPPED);
             }
 
             lastOutput = result.getValue();
 
             if (result.getKey() != 0) {
                 if (lastOutput.contains("Unsupported URL")) {
-                    DownloadFlagsEnum.UNSUPPORTED.set(flags);
-                    return new DownloadResult(flags, lastOutput);
+                    return new DownloadResult(FLAG_UNSUPPORTED, lastOutput);
                 }
 
                 if (type == VIDEO || type == AUDIO) {
-                    DownloadFlagsEnum.MAIN_CATEGORY_FAILED.set(flags);
-                    return new DownloadResult(flags, lastOutput);
+                    return new DownloadResult(FLAG_MAIN_CATEGORY_FAILED, lastOutput);
                 } else {
                     // These can be treated as low priority downloads since thumbnails
                     // and subtitles are already embedded by default, if they fail we just move on.
@@ -243,13 +238,7 @@ public class YtDlpDownloader extends AbstractDownloader {
             }
         }
 
-        if (success) {
-            DownloadFlagsEnum.SUCCESS.set(flags);
-        } else {
-            DownloadFlagsEnum.UNSUPPORTED.set(flags);
-        }
-
-        return new DownloadResult(flags, lastOutput);
+        return new DownloadResult(success ? FLAG_SUCCESS : FLAG_UNSUPPORTED, lastOutput);
     }
 
     @Override

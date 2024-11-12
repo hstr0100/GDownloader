@@ -19,6 +19,7 @@ package net.brlns.gdownloader.downloader.structs;
 import java.util.BitSet;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import net.brlns.gdownloader.downloader.enums.DownloadFlagsEnum;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -30,8 +31,15 @@ public class DownloadResult {
     private final BitSet flags;
     private final String lastOutput;
 
+    public DownloadResult(DownloadFlagsEnum flagsEnumIn) {
+        this(flagsEnumIn, "");
+    }
+
+    public DownloadResult(DownloadFlagsEnum flagsEnumIn, String lastOutputIn) {
+        this(flagsEnumIn.asBitSet(), lastOutputIn);
+    }
+
     public DownloadResult(BitSet flagsIn) {
-        flags = flagsIn;
-        lastOutput = "";
+        this(flagsIn, "");
     }
 }

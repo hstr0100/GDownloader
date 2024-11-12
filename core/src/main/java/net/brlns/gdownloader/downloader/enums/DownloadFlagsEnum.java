@@ -24,13 +24,13 @@ import lombok.Getter;
  */
 @Getter
 public enum DownloadFlagsEnum {
-    SUCCESS((byte)0x00),
-    STOPPED((byte)0x01),
-    UNSUPPORTED((byte)0x02),
-    MAIN_CATEGORY_FAILED((byte)0x03),
-    NO_METHOD((byte)0x04),
-    NO_METHOD_VIDEO((byte)0x05),
-    NO_METHOD_AUDIO((byte)0x06);
+    FLAG_SUCCESS((byte)0x00),
+    FLAG_STOPPED((byte)0x01),
+    FLAG_UNSUPPORTED((byte)0x02),
+    FLAG_MAIN_CATEGORY_FAILED((byte)0x03),
+    FLAG_NO_METHOD((byte)0x04),
+    FLAG_NO_METHOD_VIDEO((byte)0x05),
+    FLAG_NO_METHOD_AUDIO((byte)0x06);
 
     private final byte flag;
 
