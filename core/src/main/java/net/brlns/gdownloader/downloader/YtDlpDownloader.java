@@ -43,7 +43,6 @@ import net.brlns.gdownloader.util.Pair;
 import static net.brlns.gdownloader.lang.Language.*;
 import static net.brlns.gdownloader.settings.enums.DownloadTypeEnum.*;
 
-
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
@@ -164,6 +163,9 @@ public class YtDlpDownloader extends AbstractDownloader {
 
         genericArguments.addAll(filter.getArguments(ALL, main, tmpPath));
 
+        boolean success = false;
+        String lastOutput = "";
+
         for (DownloadTypeEnum type : DownloadTypeEnum.values()) {
             if (type == ALL
                 || type == VIDEO && !main.getConfig().isDownloadVideo()
@@ -193,7 +195,7 @@ public class YtDlpDownloader extends AbstractDownloader {
                 return new DownloadResult(flags);
             }
 
-            String lastOutput = result.getValue();
+            lastOutput = result.getValue();
 
             if (result.getKey() != 0) {
                 if (type == VIDEO || type == AUDIO) {
@@ -206,13 +208,17 @@ public class YtDlpDownloader extends AbstractDownloader {
                     log.error("Failed to download {}: {}", type, lastOutput);
                 }
             } else {
-                DownloadFlagsEnum.SUCCESS.set(flags);
-                return new DownloadResult(flags, lastOutput);
+                success = true;
             }
         }
 
-        DownloadFlagsEnum.UNSUPPORTED.set(flags);
-        return new DownloadResult(flags);
+        if (success) {
+            DownloadFlagsEnum.SUCCESS.set(flags);
+            return new DownloadResult(flags, lastOutput);
+        } else {
+            DownloadFlagsEnum.UNSUPPORTED.set(flags);
+            return new DownloadResult(flags);
+        }
     }
 
     @Override

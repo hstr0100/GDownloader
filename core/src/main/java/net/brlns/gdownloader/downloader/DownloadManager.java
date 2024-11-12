@@ -672,9 +672,7 @@ public class DownloadManager {
 
                                 rightClickOptions.put(
                                     l10n("gui.restart_download"),
-                                    () -> {
-                                        restartDownload(entry);
-                                    });
+                                    () -> restartDownload(entry));
 
                                 rightClickOptions.put(
                                     l10n("gui.delete_files"),
