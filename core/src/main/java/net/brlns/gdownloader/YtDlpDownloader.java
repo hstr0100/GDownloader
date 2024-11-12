@@ -21,9 +21,6 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.awt.Color;
-import java.awt.Toolkit;
-import java.awt.datatransfer.Clipboard;
-import java.awt.datatransfer.StringSelection;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -114,6 +111,7 @@ import static net.brlns.gdownloader.util.URLUtils.*;
 // TODO Add an url ignore list / Allow filters to be disabled
 // TODO Add option to clear all installed updates and start fresh. (Tackling certain issues where failed updates could break downloads)
 // TODO Optional pluggable gallery-dl and curl integration
+// TODO Split main window from GUIManager
 // Off to a bootcamp, project on pause
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -1125,7 +1123,6 @@ public class YtDlpDownloader {
 
             main.openDownloadsDirectory();
         }
-
 
         public void copyUrlToClipboard() {
             main.getClipboardManager().copyTextToClipboard(originalUrl);

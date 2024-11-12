@@ -26,7 +26,7 @@ import lombok.extern.slf4j.Slf4j;
  * @author Gabriel / hstr0100 / vertx010
  */
 @Slf4j
-public class MaybeChangedClipboardListener implements IClipboardListener {
+public class MaybeChangedClipboardListener extends AbstractClipboardListener {
 
     private final AtomicBoolean maybeOcasionallyChangedIfLucky = new AtomicBoolean(false);
 
@@ -42,7 +42,7 @@ public class MaybeChangedClipboardListener implements IClipboardListener {
     }
 
     @Override
-    public boolean clipboardHasChanged() {
+    public boolean detectClipboardChange() {
         if (maybeOcasionallyChangedIfLucky.get()) {
             maybeOcasionallyChangedIfLucky.set(false);
 

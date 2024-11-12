@@ -26,12 +26,12 @@ import lombok.extern.slf4j.Slf4j;
  * @author Gabriel / hstr0100 / vertx010
  */
 @Slf4j
-public class Win32NativeClipboardListener implements IClipboardListener {
+public class Win32NativeClipboardListener extends AbstractClipboardListener {
 
     private final AtomicInteger lastClipboardSequenceNumber = new AtomicInteger(-1);
 
     @Override
-    public boolean clipboardHasChanged() {
+    public boolean detectClipboardChange() {
         int currentSequenceNumber = User32.INSTANCE.GetClipboardSequenceNumber();
 
         int previousValue = lastClipboardSequenceNumber.get();

@@ -26,7 +26,7 @@ import lombok.extern.slf4j.Slf4j;
  * @author Gabriel / hstr0100 / vertx010
  */
 @Slf4j
-public class CtrlCNativeClipboardListener implements IClipboardListener {
+public class CtrlCNativeClipboardListener extends AbstractClipboardListener {
 
     private final AtomicBoolean hasChanged = new AtomicBoolean(false);
 
@@ -61,7 +61,7 @@ public class CtrlCNativeClipboardListener implements IClipboardListener {
     }
 
     @Override
-    public boolean clipboardHasChanged() {
+    public boolean detectClipboardChange() {
         if (hasChanged.get()) {
             hasChanged.set(false);
 

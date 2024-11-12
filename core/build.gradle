@@ -61,6 +61,7 @@ run {
 
 extraJavaModuleInfo {
     failOnMissingModuleInfo.set(true)
+    deriveAutomaticModuleNamesFromFileNames.set(true)
 
     module("twelvemonkeys-$twelvemonkeysVersion-all.jar", 'com.twelvemonkeys.imageio') {
         requiresStatic('java.desktop')
@@ -71,10 +72,14 @@ extraJavaModuleInfo {
         exports('com.twelvemonkeys.imageio.plugins.webp')
         exports('com.twelvemonkeys.imageio.plugins.tiff')
     }
+
+    automaticModule('net.java.dev.jna:jna', 'com.sun.jna') {
+        overrideModuleName()
+    }
 }
 
 tasks.withType(JavaCompile).configureEach {
-    options.compilerArgs.addAll(['-Xlint:all,-serial,-processing,-missing-explicit-ctor'])
+    options.compilerArgs.addAll(['-Xlint:all,-serial,-processing,-requires-automatic,-missing-explicit-ctor'])
 }
 
 jar {

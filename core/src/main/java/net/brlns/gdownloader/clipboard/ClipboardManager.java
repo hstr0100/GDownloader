@@ -80,11 +80,12 @@ public class ClipboardManager {
     }
 
     public void init() {
-        // Ignore any data from before the program started.
-        invalidateClipboard();
     }
 
     public void unblock() {
+        // Ignore any data from before the program started.
+        invalidateClipboard();
+
         clipboardBlocked.set(false);
     }
 
@@ -195,11 +196,14 @@ public class ClipboardManager {
                         lastClipboardState.put(flavorType, data);
                     } catch (Exception e) {
                         if (main.getConfig().isDebugMode()) {
-                            log.error("Exception resetting clipboard", e);
+                            log.error("Exception while invalidating clipboard", e);
                         }
                     }
                 }
             }
+
+            clipboardListeners.stream()
+                .forEach((listener) -> listener.skipFor(TimeUnit.SECONDS, 4));
         } finally {
             clipboardLock.unlock();
         }
@@ -208,7 +212,7 @@ public class ClipboardManager {
     private void triggerRevalidation() {
         main.getGlobalThreadPool().submitWithPriority(() -> {
             try {
-                //Wait a bit for the data to propagate.
+                //Wait a bit for data to propagate.
                 Thread.sleep(200);
 
                 revalidateClipboard();

@@ -16,11 +16,15 @@
  */
 package net.brlns.gdownloader.clipboard;
 
+import java.util.concurrent.TimeUnit;
+
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
 public interface IClipboardListener {
 
     boolean clipboardHasChanged();
+
+    void skipFor(TimeUnit unit, long value);
 
 }
