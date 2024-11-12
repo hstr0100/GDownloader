@@ -132,13 +132,11 @@ public class DownloadManager {
 
     public void block() {
         downloadsBlocked.set(true);
-
         fireListeners();
     }
 
     public void unblock() {
         downloadsBlocked.set(false);
-
         fireListeners();
     }
 
@@ -159,7 +157,6 @@ public class DownloadManager {
     }
 
     public void setExecutablePath(DownloaderIdEnum downloaderId, File path) {
-        log.info("{} {}", downloaderId, path);
         downloaders.stream()
             .filter(downloader -> downloader.getDownloaderId() == downloaderId)
             .forEach(downloader -> downloader.setExecutablePath(Optional.of(path)));
@@ -437,14 +434,12 @@ public class DownloadManager {
     public void startDownloads() {
         if (!downloadsBlocked.get()) {
             downloadsRunning.set(true);
-
             fireListeners();
         }
     }
 
     public void stopDownloads() {
         downloadsRunning.set(false);
-
         fireListeners();
     }
 
@@ -481,7 +476,6 @@ public class DownloadManager {
         }
 
         startDownloads();
-
         fireListeners();
     }
 
@@ -533,7 +527,6 @@ public class DownloadManager {
     }
 
     protected void restartDownload(QueueEntry queueEntry) {
-
         queueEntry.updateStatus(DownloadStatusEnum.QUEUED, l10n("gui.download_status.not_started"));
         queueEntry.resetForRestart();
 
@@ -680,7 +673,7 @@ public class DownloadManager {
 
                                 rightClickOptions.put(
                                     l10n("gui.delete_files"),
-                                    () -> entry.deleteMediaFiles());
+                                    () -> entry.deleteMediaFiles());// TODO: remove also menu entries
 
                                 mediaCard.getRightClickMenu().putAll(rightClickOptions);
 
