@@ -20,13 +20,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.kwhat.jnativehook.GlobalScreen;
 import com.github.kwhat.jnativehook.NativeHookException;
-import com.github.kwhat.jnativehook.keyboard.NativeKeyEvent;
-import com.github.kwhat.jnativehook.keyboard.NativeKeyListener;
 import java.awt.*;
-import java.awt.datatransfer.Clipboard;
-import java.awt.datatransfer.DataFlavor;
-import java.awt.datatransfer.Transferable;
-import java.awt.datatransfer.UnsupportedFlavorException;
 import java.awt.desktop.QuitStrategy;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -41,17 +35,18 @@ import java.nio.file.Paths;
 import java.nio.file.attribute.PosixFilePermission;
 import java.util.List;
 import java.util.*;
-import java.util.concurrent.*;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import javax.swing.UIManager;
 import javax.swing.plaf.FontUIResource;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import net.brlns.gdownloader.clipboard.ClipboardManager;
 import net.brlns.gdownloader.settings.Settings;
 import net.brlns.gdownloader.settings.enums.BrowserEnum;
 import net.brlns.gdownloader.ui.GUIManager;
@@ -67,9 +62,6 @@ import net.brlns.gdownloader.util.LoggerUtils;
 import net.brlns.gdownloader.util.NoFallbackAvailableException;
 import net.brlns.gdownloader.util.Nullable;
 import net.brlns.gdownloader.util.PriorityThreadPoolExecutor;
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
-import org.jsoup.select.Elements;
 import org.slf4j.helpers.FormattingTuple;
 import org.slf4j.helpers.MessageFormatter;
 
@@ -109,6 +101,9 @@ public final class GDownloader {
     private Settings config;
 
     @Getter
+    private ClipboardManager clipboardManager;
+
+    @Getter
     private YtDlpDownloader downloadManager;
 
     @Getter
@@ -119,9 +114,6 @@ public final class GDownloader {
 
     @Getter
     private boolean initialized = false;
-
-    private final Clipboard clipboard;
-    private final Map<FlavorType, String> lastClipboardState = new HashMap<>();
 
     @Getter
     private final PriorityThreadPoolExecutor globalThreadPool;
@@ -189,10 +181,12 @@ public final class GDownloader {
             setUIFontSize(config.getFontSize());
         }
 
-        clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
         tray = SystemTray.getSystemTray();
 
         try {
+            clipboardManager = new ClipboardManager(this);
+            clipboardManager.init();
+
             downloadManager = new YtDlpDownloader(this);
 
             guiManager = new GUIManager(this);
@@ -227,59 +221,20 @@ public final class GDownloader {
 
             updateStartupStatus();
 
-            GlobalScreen.addNativeKeyListener(new NativeKeyListener() {
-                @Override
-                public void nativeKeyPressed(NativeKeyEvent e) {
-                    try {
-                        if ((e.getModifiers() & NativeKeyEvent.CTRL_MASK) != 0
-                            && e.getKeyCode() == NativeKeyEvent.VC_C) {
-                            resetClipboard();
-
-                            // TODO check how the clipboard deals with concurrency
-                            updateClipboard();
-                        }
-                    } catch (Exception ex) {
-                        handleException(ex);
-                    }
-                }
-
-                @Override
-                public void nativeKeyReleased(NativeKeyEvent e) {
-                    // Not implemented
-                }
-
-                @Override
-                public void nativeKeyTyped(NativeKeyEvent e) {
-                    // Not implemented
-                }
-            });
-
-            //AtomicInteger spinCounter = new AtomicInteger();
-            Runnable processClipboard = () -> {
-                updateClipboard();
+            ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+            scheduler.scheduleAtFixedRate(() -> {
+                clipboardManager.tickClipboard();
 
                 downloadManager.processQueue();
-
-                //if(spinCounter.incrementAndGet() % 1728000 == 0){
-                //    try{
-                //        tray.remove(trayIcon);
-                //        tray.add(trayIcon);
-                //    }catch(AWTException e){
-                //        throw new RuntimeException(e);
-                //    }
-                //}
-            };
-
-            ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
-
-            scheduler.scheduleAtFixedRate(processClipboard, 0, 50, TimeUnit.MILLISECONDS);
+            }, 0, 50, TimeUnit.MILLISECONDS);
 
             initialized = true;
-            // SysTray is daemon and will hold the program open after main exits.
 
             globalThreadPool.submitWithPriority(() -> {
                 clearCache();
             }, 100);
+
+            // SysTray is daemon and will hold the program open after main exits.
         } catch (Exception e) {
             handleException(e);
         }
@@ -368,7 +323,6 @@ public final class GDownloader {
                 }, 5);
             } else {
                 log.info("Updater " + updater.getClass().getName() + " is not supported in this platform or runtime method.");
-
                 latch.countDown();
             }
         }
@@ -382,14 +336,8 @@ public final class GDownloader {
 
             log.info("Finished checking for updates");
 
-            boolean updated = false;
-
-            for (AbstractGitUpdater updater : updaters) {
-                if (updater.isUpdated()) {
-                    updated = true;
-                    break;
-                }
-            }
+            boolean updated = updaters.stream()
+                .anyMatch(AbstractGitUpdater::isUpdated);
 
             if (userInitiated) {
                 guiManager.showMessage(
@@ -422,6 +370,7 @@ public final class GDownloader {
             }
 
             downloadManager.unblock();
+            clipboardManager.unblock();
         }, 5);
 
         return true;
@@ -950,155 +899,9 @@ public final class GDownloader {
         updateConfig();
     }
 
-    // TODO refactor clipboard
-    public void resetClipboard() {
-        for (FlavorType type : new HashSet<>(lastClipboardState.keySet())) {
-            lastClipboardState.put(type, "reset");
-        }
-    }
-
-    public boolean tryHandleDnD(@Nullable Transferable transferable) {
-        return updateClipboard(transferable, true);// Here we use force because DnD and CTRL+V are considered manual user input.
-    }
-
-    public boolean updateClipboard() {
-        return updateClipboard(null, false);
-    }
-
-    public boolean updateClipboard(@Nullable Transferable transferable, boolean force) {
-        boolean success = false;
-
-        if (config.isMonitorClipboardForLinks() || force) {
-            if (transferable == null) {
-                transferable = clipboard.getContents(null);
-            }
-
-            if (transferable == null) {
-                return false;
-            }
-
-            if (transferable.isDataFlavorSupported(FlavorType.STRING.getFlavor())) {
-                try {
-                    String data = (String)transferable.getTransferData(FlavorType.STRING.getFlavor());
-
-                    if (!force) {
-                        processClipboardData(FlavorType.STRING, data);
-                    } else {
-                        handleClipboardInput(data, force);
-                    }
-
-                    success = true;
-                } catch (UnsupportedFlavorException | IOException e) {
-                    log.warn("Cannot obtain string transfer data");
-
-                    if (config.isDebugMode()) {
-                        log.error("Exception", e);
-                    }
-                }
-            }
-
-            if (transferable.isDataFlavorSupported(FlavorType.HTML.getFlavor())) {
-                try {
-                    String data = (String)transferable.getTransferData(FlavorType.HTML.getFlavor());
-
-                    if (!force) {
-                        processClipboardData(FlavorType.HTML, data);
-                    } else {
-                        handleClipboardInput(data, force);
-                    }
-
-                    success = true;
-                } catch (UnsupportedFlavorException | IOException e) {
-                    log.warn("Cannot obtain html transfer data");
-
-                    if (config.isDebugMode()) {
-                        log.error("Exception", e);
-                    }
-                }
-            }
-        }
-
-        return success;
-    }
-
-    private void handleClipboardInput(String data, boolean force) {
-        if (downloadManager.isBlocked()) {
-            return;
-        }
-
-        globalThreadPool.submitWithPriority(() -> {
-            List<CompletableFuture<Boolean>> list = new ArrayList<>();
-
-            for (String url : extractUrlsFromString(data)) {
-                if (url.startsWith("http")) {
-                    list.add(downloadManager.captureUrl(url, force));
-                }
-
-                // Small extra utility
-                if (config.isLogMagnetLinks() && url.startsWith("magnet")) {
-                    logUrl(url, "magnets");
-                }
-            }
-
-            CompletableFuture<Void> futures = CompletableFuture.allOf(list.toArray(CompletableFuture[]::new));
-
-            futures.thenRun(() -> {
-                int captured = 0;
-
-                List<Boolean> results = list.stream()
-                    .map(CompletableFuture::join)
-                    .collect(Collectors.toList());
-
-                for (boolean result : results) {
-                    if (result) {
-                        captured++;
-                    }
-                }
-
-                if (captured > 0) {
-                    if (config.isDisplayLinkCaptureNotifications()) {
-                        guiManager.showMessage(
-                            l10n("gui.clipboard_monitor.captured_title"),
-                            l10n("gui.clipboard_monitor.captured", captured),
-                            1500,
-                            MessageType.INFO,
-                            false
-                        );
-                    }
-
-                    // If notications are off, requesting focus could probably also be an undesired behavior,
-                    // However, I think we should keep at least this one visual cue.
-                    guiManager.requestFocus();
-                }
-            });
-
-            try {
-                futures.get(1l, TimeUnit.MINUTES);
-            } catch (InterruptedException | ExecutionException e) {
-                handleException(e);
-            } catch (TimeoutException e) {
-                log.warn("Timed out waiting for futures");
-            }
-        }, 20);
-    }
-
-    private void processClipboardData(FlavorType flavorType, String data) {
-        if (!lastClipboardState.containsKey(flavorType)) {
-            lastClipboardState.put(flavorType, "");
-        }
-
-        String last = lastClipboardState.get(flavorType);
-
-        if (!last.equals(data)) {
-            lastClipboardState.put(flavorType, data);
-
-            handleClipboardInput(data, false);
-        }
-    }
-
     private static final Object _logSync = new Object();
 
-    private void logUrl(String format, String file, Object... params) {
+    public void logUrl(String format, String file, Object... params) {
         FormattingTuple ft = MessageFormatter.arrayFormat(format, params);
         String message = ft.getMessage();
 
@@ -1113,43 +916,6 @@ public final class GDownloader {
                 log.warn("Cannot log to file", e);
             }
         }
-    }
-
-    private Set<String> extractUrlsFromString(String content) {
-        Set<String> result = new HashSet<>();
-
-        Document doc = Jsoup.parse(content);
-
-        Elements links = doc.select("a[href]");
-        Elements media = doc.select("[src]");
-
-        if (config.isDebugMode()) {
-            log.debug("Found {} Links and {} Media", links.size(), media.size());
-        }
-
-        if (links.isEmpty() && media.isEmpty()) {
-            String regex = "(http[^\\s]*|magnet:[^\\s]*)(?=\\s|$|http|magnet:)";
-            Pattern pattern = Pattern.compile(regex);
-            Matcher matcher = pattern.matcher(content);
-
-            while (matcher.find()) {
-                String url = matcher.group(1);
-
-                if (isValidURL(url)) {
-                    result.add(url);
-                }
-            }
-        }
-
-        links.forEach((link) -> {
-            result.add(link.attr("href"));
-        });
-
-        media.forEach((src) -> {
-            result.add(src.attr("src"));
-        });
-
-        return result;
     }
 
     private void printDebugInformation() {
@@ -1221,15 +987,6 @@ public final class GDownloader {
         }
 
         return Collections.unmodifiableList(list);
-    }
-
-    private static boolean isValidURL(String urlString) {
-        try {
-            new URI(urlString).toURL();
-            return true;
-        } catch (Exception e) {
-            return false;
-        }
     }
 
     public static boolean isFromJar() {
@@ -1469,17 +1226,5 @@ public final class GDownloader {
                     UIManager.put(key, new FontUIResource(newFont));
                 }
             });
-    }
-
-    @Getter
-    public static enum FlavorType {
-        STRING(DataFlavor.stringFlavor),
-        HTML(DataFlavor.selectionHtmlFlavor);
-
-        private final DataFlavor flavor;
-
-        private FlavorType(DataFlavor flavorIn) {
-            flavor = flavorIn;
-        }
     }
 }

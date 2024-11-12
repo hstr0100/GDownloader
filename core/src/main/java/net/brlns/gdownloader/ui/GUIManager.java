@@ -231,9 +231,7 @@ public final class GUIManager {
                 if (e.getID() == KeyEvent.KEY_PRESSED) {
                     if ((e.getModifiersEx() & KeyEvent.CTRL_DOWN_MASK) != 0
                         && e.getKeyCode() == KeyEvent.VK_V) {
-                        main.resetClipboard();
-
-                        main.updateClipboard(null, true);
+                        main.getClipboardManager().updateClipboard(null, true);
                     }
                 }
 
@@ -371,12 +369,11 @@ public final class GUIManager {
                 : "gui.start_clipboard_monitor.tooltip",
             main.getConfig()::isMonitorClipboardForLinks,
             () -> {
+                main.getClipboardManager().invalidateClipboard();
                 main.getConfig().setMonitorClipboardForLinks(!main.getConfig().isMonitorClipboardForLinks());
 
                 updateQueuePanelMessage();
                 main.updateConfig();
-
-                main.resetClipboard();
             }
         ));
 

@@ -64,7 +64,7 @@ public class WindowDropTargetListener implements DropTargetListener {
 
             Transferable transferable = dtde.getTransferable();
 
-            result = manager.getMain().tryHandleDnD(transferable);
+            result = manager.getMain().getClipboardManager().tryHandleDnD(transferable);
         } catch (Exception e) {
             manager.getMain().handleException(e);
         } finally {

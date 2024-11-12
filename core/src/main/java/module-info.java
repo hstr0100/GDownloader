@@ -14,9 +14,10 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+@SuppressWarnings({ "requires-automatic", "requires-transitive-automatic" })
 module net.brlns.gdownloader {
 
-    requires static lombok;
+    requires transitive static lombok;
 
     requires transitive java.datatransfer;
     requires transitive java.desktop;
@@ -35,8 +36,11 @@ module net.brlns.gdownloader {
     requires org.slf4j;
     requires ch.qos.logback.classic;
     requires ch.qos.logback.core;
+    requires com.sun.jna;
+    requires com.sun.jna.platform;
 
     exports net.brlns.gdownloader;
+    exports net.brlns.gdownloader.clipboard;
     exports net.brlns.gdownloader.settings;
     exports net.brlns.gdownloader.settings.enums;
     exports net.brlns.gdownloader.settings.filters;

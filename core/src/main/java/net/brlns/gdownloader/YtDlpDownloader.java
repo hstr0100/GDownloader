@@ -80,7 +80,6 @@ import static net.brlns.gdownloader.util.URLUtils.*;
 // TODO max simultaneous downloads should be independent per website
 // TODO silence unnecessary debug messages
 // TODO investigate adding AppImage build
-// TODO we should only grab clipboard AFTER the toggle button is clicked
 // TODO scale on resolution DPI
 // TODO save last window size in config
 // TODO keep older versions of ytdlp and retry failed downloads against them
@@ -114,6 +113,7 @@ import static net.brlns.gdownloader.util.URLUtils.*;
 // TODO Verify which exceptions are important to display to the user via GDownloader::handleException
 // TODO Add an url ignore list / Allow filters to be disabled
 // TODO Add option to clear all installed updates and start fresh. (Tackling certain issues where failed updates could break downloads)
+// TODO Optional pluggable gallery-dl and curl integration
 // Off to a bootcamp, project on pause
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -778,7 +778,7 @@ public class YtDlpDownloader {
 
                                     mediaCard.getRightClickMenu().put(
                                         l10n("gui.copy_error_message"),
-                                        () -> entry.copyTextToClipboard(errorMessage));
+                                        () -> main.getClipboardManager().copyTextToClipboard(errorMessage));
 
                                     failedDownloads.offer(entry);
                                 } else {
@@ -1126,22 +1126,9 @@ public class YtDlpDownloader {
             main.openDownloadsDirectory();
         }
 
-        public void copyTextToClipboard(String text) {
-            StringSelection stringSelection = new StringSelection(text);
-            Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
-            clipboard.setContents(stringSelection, null);
-
-            main.getGuiManager().showMessage(
-                l10n("gui.copied_to_clipboard.notification_title"),
-                text,
-                2000,
-                GUIManager.MessageType.INFO,
-                false
-            );
-        }
 
         public void copyUrlToClipboard() {
-            copyTextToClipboard(originalUrl);
+            main.getClipboardManager().copyTextToClipboard(originalUrl);
         }
 
         public void deleteMediaFiles() {

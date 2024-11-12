@@ -57,7 +57,7 @@ public class TextDnDHandler implements IDnDHandler {
         try {
             Transferable transferable = support.getTransferable();
 
-            return manager.getMain().tryHandleDnD(transferable);
+            return manager.getMain().getClipboardManager().tryHandleDnD(transferable);
         } catch (Exception e) {
             manager.getMain().handleException(e, false);
         }
