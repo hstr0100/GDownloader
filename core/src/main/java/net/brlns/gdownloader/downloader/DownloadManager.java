@@ -35,8 +35,6 @@ import net.brlns.gdownloader.downloader.enums.DownloadFlagsEnum;
 import net.brlns.gdownloader.downloader.enums.DownloadStatusEnum;
 import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.downloader.structs.DownloadResult;
-import net.brlns.gdownloader.settings.QualitySettings;
-import net.brlns.gdownloader.settings.enums.AudioBitrateEnum;
 import net.brlns.gdownloader.settings.enums.PlayListOptionEnum;
 import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
 import net.brlns.gdownloader.settings.filters.GenericFilter;
@@ -497,7 +495,7 @@ public class DownloadManager {
             main.getGuiManager().removeMediaCard(entry.getMediaCard().getId());
 
             if (!entry.isRunning()) {
-                entry.clean();
+                entry.cleanDirectories();
             }
         }
 
@@ -505,7 +503,7 @@ public class DownloadManager {
             main.getGuiManager().removeMediaCard(entry.getMediaCard().getId());
 
             if (!entry.isRunning()) {
-                entry.clean();
+                entry.cleanDirectories();
             }
         }
 
@@ -574,65 +572,25 @@ public class DownloadManager {
                         log.warn("Cookies are required for this website {}", entry.getOriginalUrl());
                     }
 
-                    boolean downloadAudio = main.getConfig().isDownloadAudio();
-                    boolean downloadVideo = main.getConfig().isDownloadVideo();
-
-                    if (!downloadAudio && !downloadVideo) {
-                        entry.updateStatus(DownloadStatusEnum.NO_METHOD, l10n("enums.download_status.no_method.video_tip"));
-                        entry.resetForRestart();
-
-                        failedDownloads.offer(entry);
-
-                        log.error("{} - No option to download.", filter);
-
-                        if (downloadDeque.size() <= 1) {
-                            stopDownloads();
-                        }
-
-                        return;
-                    }
-
-                    QualitySettings quality = filter.getQualitySettings();
-
-                    AudioBitrateEnum audioBitrate = quality.getAudioBitrate();
-
-                    if (!downloadVideo && downloadAudio && audioBitrate == AudioBitrateEnum.NO_AUDIO) {
-                        entry.updateStatus(DownloadStatusEnum.NO_METHOD, l10n("enums.download_status.no_method.audio_tip"));
-                        entry.resetForRestart();
-
-                        failedDownloads.offer(entry);
-
-                        log.error("{} - No audio quality selected, but was set to download audio only.", filter);
-
-                        if (downloadDeque.size() <= 1) {
-                            stopDownloads();
-                        }
-
-                        return;
-                    }
-
                     entry.getRunning().set(true);
                     entry.updateStatus(DownloadStatusEnum.STARTING, l10n("gui.download_status.starting"));
 
                     try {
                         runningQueue.offer(entry);
 
-                        for (AbstractDownloader downloader : entry.getDownloaders()) {
+                        Iterator<AbstractDownloader> downloaderIterator = entry.getDownloaders().iterator();
+                        while (downloaderIterator.hasNext()) {
+                            AbstractDownloader downloader = downloaderIterator.next();
                             DownloadResult result = downloader.tryDownload(entry);
 
                             BitSet flags = result.getFlags();
                             String lastOutput = result.getLastOutput();
 
                             if (DownloadFlagsEnum.UNSUPPORTED.isSet(flags)) {
-                                continue;// Onto the next downloader
-                            }
-
-                            if (DownloadFlagsEnum.MAIN_CATEGORY_FAILED.isSet(flags)) {
-                                if (!main.getConfig().isAutoDownloadRetry()
-                                    || entry.getRetryCounter().incrementAndGet() > MAX_DOWNLOAD_RETRIES
-                                    || lastOutput.contains("Unsupported URL")) {
-
-                                    log.error("Download of {} failed, all retry attempts failed.: {}",
+                                if (downloaderIterator.hasNext()) {
+                                    continue;// Onto the next downloader
+                                } else {
+                                    log.error("Download of {} failed, no downloader available.: {}",
                                         entry.getUrl(), lastOutput);
 
                                     entry.updateStatus(DownloadStatusEnum.FAILED, lastOutput);
@@ -643,6 +601,52 @@ public class DownloadManager {
                                         () -> main.getClipboardManager().copyTextToClipboard(lastOutput));
 
                                     failedDownloads.offer(entry);
+                                    fireListeners();
+                                    return;
+                                }
+                            }
+
+                            // TODO: Account for other downloaders
+                            if (DownloadFlagsEnum.NO_METHOD.isSet(flags)) {
+                                if (DownloadFlagsEnum.NO_METHOD_VIDEO.isSet(flags)) {
+                                    log.error("{} - No option to download.", filter);
+                                    entry.updateStatus(DownloadStatusEnum.NO_METHOD, l10n("enums.download_status.no_method.video_tip"));
+                                    entry.resetForRestart();
+
+                                    failedDownloads.offer(entry);
+                                    fireListeners();
+                                    return;
+                                } else if (DownloadFlagsEnum.NO_METHOD_AUDIO.isSet(flags)) {
+                                    log.error("{} - No audio quality selected, but was set to download audio only.", filter);
+                                    entry.updateStatus(DownloadStatusEnum.NO_METHOD, l10n("enums.download_status.no_method.audio_tip"));
+                                    entry.resetForRestart();
+
+                                    failedDownloads.offer(entry);
+                                    fireListeners();
+                                    return;
+                                } else {
+                                    throw new IllegalStateException("Unhandled NO_METHOD");
+                                }
+                            }
+
+                            if (DownloadFlagsEnum.MAIN_CATEGORY_FAILED.isSet(flags)) {
+                                if (!main.getConfig().isAutoDownloadRetry()
+                                    || entry.getRetryCounter().incrementAndGet() > MAX_DOWNLOAD_RETRIES) {
+                                    if (downloaderIterator.hasNext()) {
+                                        continue;// Onto the next downloader
+                                    } else {
+                                        log.error("Download of {} failed, all retry attempts failed.: {}",
+                                            entry.getUrl(), lastOutput);
+
+                                        entry.updateStatus(DownloadStatusEnum.FAILED, lastOutput);
+                                        entry.resetForRestart();
+
+                                        mediaCard.getRightClickMenu().put(
+                                            l10n("gui.copy_error_message"),
+                                            () -> main.getClipboardManager().copyTextToClipboard(lastOutput));
+
+                                        failedDownloads.offer(entry);
+                                    }
                                 } else {
                                     log.warn("Download of {} failed, retrying ({}/{}): {}",
                                         entry.getUrl(),
@@ -682,7 +686,7 @@ public class DownloadManager {
 
                                 entry.updateStatus(DownloadStatusEnum.COMPLETE, l10n("gui.download_status.finished"));
 
-                                entry.clean();
+                                entry.cleanDirectories();
 
                                 completedDownloads.offer(entry);
                                 fireListeners();

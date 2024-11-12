@@ -28,10 +28,12 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.downloader.enums.DownloadFlagsEnum;
+import net.brlns.gdownloader.downloader.enums.DownloadStatusEnum;
 import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.downloader.structs.DownloadResult;
 import net.brlns.gdownloader.downloader.structs.MediaInfo;
 import net.brlns.gdownloader.settings.QualitySettings;
+import net.brlns.gdownloader.settings.enums.AudioBitrateEnum;
 import net.brlns.gdownloader.settings.enums.AudioContainerEnum;
 import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.settings.enums.ThumbnailContainerEnum;
@@ -69,6 +71,22 @@ public class YtDlpDownloader extends AbstractDownloader {
     @Override
     public boolean isMainDownloader() {
         return true;
+    }
+
+    @Override// Not implemented
+    public DownloadTypeEnum[] getDownloadTypes() {
+        return new DownloadTypeEnum[] {VIDEO, AUDIO, SUBTITLES, THUMBNAILS};
+    }
+
+    @Override
+    protected boolean canConsumeUrl(String inputUrl) {
+        return getExecutablePath().isPresent()
+            && !(inputUrl.contains("ytimg")
+            || inputUrl.contains("ggpht")
+            || inputUrl.endsWith("youtube.com/")
+            || inputUrl.endsWith(".jpg")
+            || inputUrl.endsWith(".png")
+            || inputUrl.endsWith(".webp"));
     }
 
     @Override
@@ -123,20 +141,28 @@ public class YtDlpDownloader extends AbstractDownloader {
     }
 
     @Override
-    protected boolean canConsumeUrl(String inputUrl) {
-        return getExecutablePath().isPresent()
-            && !(inputUrl.contains("ytimg")
-            || inputUrl.contains("ggpht")
-            || inputUrl.endsWith("youtube.com/")
-            || inputUrl.endsWith(".jpg")
-            || inputUrl.endsWith(".png")
-            || inputUrl.endsWith(".webp"));
-    }
-
-    @Override
     protected DownloadResult tryDownload(QueueEntry entry) throws Exception {
         BitSet flags = new BitSet();
+
         AbstractUrlFilter filter = entry.getFilter();
+
+        boolean downloadAudio = main.getConfig().isDownloadAudio();
+        boolean downloadVideo = main.getConfig().isDownloadVideo();
+
+        if (!downloadAudio && !downloadVideo) {
+            DownloadFlagsEnum.NO_METHOD.set(flags);
+            DownloadFlagsEnum.NO_METHOD_VIDEO.set(flags);
+            return new DownloadResult(flags);
+        }
+
+        QualitySettings quality = filter.getQualitySettings();
+        AudioBitrateEnum audioBitrate = quality.getAudioBitrate();
+
+        if (!downloadVideo && downloadAudio && audioBitrate == AudioBitrateEnum.NO_AUDIO) {
+            DownloadFlagsEnum.NO_METHOD.set(flags);
+            DownloadFlagsEnum.NO_METHOD_AUDIO.set(flags);
+            return new DownloadResult(flags);
+        }
 
         File finalPath = main.getOrCreateDownloadsDirectory();
 
@@ -168,7 +194,7 @@ public class YtDlpDownloader extends AbstractDownloader {
 
         for (DownloadTypeEnum type : DownloadTypeEnum.values()) {
             if (type == ALL
-                || type == VIDEO && !main.getConfig().isDownloadVideo()
+                || type == VIDEO && !downloadVideo
                 || type == AUDIO && !main.getConfig().isDownloadAudio()
                 || type == SUBTITLES && !main.getConfig().isDownloadSubtitles()
                 || type == THUMBNAILS && !main.getConfig().isDownloadThumbnails()) {
@@ -198,6 +224,11 @@ public class YtDlpDownloader extends AbstractDownloader {
             lastOutput = result.getValue();
 
             if (result.getKey() != 0) {
+                if (lastOutput.contains("Unsupported URL")) {
+                    DownloadFlagsEnum.UNSUPPORTED.set(flags);
+                    return new DownloadResult(flags, lastOutput);
+                }
+
                 if (type == VIDEO || type == AUDIO) {
                     DownloadFlagsEnum.MAIN_CATEGORY_FAILED.set(flags);
                     return new DownloadResult(flags, lastOutput);
@@ -214,11 +245,11 @@ public class YtDlpDownloader extends AbstractDownloader {
 
         if (success) {
             DownloadFlagsEnum.SUCCESS.set(flags);
-            return new DownloadResult(flags, lastOutput);
         } else {
             DownloadFlagsEnum.UNSUPPORTED.set(flags);
-            return new DownloadResult(flags);
         }
+
+        return new DownloadResult(flags, lastOutput);
     }
 
     @Override
@@ -281,5 +312,36 @@ public class YtDlpDownloader extends AbstractDownloader {
         }
 
         return rightClickOptions;
+    }
+
+    @Override
+    protected void processProgress(QueueEntry entry, String lastOutput) {
+        double lastPercentage = entry.getMediaCard().getPercentage();
+
+        if (lastOutput.contains("[download]") && !lastOutput.contains("Destination:")) {
+            String[] parts = lastOutput.split("\\s+");
+            for (String part : parts) {
+                if (part.endsWith("%")) {
+                    double percent = Double.parseDouble(part.replace("%", ""));
+                    if (percent > lastPercentage || percent < 5
+                        || Math.abs(percent - lastPercentage) > 10) {
+                        entry.getMediaCard().setPercentage(percent);
+                        lastPercentage = percent;
+                    }
+                }
+            }
+
+            entry.updateStatus(DownloadStatusEnum.DOWNLOADING, lastOutput.replace("[download] ", ""));
+        } else {
+            if (main.getConfig().isDebugMode()) {
+                log.debug("[{}] - {}", entry.getDownloadId(), lastOutput);
+            }
+
+            if (entry.getDownloadStarted().get()) {
+                entry.updateStatus(DownloadStatusEnum.PROCESSING, lastOutput);
+            } else {
+                entry.updateStatus(DownloadStatusEnum.PREPARING, lastOutput);
+            }
+        }
     }
 }

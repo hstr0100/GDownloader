@@ -24,11 +24,13 @@ import lombok.Getter;
  */
 @Getter
 public enum DownloadFlagsEnum {
-    UNSUPPORTED((byte)0x00),
+    SUCCESS((byte)0x00),
     STOPPED((byte)0x01),
-    MAIN_CATEGORY_FAILED((byte)0x02),
-    SUCCESS((byte)0x03);
-    // TODO: combinations for different download states
+    UNSUPPORTED((byte)0x02),
+    MAIN_CATEGORY_FAILED((byte)0x03),
+    NO_METHOD((byte)0x04),
+    NO_METHOD_VIDEO((byte)0x05),
+    NO_METHOD_AUDIO((byte)0x06);
 
     private final byte flag;
 

@@ -64,6 +64,7 @@ public class QueueEntry {
 
     @Setter(AccessLevel.NONE)
     private DownloadStatusEnum downloadStatus;
+    private AtomicBoolean downloadStarted = new AtomicBoolean(false);
     private MediaInfo mediaInfo;
 
     private File tmpDirectory;
@@ -133,25 +134,24 @@ public class QueueEntry {
         return running.get();
     }
 
-    public void clean() {
+    public void cleanDirectories() {
         if (tmpDirectory != null && tmpDirectory.exists()) {
             DirectoryUtils.deleteRecursively(tmpDirectory.toPath());
         }
     }
 
     public void close() {
-        resetRetryCounter();
-
         cancelHook.set(true);
 
         if (process != null) {
             process.destroy();
         }
 
-        clean();
+        cleanDirectories();
     }
 
     public void resetForRestart() {
+        downloadStarted.set(false);
         cancelHook.set(false);
         process = null;
     }
@@ -227,6 +227,10 @@ public class QueueEntry {
 
     public void updateStatus(DownloadStatusEnum status, String text) {
         String topText = filter.getDisplayName();
+
+        if (status == DownloadStatusEnum.DOWNLOADING) {
+            downloadStarted.set(true);
+        }
 
         Optional<String> size = getDisplaySize();
         if (size.isPresent()) {

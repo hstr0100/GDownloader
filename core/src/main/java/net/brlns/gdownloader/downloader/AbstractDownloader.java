@@ -27,12 +27,11 @@ import java.util.Map;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
-import net.brlns.gdownloader.downloader.enums.DownloadStatusEnum;
 import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.downloader.structs.DownloadResult;
+import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.util.Nullable;
 import net.brlns.gdownloader.util.Pair;
-
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -56,6 +55,8 @@ public abstract class AbstractDownloader {
 
     protected abstract Map<String, Runnable> processMediaFiles(QueueEntry entry);
 
+    protected abstract void processProgress(QueueEntry entry, String lastOutput);
+
     public abstract Optional<File> getExecutablePath();
 
     public abstract void setExecutablePath(Optional<File> file);
@@ -65,6 +66,8 @@ public abstract class AbstractDownloader {
     public abstract void setFfmpegPath(Optional<File> file);
 
     public abstract boolean isMainDownloader();
+
+    public abstract DownloadTypeEnum[] getDownloadTypes();
 
     public abstract DownloaderIdEnum getDownloaderId();
 
@@ -80,8 +83,6 @@ public abstract class AbstractDownloader {
         Process process = processBuilder.start();
         entry.setProcess(process);
 
-        double lastPercentage = 0;
-        boolean downloadStarted = false;
         String lastOutput = "";
 
         try (
@@ -113,32 +114,7 @@ public abstract class AbstractDownloader {
                         prevChar = ch;
                     }
 
-                    if (lastOutput.contains("[download]") && !lastOutput.contains("Destination:")) {
-                        String[] parts = lastOutput.split("\\s+");
-                        for (String part : parts) {
-                            if (part.endsWith("%")) {
-                                double percent = Double.parseDouble(part.replace("%", ""));
-                                if (percent > lastPercentage || percent < 5
-                                    || Math.abs(percent - lastPercentage) > 10) {
-                                    entry.getMediaCard().setPercentage(percent);
-                                    lastPercentage = percent;
-                                }
-                            }
-                        }
-
-                        entry.updateStatus(DownloadStatusEnum.DOWNLOADING, lastOutput.replace("[download] ", ""));
-                        downloadStarted = true;
-                    } else {
-                        if (main.getConfig().isDebugMode()) {
-                            log.debug("[{}] - {}", entry.getDownloadId(), lastOutput);
-                        }
-
-                        if (downloadStarted) {
-                            entry.updateStatus(DownloadStatusEnum.PROCESSING, lastOutput);
-                        } else {
-                            entry.updateStatus(DownloadStatusEnum.PREPARING, lastOutput);
-                        }
-                    }
+                    processProgress(entry, lastOutput);
                 }
 
                 Thread.sleep(100);
