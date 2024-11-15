@@ -648,11 +648,9 @@ public class DownloadManager {
                                 return;
                             } else if (!entry.getCancelHook().get() && FLAG_SUCCESS.isSet(flags)) {
                                 Map<String, Runnable> rightClickOptions = downloader.processMediaFiles(entry);
-
                                 rightClickOptions.put(
                                     l10n("gui.restart_download"),
                                     () -> restartDownload(entry));
-
                                 rightClickOptions.put(
                                     l10n("gui.delete_files"),
                                     () -> entry.deleteMediaFiles());// TODO: remove also menu entries

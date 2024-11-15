@@ -129,36 +129,38 @@ public class ClipboardManager {
             return false;
         }
 
+        if (!main.getConfig().isMonitorClipboardForLinks() && !force) {
+            return false;
+        }
+
         clipboardLock.lock();
         try {
             boolean success = false;
 
-            if (main.getConfig().isMonitorClipboardForLinks() || force) {
-                if (transferable == null) {
-                    transferable = clipboard.getContents(null);
-                }
+            if (transferable == null) {
+                transferable = clipboard.getContents(null);
+            }
 
-                if (transferable == null) {
-                    return false;
-                }
+            if (transferable == null) {
+                return false;
+            }
 
-                for (FlavorType flavorType : FlavorType.values()) {
-                    if (transferable.isDataFlavorSupported(flavorType.getFlavor())) {
-                        try {
-                            String data = (String)transferable.getTransferData(flavorType.getFlavor());
+            for (FlavorType flavorType : FlavorType.values()) {
+                if (transferable.isDataFlavorSupported(flavorType.getFlavor())) {
+                    try {
+                        String data = (String)transferable.getTransferData(flavorType.getFlavor());
 
-                            if (!force) {
-                                processClipboardData(flavorType, data);
-                            } else {
-                                handleClipboardInput(data, force);
-                            }
+                        if (!force) {
+                            processClipboardData(flavorType, data);
+                        } else {
+                            handleClipboardInput(data, force);
+                        }
 
-                            success = true;
-                        } catch (Exception e) {
-                            log.warn("Cannot obtain {} transfer data", flavorType);
-                            if (main.getConfig().isDebugMode()) {
-                                log.error("Exception", e);
-                            }
+                        success = true;
+                    } catch (Exception e) {
+                        log.warn("Cannot obtain {} transfer data", flavorType);
+                        if (main.getConfig().isDebugMode()) {
+                            log.error("Exception", e);
                         }
                     }
                 }
