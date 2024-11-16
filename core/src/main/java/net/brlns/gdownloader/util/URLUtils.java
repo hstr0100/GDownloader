@@ -184,6 +184,10 @@ public final class URLUtils {
 
             host = host.replace("www.", "");
 
+            if (path.startsWith("/")) {
+                path = path.substring(1);
+            }
+
             String normalizedPath;
             if (path.contains(".") && !path.endsWith("/")) {
                 // Assume this is a file; strip the file name
@@ -193,10 +197,13 @@ public final class URLUtils {
                 normalizedPath = path;
             }
 
-            normalizedPath = normalizedPath.replaceAll("/$", "") // Remove trailing slash
-                .replace("/", File.separator);// Apply platform separator
+            StringBuilder result = new StringBuilder();
+            result.append(host)
+                .append(File.separator)
+                .append(normalizedPath.replaceAll("/$", "") // Remove trailing slash
+                    .replace("/", File.separator)); // Apply platform separator
 
-            return host + File.separator + normalizedPath;
+            return result.toString();
         } catch (URISyntaxException e) {
             log.error("Invalid URL: {} {}", urlString, e.getMessage());
             return null;

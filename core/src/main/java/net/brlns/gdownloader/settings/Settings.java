@@ -102,7 +102,7 @@ public class Settings {
     @JsonProperty("ExtraYtDlpArguments")
     private String extraYtDlpArguments = "";
 
-    // TODO expose, currently there's only one category supported by the downloader, so, we don't yet have a need for this.
+    // TODO expose, currently there's only one category supported by the downloader, so, we don't have a need for this yet.
     @JsonProperty("DownloadGallery")
     private boolean downloadGallery = true;
 
