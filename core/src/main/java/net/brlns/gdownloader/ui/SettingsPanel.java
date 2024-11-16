@@ -287,6 +287,13 @@ public class SettingsPanel {
                         ));
 
                         leftPanel.add(manager.createButton(
+                            manager.loadIcon("/assets/log.png", ICON, 24),
+                            manager.loadIcon("/assets/log.png", ICON_HOVER, 24),
+                            "gui.open_log.tooltip",
+                            e -> main.openLogFile()
+                        ));
+
+                        leftPanel.add(manager.createButton(
                             manager.loadIcon("/assets/update.png", ICON, 24),
                             manager.loadIcon("/assets/update.png", ICON_HOVER, 24),
                             "gui.update.tooltip",

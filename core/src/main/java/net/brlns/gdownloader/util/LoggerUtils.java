@@ -26,6 +26,7 @@ import ch.qos.logback.core.filter.Filter;
 import ch.qos.logback.core.spi.FilterReply;
 import com.github.kwhat.jnativehook.GlobalScreen;
 import java.io.File;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.LoggerFactory;
 
@@ -39,14 +40,17 @@ public final class LoggerUtils {
 
     private static final Level DEFAULT_LOG_LEVEL = Level.INFO;
 
-    public static void setLogFile(File logFile) {
+    @Getter
+    private static File logFile;
+
+    public static void setLogFile(File logFileIn) {
         LoggerContext loggerContext = (LoggerContext)LoggerFactory.getILoggerFactory();
         Logger logger = loggerContext.getLogger("ROOT");
 
         FileAppender<ILoggingEvent> fileAppender = new FileAppender<>();
         fileAppender.setContext(loggerContext);
         fileAppender.setName("LOG_FILE");
-        fileAppender.setFile(logFile.getPath());
+        fileAppender.setFile(logFileIn.getPath());
 
         LogFilter filter = new LogFilter();
         filter.setContext(loggerContext);
@@ -62,6 +66,8 @@ public final class LoggerUtils {
         fileAppender.start();
 
         logger.addAppender(fileAppender);
+
+        logFile = logFileIn;
     }
 
     public static void setDebugLogLevel(boolean debug) {

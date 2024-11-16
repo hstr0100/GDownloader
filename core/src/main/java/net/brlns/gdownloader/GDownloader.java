@@ -98,14 +98,13 @@ import static net.brlns.gdownloader.lang.Language.*;
 // TODO Send notifications when a NO_METHOD is triggered, explaining why it was triggered.
 // TODO Test downloading sections of a livestream (currently it gets stuck on status PREPARING). Note: it also leaves a zombie ffmpeg process behind dealing with the hls stream.
 // TODO The issue above is a yt-dlp bug https:// github.com/yt-dlp/yt-dlp/issues/7927
-// TODO Add a viewer for log files.
 // TODO Implement rate-limiting options internally; the way it's currently implemented does not account for concurrent or non-playlist downloads.
 // TODO Notify the user whenever a setting that requires restart was changed.
 // TODO Quit lingering ffmpeg processes spawned by yt-dlp
 // TODO Verify which exceptions are important to display to the user via GDownloader::handleException
 // TODO Add an url ignore list / Allow filters to be disabled
 // TODO Add option to clear all installed updates and start fresh. (Tackling certain issues where failed updates could break downloads)
-// TODO Optional pluggable gallery-dl and curl integration
+// TODO Optional curl/wget integration
 // TODO Split main window from GUIManager
 // Off to a bootcamp, project on pause
 /**
@@ -464,6 +463,10 @@ public final class GDownloader {
 
     public void openDownloadsDirectory() {
         open(getOrCreateDownloadsDirectory());
+    }
+
+    public void openLogFile() {
+        open(LoggerUtils.getLogFile());
     }
 
     public void open(File file) {
