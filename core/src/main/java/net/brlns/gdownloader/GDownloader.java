@@ -54,11 +54,7 @@ import net.brlns.gdownloader.settings.enums.BrowserEnum;
 import net.brlns.gdownloader.ui.GUIManager;
 import net.brlns.gdownloader.ui.GUIManager.MessageType;
 import net.brlns.gdownloader.ui.themes.ThemeProvider;
-import net.brlns.gdownloader.updater.AbstractGitUpdater;
-import net.brlns.gdownloader.updater.FFMpegUpdater;
-import net.brlns.gdownloader.updater.SelfUpdater;
-import net.brlns.gdownloader.updater.UpdaterBootstrap;
-import net.brlns.gdownloader.updater.YtDlpUpdater;
+import net.brlns.gdownloader.updater.*;
 import net.brlns.gdownloader.util.DirectoryUtils;
 import net.brlns.gdownloader.util.LoggerUtils;
 import net.brlns.gdownloader.util.NoFallbackAvailableException;
@@ -254,6 +250,10 @@ public final class GDownloader {
             updaters.add(new SelfUpdater(this));
             updaters.add(new YtDlpUpdater(this));
             updaters.add(new FFMpegUpdater(this));
+
+            if (config.isGalleryDlEnabled()) {
+                updaters.add(new GalleryDlUpdater(this));
+            }
 
             if (config.isDebugMode()) {
                 for (AbstractGitUpdater updater : updaters) {

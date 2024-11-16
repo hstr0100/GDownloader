@@ -21,6 +21,7 @@ package net.brlns.gdownloader.downloader.enums;
  */
 public enum DownloaderIdEnum {
 
-    YT_DLP;
+    YT_DLP,
+    GALLERY_DL;
 
 }

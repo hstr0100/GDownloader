@@ -51,10 +51,10 @@ public class FacebookFilter extends GenericFilter {
 
     @JsonIgnore
     @Override
-    protected List<String> buildArguments(DownloaderIdEnum downloaderId, DownloadTypeEnum typeEnum, GDownloader main, File savePath) {
+    protected List<String> buildArguments(DownloaderIdEnum downloaderId, DownloadTypeEnum typeEnum, GDownloader main, File savePath, String inputUrl) {
         Settings config = main.getConfig();
 
-        List<String> arguments = super.buildArguments(downloaderId, typeEnum, main, savePath);
+        List<String> arguments = super.buildArguments(downloaderId, typeEnum, main, savePath, inputUrl);
 
         switch (downloaderId) {
             case YT_DLP -> {

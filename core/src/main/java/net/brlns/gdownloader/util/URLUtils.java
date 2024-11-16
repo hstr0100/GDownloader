@@ -18,6 +18,7 @@ package net.brlns.gdownloader.util;
 
 import java.io.UnsupportedEncodingException;
 import java.net.*;
+import java.nio.file.Paths;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
@@ -143,4 +144,22 @@ public final class URLUtils {
         return queryString.toString();
     }
 
+    /**
+     * Extracts the file or folder name from a given URL.
+     *
+     * @param urlString the URL as a string
+     * @return the file or folder name from the URL path
+     */
+    @Nullable
+    public static String getFileOrFolderName(String urlString) {
+        try {
+            URI uri = new URI(urlString);
+            String path = uri.getPath();
+
+            return Paths.get(path).getFileName().toString();
+        } catch (Exception e) {
+            log.error("Invalid URL: " + e.getMessage());
+            return null;
+        }
+    }
 }

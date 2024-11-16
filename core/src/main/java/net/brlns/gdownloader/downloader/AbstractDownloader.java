@@ -133,7 +133,7 @@ public abstract class AbstractDownloader {
             } else {
                 int exitCode = process.waitFor();
                 if (main.getConfig().isDebugMode()) {
-                    log.debug("Download process took {}ms", stopped);
+                    log.debug("Download process took {}ms, exit code: {}", stopped, exitCode);
                 }
 
                 return new Pair<>(exitCode, lastOutput);

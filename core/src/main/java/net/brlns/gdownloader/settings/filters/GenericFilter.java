@@ -30,6 +30,7 @@ import net.brlns.gdownloader.settings.Settings;
 import net.brlns.gdownloader.settings.enums.AudioBitrateEnum;
 import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.settings.enums.VideoContainerEnum;
+import net.brlns.gdownloader.util.URLUtils;
 
 import static net.brlns.gdownloader.lang.Language.*;
 
@@ -64,7 +65,7 @@ public class GenericFilter extends AbstractUrlFilter {
 
     @JsonIgnore
     @Override
-    protected List<String> buildArguments(DownloaderIdEnum downloaderId, DownloadTypeEnum typeEnum, GDownloader main, File savePath) {
+    protected List<String> buildArguments(DownloaderIdEnum downloaderId, DownloadTypeEnum typeEnum, GDownloader main, File savePath, String inputUrl) {
         Settings config = main.getConfig();
         QualitySettings quality = getQualitySettings();
         AudioBitrateEnum audioBitrate = quality.getAudioBitrate();
@@ -190,6 +191,37 @@ public class GenericFilter extends AbstractUrlFilter {
                             quality.getSubtitleContainer().getValue(),
                             "--convert-subs",
                             quality.getSubtitleContainer().getValue()
+                        ));
+                    }
+                    default ->
+                        throw new IllegalArgumentException();
+                }
+            }
+            case GALLERY_DL -> {
+                switch (typeEnum) {
+                    case ALL -> {
+                        if (config.isRandomIntervalBetweenDownloads()) {
+                            arguments.addAll(List.of(
+                                "--sleep",
+                                "5.0-15.0",
+                                "--sleep-request",
+                                "2"
+                            ));
+                        }
+
+                        if (config.isReadCookiesFromBrowser()) {
+                            arguments.addAll(List.of(
+                                "--cookies-from-browser",
+                                main.getBrowserForCookies().getName()
+                            ));
+                        }
+                    }
+                    case GALLERY -> {
+                        String fileName = URLUtils.getFileOrFolderName(inputUrl);
+
+                        arguments.addAll(List.of(
+                            "-D",
+                            savePath.getAbsolutePath() + (fileName != null ? File.separator + fileName : "")
                         ));
                     }
                     default ->

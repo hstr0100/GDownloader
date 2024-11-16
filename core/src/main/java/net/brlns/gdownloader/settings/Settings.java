@@ -71,6 +71,14 @@ public class Settings {
     @JsonProperty("RespectYtDlpConfigFile")
     private boolean respectYtDlpConfigFile = false;
 
+    // TODO expose
+    @JsonProperty("GalleryDlEnabled")
+    private boolean galleryDlEnabled = true;
+
+    // TODO expose
+    @JsonProperty("RespectGalleryDlConfigFile")
+    private boolean respectGalleryDlConfigFile = true;
+
     @JsonProperty("DownloadsPath")
     private String downloadsPath = "";
 
@@ -95,6 +103,10 @@ public class Settings {
 
     @JsonProperty("ExtraYtDlpArguments")
     private String extraYtDlpArguments = "";
+
+    // TODO expose
+    @JsonProperty("DownloadGallery")
+    private boolean downloadGallery = true;
 
     @JsonProperty("DownloadAudio")
     private boolean downloadAudio = true;

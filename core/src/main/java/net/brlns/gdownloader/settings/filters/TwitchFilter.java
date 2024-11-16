@@ -58,8 +58,8 @@ public class TwitchFilter extends GenericFilter {
 
     @JsonIgnore
     @Override
-    protected List<String> buildArguments(DownloaderIdEnum downloaderId, DownloadTypeEnum typeEnum, GDownloader main, File savePath) {
-        List<String> arguments = super.buildArguments(downloaderId, typeEnum, main, savePath);
+    protected List<String> buildArguments(DownloaderIdEnum downloaderId, DownloadTypeEnum typeEnum, GDownloader main, File savePath, String inputUrl) {
+        List<String> arguments = super.buildArguments(downloaderId, typeEnum, main, savePath, inputUrl);
 
         switch (downloaderId) {
             case YT_DLP -> {

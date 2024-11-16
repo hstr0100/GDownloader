@@ -124,6 +124,9 @@ public class DownloadManager {
 
         downloaders.add(new YtDlpDownloader(this));
 
+        if (main.getConfig().isGalleryDlEnabled()) {
+            downloaders.add(new GalleryDlDownloader(this));
+        }
     }
 
     public boolean isBlocked() {
@@ -580,9 +583,10 @@ public class DownloadManager {
                             String lastOutput = result.getLastOutput();
 
                             boolean unsupported = FLAG_UNSUPPORTED.isSet(flags);
+                            boolean disabled = FLAG_DOWNLOADER_DISABLED.isSet(flags);
 
-                            if (FLAG_MAIN_CATEGORY_FAILED.isSet(flags) || unsupported) {
-                                if (unsupported || !main.getConfig().isAutoDownloadRetry()
+                            if (FLAG_MAIN_CATEGORY_FAILED.isSet(flags) || unsupported || disabled) {
+                                if (disabled || unsupported || !main.getConfig().isAutoDownloadRetry()
                                     || entry.getRetryCounter().incrementAndGet() > MAX_DOWNLOAD_RETRIES) {
                                     if (downloaderIterator.hasNext()) {
                                         continue;// Onto the next downloader

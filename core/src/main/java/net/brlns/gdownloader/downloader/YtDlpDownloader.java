@@ -21,11 +21,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.stream.Stream;
 import lombok.Getter;
 import lombok.Setter;
@@ -77,7 +73,7 @@ public class YtDlpDownloader extends AbstractDownloader {
         return true;
     }
 
-    @Override// Not implemented
+    @Override
     public DownloadTypeEnum[] getDownloadTypes() {
         return new DownloadTypeEnum[] {VIDEO, AUDIO, SUBTITLES, THUMBNAILS};
     }
@@ -185,13 +181,16 @@ public class YtDlpDownloader extends AbstractDownloader {
             genericArguments.add("--ignore-config");
         }
 
-        genericArguments.addAll(filter.getArguments(getDownloaderId(), ALL, main, tmpPath));
+        genericArguments.addAll(filter.getArguments(getDownloaderId(), ALL, main, tmpPath, entry.getUrl()));
 
         boolean success = false;
         String lastOutput = "";
 
         for (DownloadTypeEnum type : DownloadTypeEnum.values()) {
-            if (type == ALL
+            boolean supported = Arrays.stream(getDownloadTypes())
+                .anyMatch(typeIn -> typeIn == type);
+
+            if (!supported
                 || type == VIDEO && !downloadVideo
                 || type == AUDIO && !main.getConfig().isDownloadAudio()
                 || type == SUBTITLES && !main.getConfig().isDownloadSubtitles()
@@ -201,7 +200,7 @@ public class YtDlpDownloader extends AbstractDownloader {
 
             List<String> arguments = new ArrayList<>(genericArguments);
 
-            List<String> downloadArguments = filter.getArguments(getDownloaderId(), type, main, tmpPath);
+            List<String> downloadArguments = filter.getArguments(getDownloaderId(), type, main, tmpPath, entry.getUrl());
             arguments.addAll(downloadArguments);
 
             if (main.getConfig().isDebugMode()) {
@@ -250,8 +249,7 @@ public class YtDlpDownloader extends AbstractDownloader {
 
         Map<String, Runnable> rightClickOptions = new TreeMap<>();
 
-        try (
-            Stream<Path> dirStream = Files.walk(tmpPath.toPath())) {
+        try (Stream<Path> dirStream = Files.walk(tmpPath.toPath())) {
             dirStream.forEach(path -> {
                 String fileName = path.getFileName().toString().toLowerCase();
 

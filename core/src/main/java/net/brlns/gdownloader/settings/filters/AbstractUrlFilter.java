@@ -181,16 +181,19 @@ public abstract class AbstractUrlFilter {
     }
 
     @JsonIgnore
-    public List<String> getArguments(DownloaderIdEnum downloaderId, DownloadTypeEnum typeEnum, GDownloader main, File savePath) {
+    public List<String> getArguments(DownloaderIdEnum downloaderId, DownloadTypeEnum typeEnum, GDownloader main, File savePath, String inputUrl) {
         List<String> arguments = new ArrayList<>();
 
-        arguments.addAll(buildArguments(downloaderId, typeEnum, main, savePath));
+        arguments.addAll(buildArguments(downloaderId, typeEnum, main, savePath, inputUrl));
 
         switch (downloaderId) {
             case YT_DLP -> {
                 if (extraYtDlpArguments.containsKey(typeEnum)) {
                     arguments.addAll(extraYtDlpArguments.get(typeEnum));
                 }
+            }
+            case GALLERY_DL -> {
+                // TODO
             }
             default -> {
                 log.warn("Unhandled downloader id {}", downloaderId);
@@ -201,7 +204,7 @@ public abstract class AbstractUrlFilter {
     }
 
     @JsonIgnore
-    protected abstract List<String> buildArguments(DownloaderIdEnum downloaderId, DownloadTypeEnum typeEnum, GDownloader main, File savePath);
+    protected abstract List<String> buildArguments(DownloaderIdEnum downloaderId, DownloadTypeEnum typeEnum, GDownloader main, File savePath, String inputUrl);
 
     @JsonIgnore
     public abstract boolean areCookiesRequired();

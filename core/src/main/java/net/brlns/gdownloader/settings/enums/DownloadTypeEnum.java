@@ -28,7 +28,8 @@ public enum DownloadTypeEnum implements ISettingsEnum {
     VIDEO,
     AUDIO,
     SUBTITLES,
-    THUMBNAILS;
+    THUMBNAILS,
+    GALLERY;
 
     @Override
     public String getTranslationKey() {

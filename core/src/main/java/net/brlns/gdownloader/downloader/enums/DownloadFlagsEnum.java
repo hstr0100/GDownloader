@@ -30,7 +30,8 @@ public enum DownloadFlagsEnum {
     FLAG_MAIN_CATEGORY_FAILED((byte)0x03),
     FLAG_NO_METHOD((byte)0x04),
     FLAG_NO_METHOD_VIDEO((byte)0x05),
-    FLAG_NO_METHOD_AUDIO((byte)0x06);
+    FLAG_NO_METHOD_AUDIO((byte)0x06),
+    FLAG_DOWNLOADER_DISABLED((byte)0x07);
 
     private final byte flag;
 
