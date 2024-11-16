@@ -17,15 +17,20 @@
 package net.brlns.gdownloader.ui.custom;
 
 import java.awt.*;
+import java.util.Collections;
+import java.util.Set;
+import java.util.WeakHashMap;
 import javax.swing.JPanel;
 import javax.swing.Timer;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.util.Nullable;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
+@Slf4j
 public class CustomProgressBar extends JPanel {
 
     private static final Font FONT = new Font("Dialog", Font.BOLD, 14);
@@ -43,8 +48,25 @@ public class CustomProgressBar extends JPanel {
     @Getter
     private int value = 0;
 
-    private double phase = 0;
-    private Timer bounceTimer;
+    private static double phase = 0;
+    private static final Timer bounceTimer;
+    private static final Set<CustomProgressBar> activeReferences
+        = Collections.newSetFromMap(new WeakHashMap<>());
+
+    static {
+        bounceTimer = new Timer(10, e -> {
+            phase += 0.05;
+            if (phase > 2 * Math.PI) {
+                phase -= 2 * Math.PI;
+            }
+
+            synchronized (activeReferences) {
+                for (CustomProgressBar bar : activeReferences) {
+                    bar.repaint();
+                }
+            }
+        });
+    }
 
     public CustomProgressBar() {
         this(null);
@@ -56,19 +78,6 @@ public class CustomProgressBar extends JPanel {
 
         setPreferredSize(new Dimension(300, 20));
         setDoubleBuffered(true);
-
-        bounceTimer = new Timer(10, e -> {
-            if (value == -1) {
-                phase += 0.05;
-                if (phase > 2 * Math.PI) {
-                    phase -= 2 * Math.PI;
-                }
-
-                repaint();
-            } else {
-                bounceTimer.stop();
-            }
-        });
     }
 
     @Override
@@ -85,7 +94,7 @@ public class CustomProgressBar extends JPanel {
         int blockWidth = progressBarWidth / 6; // 1 / 6
 
         if (value == -1) {
-            // Use a sine curve too slow down near the edges
+            // Use a sine curve to slow down near the edges
             double normalizedPosition = (Math.sin(phase) + 1) / 2;
             int blockX = (int)(normalizedPosition * (progressBarWidth - blockWidth));
 
@@ -110,14 +119,21 @@ public class CustomProgressBar extends JPanel {
     }
 
     public void setValue(int valueIn) {
-        value = valueIn;
-
-        if (value == -1) {
-            bounceTimer.start();
-        } else {
-            bounceTimer.stop();
-            phase = 0;
+        synchronized (activeReferences) {
+            if (this.value == -1 && valueIn != -1) {
+                activeReferences.remove(this);
+                if (activeReferences.isEmpty()) {
+                    bounceTimer.stop();
+                }
+            } else if (this.value != -1 && valueIn == -1) {
+                activeReferences.add(this);
+                if (activeReferences.size() == 1) {
+                    bounceTimer.start();
+                }
+            }
         }
+
+        value = valueIn;
 
         repaint();
     }
