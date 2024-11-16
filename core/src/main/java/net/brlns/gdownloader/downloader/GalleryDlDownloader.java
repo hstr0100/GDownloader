@@ -23,6 +23,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 import lombok.Getter;
 import lombok.Setter;
@@ -37,6 +38,7 @@ import net.brlns.gdownloader.util.DirectoryUtils;
 import net.brlns.gdownloader.util.Pair;
 
 import static net.brlns.gdownloader.downloader.enums.DownloadFlagsEnum.*;
+import static net.brlns.gdownloader.lang.Language.*;
 import static net.brlns.gdownloader.settings.enums.DownloadTypeEnum.*;
 
 /**
@@ -181,6 +183,8 @@ public class GalleryDlDownloader extends AbstractDownloader {
         Map<String, Runnable> rightClickOptions = new TreeMap<>();
 
         try (Stream<Path> dirStream = Files.walk(tmpPath.toPath())) {
+            AtomicReference<File> deepestDirectoryRef = new AtomicReference<>(null);
+
             dirStream.forEach(path -> {
                 Path relativePath = tmpPath.toPath().relativize(path);
                 Path targetPath = finalPath.toPath().resolve(relativePath);
@@ -188,6 +192,7 @@ public class GalleryDlDownloader extends AbstractDownloader {
                 try {
                     if (Files.isDirectory(path)) {
                         Files.createDirectories(targetPath);
+                        deepestDirectoryRef.set(targetPath.toFile());
                         log.info("Created directory: {}", path.getFileName());
                     } else {
                         Files.copy(path, targetPath, StandardCopyOption.REPLACE_EXISTING);
@@ -199,6 +204,13 @@ public class GalleryDlDownloader extends AbstractDownloader {
                     log.error("Failed to copy file: {}", path.getFileName(), e);
                 }
             });
+
+            File deepestDirectory = deepestDirectoryRef.get();
+            if (deepestDirectory != null) {
+                rightClickOptions.put(
+                    l10n("gui.open_downloaded_directory"),
+                    () -> main.open(deepestDirectory));
+            }
 
             entry.getFinalMediaFiles().add(finalPath);
         } catch (IOException e) {
@@ -219,8 +231,7 @@ public class GalleryDlDownloader extends AbstractDownloader {
         }
 
         if (lastOutput.startsWith(entry.getTmpDirectory().getAbsolutePath())) {
-            // TODO: estimate percentage
-            entry.getMediaCard().setPercentage(50);
+            entry.getMediaCard().setPercentage(-1);
 
             entry.updateStatus(DownloadStatusEnum.DOWNLOADING, lastOutput.replace(entry.getTmpDirectory().getAbsolutePath() + "/", ""));
         } else {

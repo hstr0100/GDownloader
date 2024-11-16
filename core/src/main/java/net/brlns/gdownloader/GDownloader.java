@@ -105,6 +105,7 @@ import static net.brlns.gdownloader.lang.Language.*;
 // TODO Add an url ignore list / Allow filters to be disabled
 // TODO Add option to clear all installed updates and start fresh. (Tackling certain issues where failed updates could break downloads)
 // TODO Optional curl/wget integration
+// TODO NTFS File path length workaround for gallery-dl
 // TODO Split main window from GUIManager
 // Off to a bootcamp, project on pause
 /**
