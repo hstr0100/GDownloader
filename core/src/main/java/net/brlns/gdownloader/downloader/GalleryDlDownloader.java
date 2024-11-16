@@ -116,7 +116,7 @@ public class GalleryDlDownloader extends AbstractDownloader {
         // Workaround for gallery-dl: the process always returns 1 even when downloads succeed.
         genericArguments.addAll(List.of(
             "--exec-after",
-            "echo \"GD-Internal-Finished\""
+            "echo \"" + GD_INTERNAL_FINISHED + "\""
         ));
 
         genericArguments.addAll(filter.getArguments(getDownloaderId(), ALL, main, tmpPath, entry.getUrl()));
@@ -210,7 +210,7 @@ public class GalleryDlDownloader extends AbstractDownloader {
 
     @Override
     protected void processProgress(QueueEntry entry, String lastOutput) {
-        if (lastOutput.contains("GD-Internal-Finished")) {
+        if (lastOutput.contains(GD_INTERNAL_FINISHED)) {
             return;
         }
 

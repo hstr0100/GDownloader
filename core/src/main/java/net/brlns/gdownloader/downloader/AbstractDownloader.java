@@ -39,6 +39,8 @@ import net.brlns.gdownloader.util.Pair;
 @Slf4j
 public abstract class AbstractDownloader {
 
+    protected static final String GD_INTERNAL_FINISHED = "GD-Internal-Finished";
+
     protected final GDownloader main;
     protected final DownloadManager manager;
 
@@ -136,7 +138,7 @@ public abstract class AbstractDownloader {
                     log.debug("Download process took {}ms, exit code: {}", stopped, exitCode);
                 }
 
-                if (lastOutput.contains("GD-Internal-Finished")) {
+                if (lastOutput.contains(GD_INTERNAL_FINISHED)) {
                     exitCode = 0;
                 }
 

@@ -837,7 +837,7 @@ public class SettingsPanel {
             "settings.downloader.gallery_dl.enabled",
             settings::isGalleryDlEnabled,
             settings::setGalleryDlEnabled,
-            false
+            true
         );
 
         addCheckBox(downloadSettingsPanel, gbcPanel,
