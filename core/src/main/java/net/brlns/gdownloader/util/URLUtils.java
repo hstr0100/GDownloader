@@ -22,6 +22,7 @@ import java.net.*;
 import java.nio.file.Paths;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -171,7 +172,7 @@ public final class URLUtils {
      * @return the directory path, or null if the URL is invalid
      */
     @Nullable
-    public static String getDirectoryPath(String urlString) {
+    public static String getDirectoryPath(@NonNull String urlString) {
         try {
             URI uri = new URI(urlString);
 
@@ -184,26 +185,36 @@ public final class URLUtils {
 
             host = host.replace("www.", "");
 
-            if (path.startsWith("/")) {
-                path = path.substring(1);
+            while (path.startsWith("/")) {
+                path = path.substring(1); // Remove leading slashes if present
             }
+
+            // Normalize consecutive slashes into a single slash
+            path = path.replaceAll("/+", "/");
 
             String normalizedPath;
             if (path.contains(".") && !path.endsWith("/")) {
-                // Assume this is a file; strip the file name
-                normalizedPath = path.substring(0, path.lastIndexOf('/'));
+                int lastSlashIndex = path.lastIndexOf('/');
+                if (lastSlashIndex > 0) {
+                    normalizedPath = path.substring(0, lastSlashIndex); // Safe substring
+                } else {
+                    normalizedPath = path;
+                }
             } else {
                 // This is a directory
                 normalizedPath = path;
             }
 
             StringBuilder result = new StringBuilder();
-            result.append(host)
-                .append(File.separator)
-                .append(normalizedPath.replaceAll("/$", "") // Remove trailing slash
-                    .replace("/", File.separator)); // Apply platform separator
+            result.append(host);
 
-            return result.toString();
+            if (!normalizedPath.isEmpty()) {
+                result.append(File.separator)
+                    .append(normalizedPath.replaceAll("/$", ""));  // Remove trailing slash
+            }
+
+            return result.toString()
+                .replace("/", File.separator);// Apply platform separator
         } catch (URISyntaxException e) {
             log.error("Invalid URL: {} {}", urlString, e.getMessage());
             return null;
