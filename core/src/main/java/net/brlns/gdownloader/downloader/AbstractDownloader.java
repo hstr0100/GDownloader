@@ -136,6 +136,10 @@ public abstract class AbstractDownloader {
                     log.debug("Download process took {}ms, exit code: {}", stopped, exitCode);
                 }
 
+                if (lastOutput.contains("GD-Internal-Finished")) {
+                    exitCode = 0;
+                }
+
                 return new Pair<>(exitCode, lastOutput);
             }
         } catch (IOException e) {

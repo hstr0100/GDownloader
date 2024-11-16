@@ -18,6 +18,7 @@ package net.brlns.gdownloader.downloader;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -30,7 +31,6 @@ import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.downloader.enums.DownloadStatusEnum;
 import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.downloader.structs.DownloadResult;
-import net.brlns.gdownloader.settings.QualitySettings;
 import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
 import net.brlns.gdownloader.util.DirectoryUtils;
@@ -105,12 +105,19 @@ public class GalleryDlDownloader extends AbstractDownloader {
         List<String> genericArguments = new ArrayList<>();
 
         genericArguments.addAll(List.of(
-            executablePath.get().getAbsolutePath()
+            executablePath.get().getAbsolutePath(),
+            "--no-colors"
         ));
 
         if (!main.getConfig().isRespectGalleryDlConfigFile()) {
             genericArguments.add("--config-ignore");
         }
+
+        // Workaround for gallery-dl: the process always returns 1 even when downloads succeed.
+        genericArguments.addAll(List.of(
+            "--exec-after",
+            "echo \"GD-Internal-Finished\""
+        ));
 
         genericArguments.addAll(filter.getArguments(getDownloaderId(), ALL, main, tmpPath, entry.getUrl()));
 
@@ -164,7 +171,11 @@ public class GalleryDlDownloader extends AbstractDownloader {
 
     @Override
     protected Map<String, Runnable> processMediaFiles(QueueEntry entry) {
-        File finalPath = main.getOrCreateDownloadsDirectory();
+        File finalPath = new File(main.getOrCreateDownloadsDirectory(), "GalleryDL");
+        if (!finalPath.exists()) {
+            finalPath.mkdirs();
+        }
+
         File tmpPath = entry.getTmpDirectory();
 
         Map<String, Runnable> rightClickOptions = new TreeMap<>();
@@ -175,10 +186,15 @@ public class GalleryDlDownloader extends AbstractDownloader {
                 Path targetPath = finalPath.toPath().resolve(relativePath);
 
                 try {
-                    Files.createDirectories(targetPath.getParent());
-                    Files.copy(path, targetPath, StandardCopyOption.REPLACE_EXISTING);
-
-                    log.info("Copied file: {}", path.getFileName());
+                    if (Files.isDirectory(path)) {
+                        Files.createDirectories(targetPath);
+                        log.info("Created directory: {}", path.getFileName());
+                    } else {
+                        Files.copy(path, targetPath, StandardCopyOption.REPLACE_EXISTING);
+                        log.info("Copied file: {}", path.getFileName());
+                    }
+                } catch (FileAlreadyExistsException e) {
+                    log.warn("File or directory already exists: {}", targetPath, e);
                 } catch (IOException e) {
                     log.error("Failed to copy file: {}", path.getFileName(), e);
                 }
@@ -194,6 +210,10 @@ public class GalleryDlDownloader extends AbstractDownloader {
 
     @Override
     protected void processProgress(QueueEntry entry, String lastOutput) {
+        if (lastOutput.contains("GD-Internal-Finished")) {
+            return;
+        }
+
         if (main.getConfig().isDebugMode()) {
             log.debug("[{}] - {}", entry.getDownloadId(), lastOutput);
         }

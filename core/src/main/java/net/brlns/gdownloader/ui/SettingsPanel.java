@@ -826,6 +826,20 @@ public class SettingsPanel {
             false
         );
 
+        addCheckBox(downloadSettingsPanel, gbcPanel,
+            "settings.downloader.gallery_dl.enabled",
+            settings::isGalleryDlEnabled,
+            settings::setGalleryDlEnabled,
+            false
+        );
+
+        addCheckBox(downloadSettingsPanel, gbcPanel,
+            "settings.downloader.gallery_dl.respect_config_file",
+            settings::isRespectGalleryDlConfigFile,
+            settings::setRespectGalleryDlConfigFile,
+            false
+        );
+
         gbcPanel.gridx = 0;
         gbcPanel.gridy++;
         gbcPanel.weightx = 1;

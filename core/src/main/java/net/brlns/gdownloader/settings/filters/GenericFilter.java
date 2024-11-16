@@ -217,7 +217,7 @@ public class GenericFilter extends AbstractUrlFilter {
                         }
                     }
                     case GALLERY -> {
-                        String fileName = URLUtils.getFileOrFolderName(inputUrl);
+                        String fileName = URLUtils.getDirectoryPath(inputUrl);
 
                         arguments.addAll(List.of(
                             "-D",

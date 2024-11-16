@@ -16,6 +16,7 @@
  */
 package net.brlns.gdownloader.util;
 
+import java.io.File;
 import java.io.UnsupportedEncodingException;
 import java.net.*;
 import java.nio.file.Paths;
@@ -158,7 +159,46 @@ public final class URLUtils {
 
             return Paths.get(path).getFileName().toString();
         } catch (Exception e) {
-            log.error("Invalid URL: " + e.getMessage());
+            log.error("Invalid URL: {} {}", urlString, e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Extracts and normalizes the directory path from a given URL.
+     *
+     * @param urlString the URL as a string
+     * @return the directory path, or null if the URL is invalid
+     */
+    @Nullable
+    public static String getDirectoryPath(String urlString) {
+        try {
+            URI uri = new URI(urlString);
+
+            String host = uri.getHost();
+            String path = uri.getPath();
+
+            if (host == null || path == null) {
+                throw new URISyntaxException(urlString, "Invalid URL format");
+            }
+
+            host = host.replace("www.", "");
+
+            String normalizedPath;
+            if (path.contains(".") && !path.endsWith("/")) {
+                // Assume this is a file; strip the file name
+                normalizedPath = path.substring(0, path.lastIndexOf('/'));
+            } else {
+                // This is a directory
+                normalizedPath = path;
+            }
+
+            normalizedPath = normalizedPath.replaceAll("/$", "") // Remove trailing slash
+                .replace("/", File.separator);// Apply platform separator
+
+            return host + File.separator + normalizedPath;
+        } catch (URISyntaxException e) {
+            log.error("Invalid URL: {} {}", urlString, e.getMessage());
             return null;
         }
     }
