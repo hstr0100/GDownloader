@@ -16,8 +16,10 @@
  */
 package net.brlns.gdownloader.downloader;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -39,6 +41,7 @@ import net.brlns.gdownloader.downloader.structs.DownloadResult;
 import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
 import net.brlns.gdownloader.util.DirectoryUtils;
+import net.brlns.gdownloader.util.Nullable;
 import net.brlns.gdownloader.util.Pair;
 
 import static net.brlns.gdownloader.downloader.enums.DownloadFlagsEnum.*;
@@ -50,6 +53,8 @@ import static net.brlns.gdownloader.settings.enums.DownloadTypeEnum.*;
  */
 @Slf4j
 public class GalleryDlDownloader extends AbstractDownloader {
+
+    private static final String GD_INTERNAL_FINISHED = "GD-Internal-Finished";
 
     @Getter
     @Setter
@@ -216,6 +221,65 @@ public class GalleryDlDownloader extends AbstractDownloader {
         }
 
         return rightClickOptions;
+    }
+
+    @Nullable
+    @Override
+    protected Pair<Integer, String> processDownload(QueueEntry entry, List<String> arguments) throws Exception {
+        long start = System.currentTimeMillis();
+
+        List<String> finalArgs = new ArrayList<>(arguments);
+        finalArgs.add(entry.getUrl());
+
+        ProcessBuilder processBuilder = new ProcessBuilder(finalArgs);
+        processBuilder.redirectErrorStream(true);
+        Process process = processBuilder.start();
+        entry.setProcess(process);
+
+        String lastOutput = "";
+
+        try (
+            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+            String line;
+            while (manager.isRunning() && !entry.getCancelHook().get() && process.isAlive()) {
+                if ((line = reader.readLine()) != null) {
+                    lastOutput = line;
+
+                    processProgress(entry, lastOutput);
+                }
+
+                Thread.sleep(100);
+            }
+
+            entry.getDownloadStarted().set(false);
+
+            long stopped = System.currentTimeMillis() - start;
+
+            if (!manager.isRunning() || entry.getCancelHook().get()) {
+                if (main.getConfig().isDebugMode()) {
+                    log.debug("Download process halted after {}ms.", stopped);
+                }
+
+                return null;
+            } else {
+                int exitCode = process.waitFor();
+                if (main.getConfig().isDebugMode()) {
+                    log.debug("Download process took {}ms, exit code: {}", stopped, exitCode);
+                }
+
+                if (lastOutput.contains(GD_INTERNAL_FINISHED)) {
+                    exitCode = 0;
+                }
+
+                return new Pair<>(exitCode, lastOutput);
+            }
+        } catch (IOException e) {
+            log.info("IO error: {}", e.getMessage());
+
+            return null;
+        } finally {
+            // Our ProcessMonitor will take care of closing the underlying process.
+        }
     }
 
     @Override

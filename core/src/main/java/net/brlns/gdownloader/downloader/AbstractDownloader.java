@@ -17,11 +17,6 @@
 package net.brlns.gdownloader.downloader;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.Channels;
-import java.nio.channels.ReadableByteChannel;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -30,7 +25,6 @@ import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.downloader.structs.DownloadResult;
 import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
-import net.brlns.gdownloader.util.Nullable;
 import net.brlns.gdownloader.util.Pair;
 
 /**
@@ -38,8 +32,6 @@ import net.brlns.gdownloader.util.Pair;
  */
 @Slf4j
 public abstract class AbstractDownloader {
-
-    protected static final String GD_INTERNAL_FINISHED = "GD-Internal-Finished";
 
     protected final GDownloader main;
     protected final DownloadManager manager;
@@ -59,6 +51,8 @@ public abstract class AbstractDownloader {
 
     protected abstract void processProgress(QueueEntry entry, String lastOutput);
 
+    protected abstract Pair<Integer, String> processDownload(QueueEntry entry, List<String> arguments) throws Exception;
+
     public abstract Optional<File> getExecutablePath();
 
     public abstract void setExecutablePath(Optional<File> file);
@@ -73,85 +67,5 @@ public abstract class AbstractDownloader {
 
     public List<DownloadTypeEnum> getDownloadTypes() {
         return DownloadTypeEnum.getForDownloaderId(getDownloaderId());
-    }
-
-    @Nullable
-    protected Pair<Integer, String> processDownload(QueueEntry entry, List<String> arguments) throws Exception {
-        long start = System.currentTimeMillis();
-
-        List<String> finalArgs = new ArrayList<>(arguments);
-        finalArgs.add(entry.getUrl());
-
-        ProcessBuilder processBuilder = new ProcessBuilder(finalArgs);
-        processBuilder.redirectErrorStream(true);
-        Process process = processBuilder.start();
-        entry.setProcess(process);
-
-        String lastOutput = "";
-
-        try (
-            ReadableByteChannel stdInput = Channels.newChannel(process.getInputStream())) {
-            ByteBuffer buffer = ByteBuffer.allocate(4096);
-            StringBuilder output = new StringBuilder();
-            char prevChar = '\0';
-
-            while (manager.isRunning() && !entry.getCancelHook().get() && process.isAlive()) {
-                if (Thread.currentThread().isInterrupted()) {
-                    process.destroy();
-                    throw new InterruptedException("Download interrupted");
-                }
-
-                buffer.clear();
-                int bytesRead = stdInput.read(buffer);
-                if (bytesRead > 0) {
-                    buffer.flip();
-
-                    while (buffer.hasRemaining()) {
-                        char ch = (char)buffer.get();
-                        output.append(ch);
-
-                        if (ch == '\n' || (ch == '\r' && prevChar != '\n')) {
-                            lastOutput = output.toString().replace("\n", "");
-                            output.setLength(0);
-                        }
-
-                        prevChar = ch;
-                    }
-
-                    processProgress(entry, lastOutput);
-                }
-
-                Thread.sleep(100);
-            }
-
-            entry.getDownloadStarted().set(false);
-
-            long stopped = System.currentTimeMillis() - start;
-
-            if (!manager.isRunning() || entry.getCancelHook().get()) {
-                if (main.getConfig().isDebugMode()) {
-                    log.debug("Download process halted after {}ms.", stopped);
-                }
-
-                return null;
-            } else {
-                int exitCode = process.waitFor();
-                if (main.getConfig().isDebugMode()) {
-                    log.debug("Download process took {}ms, exit code: {}", stopped, exitCode);
-                }
-
-                if (lastOutput.contains(GD_INTERNAL_FINISHED)) {
-                    exitCode = 0;
-                }
-
-                return new Pair<>(exitCode, lastOutput);
-            }
-        } catch (IOException e) {
-            log.info("IO error: {}", e.getMessage());
-
-            return null;
-        } finally {
-            // Our ProcessMonitor will take care of closing the underlying process.
-        }
     }
 }

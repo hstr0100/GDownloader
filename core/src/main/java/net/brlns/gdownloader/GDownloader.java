@@ -109,6 +109,9 @@ import static net.brlns.gdownloader.lang.Language.*;
 // TODO Split main window from GUIManager
 // TODO Card selection support / Undo last action
 // TODO Right click menu -> Try Dowload With <X>
+// TODO Right click empty area -> Paste URL
+// TODO Debug no console output from gallery-dl on Windows when using channels
+// TODO gallery-dl does not accept an argument specifying yt-dlp/ffmpeg location, figure out a workaround to pass the correct path to it
 // Off to a bootcamp, project on pause
 /**
  * GDownloader - GUI wrapper for yt-dlp
