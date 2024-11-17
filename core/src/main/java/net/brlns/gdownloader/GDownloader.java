@@ -107,6 +107,7 @@ import static net.brlns.gdownloader.lang.Language.*;
 // TODO Optional curl/wget integration
 // TODO NTFS File path length workaround for gallery-dl
 // TODO Split main window from GUIManager
+// TODO Card selection support / Undo last action
 // Off to a bootcamp, project on pause
 /**
  * GDownloader - GUI wrapper for yt-dlp

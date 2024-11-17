@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class URLToFilePathTest {
+public class UrlToFilePathTest {
 
     @Test
     public void testValidUrlWithTrailingSlash() {
