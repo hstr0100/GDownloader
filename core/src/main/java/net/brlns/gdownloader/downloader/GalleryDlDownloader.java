@@ -40,6 +40,8 @@ import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.downloader.structs.DownloadResult;
 import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
+import net.brlns.gdownloader.ui.menu.IMenuEntry;
+import net.brlns.gdownloader.ui.menu.RunnableMenuEntry;
 import net.brlns.gdownloader.util.DirectoryUtils;
 import net.brlns.gdownloader.util.Nullable;
 import net.brlns.gdownloader.util.Pair;
@@ -175,7 +177,7 @@ public class GalleryDlDownloader extends AbstractDownloader {
     }
 
     @Override
-    protected Map<String, Runnable> processMediaFiles(QueueEntry entry) {
+    protected Map<String, IMenuEntry> processMediaFiles(QueueEntry entry) {
         File finalPath = new File(main.getOrCreateDownloadsDirectory(), "GalleryDL");
         if (!finalPath.exists()) {
             finalPath.mkdirs();
@@ -183,7 +185,7 @@ public class GalleryDlDownloader extends AbstractDownloader {
 
         File tmpPath = entry.getTmpDirectory();
 
-        Map<String, Runnable> rightClickOptions = new TreeMap<>();
+        Map<String, IMenuEntry> rightClickOptions = new TreeMap<>();
 
         try (Stream<Path> dirStream = Files.walk(tmpPath.toPath())) {
             AtomicReference<File> deepestDirectoryRef = new AtomicReference<>(null);
@@ -212,7 +214,7 @@ public class GalleryDlDownloader extends AbstractDownloader {
             if (deepestDirectory != null) {
                 rightClickOptions.put(
                     l10n("gui.open_downloaded_directory"),
-                    () -> main.open(deepestDirectory));
+                    new RunnableMenuEntry(() -> main.open(deepestDirectory)));
             }
 
             entry.getFinalMediaFiles().add(finalPath);

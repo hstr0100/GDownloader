@@ -41,6 +41,9 @@ import net.brlns.gdownloader.settings.filters.YoutubeFilter;
 import net.brlns.gdownloader.settings.filters.YoutubePlaylistFilter;
 import net.brlns.gdownloader.ui.GUIManager;
 import net.brlns.gdownloader.ui.MediaCard;
+import net.brlns.gdownloader.ui.menu.IMenuEntry;
+import net.brlns.gdownloader.ui.menu.NestedMenuEntry;
+import net.brlns.gdownloader.ui.menu.RunnableMenuEntry;
 import net.brlns.gdownloader.util.ConcurrentRearrangeableDeque;
 import net.brlns.gdownloader.util.LinkedIterableBlockingQueue;
 import net.brlns.gdownloader.util.Nullable;
@@ -261,7 +264,7 @@ public class DownloadManager {
                                 captureUrl(playlist, force, PlayListOptionEnum.DOWNLOAD_PLAYLIST)
                                     .whenComplete((Boolean result, Throwable e) -> {
                                         if (e != null) {
-                                            main.handleException(e);
+                                            GDownloader.handleException(e);
                                         }
 
                                         future.complete(result);
@@ -278,7 +281,7 @@ public class DownloadManager {
                                 captureUrl(inputUrl, force, PlayListOptionEnum.DOWNLOAD_SINGLE)
                                     .whenComplete((Boolean result, Throwable e) -> {
                                         if (e != null) {
-                                            main.handleException(e);
+                                            GDownloader.handleException(e);
                                         }
 
                                         future.complete(result);
@@ -359,14 +362,7 @@ public class DownloadManager {
                 main.openDownloadsDirectory();
             });
 
-            mediaCard.getRightClickMenu().putAll(Map.of(
-                l10n("gui.open_downloads_directory"),
-                () -> main.openDownloadsDirectory(),
-                l10n("gui.open_in_browser"),
-                () -> queueEntry.openUrl(),
-                l10n("gui.copy_url"),
-                () -> queueEntry.copyUrlToClipboard()
-            ));
+            createRightClickMenu(queueEntry);
 
             mediaCard.setOnDrag((targetIndex) -> {
                 if (downloadDeque.contains(queueEntry)) {
@@ -374,7 +370,7 @@ public class DownloadManager {
                         downloadDeque.moveToPosition(queueEntry,
                             Math.clamp(targetIndex, 0, downloadDeque.size() - 1));
                     } catch (Exception e) {
-                        main.handleException(e, false);
+                        GDownloader.handleException(e, false);
                     }
                 }
             });
@@ -471,11 +467,7 @@ public class DownloadManager {
     public void retryFailedDownloads() {
         QueueEntry entry;
         while ((entry = failedDownloads.poll()) != null) {
-            entry.updateStatus(DownloadStatusEnum.QUEUED, l10n("gui.download_status.not_started"));
-            entry.resetRetryCounter();// Normaly we want the retry count to stick around, but not in this case.
-            entry.resetForRestart();
-
-            downloadDeque.offerLast(entry);
+            restartDownload(entry, false);
         }
 
         startDownloads();
@@ -529,13 +521,59 @@ public class DownloadManager {
         }, 1);
     }
 
-    protected void restartDownload(QueueEntry queueEntry) {
+    private void createRightClickMenu(QueueEntry queueEntry) {
+        Map<String, IMenuEntry> menu = queueEntry.getMediaCard().getRightClickMenu();
+
+        menu.clear();
+
+        menu.put(l10n("gui.open_downloads_directory"),
+            new RunnableMenuEntry(() -> main.openDownloadsDirectory()));
+        menu.put(l10n("gui.open_in_browser"),
+            new RunnableMenuEntry(() -> queueEntry.openUrl()));
+        menu.put(l10n("gui.copy_url"),
+            new RunnableMenuEntry(() -> queueEntry.copyUrlToClipboard()));
+
+        NestedMenuEntry downloadersSubmenu = new NestedMenuEntry();
+
+        for (AbstractDownloader downloader : queueEntry.getDownloaders()) {
+            DownloaderIdEnum downloaderId = downloader.getDownloaderId();
+            downloadersSubmenu.put(
+                downloaderId.getDisplayName(),
+                new RunnableMenuEntry(() -> {
+                    queueEntry.setForcedDownloader(downloaderId);
+                    restartDownload(queueEntry);
+                })
+            );
+        }
+
+        if (!downloadersSubmenu.isEmpty()) {
+            menu.put(l10n("gui.download_with"),
+                downloadersSubmenu);
+        }
+    }
+
+    private void restartDownload(QueueEntry queueEntry) {
+        restartDownload(queueEntry, true);
+    }
+
+    private void restartDownload(QueueEntry queueEntry, boolean fireListeners) {
+        createRightClickMenu(queueEntry);
+
+        queueEntry.cleanDirectories();
+
         queueEntry.updateStatus(DownloadStatusEnum.QUEUED, l10n("gui.download_status.not_started"));
         queueEntry.resetForRestart();
+        queueEntry.resetRetryCounter();
 
+        failedDownloads.remove(queueEntry);
         completedDownloads.remove(queueEntry);
-        downloadDeque.offerLast(queueEntry);
-        fireListeners();
+        if (!downloadDeque.contains(queueEntry)) {
+            downloadDeque.offerLast(queueEntry);
+        }
+
+        if (fireListeners) {
+            fireListeners();
+        }
     }
 
     public void processQueue() {
@@ -577,6 +615,12 @@ public class DownloadManager {
                         Iterator<AbstractDownloader> downloaderIterator = entry.getDownloaders().iterator();
                         while (downloaderIterator.hasNext()) {
                             AbstractDownloader downloader = downloaderIterator.next();
+
+                            DownloaderIdEnum forcedDownloader = entry.getForcedDownloader();
+                            if (forcedDownloader != null && forcedDownloader != downloader.getDownloaderId()) {
+                                continue;
+                            }
+
                             entry.setCurrentDownloader(downloader.getDownloaderId());
 
                             DownloadResult result = downloader.tryDownload(entry);
@@ -601,8 +645,11 @@ public class DownloadManager {
                                         entry.resetForRestart();
 
                                         mediaCard.getRightClickMenu().put(
+                                            l10n("gui.restart_download"),
+                                            new RunnableMenuEntry(() -> restartDownload(entry)));
+                                        mediaCard.getRightClickMenu().put(
                                             l10n("gui.copy_error_message"),
-                                            () -> main.getClipboardManager().copyTextToClipboard(lastOutput));
+                                            new RunnableMenuEntry(() -> main.getClipboardManager().copyTextToClipboard(lastOutput)));
 
                                         failedDownloads.offer(entry);
                                     }
@@ -654,13 +701,13 @@ public class DownloadManager {
                                 fireListeners();
                                 return;
                             } else if (!entry.getCancelHook().get() && FLAG_SUCCESS.isSet(flags)) {
-                                Map<String, Runnable> rightClickOptions = downloader.processMediaFiles(entry);
+                                Map<String, IMenuEntry> rightClickOptions = downloader.processMediaFiles(entry);
                                 rightClickOptions.put(
                                     l10n("gui.restart_download"),
-                                    () -> restartDownload(entry));
+                                    new RunnableMenuEntry(() -> restartDownload(entry)));
                                 rightClickOptions.put(
                                     l10n("gui.delete_files"),
-                                    () -> entry.deleteMediaFiles());// TODO: remove also menu entries
+                                    new RunnableMenuEntry(() -> entry.deleteMediaFiles()));// TODO: remove also menu entries
 
                                 mediaCard.getRightClickMenu().putAll(rightClickOptions);
 
@@ -681,13 +728,17 @@ public class DownloadManager {
                 } catch (Exception e) {
                     log.error("Failed to download", e);
 
+                    mediaCard.getRightClickMenu().put(
+                        l10n("gui.restart_download"),
+                        new RunnableMenuEntry(() -> restartDownload(entry)));
+
                     entry.updateStatus(DownloadStatusEnum.FAILED, e.getLocalizedMessage());
                     entry.resetForRestart();
 
                     downloadDeque.offerLast(entry);// Retry later
                     fireListeners();
 
-                    main.handleException(e);
+                    GDownloader.handleException(e);
                 } finally {
                     entry.getRunning().set(false);
 

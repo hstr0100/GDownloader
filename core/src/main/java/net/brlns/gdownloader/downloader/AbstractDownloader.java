@@ -25,6 +25,7 @@ import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.downloader.structs.DownloadResult;
 import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
+import net.brlns.gdownloader.ui.menu.IMenuEntry;
 import net.brlns.gdownloader.util.Pair;
 
 /**
@@ -47,7 +48,7 @@ public abstract class AbstractDownloader {
 
     protected abstract DownloadResult tryDownload(QueueEntry entry) throws Exception;
 
-    protected abstract Map<String, Runnable> processMediaFiles(QueueEntry entry);
+    protected abstract Map<String, IMenuEntry> processMediaFiles(QueueEntry entry);
 
     protected abstract Pair<Integer, String> processDownload(QueueEntry entry, List<String> arguments) throws Exception;
 

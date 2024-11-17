@@ -112,7 +112,6 @@ import static net.brlns.gdownloader.lang.Language.*;
 // TODO Right click empty area -> Paste URL
 // TODO Debug no console output from gallery-dl on Windows when using channels
 // TODO gallery-dl does not accept an argument specifying yt-dlp/ffmpeg location, figure out a workaround to pass the correct path to it
-// Off to a bootcamp, project on pause
 /**
  * GDownloader - GUI wrapper for yt-dlp
  *
@@ -132,6 +131,9 @@ public final class GDownloader {
     public static final String OLD_CACHE_DIRETORY_NAME = "gdownloader_cache";
 
     public static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
+    @Getter
+    private static GDownloader instance;
 
     private static String launcher;
 
@@ -1004,15 +1006,15 @@ public final class GDownloader {
         log.info("Number of available processor cores: {}", cores);
     }
 
-    public final void handleException(Throwable e) {
+    public static final void handleException(Throwable e) {
         handleException(e, true);
     }
 
-    public final void handleException(Throwable e, boolean displayToUser) {
+    public static final void handleException(Throwable e, boolean displayToUser) {
         log.error("An exception has been caught", e);
 
         if (displayToUser) {
-            guiManager.showMessage(
+            instance.getGuiManager().showMessage(
                 l10n("gui.error_popup_title"),
                 l10n("gui.error_popup", e.getLocalizedMessage()),
                 4000,
@@ -1223,6 +1225,7 @@ public final class GDownloader {
             }
 
             GDownloader instance = new GDownloader();
+            GDownloader.instance = instance;
 
             if (!noGui) {
                 instance.initUi();
@@ -1247,7 +1250,7 @@ public final class GDownloader {
             }));
 
             Thread.setDefaultUncaughtExceptionHandler((Thread t, Throwable e) -> {
-                instance.handleException(e);
+                GDownloader.handleException(e);
             });
         } else {
             log.error("System tray not supported??? did you run this on a calculator?");

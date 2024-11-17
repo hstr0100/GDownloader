@@ -45,6 +45,8 @@ import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.settings.enums.ThumbnailContainerEnum;
 import net.brlns.gdownloader.settings.enums.VideoContainerEnum;
 import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
+import net.brlns.gdownloader.ui.menu.IMenuEntry;
+import net.brlns.gdownloader.ui.menu.RunnableMenuEntry;
 import net.brlns.gdownloader.util.DirectoryUtils;
 import net.brlns.gdownloader.util.Nullable;
 import net.brlns.gdownloader.util.Pair;
@@ -243,13 +245,13 @@ public class YtDlpDownloader extends AbstractDownloader {
     }
 
     @Override
-    protected Map<String, Runnable> processMediaFiles(QueueEntry entry) {
+    protected Map<String, IMenuEntry> processMediaFiles(QueueEntry entry) {
         File finalPath = main.getOrCreateDownloadsDirectory();
         File tmpPath = entry.getTmpDirectory();
 
         QualitySettings quality = entry.getFilter().getQualitySettings();
 
-        Map<String, Runnable> rightClickOptions = new TreeMap<>();
+        Map<String, IMenuEntry> rightClickOptions = new TreeMap<>();
 
         try (Stream<Path> dirStream = Files.walk(tmpPath.toPath())) {
             dirStream.forEach(path -> {
@@ -275,19 +277,19 @@ public class YtDlpDownloader extends AbstractDownloader {
                         if (isVideo) {
                             rightClickOptions.put(
                                 l10n("gui.play_video"),
-                                () -> entry.play(VideoContainerEnum.class));
+                                new RunnableMenuEntry(() -> entry.play(VideoContainerEnum.class)));
                         }
 
                         if (isAudio) {
                             rightClickOptions.put(
                                 l10n("gui.play_audio"),
-                                () -> entry.play(AudioContainerEnum.class));
+                                new RunnableMenuEntry(() -> entry.play(AudioContainerEnum.class)));
                         }
 
                         if (isThumbnail) {
                             rightClickOptions.put(
                                 l10n("gui.view_thumbnail"),
-                                () -> entry.play(ThumbnailContainerEnum.class));
+                                new RunnableMenuEntry(() -> entry.play(ThumbnailContainerEnum.class)));
                         }
 
                         log.info("Copied file: {}", path.getFileName());

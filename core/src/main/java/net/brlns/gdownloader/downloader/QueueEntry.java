@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import javax.imageio.ImageIO;
 import lombok.AccessLevel;
 import lombok.Data;
@@ -42,6 +43,7 @@ import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
 import net.brlns.gdownloader.ui.GUIManager;
 import net.brlns.gdownloader.ui.MediaCard;
 import net.brlns.gdownloader.util.DirectoryUtils;
+import net.brlns.gdownloader.util.Nullable;
 import net.brlns.gdownloader.util.StringUtils;
 
 import static net.brlns.gdownloader.downloader.enums.DownloadStatusEnum.*;
@@ -62,6 +64,9 @@ public class QueueEntry {
     private final String url;
     private final int downloadId;
     private final List<AbstractDownloader> downloaders;
+
+    private final AtomicReference<DownloaderIdEnum> forcedDownloader
+        = new AtomicReference<>(null);
 
     private DownloaderIdEnum currentDownloader;
 
@@ -107,6 +112,15 @@ public class QueueEntry {
         main.openDownloadsDirectory();
     }
 
+    @Nullable
+    public DownloaderIdEnum getForcedDownloader() {
+        return forcedDownloader.get();
+    }
+
+    public void setForcedDownloader(DownloaderIdEnum downloaderId) {
+        forcedDownloader.set(downloaderId);
+    }
+
     public void copyUrlToClipboard() {
         main.getClipboardManager().copyTextToClipboard(originalUrl);
     }
@@ -120,7 +134,7 @@ public class QueueEntry {
                     success = true;
                 }
             } catch (IOException e) {
-                main.handleException(e);
+                GDownloader.handleException(e);
             }
         }
 

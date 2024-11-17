@@ -47,6 +47,8 @@ import net.brlns.gdownloader.ui.custom.*;
 import net.brlns.gdownloader.ui.dnd.WindowDragSourceListener;
 import net.brlns.gdownloader.ui.dnd.WindowDropTargetListener;
 import net.brlns.gdownloader.ui.dnd.WindowTransferHandler;
+import net.brlns.gdownloader.ui.menu.IMenuEntry;
+import net.brlns.gdownloader.ui.menu.RightClickMenu;
 import net.brlns.gdownloader.ui.themes.ThemeProvider;
 import net.brlns.gdownloader.ui.themes.UIColors;
 import net.brlns.gdownloader.updater.AbstractGitUpdater;
@@ -125,7 +127,7 @@ public final class GUIManager {
         try {
             icon = ImageIO.read(getClass().getResource(getCurrentAppIconPath()));
         } catch (IOException e) {
-            main.handleException(e);
+            GDownloader.handleException(e);
         }
 
         return icon;
@@ -1262,65 +1264,9 @@ public final class GUIManager {
         }
     }
 
-    private void showMediaCardRightClickMenu(JPanel parentPanel, Map<String, Runnable> actions, int x, int y) {
-        assert SwingUtilities.isEventDispatchThread();
-
-        if (actions.isEmpty()) {
-            return;
-        }
-
-        JWindow popupWindow = new JWindow();
-        popupWindow.setLayout(new BorderLayout());
-        popupWindow.setAlwaysOnTop(main.getConfig().isKeepWindowAlwaysOnTop());
-
-        JPanel popupPanel = new JPanel();
-        popupPanel.setLayout(new GridLayout(actions.size(), 1));
-        popupPanel.setBackground(Color.DARK_GRAY);
-        popupPanel.setBorder(BorderFactory.createLineBorder(Color.GRAY));
-        popupPanel.setOpaque(true);
-
-        for (Map.Entry<String, Runnable> entry : actions.entrySet()) {
-            JButton button = new CustomMenuButton(entry.getKey());
-
-            button.addActionListener(e -> {
-                entry.getValue().run();
-                popupWindow.dispose();
-            });
-
-            popupPanel.add(button);
-        }
-
-        popupWindow.add(popupPanel, BorderLayout.CENTER);
-        popupWindow.pack();
-
-        Point locationOnScreen = parentPanel.getLocationOnScreen();
-        popupWindow.setLocation(locationOnScreen.x + x, locationOnScreen.y + y);
-
-        AWTEventListener globalMouseListener = new AWTEventListener() {
-            @Override
-            public void eventDispatched(AWTEvent event) {
-                if (event.getID() == MouseEvent.MOUSE_CLICKED) {
-                    MouseEvent me = (MouseEvent)event;
-                    Component component = SwingUtilities.getDeepestComponentAt(me.getComponent(), me.getX(), me.getY());
-
-                    if (component == null || !SwingUtilities.isDescendingFrom(component, popupWindow)) {
-                        popupWindow.dispose();
-                        Toolkit.getDefaultToolkit().removeAWTEventListener(this);
-                    }
-                }
-            }
-        };
-
-        Toolkit.getDefaultToolkit().addAWTEventListener(globalMouseListener, AWTEvent.MOUSE_EVENT_MASK);
-
-        popupWindow.addWindowListener(new WindowAdapter() {
-            @Override
-            public void windowClosed(WindowEvent e) {
-                Toolkit.getDefaultToolkit().removeAWTEventListener(globalMouseListener);
-            }
-        });
-
-        popupWindow.setVisible(true);
+    private void showMediaCardRightClickMenu(JPanel parentPanel, Map<String, IMenuEntry> actions, int x, int y) {
+        RightClickMenu rightClickMenu = new RightClickMenu(main.getConfig().isKeepWindowAlwaysOnTop());
+        rightClickMenu.showMenu(parentPanel, actions, x, y);
     }
 
     public boolean handleMediaCardDnD(MediaCard mediaCard, Component dropTarget) {

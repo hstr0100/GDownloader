@@ -275,7 +275,7 @@ public class ClipboardManager {
             try {
                 futures.get(1l, TimeUnit.MINUTES);
             } catch (InterruptedException | ExecutionException e) {
-                main.handleException(e);
+                GDownloader.handleException(e);
             } catch (TimeoutException e) {
                 log.warn("Timed out waiting for futures");
             }

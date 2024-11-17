@@ -29,6 +29,7 @@ import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.ui.custom.CustomProgressBar;
 import net.brlns.gdownloader.ui.custom.CustomThumbnailPanel;
+import net.brlns.gdownloader.ui.menu.IMenuEntry;
 
 import static net.brlns.gdownloader.ui.GUIManager.runOnEDT;
 
@@ -49,7 +50,7 @@ public class MediaCard {
     private double percentage = 0;
 
     private Runnable onLeftClick;
-    private Map<String, Runnable> rightClickMenu = new LinkedHashMap<>();
+    private Map<String, IMenuEntry> rightClickMenu = new LinkedHashMap<>();
     private Runnable onClose;
     private Consumer<Integer> onDrag;
     private boolean closed;

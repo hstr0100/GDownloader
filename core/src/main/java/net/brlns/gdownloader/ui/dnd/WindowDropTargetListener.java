@@ -22,6 +22,7 @@ import java.awt.dnd.DropTargetDragEvent;
 import java.awt.dnd.DropTargetDropEvent;
 import java.awt.dnd.DropTargetEvent;
 import java.awt.dnd.DropTargetListener;
+import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.ui.GUIManager;
 
 /**
@@ -66,7 +67,7 @@ public class WindowDropTargetListener implements DropTargetListener {
 
             result = manager.getMain().getClipboardManager().tryHandleDnD(transferable);
         } catch (Exception e) {
-            manager.getMain().handleException(e);
+            GDownloader.handleException(e);
         } finally {
             dtde.dropComplete(result);
         }
