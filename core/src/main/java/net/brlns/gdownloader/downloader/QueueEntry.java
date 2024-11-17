@@ -35,6 +35,7 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.downloader.enums.DownloadStatusEnum;
+import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.downloader.structs.MediaInfo;
 import net.brlns.gdownloader.settings.enums.IContainerEnum;
 import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
@@ -61,6 +62,8 @@ public class QueueEntry {
     private final String url;
     private final int downloadId;
     private final List<AbstractDownloader> downloaders;
+
+    private DownloaderIdEnum currentDownloader;
 
     @Setter(AccessLevel.NONE)
     private DownloadStatusEnum downloadStatus;
@@ -230,6 +233,10 @@ public class QueueEntry {
 
         if (status == DownloadStatusEnum.DOWNLOADING) {
             downloadStarted.set(true);
+        }
+
+        if (currentDownloader != null) {
+            topText += " (" + currentDownloader.getDisplayName() + ")";
         }
 
         Optional<String> size = getDisplaySize();

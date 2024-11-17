@@ -242,6 +242,11 @@ public class GalleryDlDownloader extends AbstractDownloader {
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
             String line;
             while (manager.isRunning() && !entry.getCancelHook().get() && process.isAlive()) {
+                if (Thread.currentThread().isInterrupted()) {
+                    process.destroy();
+                    throw new InterruptedException("Download interrupted");
+                }
+
                 if ((line = reader.readLine()) != null) {
                     lastOutput = line;
 
@@ -282,8 +287,7 @@ public class GalleryDlDownloader extends AbstractDownloader {
         }
     }
 
-    @Override
-    protected void processProgress(QueueEntry entry, String lastOutput) {
+    private void processProgress(QueueEntry entry, String lastOutput) {
         if (lastOutput.contains(GD_INTERNAL_FINISHED)) {
             return;
         }

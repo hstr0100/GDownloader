@@ -380,8 +380,7 @@ public class YtDlpDownloader extends AbstractDownloader {
         }
     }
 
-    @Override
-    protected void processProgress(QueueEntry entry, String lastOutput) {
+    private void processProgress(QueueEntry entry, String lastOutput) {
         double lastPercentage = entry.getMediaCard().getPercentage();
 
         if (lastOutput.contains("[download]") && !lastOutput.contains("Destination:")) {

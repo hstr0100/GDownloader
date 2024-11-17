@@ -577,6 +577,8 @@ public class DownloadManager {
                         Iterator<AbstractDownloader> downloaderIterator = entry.getDownloaders().iterator();
                         while (downloaderIterator.hasNext()) {
                             AbstractDownloader downloader = downloaderIterator.next();
+                            entry.setCurrentDownloader(downloader.getDownloaderId());
+
                             DownloadResult result = downloader.tryDownload(entry);
 
                             BitSet flags = result.getFlags();
@@ -589,7 +591,6 @@ public class DownloadManager {
                                 if (disabled || unsupported || !main.getConfig().isAutoDownloadRetry()
                                     || entry.getRetryCounter().incrementAndGet() > MAX_DOWNLOAD_RETRIES) {
                                     if (downloaderIterator.hasNext()) {
-                                        // TODO: Display on the UI which downloader is in use.
                                         entry.updateStatus(DownloadStatusEnum.STARTING, l10n("gui.download_status.starting"));
                                         continue;// Onto the next downloader
                                     } else {

@@ -49,8 +49,6 @@ public abstract class AbstractDownloader {
 
     protected abstract Map<String, Runnable> processMediaFiles(QueueEntry entry);
 
-    protected abstract void processProgress(QueueEntry entry, String lastOutput);
-
     protected abstract Pair<Integer, String> processDownload(QueueEntry entry, List<String> arguments) throws Exception;
 
     public abstract Optional<File> getExecutablePath();

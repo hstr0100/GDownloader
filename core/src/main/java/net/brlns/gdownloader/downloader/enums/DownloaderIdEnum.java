@@ -16,12 +16,25 @@
  */
 package net.brlns.gdownloader.downloader.enums;
 
+import lombok.Getter;
+import net.brlns.gdownloader.settings.enums.ISettingsEnum;
+
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-public enum DownloaderIdEnum {
+@Getter
+public enum DownloaderIdEnum implements ISettingsEnum {
+    YT_DLP("yt-dlp"),
+    GALLERY_DL("gallery-dl");
 
-    YT_DLP,
-    GALLERY_DL;
+    private final String displayName;
 
+    private DownloaderIdEnum(String displayNameIn) {
+        displayName = displayNameIn;
+    }
+
+    @Override
+    public String getTranslationKey() {
+        return "";
+    }
 }
