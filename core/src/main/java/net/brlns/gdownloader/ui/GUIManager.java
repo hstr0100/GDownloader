@@ -25,6 +25,7 @@ import java.awt.image.WritableRaster;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
@@ -49,6 +50,7 @@ import net.brlns.gdownloader.ui.dnd.WindowDropTargetListener;
 import net.brlns.gdownloader.ui.dnd.WindowTransferHandler;
 import net.brlns.gdownloader.ui.menu.IMenuEntry;
 import net.brlns.gdownloader.ui.menu.RightClickMenu;
+import net.brlns.gdownloader.ui.menu.RunnableMenuEntry;
 import net.brlns.gdownloader.ui.themes.ThemeProvider;
 import net.brlns.gdownloader.ui.themes.UIColors;
 import net.brlns.gdownloader.updater.AbstractGitUpdater;
@@ -240,6 +242,9 @@ public final class GUIManager {
                 return false;
             });
 
+            DefaultMouseAdapter mouseAdapter = new DefaultMouseAdapter();
+            appWindow.addMouseListener(mouseAdapter);
+
             adjustWindowSize();
 
             adjustMessageWindowPosition();
@@ -256,6 +261,7 @@ public final class GUIManager {
             queuePanel = new JPanel();
             queuePanel.setLayout(new BoxLayout(queuePanel, BoxLayout.Y_AXIS));
             queuePanel.setBackground(color(BACKGROUND));
+            queuePanel.addMouseListener(mouseAdapter);
 
             // Drag source used to initiate DnD autoscrolling
             DragSource dragSource = DragSource.getDefaultDragSource();
@@ -1202,7 +1208,7 @@ public final class GUIManager {
                         lastClick = System.currentTimeMillis();
                     }
                 } else if (SwingUtilities.isRightMouseButton(e)) {
-                    showMediaCardRightClickMenu(card, mediaCard.getRightClickMenu(), e.getX(), e.getY());
+                    showRightClickMenu(card, mediaCard.getRightClickMenu(), e.getX(), e.getY());
                 }
             }
 
@@ -1264,9 +1270,9 @@ public final class GUIManager {
         }
     }
 
-    private void showMediaCardRightClickMenu(JPanel parentPanel, Map<String, IMenuEntry> actions, int x, int y) {
+    private void showRightClickMenu(Component parentComponent, Map<String, IMenuEntry> actions, int x, int y) {
         RightClickMenu rightClickMenu = new RightClickMenu(main.getConfig().isKeepWindowAlwaysOnTop());
-        rightClickMenu.showMenu(parentPanel, actions, x, y);
+        rightClickMenu.showMenu(parentComponent, actions, x, y);
     }
 
     public boolean handleMediaCardDnD(MediaCard mediaCard, Component dropTarget) {
@@ -1472,6 +1478,36 @@ public final class GUIManager {
             runnable.run();
         } else {
             SwingUtilities.invokeLater(runnable);
+        }
+    }
+
+    private final class DefaultMouseAdapter extends MouseAdapter {
+
+        private final Map<String, IMenuEntry> rightClickMenu = new LinkedHashMap<>();
+
+        private final IMenuEntry _cachedClipboardRunnable = new RunnableMenuEntry(() -> {
+            main.getClipboardManager().updateClipboard(null, true);
+        });
+
+        private Map<String, IMenuEntry> getRightClickMenu() {
+            String clipboardKey = l10n("gui.paste_url_from_clipboard");
+            if (main.getClipboardManager().isClipboardEmpty()) {
+                rightClickMenu.remove(clipboardKey);
+            } else {
+                rightClickMenu.putIfAbsent(clipboardKey, _cachedClipboardRunnable);
+            }
+
+            return rightClickMenu;
+        }
+
+        @Override
+        public void mouseClicked(MouseEvent e) {
+            if (SwingUtilities.isRightMouseButton(e)) {
+                Component component = e.getComponent();
+                if (component != null) {
+                    showRightClickMenu(component, getRightClickMenu(), e.getX(), e.getY());
+                }
+            }
         }
     }
 

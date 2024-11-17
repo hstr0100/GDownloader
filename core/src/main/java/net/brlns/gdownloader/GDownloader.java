@@ -107,9 +107,7 @@ import static net.brlns.gdownloader.lang.Language.*;
 // TODO Optional curl/wget integration
 // TODO NTFS File path length workaround for gallery-dl
 // TODO Split main window from GUIManager
-// TODO Card selection support / Undo last action
-// TODO Right click menu -> Try Dowload With <X>
-// TODO Right click empty area -> Paste URL
+// TODO Card multi-select support / Undo last action / try with downloader X
 // TODO Debug no console output from gallery-dl on Windows when using channels
 // TODO gallery-dl does not accept an argument specifying yt-dlp/ffmpeg location, figure out a workaround to pass the correct path to it
 /**

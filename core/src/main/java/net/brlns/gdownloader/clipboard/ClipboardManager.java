@@ -333,6 +333,11 @@ public class ClipboardManager {
         return result;
     }
 
+    public boolean isClipboardEmpty() {
+        DataFlavor[] flavors = clipboard.getAvailableDataFlavors();
+        return flavors.length == 0;
+    }
+
     private static boolean isValidURL(String urlString) {
         try {
             new URI(urlString).toURL();

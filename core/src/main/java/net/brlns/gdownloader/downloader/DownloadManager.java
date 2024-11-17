@@ -563,7 +563,7 @@ public class DownloadManager {
 
         queueEntry.updateStatus(DownloadStatusEnum.QUEUED, l10n("gui.download_status.not_started"));
         queueEntry.resetForRestart();
-        queueEntry.resetRetryCounter();
+        queueEntry.resetRetryCounter();// Normaly we want the retry count to stick around, but not in this case.
 
         failedDownloads.remove(queueEntry);
         completedDownloads.remove(queueEntry);
