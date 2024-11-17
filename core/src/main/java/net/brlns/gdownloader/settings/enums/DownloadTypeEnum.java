@@ -16,20 +16,34 @@
  */
 package net.brlns.gdownloader.settings.enums;
 
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.Getter;
+import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
 @Getter
 public enum DownloadTypeEnum implements ISettingsEnum {
-    ALL,
+    ALL((DownloaderIdEnum)null),
     // Downloads will also follow this specific order
-    VIDEO,
-    AUDIO,
-    SUBTITLES,
-    THUMBNAILS,
-    GALLERY;
+    VIDEO(DownloaderIdEnum.YT_DLP),
+    AUDIO(DownloaderIdEnum.YT_DLP),
+    SUBTITLES(DownloaderIdEnum.YT_DLP),
+    THUMBNAILS(DownloaderIdEnum.YT_DLP),
+    GALLERY(DownloaderIdEnum.GALLERY_DL);
+
+    private static final Map<DownloaderIdEnum, List<DownloadTypeEnum>> CACHE = new HashMap<>();
+
+    private final DownloaderIdEnum[] downloaderIds;
+
+    private DownloadTypeEnum(DownloaderIdEnum... downloaderIdsIn) {
+        downloaderIds = downloaderIdsIn;
+    }
 
     @Override
     public String getTranslationKey() {
@@ -39,5 +53,20 @@ public enum DownloadTypeEnum implements ISettingsEnum {
     @Override
     public String getDisplayName() {
         return name().toLowerCase();
+    }
+
+    /**
+     * Returns the download types associated with the given downloader ID.
+     *
+     * @param downloaderId the DownloaderIdEnum to filter by.
+     * @return a list of DownloadTypeEnum values associated with the given DownloaderIdEnum.
+     */
+    public static List<DownloadTypeEnum> getForDownloaderId(DownloaderIdEnum downloaderId) {
+        return CACHE.computeIfAbsent(downloaderId, id -> {
+            return Arrays.stream(values())
+                .filter(downloadType -> downloadType.downloaderIds != null
+                && Arrays.asList(downloadType.downloaderIds).contains(id))
+                .collect(Collectors.toList());
+        });
     }
 }

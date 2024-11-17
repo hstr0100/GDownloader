@@ -69,9 +69,11 @@ public abstract class AbstractDownloader {
 
     public abstract boolean isMainDownloader();
 
-    public abstract DownloadTypeEnum[] getDownloadTypes();
-
     public abstract DownloaderIdEnum getDownloaderId();
+
+    public List<DownloadTypeEnum> getDownloadTypes() {
+        return DownloadTypeEnum.getForDownloaderId(getDownloaderId());
+    }
 
     @Nullable
     protected Pair<Integer, String> processDownload(QueueEntry entry, List<String> arguments) throws Exception {

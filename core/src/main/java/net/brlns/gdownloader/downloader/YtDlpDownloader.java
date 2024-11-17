@@ -21,7 +21,11 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.TreeMap;
 import java.util.stream.Stream;
 import lombok.Getter;
 import lombok.Setter;
@@ -71,11 +75,6 @@ public class YtDlpDownloader extends AbstractDownloader {
     @Override
     public boolean isMainDownloader() {
         return true;
-    }
-
-    @Override
-    public DownloadTypeEnum[] getDownloadTypes() {
-        return new DownloadTypeEnum[] {VIDEO, AUDIO, SUBTITLES, THUMBNAILS};
     }
 
     @Override
@@ -187,8 +186,7 @@ public class YtDlpDownloader extends AbstractDownloader {
         String lastOutput = "";
 
         for (DownloadTypeEnum type : DownloadTypeEnum.values()) {
-            boolean supported = Arrays.stream(getDownloadTypes())
-                .anyMatch(typeIn -> typeIn == type);
+            boolean supported = getDownloadTypes().contains(type);
 
             if (!supported
                 || type == VIDEO && !downloadVideo

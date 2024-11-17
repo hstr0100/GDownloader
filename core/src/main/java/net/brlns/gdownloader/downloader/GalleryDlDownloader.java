@@ -22,7 +22,11 @@ import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 import lombok.Getter;
@@ -67,11 +71,6 @@ public class GalleryDlDownloader extends AbstractDownloader {
     @Override
     public boolean isMainDownloader() {
         return false;
-    }
-
-    @Override
-    public DownloadTypeEnum[] getDownloadTypes() {
-        return new DownloadTypeEnum[] {GALLERY};
     }
 
     @Override
@@ -127,8 +126,7 @@ public class GalleryDlDownloader extends AbstractDownloader {
         String lastOutput = "";
 
         for (DownloadTypeEnum type : DownloadTypeEnum.values()) {
-            boolean supported = Arrays.stream(getDownloadTypes())
-                .anyMatch(typeIn -> typeIn == type);
+            boolean supported = getDownloadTypes().contains(type);
 
             if (!supported
                 || type == GALLERY && !main.getConfig().isDownloadGallery()

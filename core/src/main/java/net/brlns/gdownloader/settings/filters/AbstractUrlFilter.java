@@ -145,12 +145,41 @@ public abstract class AbstractUrlFilter {
     @JsonProperty("ExtraYtDlpArguments")
     private Map<DownloadTypeEnum, List<String>> extraYtDlpArguments = new HashMap<>();
 
+    /**
+     * Represents a set of extra arguments for gallery-dl.
+     * These arguments are categorized based on the type of download (e.g. GALLERY).
+     * Arguments in the ALL category apply to all categories that depend on this filter.
+     *
+     * JSON schema:
+     *
+     * <pre>
+     * "ExtraGalleryDlArguments" : {
+     *   "ALL": [
+     *     "--config-ignore",
+     *     "--proxy",
+     *     "http://example.com:1234"
+     *   ],
+     *   "GALLERY": [
+     *     "--no-colors"
+     *   ]
+     * }
+     * </pre>
+     */
+    @JsonProperty("ExtraGalleryDlArguments")
+    private Map<DownloadTypeEnum, List<String>> extraGalleryDlArguments = new HashMap<>();
+
     @JsonProperty("QualitySettings")
     private QualitySettings qualitySettings = QualitySettings.builder().build();
 
     public AbstractUrlFilter() {
-        for (DownloadTypeEnum downloadType : DownloadTypeEnum.values()) {
+        extraYtDlpArguments.put(DownloadTypeEnum.ALL, new ArrayList<>());
+        for (DownloadTypeEnum downloadType : DownloadTypeEnum.getForDownloaderId(DownloaderIdEnum.YT_DLP)) {
             extraYtDlpArguments.put(downloadType, new ArrayList<>());
+        }
+
+        extraGalleryDlArguments.put(DownloadTypeEnum.ALL, new ArrayList<>());
+        for (DownloadTypeEnum downloadType : DownloadTypeEnum.getForDownloaderId(DownloaderIdEnum.GALLERY_DL)) {
+            extraGalleryDlArguments.put(downloadType, new ArrayList<>());
         }
     }
 
@@ -186,6 +215,7 @@ public abstract class AbstractUrlFilter {
 
         arguments.addAll(buildArguments(downloaderId, typeEnum, main, savePath, inputUrl));
 
+        // TODO: Map<DonwloaderIdEnum, Map<DownloadTypeEnum, List<String>>> or a struct extending that.
         switch (downloaderId) {
             case YT_DLP -> {
                 if (extraYtDlpArguments.containsKey(typeEnum)) {
@@ -193,7 +223,9 @@ public abstract class AbstractUrlFilter {
                 }
             }
             case GALLERY_DL -> {
-                // TODO
+                if (extraGalleryDlArguments.containsKey(typeEnum)) {
+                    arguments.addAll(extraGalleryDlArguments.get(typeEnum));
+                }
             }
             default -> {
                 log.warn("Unhandled downloader id {}", downloaderId);

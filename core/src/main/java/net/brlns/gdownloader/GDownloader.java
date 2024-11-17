@@ -108,6 +108,7 @@ import static net.brlns.gdownloader.lang.Language.*;
 // TODO NTFS File path length workaround for gallery-dl
 // TODO Split main window from GUIManager
 // TODO Card selection support / Undo last action
+// TODO Right click menu -> Try Dowload With <X>
 // Off to a bootcamp, project on pause
 /**
  * GDownloader - GUI wrapper for yt-dlp
@@ -1246,7 +1247,7 @@ public final class GDownloader {
                 instance.handleException(e);
             });
         } else {
-            System.err.println("System tray not supported???? did you run this on a calculator?");
+            log.error("System tray not supported??? did you run this on a calculator?");
         }
     }
 
