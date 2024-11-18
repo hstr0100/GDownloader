@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
+import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -255,47 +256,30 @@ public class YtDlpDownloader extends AbstractDownloader {
 
         try (Stream<Path> dirStream = Files.walk(tmpPath.toPath())) {
             dirStream.forEach(path -> {
-                String fileName = path.getFileName().toString().toLowerCase();
+                if (path.equals(tmpPath.toPath())) {
+                    return;
+                }
 
-                boolean isAudio = fileName.endsWith(")." + quality.getAudioContainer().getValue());
-                boolean isVideo = fileName.endsWith(")." + quality.getVideoContainer().getValue());
-                boolean isSubtitle = fileName.endsWith("." + quality.getSubtitleContainer().getValue());
-                boolean isThumbnail = fileName.endsWith("." + quality.getThumbnailContainer().getValue());
+                Path relativePath = tmpPath.toPath().relativize(path);
+                Path targetPath = determineTargetPath(path, finalPath, relativePath, quality);
 
-                if (isAudio || isVideo
-                    || isSubtitle && main.getConfig().isDownloadSubtitles()
-                    || isThumbnail && main.getConfig().isDownloadThumbnails()) {
+                try {
+                    if (Files.isDirectory(targetPath)) {
+                        Files.createDirectories(targetPath);
 
-                    Path relativePath = tmpPath.toPath().relativize(path);
-                    Path targetPath = finalPath.toPath().resolve(relativePath);
-
-                    try {
+                        log.info("Created directory: {} -> {}", path.toAbsolutePath(), targetPath);
+                    } else {
                         Files.createDirectories(targetPath.getParent());
                         Files.copy(path, targetPath, StandardCopyOption.REPLACE_EXISTING);
                         entry.getFinalMediaFiles().add(targetPath.toFile());
+                        updateRightClickOptions(path, quality, rightClickOptions, entry);
 
-                        if (isVideo) {
-                            rightClickOptions.put(
-                                l10n("gui.play_video"),
-                                new RunnableMenuEntry(() -> entry.play(VideoContainerEnum.class)));
-                        }
-
-                        if (isAudio) {
-                            rightClickOptions.put(
-                                l10n("gui.play_audio"),
-                                new RunnableMenuEntry(() -> entry.play(AudioContainerEnum.class)));
-                        }
-
-                        if (isThumbnail) {
-                            rightClickOptions.put(
-                                l10n("gui.view_thumbnail"),
-                                new RunnableMenuEntry(() -> entry.play(ThumbnailContainerEnum.class)));
-                        }
-
-                        log.info("Copied file: {}", path.getFileName());
-                    } catch (IOException e) {
-                        log.error("Failed to copy file: {}", path.getFileName(), e);
+                        log.info("Copied file: {} -> {}", path.toAbsolutePath(), targetPath);
                     }
+                } catch (FileAlreadyExistsException e) {
+                    log.warn("File or directory already exists: {}", targetPath, e);
+                } catch (IOException e) {
+                    log.error("Failed to copy file: {}", path.getFileName(), e);
                 }
             });
         } catch (IOException e) {
@@ -303,6 +287,39 @@ public class YtDlpDownloader extends AbstractDownloader {
         }
 
         return rightClickOptions;
+    }
+
+    private void updateRightClickOptions(Path path, QualitySettings quality, Map<String, IMenuEntry> rightClickOptions, QueueEntry entry) {
+        if (isFileType(path, quality.getVideoContainer().getValue())) {
+            rightClickOptions.putIfAbsent(l10n("gui.play_video"),
+                new RunnableMenuEntry(() -> entry.play(VideoContainerEnum.class)));
+        } else if (isFileType(path, quality.getAudioContainer().getValue())) {
+            rightClickOptions.putIfAbsent(l10n("gui.play_audio"),
+                new RunnableMenuEntry(() -> entry.play(AudioContainerEnum.class)));
+        } else if (isFileType(path, quality.getThumbnailContainer().getValue())) {
+            rightClickOptions.putIfAbsent(l10n("gui.view_thumbnail"),
+                new RunnableMenuEntry(() -> entry.play(ThumbnailContainerEnum.class)));
+        }
+    }
+
+    private Path determineTargetPath(Path path, File finalPath, Path relativePath, QualitySettings quality) {
+        boolean isAudio = isFileType(path, quality.getAudioContainer().getValue());
+        boolean isVideo = isFileType(path, quality.getVideoContainer().getValue());
+        boolean isSubtitle = isFileType(path, quality.getSubtitleContainer().getValue());
+        boolean isThumbnail = isFileType(path, quality.getThumbnailContainer().getValue());
+
+        if (isAudio || isVideo
+            || (isSubtitle && main.getConfig().isDownloadSubtitles())
+            || (isThumbnail && main.getConfig().isDownloadThumbnails())
+            || Files.isDirectory(path)) {
+            return finalPath.toPath().resolve(relativePath);
+        }
+
+        return Path.of(finalPath.getAbsolutePath(), l10n("system.unknown_directory_name")).resolve(relativePath);
+    }
+
+    private boolean isFileType(Path path, String extension) {
+        return path.getFileName().toString().toLowerCase().endsWith("." + extension);
     }
 
     @Nullable

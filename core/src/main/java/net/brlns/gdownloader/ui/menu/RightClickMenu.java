@@ -49,11 +49,11 @@ public class RightClickMenu {
         this.alwaysOnTop = alwaysOnTop;
     }
 
-    public void showMenu(Component parentComponent, Map<String, IMenuEntry> actions, int x, int y) {
-        showMenu(parentComponent, actions, x, y, new ArrayList<>());
+    public void showMenu(Component parentComponent, Map<String, IMenuEntry> actions, int sourceX, int sourceY) {
+        showMenu(parentComponent, actions, sourceX, sourceY, new ArrayList<>());
     }
 
-    public void showMenu(Component parentComponent, Map<String, IMenuEntry> actions, int x, int y, List<Integer> hierarchy) {
+    public void showMenu(Component parentComponent, Map<String, IMenuEntry> actions, int sourceX, int sourceY, List<Integer> hierarchy) {
         assert SwingUtilities.isEventDispatchThread();
 
         if (actions.isEmpty()) {
@@ -72,7 +72,7 @@ public class RightClickMenu {
         popupWindow.add(popupPanel, BorderLayout.CENTER);
         popupWindow.pack();
 
-        setPopupLocation(popupWindow, parentComponent, x, y);
+        setPopupLocation(popupWindow, parentComponent, sourceX, sourceY);
 
         AWTEventListener globalMouseListener = createGlobalMouseListener(popupWindow);
         Toolkit.getDefaultToolkit().addAWTEventListener(globalMouseListener, AWTEvent.MOUSE_EVENT_MASK);
@@ -105,7 +105,9 @@ public class RightClickMenu {
                         closeHierarchy(hierarchy);
                     }
                     case NestedMenuEntry nested -> {
-                        showMenu(button, nested, button.getWidth(), -button.getHeight(), hierarchy);
+                        // TODO: expand upwards
+                        showMenu(button, nested, button.getWidth(),
+                            nested.size() <= 1  ? 0 : -((nested.size() - 1) * button.getHeight()), hierarchy);
                     }
                     default ->
                         throw new IllegalArgumentException("Unhandled menu entry");
@@ -118,7 +120,8 @@ public class RightClickMenu {
                     closeOtherSubmenus(currentId, popupWindow, hierarchy);
 
                     if (value instanceof NestedMenuEntry nested) {
-                        showMenu(button, nested, button.getWidth(), -button.getHeight(), hierarchy);
+                        showMenu(button, nested, button.getWidth(), 
+                            nested.size() <= 1  ? 0 : -((nested.size() - 1) * button.getHeight()), hierarchy);
                     }
                 }
             });
@@ -162,7 +165,7 @@ public class RightClickMenu {
     }
 
     private void closeHierarchy(List<Integer> hierarchy) {
-        for (Integer id : hierarchy) {
+        for (int id : hierarchy) {
             JWindow submenu = openSubmenus.get(id);
             if (submenu != null) {
                 submenu.dispose();

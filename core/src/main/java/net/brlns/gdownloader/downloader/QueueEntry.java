@@ -26,6 +26,7 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -69,6 +70,8 @@ public class QueueEntry {
         = new AtomicReference<>(null);
 
     private DownloaderIdEnum currentDownloader;
+
+    private List<DownloaderIdEnum> downloaderBlacklist = new CopyOnWriteArrayList<>();
 
     @Setter(AccessLevel.NONE)
     private DownloadStatusEnum downloadStatus;
@@ -121,6 +124,18 @@ public class QueueEntry {
         forcedDownloader.set(downloaderId);
     }
 
+    public void resetDownloaderBlacklist() {
+        downloaderBlacklist.clear();
+    }
+
+    public boolean isDownloaderBlacklisted(DownloaderIdEnum downloaderId) {
+        return downloaderBlacklist.contains(downloaderId);
+    }
+
+    public void blackListDownloader(DownloaderIdEnum downloaderId) {
+        downloaderBlacklist.add(downloaderId);
+    }
+
     public void copyUrlToClipboard() {
         main.getClipboardManager().copyTextToClipboard(originalUrl);
     }
@@ -137,6 +152,8 @@ public class QueueEntry {
                 GDownloader.handleException(e);
             }
         }
+
+        finalMediaFiles.clear();
 
         main.getGuiManager().showMessage(
             l10n("gui.delete_files.notification_title"),
@@ -263,43 +280,44 @@ public class QueueEntry {
 
         mediaCard.setTooltip(text);
 
+        updateStatus(status);
+    }
+
+    public void updateStatus(DownloadStatusEnum status) {
         if (status != downloadStatus) {
             downloadStatus = status;
 
             switch (status) {
-                case QUERYING:
+                case QUERYING -> {
                     mediaCard.setPercentage(100);
                     mediaCard.setProgressBarTextAndColors(status.getDisplayName(), Color.MAGENTA);
-                    break;
-                case PROCESSING:
+                }
+                case PROCESSING -> {
                     mediaCard.setPercentage(100);
                     mediaCard.setProgressBarTextAndColors(status.getDisplayName(), Color.ORANGE);
-                    break;
-                case PREPARING:
-                case QUEUED:
-                case STOPPED:
+                }
+                case PREPARING, QUEUED, STOPPED -> {
                     mediaCard.setPercentage(100);
                     mediaCard.setProgressBarTextAndColors(status.getDisplayName(), Color.GRAY);
-                    break;
-                case DOWNLOADING:
+                }
+                case DOWNLOADING -> {
                     mediaCard.setPercentage(0);
                     mediaCard.setProgressBarTextAndColors(status.getDisplayName() + ": " + mediaCard.getPercentage() + "%",
                         new Color(255, 214, 0));
-                    break;
-                case STARTING:
+                }
+                case RETRYING, STARTING -> {
                     mediaCard.setPercentage(0);
                     mediaCard.setProgressBarTextAndColors(status.getDisplayName(), new Color(255, 214, 0));
-                    break;
-                case COMPLETE:
+                }
+                case COMPLETE -> {
                     mediaCard.setPercentage(100);
                     mediaCard.setProgressBarTextAndColors(status.getDisplayName(), new Color(0, 200, 83));
-                    break;
-                case NO_METHOD:
-                case FAILED:
+                }
+                case NO_METHOD, FAILED -> {
                     mediaCard.setPercentage(100);
                     mediaCard.setProgressBarTextAndColors(status.getDisplayName(), Color.RED);
-                    break;
-                default:
+                }
+                default ->
                     throw new RuntimeException("Unhandled status: " + status);
             }
         } else if (status == DownloadStatusEnum.DOWNLOADING) {

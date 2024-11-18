@@ -83,12 +83,10 @@ public class GalleryDlDownloader extends AbstractDownloader {
     @Override
     protected boolean canConsumeUrl(String inputUrl) {
         return getExecutablePath().isPresent()
+            && main.getConfig().isGalleryDlEnabled()
             && !(inputUrl.contains("ytimg")
             || inputUrl.contains("ggpht")
-            || inputUrl.endsWith("youtube.com/")
-            || inputUrl.endsWith(".jpg")
-            || inputUrl.endsWith(".png")
-            || inputUrl.endsWith(".webp"));
+            || inputUrl.endsWith("youtube.com/"));
     }
 
     @Override
@@ -191,17 +189,23 @@ public class GalleryDlDownloader extends AbstractDownloader {
             AtomicReference<File> deepestDirectoryRef = new AtomicReference<>(null);
 
             dirStream.forEach(path -> {
+                if (path.equals(tmpPath.toPath())) {
+                    return;
+                }
+
                 Path relativePath = tmpPath.toPath().relativize(path);
                 Path targetPath = finalPath.toPath().resolve(relativePath);
 
                 try {
-                    if (Files.isDirectory(path)) {
+                    if (Files.isDirectory(targetPath)) {
                         Files.createDirectories(targetPath);
                         deepestDirectoryRef.set(targetPath.toFile());
-                        log.info("Created directory: {}", path.getFileName());
+                        log.info("Created directory: {} -> {}", path.toAbsolutePath(), targetPath);
                     } else {
+                        Files.createDirectories(targetPath.getParent());
                         Files.copy(path, targetPath, StandardCopyOption.REPLACE_EXISTING);
-                        log.info("Copied file: {}", path.getFileName());
+                        entry.getFinalMediaFiles().add(targetPath.toFile());
+                        log.info("Copied file: {} -> {}", path.toAbsolutePath(), targetPath);
                     }
                 } catch (FileAlreadyExistsException e) {
                     log.warn("File or directory already exists: {}", targetPath, e);
@@ -298,7 +302,7 @@ public class GalleryDlDownloader extends AbstractDownloader {
             log.debug("[{}] - {}", entry.getDownloadId(), lastOutput);
         }
 
-        if (lastOutput.startsWith(entry.getTmpDirectory().getAbsolutePath())) {
+        if (lastOutput.startsWith("#") || lastOutput.startsWith(entry.getTmpDirectory().getAbsolutePath())) {
             entry.getMediaCard().setPercentage(-1);
 
             entry.updateStatus(DownloadStatusEnum.DOWNLOADING, lastOutput.replace(entry.getTmpDirectory().getAbsolutePath() + "/", ""));

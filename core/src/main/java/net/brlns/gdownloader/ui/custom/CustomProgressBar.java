@@ -90,6 +90,8 @@ public class CustomProgressBar extends JPanel {
         g2d.setColor(getBackground());
         g2d.fillRect(0, 0, getWidth(), getHeight());
 
+        g2d.setColor(getForeground());
+
         int progressBarWidth = getWidth();
         int blockWidth = progressBarWidth / 6; // 1 / 6
 
@@ -98,11 +100,9 @@ public class CustomProgressBar extends JPanel {
             double normalizedPosition = (Math.sin(phase) + 1) / 2;
             int blockX = (int)(normalizedPosition * (progressBarWidth - blockWidth));
 
-            g2d.setColor(getForeground());
             g2d.fillRect(blockX, 0, blockWidth, getHeight());
         } else {
             // Draw normal progress bar when value is not -1
-            g2d.setColor(getForeground());
             int width = (int)(progressBarWidth * (value / 100.0));
             g2d.fillRect(0, 0, width, getHeight());
         }

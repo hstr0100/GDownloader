@@ -57,7 +57,10 @@ public class YoutubePlaylistFilter extends YoutubeFilter {
             case YT_DLP -> {
                 switch (typeEnum) {
                     case ALL -> {
-                        arguments.add("--yes-playlist");
+                        arguments.addAll(List.of(
+                            "--yes-playlist",
+                            "--ignore-errors"
+                        ));
                     }
                 }
             }

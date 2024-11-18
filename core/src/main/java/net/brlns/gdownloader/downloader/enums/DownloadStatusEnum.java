@@ -28,6 +28,7 @@ public enum DownloadStatusEnum implements ISettingsEnum {
     STOPPED("enums.download_status.stopped"),
     QUEUED("enums.download_status.queued"),
     STARTING("enums.download_status.starting"),
+    RETRYING("enums.download_status.retrying"),
     PREPARING("enums.download_status.preparing"),
     PROCESSING("enums.download_status.processing"),
     DOWNLOADING("enums.download_status.downloading"),
