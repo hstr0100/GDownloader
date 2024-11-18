@@ -41,6 +41,7 @@ import net.brlns.gdownloader.util.DirectoryDeduplicator;
 import net.brlns.gdownloader.util.DirectoryUtils;
 import net.brlns.gdownloader.util.Nullable;
 import net.brlns.gdownloader.util.Pair;
+import net.brlns.gdownloader.util.StringUtils;
 
 import static net.brlns.gdownloader.downloader.enums.DownloadFlagsEnum.*;
 import static net.brlns.gdownloader.lang.Language.*;
@@ -309,7 +310,9 @@ public class GalleryDlDownloader extends AbstractDownloader {
         if (lastOutput.startsWith("#") || lastOutput.startsWith(entry.getTmpDirectory().getAbsolutePath())) {
             entry.getMediaCard().setPercentage(-1);
 
-            entry.updateStatus(DownloadStatusEnum.DOWNLOADING, lastOutput.replace(entry.getTmpDirectory().getAbsolutePath() + "/", ""));
+            entry.updateStatus(DownloadStatusEnum.DOWNLOADING,
+                StringUtils.getStringAfterLastSeparator(lastOutput
+                    .replace(entry.getTmpDirectory().getAbsolutePath() + File.separator, "")));
         } else {
             if (entry.getDownloadStarted().get()) {
                 entry.updateStatus(DownloadStatusEnum.PROCESSING, lastOutput);

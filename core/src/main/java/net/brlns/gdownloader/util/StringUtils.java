@@ -16,6 +16,8 @@
  */
 package net.brlns.gdownloader.util;
 
+import java.io.File;
+
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
@@ -43,5 +45,15 @@ public final class StringUtils {
         }
 
         return String.format("%.1f%s", size, units[unitIndex]);
+    }
+
+    public static String getStringAfterLastSeparator(String filePath) {
+        if (filePath == null || filePath.isEmpty() || !filePath.contains(File.separator)) {
+            return filePath;
+        } else {
+            String fileName = filePath.substring(filePath.lastIndexOf(File.separator) + 1);
+
+            return !fileName.isEmpty() ? fileName : filePath;
+        }
     }
 }
