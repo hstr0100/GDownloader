@@ -311,7 +311,8 @@ public class GalleryDlDownloader extends AbstractDownloader {
             entry.getMediaCard().setPercentage(-1);
 
             entry.updateStatus(DownloadStatusEnum.DOWNLOADING,
-                StringUtils.getStringAfterLastSeparator(lastOutput));
+                StringUtils.getStringAfterLastSeparator(lastOutput
+                    .replace(entry.getTmpDirectory().getAbsolutePath() + File.separator, "")));
         } else {
             if (entry.getDownloadStarted().get()) {
                 entry.updateStatus(DownloadStatusEnum.PROCESSING, lastOutput);
