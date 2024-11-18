@@ -718,13 +718,23 @@ public class DownloadManager {
                                 return;
                             } else if (!entry.getCancelHook().get() && FLAG_SUCCESS.isSet(flags)) {
                                 Map<String, IMenuEntry> rightClickOptions = downloader.processMediaFiles(entry);
-                                rightClickOptions.put(
+
+                                Map<String, IMenuEntry> controlOptions = new LinkedHashMap<>();
+                                controlOptions.put(
                                     l10n("gui.restart_download"),
                                     new RunnableMenuEntry(() -> restartDownload(entry)));
-                                rightClickOptions.put(
-                                    l10n("gui.delete_files"),
-                                    new RunnableMenuEntry(() -> entry.deleteMediaFiles()));// TODO: remove also menu entries
 
+                                controlOptions.put(
+                                    l10n("gui.delete_files"), new RunnableMenuEntry(() -> {
+                                    entry.deleteMediaFiles();
+
+                                    mediaCard.getRightClickMenu().remove(l10n("gui.delete_files"));
+                                    for (String key : rightClickOptions.keySet()) {
+                                        mediaCard.getRightClickMenu().remove(key);
+                                    }
+                                }));
+
+                                mediaCard.getRightClickMenu().putAll(controlOptions);
                                 mediaCard.getRightClickMenu().putAll(rightClickOptions);
 
                                 entry.updateStatus(DownloadStatusEnum.COMPLETE, l10n("gui.download_status.finished"));
