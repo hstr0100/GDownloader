@@ -292,7 +292,7 @@ public class QueueEntry {
                     mediaCard.setPercentage(100);
                     mediaCard.setProgressBarTextAndColors(status.getDisplayName(), Color.MAGENTA);
                 }
-                case PROCESSING -> {
+                case PROCESSING, POST_PROCESSING, DEDUPLICATING -> {
                     mediaCard.setPercentage(100);
                     mediaCard.setProgressBarTextAndColors(status.getDisplayName(), Color.ORANGE);
                 }

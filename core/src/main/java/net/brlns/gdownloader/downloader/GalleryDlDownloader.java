@@ -222,6 +222,8 @@ public class GalleryDlDownloader extends AbstractDownloader {
                     new RunnableMenuEntry(() -> main.open(deepestDirectory)));
 
                 if (main.getConfig().isGalleryDlDeduplication()) {
+                    entry.updateStatus(DownloadStatusEnum.DEDUPLICATING, l10n("gui.deduplication.deduplicating"));
+
                     DirectoryDeduplicator.deduplicateDirectory(deepestDirectory);
                 }
             }
@@ -258,13 +260,15 @@ public class GalleryDlDownloader extends AbstractDownloader {
                     throw new InterruptedException("Download interrupted");
                 }
 
-                if ((line = reader.readLine()) != null) {
-                    lastOutput = line;
+                if (reader.ready()) {
+                    if ((line = reader.readLine()) != null) {
+                        lastOutput = line;
 
-                    processProgress(entry, lastOutput);
+                        processProgress(entry, lastOutput);
+                    }
+                } else {
+                    Thread.sleep(100);
                 }
-
-                Thread.sleep(100);
             }
 
             entry.getDownloadStarted().set(false);

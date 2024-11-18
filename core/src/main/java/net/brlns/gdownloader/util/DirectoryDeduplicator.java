@@ -22,9 +22,7 @@ import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
-import java.util.WeakHashMap;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -33,7 +31,9 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class DirectoryDeduplicator {
 
-    private static final Map<File, String> HASH_CACHE = new WeakHashMap<>();
+    // We're pretty light-weight on memory so far, even while using native Java collections.
+    // We're safe to push this one a bit.
+    private static final LRUCache<File, String> HASH_CACHE = new LRUCache<>(2000);
 
     /**
      * Deduplicates the specified directory using SHA-256.

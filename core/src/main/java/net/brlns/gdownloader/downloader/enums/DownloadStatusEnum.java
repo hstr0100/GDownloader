@@ -31,6 +31,8 @@ public enum DownloadStatusEnum implements ISettingsEnum {
     RETRYING("enums.download_status.retrying"),
     PREPARING("enums.download_status.preparing"),
     PROCESSING("enums.download_status.processing"),
+    POST_PROCESSING("enums.download_status.post_processing"),
+    DEDUPLICATING("enums.download_status.deduplicating"),
     DOWNLOADING("enums.download_status.downloading"),
     COMPLETE("enums.download_status.complete"),
     FAILED("enums.download_status.failed"),

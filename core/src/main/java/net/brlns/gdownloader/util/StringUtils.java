@@ -48,9 +48,17 @@ public final class StringUtils {
     }
 
     public static String getStringAfterLastSeparator(String filePath) {
-        if (filePath == null || filePath.isEmpty() || !filePath.contains(File.separator)) {
+        if (filePath == null || filePath.isEmpty()) {
             return filePath;
         } else {
+            while (filePath.endsWith(File.separator)) {
+                filePath = filePath.substring(0, filePath.length() - 1);
+            }
+
+            if (!filePath.contains(File.separator)) {
+                return filePath;
+            }
+
             String fileName = filePath.substring(filePath.lastIndexOf(File.separator) + 1);
 
             return !fileName.isEmpty() ? fileName : filePath;
