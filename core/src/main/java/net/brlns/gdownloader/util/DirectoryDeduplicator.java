@@ -31,7 +31,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class DirectoryDeduplicator {
 
-    // We're pretty light-weight on memory so far, even while using native Java collections.
+    // We're pretty light-weight on memory so far, even while using pure Java collections.
     // We're safe to push this one a bit.
     private static final LRUCache<File, String> HASH_CACHE = new LRUCache<>(2000);
 

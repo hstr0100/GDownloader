@@ -31,8 +31,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.imageio.ImageIO;
-import lombok.AccessLevel;
-import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
@@ -54,7 +55,9 @@ import static net.brlns.gdownloader.lang.Language.*;
  * @author Gabriel / hstr0100 / vertx010
  */
 @Slf4j
-@Data
+@Getter
+@EqualsAndHashCode
+@RequiredArgsConstructor
 public class QueueEntry {
 
     private final GDownloader main;
@@ -66,27 +69,30 @@ public class QueueEntry {
     private final int downloadId;
     private final List<AbstractDownloader> downloaders;
 
+    private final List<DownloaderIdEnum> downloaderBlacklist = new CopyOnWriteArrayList<>();
+
     private final AtomicReference<DownloaderIdEnum> forcedDownloader
         = new AtomicReference<>(null);
 
+    @Setter
     private DownloaderIdEnum currentDownloader;
 
-    private List<DownloaderIdEnum> downloaderBlacklist = new CopyOnWriteArrayList<>();
-
-    @Setter(AccessLevel.NONE)
     private DownloadStatusEnum downloadStatus;
-    private AtomicBoolean downloadStarted = new AtomicBoolean(false);
+
+    private final AtomicBoolean downloadStarted = new AtomicBoolean(false);
+    private final AtomicBoolean cancelHook = new AtomicBoolean(false);
+    private final AtomicBoolean running = new AtomicBoolean(false);
+    private final AtomicBoolean forced = new AtomicBoolean(false);
+    private final AtomicInteger retryCounter = new AtomicInteger();
+
     private MediaInfo mediaInfo;
 
+    @Setter
     private File tmpDirectory;
-    private List<File> finalMediaFiles = new ArrayList<>();
+    private final List<File> finalMediaFiles = new ArrayList<>();
 
-    private AtomicBoolean cancelHook = new AtomicBoolean(false);
-    private AtomicBoolean running = new AtomicBoolean(false);
-
+    @Setter
     private Process process;
-
-    private AtomicInteger retryCounter = new AtomicInteger();
 
     public void openUrl() {
         main.openUrlInBrowser(originalUrl);

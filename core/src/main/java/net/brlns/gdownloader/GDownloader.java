@@ -107,7 +107,6 @@ import static net.brlns.gdownloader.lang.Language.*;
 // TODO Debug no console output from gallery-dl on Windows when using channels
 // TODO gallery-dl does not accept an argument specifying yt-dlp/ffmpeg location, figure out a workaround to pass the correct path to it
 // TODO Fastutil collections
-// TODO Force download start
 /**
  * GDownloader - GUI wrapper for yt-dlp
  *
