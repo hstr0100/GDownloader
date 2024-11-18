@@ -42,6 +42,7 @@ import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
 import net.brlns.gdownloader.ui.menu.IMenuEntry;
 import net.brlns.gdownloader.ui.menu.RunnableMenuEntry;
+import net.brlns.gdownloader.util.DirectoryDeduplicator;
 import net.brlns.gdownloader.util.DirectoryUtils;
 import net.brlns.gdownloader.util.Nullable;
 import net.brlns.gdownloader.util.Pair;
@@ -200,12 +201,12 @@ public class GalleryDlDownloader extends AbstractDownloader {
                     if (Files.isDirectory(targetPath)) {
                         Files.createDirectories(targetPath);
                         deepestDirectoryRef.set(targetPath.toFile());
-                        log.info("Created directory: {} -> {}", path.toAbsolutePath(), targetPath);
+                        log.info("Created directory: {}", targetPath);
                     } else {
                         Files.createDirectories(targetPath.getParent());
-                        Files.copy(path, targetPath, StandardCopyOption.REPLACE_EXISTING);
-                        entry.getFinalMediaFiles().add(targetPath.toFile());
-                        log.info("Copied file: {} -> {}", path.toAbsolutePath(), targetPath);
+                        Files.move(path, targetPath, StandardCopyOption.REPLACE_EXISTING);
+                        //entry.getFinalMediaFiles().add(targetPath.toFile());
+                        log.info("Moved file: {}", targetPath);
                     }
                 } catch (FileAlreadyExistsException e) {
                     log.warn("File or directory already exists: {}", targetPath, e);
@@ -219,6 +220,10 @@ public class GalleryDlDownloader extends AbstractDownloader {
                 rightClickOptions.put(
                     l10n("gui.open_downloaded_directory"),
                     new RunnableMenuEntry(() -> main.open(deepestDirectory)));
+
+                if (main.getConfig().isGalleryDlDeduplication()) {
+                    DirectoryDeduplicator.deduplicateDirectory(deepestDirectory);
+                }
             }
 
             entry.getFinalMediaFiles().add(finalPath);

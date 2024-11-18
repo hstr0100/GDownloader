@@ -294,6 +294,13 @@ public class SettingsPanel {
                         ));
 
                         leftPanel.add(manager.createButton(
+                            manager.loadIcon("/assets/deduplicate.png", ICON, 24),
+                            manager.loadIcon("/assets/deduplicate.png", ICON_HOVER, 24),
+                            "gui.deduplication.deduplicate_downloads_directory",
+                            e -> main.deduplicateDownloadsDirectory()
+                        ));
+
+                        leftPanel.add(manager.createButton(
                             manager.loadIcon("/assets/update.png", ICON, 24),
                             manager.loadIcon("/assets/update.png", ICON_HOVER, 24),
                             "gui.update.tooltip",
@@ -844,6 +851,13 @@ public class SettingsPanel {
             "settings.downloader.gallery_dl.respect_config_file",
             settings::isRespectGalleryDlConfigFile,
             settings::setRespectGalleryDlConfigFile,
+            false
+        );
+
+        addCheckBox(downloadSettingsPanel, gbcPanel,
+            "settings.downloader.gallery_dl.deduplicate_files",
+            settings::isGalleryDlDeduplication,
+            settings::setGalleryDlDeduplication,
             false
         );
 

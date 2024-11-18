@@ -71,6 +71,9 @@ public class Settings {
     @JsonProperty("RespectYtDlpConfigFile")
     private boolean respectYtDlpConfigFile = false;
 
+    @JsonProperty("GalleryDlDeduplication")
+    private boolean galleryDlDeduplication = true;
+
     @JsonProperty("GalleryDlEnabled")
     private boolean galleryDlEnabled = true;
 

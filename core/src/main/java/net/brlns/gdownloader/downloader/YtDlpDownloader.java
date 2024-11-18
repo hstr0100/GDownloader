@@ -267,14 +267,14 @@ public class YtDlpDownloader extends AbstractDownloader {
                     if (Files.isDirectory(targetPath)) {
                         Files.createDirectories(targetPath);
 
-                        log.info("Created directory: {} -> {}", path.toAbsolutePath(), targetPath);
+                        log.info("Created directory: {}", targetPath);
                     } else {
                         Files.createDirectories(targetPath.getParent());
-                        Files.copy(path, targetPath, StandardCopyOption.REPLACE_EXISTING);
+                        Files.move(path, targetPath, StandardCopyOption.REPLACE_EXISTING);
                         entry.getFinalMediaFiles().add(targetPath.toFile());
                         updateRightClickOptions(path, quality, rightClickOptions, entry);
 
-                        log.info("Copied file: {} -> {}", path.toAbsolutePath(), targetPath);
+                        log.info("Moved file: {}", targetPath);
                     }
                 } catch (FileAlreadyExistsException e) {
                     log.warn("File or directory already exists: {}", targetPath, e);

@@ -55,11 +55,7 @@ import net.brlns.gdownloader.ui.GUIManager;
 import net.brlns.gdownloader.ui.GUIManager.MessageType;
 import net.brlns.gdownloader.ui.themes.ThemeProvider;
 import net.brlns.gdownloader.updater.*;
-import net.brlns.gdownloader.util.DirectoryUtils;
-import net.brlns.gdownloader.util.LoggerUtils;
-import net.brlns.gdownloader.util.NoFallbackAvailableException;
-import net.brlns.gdownloader.util.Nullable;
-import net.brlns.gdownloader.util.PriorityThreadPoolExecutor;
+import net.brlns.gdownloader.util.*;
 import org.slf4j.helpers.FormattingTuple;
 import org.slf4j.helpers.MessageFormatter;
 
@@ -110,6 +106,7 @@ import static net.brlns.gdownloader.lang.Language.*;
 // TODO Card multi-select support / Undo last action / try with downloader X
 // TODO Debug no console output from gallery-dl on Windows when using channels
 // TODO gallery-dl does not accept an argument specifying yt-dlp/ffmpeg location, figure out a workaround to pass the correct path to it
+// TODO Fastutil collections
 /**
  * GDownloader - GUI wrapper for yt-dlp
  *
@@ -896,6 +893,29 @@ public final class GDownloader {
         } catch (Exception e) {
             handleException(e);
         }
+    }
+
+    public void deduplicateDownloadsDirectory() {
+        guiManager.showMessage(
+            l10n("gui.deduplication.notification_title"),
+            l10n("gui.deduplication.deduplicating"),
+            1500,
+            GUIManager.MessageType.INFO,
+            false);
+
+        globalThreadPool.submitWithPriority(() -> {
+            File directory = getDownloadsDirectory();
+            if (directory.exists()) {
+                DirectoryDeduplicator.deduplicateDirectory(directory);
+            }
+
+            guiManager.showMessage(
+                l10n("gui.deduplication.notification_title"),
+                l10n("gui.deduplication.deduplicated"),
+                2000,
+                GUIManager.MessageType.INFO,
+                false);
+        }, 0);
     }
 
     public File getOrCreateDownloadsDirectory() {

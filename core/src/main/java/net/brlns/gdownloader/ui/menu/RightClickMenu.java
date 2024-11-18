@@ -106,7 +106,7 @@ public class RightClickMenu {
                     }
                     case NestedMenuEntry nested -> {
                         showMenu(button, nested, button.getWidth(),
-                            nested.size() <= 1  ? 0 : -((nested.size() - 1) * button.getHeight()), hierarchy);
+                            nested.size() <= 1 ? 0 : -((nested.size() - 1) * button.getHeight()), hierarchy);
                     }
                     default ->
                         throw new IllegalArgumentException("Unhandled menu entry");
@@ -119,8 +119,8 @@ public class RightClickMenu {
                     closeOtherSubmenus(currentId, popupWindow, hierarchy);
 
                     if (value instanceof NestedMenuEntry nested) {
-                        showMenu(button, nested, button.getWidth(), 
-                            nested.size() <= 1  ? 0 : -((nested.size() - 1) * button.getHeight()), hierarchy);
+                        showMenu(button, nested, button.getWidth(),
+                            nested.size() <= 1 ? 0 : -((nested.size() - 1) * button.getHeight()), hierarchy);
                     }
                 }
             });
