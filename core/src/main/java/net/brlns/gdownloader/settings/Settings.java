@@ -75,7 +75,7 @@ public class Settings {
     private boolean galleryDlDeduplication = true;
 
     @JsonProperty("GalleryDlEnabled")
-    private boolean galleryDlEnabled = true;
+    private boolean galleryDlEnabled = false;// Disabled by default for now
 
     @JsonProperty("RespectGalleryDlConfigFile")
     private boolean respectGalleryDlConfigFile = true;

@@ -25,12 +25,7 @@ import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.TreeMap;
-import java.util.stream.Stream;
+import java.util.*;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -254,10 +249,14 @@ public class YtDlpDownloader extends AbstractDownloader {
 
         Map<String, IMenuEntry> rightClickOptions = new TreeMap<>();
 
-        try (Stream<Path> dirStream = Files.walk(tmpPath.toPath())) {
-            dirStream.forEach(path -> {
+        try {
+            List<Path> paths = Files.walk(tmpPath.toPath())
+                .sorted(Comparator.reverseOrder()) // Process files before directories
+                .toList();
+
+            for (Path path : paths) {
                 if (path.equals(tmpPath.toPath())) {
-                    return;
+                    continue;
                 }
 
                 Path relativePath = tmpPath.toPath().relativize(path);
@@ -279,9 +278,9 @@ public class YtDlpDownloader extends AbstractDownloader {
                 } catch (FileAlreadyExistsException e) {
                     log.warn("File or directory already exists: {}", targetPath, e);
                 } catch (IOException e) {
-                    log.error("Failed to copy file: {}", path.getFileName(), e);
+                    log.error("Failed to move file: {}", path.getFileName(), e);
                 }
-            });
+            }
         } catch (IOException e) {
             log.error("Failed to list files", e);
         }

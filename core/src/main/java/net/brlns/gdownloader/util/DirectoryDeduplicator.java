@@ -26,7 +26,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.WeakHashMap;
 import lombok.extern.slf4j.Slf4j;
-import net.brlns.gdownloader.GDownloader;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -57,6 +56,8 @@ public class DirectoryDeduplicator {
             traverseDirectory(directory, fileHashes);
 
             deleteEmptyDirectories(directory);
+
+            log.info("Deduplication complete {}", directory);
         } catch (Exception e) {
             log.error("Deduplication failed", e);
         }

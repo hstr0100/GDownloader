@@ -11,10 +11,10 @@ class UrlFilterTest {
     void testYoutube() {
         YoutubeFilter filter = new YoutubeFilter();
         assertTrue(filter.matches("youtube.com/watch?v=dQw4w9WgXcQ"));
-        assertTrue(filter.matches("https://www.youtube.com/watch?v=dQw4w9WgXcQ"));
+        assertTrue(filter.matches("https://www.youtube.com/watch?v=D59NyexPnU8"));
         assertTrue(filter.matches("youtu.be/dQw4w9WgXcQ"));
         assertTrue(filter.matches("https://youtu.be/dQw4w9WgXcQ"));
-        assertTrue(filter.matches("http://youtube.com/watch?v=dQw4w9WgXcQ"));
+        assertTrue(filter.matches("http://youtube.com/watch?v=D59NyexPnU8"));
         assertTrue(filter.matches("http://youtube.com/shorts/dQw4w9WgXcQ"));
         assertFalse(filter.matches("https://www.youtube.com/live/dQw4w9WgXcQ"));
         assertFalse(filter.matches("https://www.youtube.com/playlist?list=PLFgquLnL59alCl_2TQvOiD5Vgm1hCaGSI"));
