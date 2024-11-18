@@ -105,7 +105,6 @@ public class RightClickMenu {
                         closeHierarchy(hierarchy);
                     }
                     case NestedMenuEntry nested -> {
-                        // TODO: expand upwards
                         showMenu(button, nested, button.getWidth(),
                             nested.size() <= 1  ? 0 : -((nested.size() - 1) * button.getHeight()), hierarchy);
                     }

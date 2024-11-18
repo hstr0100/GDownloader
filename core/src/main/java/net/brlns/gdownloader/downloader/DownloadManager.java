@@ -624,7 +624,7 @@ public class DownloadManager {
                     try {
                         runningQueue.offer(entry);
 
-                        Iterator<AbstractDownloader> downloaderIterator = new ArrayList<>(entry.getDownloaders()).iterator();
+                        Iterator<AbstractDownloader> downloaderIterator = entry.getDownloaders().iterator();
                         while (downloaderIterator.hasNext()) {
                             AbstractDownloader downloader = downloaderIterator.next();
                             DownloaderIdEnum downloaderId = downloader.getDownloaderId();
