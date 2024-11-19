@@ -861,6 +861,20 @@ public class SettingsPanel {
             false
         );
 
+        addCheckBox(downloadSettingsPanel, gbcPanel,
+            "settings.downloader.direct_http.enabled",
+            settings::isDirectHttpEnabled,
+            settings::setDirectHttpEnabled,
+            true
+        );
+
+        addSlider(downloadSettingsPanel, gbcPanel,
+            "settings.downloader.direct_http.max_download_chunks",
+            1, 15,
+            settings::getDirectHttpMaxDownloadChunks,
+            settings::setDirectHttpMaxDownloadChunks
+        );
+
         gbcPanel.gridx = 0;
         gbcPanel.gridy++;
         gbcPanel.weightx = 1;

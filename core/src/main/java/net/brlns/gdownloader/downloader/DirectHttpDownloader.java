@@ -54,8 +54,8 @@ import net.brlns.gdownloader.util.StringUtils;
 import net.brlns.gdownloader.util.URLUtils;
 
 import static net.brlns.gdownloader.downloader.enums.DownloadFlagsEnum.*;
+import static net.brlns.gdownloader.settings.enums.DownloadTypeEnum.DIRECT;
 
-// TODO: Settings
 // TODO: Resume chunked
 // TODO: Proxy
 // TODO: ftp
@@ -67,7 +67,6 @@ import static net.brlns.gdownloader.downloader.enums.DownloadFlagsEnum.*;
 public class DirectHttpDownloader extends AbstractDownloader {
 
     private static final int BUFFER_SIZE = 8192;
-    private static final int THREAD_COUNT = 5;
     private static final int MAX_CHUNK_RETRIES = 5;
 
     @Getter
@@ -107,9 +106,9 @@ public class DirectHttpDownloader extends AbstractDownloader {
 
     @Override
     protected DownloadResult tryDownload(QueueEntry entry) throws Exception {
-//        if (!main.getConfig().isDownloadDirect() || !main.getConfig().isDirectHttpEnabled()) {
-//            return new DownloadResult(FLAG_DOWNLOADER_DISABLED);
-//        }
+        if (!main.getConfig().isDirectHttpEnabled()) {
+            return new DownloadResult(FLAG_DOWNLOADER_DISABLED);
+        }
 
         File finalPath = main.getOrCreateDownloadsDirectory();
 
@@ -122,9 +121,8 @@ public class DirectHttpDownloader extends AbstractDownloader {
         for (DownloadTypeEnum type : DownloadTypeEnum.values()) {
             boolean supported = getDownloadTypes().contains(type);
 
-            if (!supported) {
-                // || type == DIRECT && !main.getConfig().isDownloadDirect() 
-                // ||!main.getConfig().isDirectHttpEnabled()) {
+            if (!supported || type != DIRECT
+                || !main.getConfig().isDirectHttpEnabled()) {
                 continue;
             }
 
@@ -272,7 +270,7 @@ public class DirectHttpDownloader extends AbstractDownloader {
         }
 
         long totalBytes = connection.getContentLengthLong();
-        log.info("Total file size: " + totalBytes + " bytes");
+        log.info("Total file size: {}", StringUtils.getHumanReadableFileSize(totalBytes));
         if (totalBytes <= 0) {
             throw new IOException("Cannot determine content length: " + fileUrl);
         }
@@ -289,7 +287,7 @@ public class DirectHttpDownloader extends AbstractDownloader {
 
         long remainingBytes = totalBytes - downloadedBytesSoFar;
         if (remainingBytes <= 0) {
-            log.info("Download already complete.");
+            log.debug("Download already complete.");
             return true;
         }
 
@@ -299,7 +297,7 @@ public class DirectHttpDownloader extends AbstractDownloader {
 
         if (!"bytes".equalsIgnoreCase(connection.getHeaderField("Accept-Ranges"))) {
             log.info("Server does not support multi-threading, downloading single-threaded.");
-            log.info("Start offset: {} remaining: {}", downloadedBytesSoFar, remainingBytes);
+            log.debug("Start offset: {} remaining: {}", downloadedBytesSoFar, remainingBytes);
 
             activeChunkCount.incrementAndGet();
             try {
@@ -327,15 +325,18 @@ public class DirectHttpDownloader extends AbstractDownloader {
         // No support for cold-start resume of chunked downloads yet
         downloadedBytes.set(0);
 
-        ExecutorService executor = Executors.newFixedThreadPool(THREAD_COUNT);
-        long chunkSize = totalBytes / THREAD_COUNT;
+        int maxDownloadChunks = Math.clamp(manager.getMain()
+            .getConfig().getDirectHttpMaxDownloadChunks(), 1, 20);
+
+        ExecutorService executor = Executors.newFixedThreadPool(maxDownloadChunks);
+        long chunkSize = totalBytes / maxDownloadChunks;
 
         List<Future<?>> futures = new ArrayList<>();
 
-        for (int i = 0; i < THREAD_COUNT; i++) {
+        for (int i = 0; i < maxDownloadChunks; i++) {
             int chunkId = i;
             long startByte = i * chunkSize;
-            long endByte = (i == THREAD_COUNT - 1) ? totalBytes - 1 : (startByte + chunkSize - 1);
+            long endByte = (i == maxDownloadChunks - 1) ? totalBytes - 1 : (startByte + chunkSize - 1);
 
             log.error("Chunk {} start/end {}/{}", i, startByte, endByte);
             activeChunkCount.incrementAndGet();
@@ -415,13 +416,13 @@ public class DirectHttpDownloader extends AbstractDownloader {
                     try (InputStream inputStream = connection.getInputStream();
                          RandomAccessFile outputFile = new RandomAccessFile(chunkData.getFilePath(), "rw")) {
                         if (responseCode == HttpURLConnection.HTTP_PARTIAL) {
-                            log.info("Partial download accepted, resuming from {} <- offset {}", chunkData.getStartByte(), startOffset);
+                            log.debug("Partial download accepted, resuming from {} <- offset {}", chunkData.getStartByte(), startOffset);
                             outputFile.seek(startOffset); // Move to the start of this chunk
                         } else if (chunkData.isChunked()) {
                             if (chunkData.getStartByte() != 0 && chunkData.getEndByte() != chunkData.getTotalBytes() - 1) {
                                 throw new IOException("Partial download refused by server");
                             } else {
-                                log.info("Partial download refused, resetting progress");
+                                log.debug("Partial download refused, resetting progress");
                                 chunkData.getDownloadedBytes().set(0);
                             }
                         }
@@ -471,7 +472,7 @@ public class DirectHttpDownloader extends AbstractDownloader {
                         }
                     }
 
-                    log.info("Chunk {} has quit", chunkData.getChunkId());
+                    log.debug("Chunk {} has quit", chunkData.getChunkId());
                     success = alive.get();
                 } else {
                     throw new IOException("Failed to connect with HTTP code: " + responseCode);

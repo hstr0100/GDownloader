@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.TreeMap;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
+import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.settings.enums.BrowserEnum;
 import net.brlns.gdownloader.settings.enums.LanguageEnum;
 import net.brlns.gdownloader.settings.enums.PlayListOptionEnum;
@@ -75,7 +76,15 @@ public class Settings {
     private boolean galleryDlDeduplication = true;
 
     @JsonProperty("GalleryDlEnabled")
-    private boolean galleryDlEnabled = false;// Disabled by default for now
+    // gallery-dl appears to be unsigned
+    // let's leave it off by default on Windows to avoid any possible issues with that
+    private boolean galleryDlEnabled = !GDownloader.isWindows();
+
+    @JsonProperty("DirectHttpEnabled")
+    private boolean directHttpEnabled = true;
+
+    @JsonProperty("DirectHttpMaxDownloadChunks")
+    private int directHttpMaxDownloadChunks = 5;
 
     @JsonProperty("RespectGalleryDlConfigFile")
     private boolean respectGalleryDlConfigFile = true;
@@ -104,10 +113,6 @@ public class Settings {
 
     @JsonProperty("ExtraYtDlpArguments")
     private String extraYtDlpArguments = "";
-
-    // TODO expose, currently there's only one category supported by the downloader, so, we don't have a need for this yet.
-    @JsonProperty("DownloadGallery")
-    private boolean downloadGallery = true;
 
     @JsonProperty("DownloadAudio")
     private boolean downloadAudio = true;

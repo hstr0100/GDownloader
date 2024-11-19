@@ -94,7 +94,7 @@ public class GalleryDlDownloader extends AbstractDownloader {
     protected DownloadResult tryDownload(QueueEntry entry) throws Exception {
         AbstractUrlFilter filter = entry.getFilter();
 
-        if (!main.getConfig().isDownloadGallery() || !main.getConfig().isGalleryDlEnabled()) {
+        if (!main.getConfig().isGalleryDlEnabled()) {
             return new DownloadResult(FLAG_DOWNLOADER_DISABLED);
         }
 
@@ -132,8 +132,7 @@ public class GalleryDlDownloader extends AbstractDownloader {
         for (DownloadTypeEnum type : DownloadTypeEnum.values()) {
             boolean supported = getDownloadTypes().contains(type);
 
-            if (!supported
-                || type == GALLERY && !main.getConfig().isDownloadGallery()
+            if (!supported || type != GALLERY
                 || !main.getConfig().isGalleryDlEnabled()) {
                 continue;
             }
