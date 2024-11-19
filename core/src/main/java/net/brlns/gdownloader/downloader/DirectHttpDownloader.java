@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.RandomAccessFile;
 import java.net.HttpURLConnection;
+import java.net.Proxy;
 import java.net.URI;
 import java.net.URL;
 import java.nio.file.FileAlreadyExistsException;
@@ -48,14 +49,15 @@ import net.brlns.gdownloader.ui.menu.IMenuEntry;
 import net.brlns.gdownloader.util.DirectoryUtils;
 import net.brlns.gdownloader.util.Nullable;
 import net.brlns.gdownloader.util.Pair;
+import net.brlns.gdownloader.util.StringUtils;
 import net.brlns.gdownloader.util.URLUtils;
 
 import static net.brlns.gdownloader.downloader.enums.DownloadFlagsEnum.*;
 
-// TODO: ETA
-// TODO: Speed
 // TODO: Settings
-// TODO: Resume
+// TODO: Resume chunked
+// TODO: Proxy
+// TODO: ftp
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
@@ -127,8 +129,23 @@ public class DirectHttpDownloader extends AbstractDownloader {
             }
 
             try {
-                success = downloadFile(entry, (percentage, chunkCount) -> {
-                    processProgress(entry, percentage, chunkCount);
+                success = downloadFile(entry, (percent, total, speed, remainingTime, chunkCount) -> {
+                    String fmPercent = percentFormatter.format(percent);
+                    percent = Double.parseDouble(fmPercent);
+
+                    double lastPercentage = entry.getMediaCard().getPercentage();
+
+                    if (percent > lastPercentage || percent < 5 || Math.abs(percent - lastPercentage) > 10) {
+                        entry.getMediaCard().setPercentage(percent);
+                    }
+
+                    String fmTotal = StringUtils.getHumanReadableFileSize(total);
+                    String fmSpeed = StringUtils.getHumanReadableFileSize(speed);
+                    String fmRemaingTime = StringUtils.convertTime(remainingTime);
+
+                    entry.updateStatus(DownloadStatusEnum.DOWNLOADING,
+                        String.format("%s%% of %s at %s/s ETA: %s chks %d",
+                            fmPercent, fmTotal, fmSpeed, fmRemaingTime, chunkCount));
                 });
 
                 lastOutput = "Download complete";
@@ -206,20 +223,6 @@ public class DirectHttpDownloader extends AbstractDownloader {
         return manager.isRunning() && !entry.getCancelHook().get();
     }
 
-    private void processProgress(QueueEntry entry, double percent, int chunkCount) {
-        String formattedPercent = percentFormatter.format(percent);
-        percent = Double.parseDouble(formattedPercent);
-
-        double lastPercentage = entry.getMediaCard().getPercentage();
-
-        if (percent > lastPercentage || percent < 5 || Math.abs(percent - lastPercentage) > 10) {
-            entry.getMediaCard().setPercentage(percent);
-        }
-
-        entry.updateStatus(DownloadStatusEnum.DOWNLOADING,
-            "Downloading: " + formattedPercent + "% active chunks: " + chunkCount);
-    }
-
     @Nullable
     private Pair<HttpURLConnection, Integer> openConnection(URL fileUrl, String requestType) {
         HttpURLConnection connection = null;
@@ -281,12 +284,16 @@ public class DirectHttpDownloader extends AbstractDownloader {
         }
 
         File targetFile = new File(queueEntry.getTmpDirectory(), detectedFileName);
-        try (
-            RandomAccessFile outputFile = new RandomAccessFile(targetFile, "rw")) {
-            outputFile.setLength(totalBytes); // Preallocate file size
+
+        long downloadedBytesSoFar = targetFile.exists() ? targetFile.length() : 0;
+
+        long remainingBytes = totalBytes - downloadedBytesSoFar;
+        if (remainingBytes <= 0) {
+            log.info("Download already complete.");
+            return true;
         }
 
-        AtomicLong downloadedBytes = new AtomicLong(0);
+        AtomicLong downloadedBytes = new AtomicLong(downloadedBytesSoFar);
         AtomicInteger activeChunkCount = new AtomicInteger(0);
 
         if (!"bytes".equalsIgnoreCase(connection.getHeaderField("Accept-Ranges"))) {
@@ -299,6 +306,8 @@ public class DirectHttpDownloader extends AbstractDownloader {
                     .queueEntry(queueEntry)
                     .fileUrl(fileUrl)
                     .filePath(targetFile)
+                    .startByte(downloadedBytesSoFar)
+                    .endByte(totalBytes - 1)
                     .totalBytes(totalBytes)
                     .downloadedBytes(downloadedBytes)
                     .activeChunkCount(activeChunkCount)
@@ -373,10 +382,11 @@ public class DirectHttpDownloader extends AbstractDownloader {
     private boolean downloadChunk(ChunkData chunkData) throws IOException {
         int attempt = 0;
         boolean success = false;
+
         while (attempt < MAX_RETRIES && !success && isAlive(chunkData.getQueueEntry())) {
             HttpURLConnection connection = null;
             try {
-                connection = (HttpURLConnection)chunkData.getFileUrl().openConnection();
+                connection = (HttpURLConnection)chunkData.getFileUrl().openConnection(getProxySettings());
                 connection.setRequestMethod("GET");
 
                 if (chunkData.isChunked()) {
@@ -389,10 +399,10 @@ public class DirectHttpDownloader extends AbstractDownloader {
                 if (responseCode == expectedCode) {
                     try (InputStream inputStream = connection.getInputStream();
                          RandomAccessFile outputFile = new RandomAccessFile(chunkData.getFilePath(), "rw")) {
+                        outputFile.seek(chunkData.getStartByte()); // Move to the start of this chunk
 
-                        if (chunkData.isChunked()) {
-                            outputFile.seek(chunkData.getStartByte()); // Move to the start of this chunk
-                        }
+                        long startTime = System.nanoTime();
+                        long lastCallbackTime = System.nanoTime();
 
                         byte[] buffer = new byte[BUFFER_SIZE];
                         int bytesRead;
@@ -400,11 +410,35 @@ public class DirectHttpDownloader extends AbstractDownloader {
                         while ((bytesRead = inputStream.read(buffer)) != -1 && isAlive(chunkData.getQueueEntry())) {
                             outputFile.write(buffer, 0, bytesRead);
 
-                            long sum = chunkData.getDownloadedBytes().addAndGet(bytesRead);
-                            double progress = ((double)sum * 100) / chunkData.getTotalBytes();
+                            long totalDownloaded = chunkData.getDownloadedBytes().addAndGet(bytesRead);
 
-                            if (chunkData.getProgressCallback() != null) {
-                                chunkData.getProgressCallback().accept(progress, chunkData.getActiveChunkCount().get());
+                            long currentTime = System.nanoTime();
+                            if ((currentTime - lastCallbackTime) >= 1e9) {
+                                if (chunkData.getProgressCallback() == null) {
+                                    continue;
+                                }
+
+                                double progress = ((double)totalDownloaded * 100) / chunkData.getTotalBytes();
+
+                                // Speed
+                                long elapsedTimeNano = System.nanoTime() - startTime;
+                                double elapsedTimeSeconds = elapsedTimeNano / 1e9;
+                                long speed = (long)(totalDownloaded / elapsedTimeSeconds);
+
+                                // ETA
+                                long remainingBytes = chunkData.getTotalBytes() - totalDownloaded;
+                                double remainingTimeSeconds = (double)remainingBytes / speed;
+                                long remainingTimeMillis = (long)(remainingTimeSeconds * 1000);
+
+                                chunkData.getProgressCallback().accept(
+                                    progress,
+                                    chunkData.getTotalBytes(),
+                                    speed,
+                                    remainingTimeMillis,
+                                    chunkData.getActiveChunkCount().get()
+                                );
+
+                                lastCallbackTime = currentTime;
                             }
                         }
                     }
@@ -430,6 +464,10 @@ public class DirectHttpDownloader extends AbstractDownloader {
         return success;
     }
 
+    private Proxy getProxySettings() {
+        return Proxy.NO_PROXY;// TODO
+    }
+
     @Nullable
     private String getFileNameFromHeaders(HttpURLConnection connection) {
         if (log.isDebugEnabled()) {
@@ -453,7 +491,8 @@ public class DirectHttpDownloader extends AbstractDownloader {
     @FunctionalInterface
     private interface ProgressUpdater {
 
-        void accept(double progress, int chunkCount);
+        void accept(double progress, long size, long speed, long remainingTime, int chunkCount);
+
     }
 
     @Data

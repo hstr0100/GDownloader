@@ -17,6 +17,7 @@
 package net.brlns.gdownloader.util;
 
 import java.io.File;
+import java.time.Duration;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -45,6 +46,40 @@ public final class StringUtils {
         }
 
         return String.format("%.1f%s", size, units[unitIndex]);
+    }
+
+    public static String convertTime(long timeInMillis) {
+        // If the time exceeds 24 hours, return "n/a". Tough luck buddy
+        if (timeInMillis >= Duration.ofDays(1).toMillis()) {
+            return "n/a";
+        }
+
+        Duration duration = Duration.ofMillis(timeInMillis);
+
+        long hours = duration.toHours();
+        long minutes = duration.toMinutes() % 60;
+        long seconds = duration.getSeconds() % 60;
+
+        StringBuilder timeString = new StringBuilder();
+
+        // Add hours if non-zero
+        if (hours > 0) {
+            timeString.append(hours).append(":");
+        }
+
+        // Add minutes if non-zero or if there are hours
+        if (minutes > 0 || hours > 0) {
+            if (timeString.length() > 0) {
+                timeString.append(String.format("%02d:", minutes));
+            } else {
+                timeString.append(minutes).append(":");
+            }
+        }
+
+        // Add seconds
+        timeString.append(String.format("%02d", seconds));
+
+        return timeString.toString();
     }
 
     public static String getStringAfterLastSeparator(String filePath) {
