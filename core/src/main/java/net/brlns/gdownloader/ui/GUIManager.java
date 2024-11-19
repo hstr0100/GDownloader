@@ -44,6 +44,7 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.downloader.DownloadManager;
+import net.brlns.gdownloader.downloader.enums.QueueCategoryEnum;
 import net.brlns.gdownloader.ui.custom.*;
 import net.brlns.gdownloader.ui.dnd.WindowDragSourceListener;
 import net.brlns.gdownloader.ui.dnd.WindowDropTargetListener;
@@ -161,8 +162,9 @@ public final class GUIManager {
                     appWindow.setVisible(true);
                 }
 
-                appWindow.setExtendedState(JFrame.NORMAL);
-                appWindow.toFront();
+                if (appWindow.getExtendedState() == Frame.NORMAL) {
+                    appWindow.toFront();
+                }
             }
         });
     }
@@ -439,12 +441,31 @@ public final class GUIManager {
             }
         ));
 
-        buttonPanel.add(createButton(
+        JButton clearQueueButton = createButton(
             loadIcon("/assets/erase.png", ICON),
             loadIcon("/assets/erase.png", ICON_HOVER),
             "gui.clear_download_queue.tooltip",
             e -> main.getDownloadManager().clearQueue()
-        ));
+        );
+
+        Map<String, IMenuEntry> rightClickMenu = new LinkedHashMap<>();
+        rightClickMenu.put(l10n("gui.clear_download_queue.clear_failed"),
+            new RunnableMenuEntry(() -> main.getDownloadManager().clearQueue(QueueCategoryEnum.FAILED)));
+        rightClickMenu.put(l10n("gui.clear_download_queue.clear_completed"),
+            new RunnableMenuEntry(() -> main.getDownloadManager().clearQueue(QueueCategoryEnum.COMPLETED)));
+        rightClickMenu.put(l10n("gui.clear_download_queue.clear_queued"),
+            new RunnableMenuEntry(() -> main.getDownloadManager().clearQueue(QueueCategoryEnum.QUEUED)));
+
+        clearQueueButton.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (SwingUtilities.isRightMouseButton(e)) {
+                    showRightClickMenu(clearQueueButton, rightClickMenu, e.getX(), e.getY());
+                }
+            }
+        });
+
+        buttonPanel.add(clearQueueButton);
 
         buttonPanel.add(createButton(
             loadIcon("/assets/settings.png", ICON),
@@ -790,8 +811,10 @@ public final class GUIManager {
             dialogPanel.setOpaque(false);
             dialogPanel.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0));
 
-            JLabel dialogLabel = new JLabel(wrapText(50, message), SwingConstants.CENTER);
+            JLabel dialogLabel = new JLabel();
+            dialogLabel.setText(wrapTextInHtml(50, message));
             dialogLabel.setForeground(color(FOREGROUND));
+            dialogLabel.setHorizontalAlignment(SwingConstants.CENTER);
             dialogPanel.add(dialogLabel, BorderLayout.CENTER);
 
             panel.add(dialogPanel, BorderLayout.CENTER);
@@ -932,7 +955,8 @@ public final class GUIManager {
             JPanel titlePanel = new JPanel(new BorderLayout());
             titlePanel.setOpaque(false);
 
-            JLabel titleLabel = new JLabel(wrapText(45, nextMessage.getTitle()));
+            JLabel titleLabel = new JLabel();
+            titleLabel.setText(wrapTextInHtml(45, nextMessage.getTitle()));
             titleLabel.setForeground(titleColor);
             titleLabel.setHorizontalAlignment(SwingConstants.LEFT);
             titlePanel.add(titleLabel, BorderLayout.WEST);
@@ -959,8 +983,10 @@ public final class GUIManager {
             messagePanel.setOpaque(false);
             messagePanel.setBorder(BorderFactory.createEmptyBorder(10, 0, 20, 0));
 
-            JLabel messageLabel = new JLabel(wrapText(50, nextMessage.getMessage()), SwingConstants.CENTER);
+            JLabel messageLabel = new JLabel();
+            messageLabel.setText(wrapTextInHtml(50, nextMessage.getMessage()));
             messageLabel.setForeground(textColor);
+            messageLabel.setHorizontalAlignment(SwingConstants.CENTER);
             messagePanel.add(messageLabel, BorderLayout.CENTER);
 
             panel.add(messagePanel, BorderLayout.CENTER);
@@ -1072,29 +1098,33 @@ public final class GUIManager {
     private void adjustMediaCards() {
         assert SwingUtilities.isEventDispatchThread();
 
-        double factor = 1;
-        if (appWindow.getExtendedState() == JFrame.MAXIMIZED_BOTH) {
-            factor = 1.20;
-        }
+        boolean fullScreen = isFullScreen();
 
         for (MediaCard card : mediaCards.values()) {
-            card.scaleThumbnail(factor);
+            card.expand(fullScreen);
         }
 
         queuePanel.revalidate();
         queuePanel.repaint();
     }
 
+    public boolean isFullScreen() {
+        return appWindow.getExtendedState() == JFrame.MAXIMIZED_BOTH;
+    }
+
     public MediaCard addMediaCard(boolean video, String... mediaLabel) {
         int id = mediaCardId.incrementAndGet();
 
-        JPanel card = new JPanel();
+        JPanel card = new JPanel() {
+            @Override
+            public Dimension getMaximumSize() {
+                int availableWidth = appWindow.getWidth() - getInsets().left - getInsets().right;
+                return new Dimension(availableWidth, super.getMaximumSize().height);
+            }
+        };
         card.setLayout(new GridBagLayout());
         card.setBorder(BorderFactory.createLineBorder(color(BACKGROUND), 5));
         card.setBackground(color(MEDIA_CARD));
-
-        int fontSize = main.getConfig().getFontSize();
-        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, fontSize >= 15 ? 150 + (fontSize - 15) * 3 : 135));
 
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(10, 10, 10, 10);
@@ -1138,15 +1168,18 @@ public final class GUIManager {
         gbc.weighty = 0;
         card.add(thumbnailPanel, gbc);
 
-        JLabel mediaNameLabel = new JLabel(wrapText(50, mediaLabel));
+        CustomDynamicLabel mediaNameLabel = new CustomDynamicLabel();
         mediaNameLabel.setForeground(color(FOREGROUND));
         gbc.insets = new Insets(10, 10, 10, 10);
         gbc.gridx = 2;
         gbc.gridy = 0;
         gbc.gridheight = 1;
         gbc.weightx = 1;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.weighty = 0;
         card.add(mediaNameLabel, gbc);
+
+        appWindow.addComponentListener(mediaNameLabel.getListener());
 
         CustomProgressBar progressBar = new CustomProgressBar(Color.WHITE);
         progressBar.setValue(100);
@@ -1161,6 +1194,7 @@ public final class GUIManager {
         gbc.gridy = 1;
         gbc.weightx = 1;
         gbc.weighty = 0;
+        gbc.fill = GridBagConstraints.BOTH;
         card.add(progressBar, gbc);
 
         JButton closeButton = createButton(
@@ -1180,6 +1214,8 @@ public final class GUIManager {
         card.add(closeButton, gbc);
 
         MediaCard mediaCard = new MediaCard(id, card, mediaNameLabel, thumbnailPanel, progressBar);
+        mediaCard.expand(isFullScreen());
+        mediaCard.setLabel(mediaLabel);
 
         card.setTransferHandler(new WindowTransferHandler(this));
 
@@ -1264,6 +1300,7 @@ public final class GUIManager {
                     queuePanel.add(getOrCreateEmptyQueuePanel(), BorderLayout.CENTER);
                 }
 
+                appWindow.removeComponentListener(mediaCard.getMediaLabel().getListener());
                 appWindow.revalidate();
                 appWindow.repaint();
             });
@@ -1408,13 +1445,17 @@ public final class GUIManager {
             @Override
             public void adjustmentValueChanged(AdjustmentEvent e) {
                 Adjustable adjustable = e.getAdjustable();
+                if (adjustable.getValue() + adjustable.getVisibleAmount() >= adjustable.getMaximum()) {
+                    return;
+                }
+
                 adjustable.setValue(adjustable.getMaximum());
                 verticalBar.removeAdjustmentListener(this);
             }
         });
     }
 
-    protected static String wrapText(int maxLineLength, String... lines) {
+    public static String wrapTextInHtml(int maxLineLength, String... lines) {
         if (maxLineLength < 20) {
             throw new IllegalArgumentException("Line length too short" + maxLineLength);
         }

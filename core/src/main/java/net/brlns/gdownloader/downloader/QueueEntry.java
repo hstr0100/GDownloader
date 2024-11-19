@@ -35,6 +35,7 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
+import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.downloader.enums.DownloadStatusEnum;
@@ -57,6 +58,7 @@ import static net.brlns.gdownloader.lang.Language.*;
 @Slf4j
 @Getter
 @EqualsAndHashCode
+@ToString
 @RequiredArgsConstructor
 public class QueueEntry {
 
@@ -243,12 +245,10 @@ public class QueueEntry {
 
     private String getTitle() {
         if (mediaInfo != null && !mediaInfo.getTitle().isEmpty()) {
-            return StringUtils.truncate(mediaInfo.getTitle(), 40);
+            return mediaInfo.getTitle();
         }
 
-        return StringUtils.truncate(url
-            .replace("https://", "")
-            .replace("www.", ""), 30);
+        return url.replace("https://", "").replace("www.", "");
     }
 
     private Optional<String> getDisplaySize() {
@@ -280,9 +280,7 @@ public class QueueEntry {
             topText += " (~" + size.get() + ")";
         }
 
-        mediaCard.setLabel(topText, getTitle(),
-            status != DownloadStatusEnum.DOWNLOADING ? StringUtils.truncate(text, 40) : StringUtils.truncate(text, 51));
-
+        mediaCard.setLabel(topText, getTitle(), text);
         mediaCard.setTooltip(text);
 
         updateStatus(status);

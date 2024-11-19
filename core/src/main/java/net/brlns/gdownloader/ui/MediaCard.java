@@ -23,10 +23,10 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
-import javax.swing.JLabel;
 import javax.swing.JPanel;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
+import net.brlns.gdownloader.ui.custom.CustomDynamicLabel;
 import net.brlns.gdownloader.ui.custom.CustomProgressBar;
 import net.brlns.gdownloader.ui.custom.CustomThumbnailPanel;
 import net.brlns.gdownloader.ui.menu.IMenuEntry;
@@ -43,7 +43,7 @@ public class MediaCard {
     private final int id;
 
     private final JPanel panel;
-    private final JLabel mediaLabel;
+    private final CustomDynamicLabel mediaLabel;
     private final CustomThumbnailPanel thumbnailPanel;
     private final CustomProgressBar progressBar;
 
@@ -54,6 +54,7 @@ public class MediaCard {
     private Runnable onClose;
     private Consumer<Integer> onDrag;
     private boolean closed;
+    private boolean expanded;
 
     private Supplier<Boolean> validateDropTarget;
 
@@ -65,6 +66,15 @@ public class MediaCard {
 
         if (onClose != null) {
             onClose.run();
+        }
+    }
+
+    protected void expand(boolean expand) {
+        boolean isChanging = expanded != expand;
+        expanded = expand;
+
+        if (isChanging) {
+            scaleThumbnail(expand ? 1.20 : 1);
         }
     }
 
@@ -93,7 +103,7 @@ public class MediaCard {
 
     public void setLabel(String... label) {
         runOnEDT(() -> {
-            mediaLabel.setText(GUIManager.wrapText(51, label));
+            mediaLabel.setFullText(label);
         });
     }
 

@@ -31,14 +31,6 @@ public final class StringUtils {
         return PERCENT_FORMATTER.format(percent);
     }
 
-    public static String truncate(String input, int length) {
-        if (input.length() > length) {
-            input = input.substring(0, length - 3) + "...";
-        }
-
-        return input;
-    }
-
     public static String getHumanReadableFileSize(long bytes) {
         assert bytes >= 0 && bytes < Long.MAX_VALUE : "Invalid argument. Expected valid positive long";
 
