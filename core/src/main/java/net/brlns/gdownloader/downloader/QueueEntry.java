@@ -82,7 +82,6 @@ public class QueueEntry {
     private final AtomicBoolean downloadStarted = new AtomicBoolean(false);
     private final AtomicBoolean cancelHook = new AtomicBoolean(false);
     private final AtomicBoolean running = new AtomicBoolean(false);
-    private final AtomicBoolean forced = new AtomicBoolean(false);
     private final AtomicInteger retryCounter = new AtomicInteger();
 
     private MediaInfo mediaInfo;

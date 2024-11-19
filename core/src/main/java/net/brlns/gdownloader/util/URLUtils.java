@@ -19,6 +19,7 @@ package net.brlns.gdownloader.util;
 import java.io.File;
 import java.io.UnsupportedEncodingException;
 import java.net.*;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -217,6 +218,44 @@ public final class URLUtils {
                 .replace("/", File.separator);// Apply platform separator
         } catch (URISyntaxException e) {
             log.error("Invalid URL: {} {}", urlString, e.getMessage());
+            return null;
+        }
+    }
+
+    public static String getFileName(@NonNull String urlString) {
+        try {
+            return getFileName(new URI(urlString).toURL());
+        } catch (MalformedURLException | URISyntaxException e) {
+            log.error("Invalid URL: {} {}", urlString, e.getMessage());
+            return null;
+        }
+    }
+
+    public static String getFileName(@NonNull URL url) {
+        try {
+            String path = url.getPath();
+
+            // Decode URL to remove any encoded characters
+            String decodedPath = URLDecoder.decode(path, StandardCharsets.UTF_8);
+
+            // Strip out any query parameters or fragments
+            int queryIndex = decodedPath.indexOf('?');
+            int fragmentIndex = decodedPath.indexOf('#');
+            if (queryIndex != -1) {
+                decodedPath = decodedPath.substring(0, queryIndex);
+            }
+            if (fragmentIndex != -1) {
+                decodedPath = decodedPath.substring(0, fragmentIndex);
+            }
+
+            // Split path to get the last segment
+            String[] pathSegments = decodedPath.split("/");
+            String inferredFileName = pathSegments[pathSegments.length - 1];
+
+            // Return null if the filename is empty
+            return inferredFileName.isEmpty() ? null : inferredFileName;
+        } catch (Exception e) {
+            log.error("Error parsing URL: {} {}", url, e.getMessage());
             return null;
         }
     }

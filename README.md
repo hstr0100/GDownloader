@@ -1,6 +1,6 @@
 # GDownloader
 
-A GUI Wrapper for [yt-dlp](https://github.com/yt-dlp/yt-dlp) and [gallery-dl](https://github.com/mikf/gallery-dl) written in Java.
+A user-friendly GUI wrapper for [yt-dlp](https://github.com/yt-dlp/yt-dlp) and [gallery-dl](https://github.com/mikf/gallery-dl) written in Java.
 
 ## Overview
 
@@ -39,12 +39,12 @@ Download the latest version for your platform from the [releases page](https://g
    ```bash
    cd GDownloader
    ```
-   
+
 3. Build the project using Gradle:
    ```bash
    ./gradlew clean build jpackage
    ```
-   
+
 ## Screenshots
 
 <img src="screenshot1.png" alt="Screenshot1" width="500"/>

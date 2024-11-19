@@ -93,7 +93,7 @@ public class DownloadManager {
 
     private final ExpiringSet<String> urlIgnoreSet = new ExpiringSet<>(TimeUnit.SECONDS, 5);
 
-    private final ExecutorService forcefulExecutor = Executors.newCachedThreadPool();
+    private final ExecutorService forcefulExecutor = Executors.newCachedThreadPool();// No limits, power to ya
     private final String _forceStartKey = l10n("gui.force_download_start");
 
     @SuppressWarnings("this-escape")
@@ -136,6 +136,10 @@ public class DownloadManager {
 
         if (main.getConfig().isGalleryDlEnabled()) {
             downloaders.add(new GalleryDlDownloader(this));
+        }
+
+        if (main.getConfig().isDebugMode()) {
+            downloaders.add(new DirectHttpDownloader(this));
         }
     }
 

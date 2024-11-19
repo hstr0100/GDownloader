@@ -35,7 +35,8 @@ public enum DownloadTypeEnum implements ISettingsEnum {
     AUDIO(DownloaderIdEnum.YT_DLP),
     SUBTITLES(DownloaderIdEnum.YT_DLP),
     THUMBNAILS(DownloaderIdEnum.YT_DLP),
-    GALLERY(DownloaderIdEnum.GALLERY_DL);
+    GALLERY(DownloaderIdEnum.GALLERY_DL),
+    DIRECT(DownloaderIdEnum.DIRECT_HTTP);
 
     private static final Map<DownloaderIdEnum, List<DownloadTypeEnum>> CACHE = new HashMap<>();
 

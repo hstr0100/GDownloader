@@ -322,8 +322,7 @@ public class YtDlpDownloader extends AbstractDownloader {
     }
 
     @Nullable
-    @Override
-    protected Pair<Integer, String> processDownload(QueueEntry entry, List<String> arguments) throws Exception {
+    private Pair<Integer, String> processDownload(QueueEntry entry, List<String> arguments) throws Exception {
         long start = System.currentTimeMillis();
 
         List<String> finalArgs = new ArrayList<>(arguments);

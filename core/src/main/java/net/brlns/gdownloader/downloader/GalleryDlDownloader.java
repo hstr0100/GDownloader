@@ -116,6 +116,16 @@ public class GalleryDlDownloader extends AbstractDownloader {
             genericArguments.add("--config-ignore");
         }
 
+        if (ffmpegPath.isPresent()) {// TODO: test
+            genericArguments.addAll(List.of(
+                "-o",
+                "downloader.ytdl.raw-options=['"
+                + "--ffmpeg-location" + "', '"
+                + ffmpegPath.get().getAbsolutePath()
+                + "']"
+            ));
+        }
+
         // Workaround for gallery-dl: the process always returns 1 even when downloads succeed.
         genericArguments.addAll(List.of(
             "--exec-after",
@@ -237,8 +247,7 @@ public class GalleryDlDownloader extends AbstractDownloader {
     }
 
     @Nullable
-    @Override
-    protected Pair<Integer, String> processDownload(QueueEntry entry, List<String> arguments) throws Exception {
+    private Pair<Integer, String> processDownload(QueueEntry entry, List<String> arguments) throws Exception {
         long start = System.currentTimeMillis();
 
         List<String> finalArgs = new ArrayList<>(arguments);
