@@ -59,6 +59,7 @@ import static net.brlns.gdownloader.downloader.enums.DownloadFlagsEnum.*;
 // TODO: Resume chunked
 // TODO: Proxy
 // TODO: ftp
+// TODO: Throttling, chunked downloads are easily saturating all available downlink bandwidth
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
@@ -470,8 +471,8 @@ public class DirectHttpDownloader extends AbstractDownloader {
                         }
                     }
 
-                    log.info("Chunk {} is complete", chunkData.getChunkId());
-                    success = true;
+                    log.info("Chunk {} has quit", chunkData.getChunkId());
+                    success = alive.get();
                 } else {
                     throw new IOException("Failed to connect with HTTP code: " + responseCode);
                 }

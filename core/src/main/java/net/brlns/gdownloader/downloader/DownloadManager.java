@@ -144,20 +144,20 @@ public class DownloadManager {
     }
 
     private void enqueueLast(QueueEntry entry) {
-        if (!downloadDeque.contains(entry)) {
-            entry.getMediaCard().getRightClickMenu().put(_forceStartKey,
-                new RunnableMenuEntry(() -> submitDownloadTask(entry, true)));
+        entry.getMediaCard().getRightClickMenu().putIfAbsent(_forceStartKey,
+            new RunnableMenuEntry(() -> submitDownloadTask(entry, true)));
 
+        if (!downloadDeque.contains(entry)) {
             downloadDeque.offerLast(entry);
             fireListeners();
         }
     }
 
     private void enqueueFirst(QueueEntry entry) {
-        if (!downloadDeque.contains(entry)) {
-            entry.getMediaCard().getRightClickMenu().put(_forceStartKey,
-                new RunnableMenuEntry(() -> submitDownloadTask(entry, true)));
+        entry.getMediaCard().getRightClickMenu().putIfAbsent(_forceStartKey,
+            new RunnableMenuEntry(() -> submitDownloadTask(entry, true)));
 
+        if (!downloadDeque.contains(entry)) {
             downloadDeque.offerFirst(entry);
             fireListeners();
         }
