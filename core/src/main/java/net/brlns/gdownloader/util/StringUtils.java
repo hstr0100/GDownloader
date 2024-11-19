@@ -17,12 +17,19 @@
 package net.brlns.gdownloader.util;
 
 import java.io.File;
+import java.text.DecimalFormat;
 import java.time.Duration;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
 public final class StringUtils {
+
+    private static final DecimalFormat PERCENT_FORMATTER = new DecimalFormat("#0.0");
+
+    public static String formatPercent(double percent) {
+        return PERCENT_FORMATTER.format(percent);
+    }
 
     public static String truncate(String input, int length) {
         if (input.length() > length) {

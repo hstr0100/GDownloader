@@ -53,8 +53,6 @@ import static net.brlns.gdownloader.settings.enums.DownloadTypeEnum.*;
 @Slf4j
 public class GalleryDlDownloader extends AbstractDownloader {
 
-    private static final String GD_INTERNAL_FINISHED = "GD-Internal-Finished";
-
     @Getter
     @Setter
     private Optional<File> executablePath = Optional.empty();
@@ -125,12 +123,6 @@ public class GalleryDlDownloader extends AbstractDownloader {
                 + "']"
             ));
         }
-
-        // Workaround for gallery-dl: the process always returns 1 even when downloads succeed.
-        genericArguments.addAll(List.of(
-            "--exec-after",
-            "echo \"" + GD_INTERNAL_FINISHED + "\""
-        ));
 
         genericArguments.addAll(filter.getArguments(getDownloaderId(), ALL, main, tmpPath, entry.getUrl()));
 
@@ -296,10 +288,6 @@ public class GalleryDlDownloader extends AbstractDownloader {
                     log.debug("Download process took {}ms, exit code: {}", stopped, exitCode);
                 }
 
-                if (lastOutput.contains(GD_INTERNAL_FINISHED)) {
-                    exitCode = 0;
-                }
-
                 return new Pair<>(exitCode, lastOutput);
             }
         } catch (IOException e) {
@@ -312,10 +300,6 @@ public class GalleryDlDownloader extends AbstractDownloader {
     }
 
     private void processProgress(QueueEntry entry, String lastOutput) {
-        if (lastOutput.contains(GD_INTERNAL_FINISHED)) {
-            return;
-        }
-
         if (main.getConfig().isDebugMode()) {
             log.debug("[{}] - {}", entry.getDownloadId(), lastOutput);
         }

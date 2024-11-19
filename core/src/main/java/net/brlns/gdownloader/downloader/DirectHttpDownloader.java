@@ -28,13 +28,14 @@ import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.text.DecimalFormat;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Supplier;
 import lombok.Builder;
 import lombok.Data;
 import lombok.Getter;
@@ -65,10 +66,8 @@ import static net.brlns.gdownloader.downloader.enums.DownloadFlagsEnum.*;
 public class DirectHttpDownloader extends AbstractDownloader {
 
     private static final int BUFFER_SIZE = 8192;
-    private static final int THREAD_COUNT = 4;
-    private static final int MAX_RETRIES = 5;
-
-    private final DecimalFormat percentFormatter = new DecimalFormat("#0.0");
+    private static final int THREAD_COUNT = 5;
+    private static final int MAX_CHUNK_RETRIES = 5;
 
     @Getter
     @Setter
@@ -130,8 +129,8 @@ public class DirectHttpDownloader extends AbstractDownloader {
 
             try {
                 success = downloadFile(entry, (percent, total, speed, remainingTime, chunkCount) -> {
-                    String fmPercent = percentFormatter.format(percent);
-                    percent = Double.parseDouble(fmPercent);
+                    String fmPercent = StringUtils.formatPercent(percent);
+                    percent = Math.round(percent * 10) / 10.0;// Strip out unecessary precision
 
                     double lastPercentage = entry.getMediaCard().getPercentage();
 
@@ -295,14 +294,18 @@ public class DirectHttpDownloader extends AbstractDownloader {
 
         AtomicLong downloadedBytes = new AtomicLong(downloadedBytesSoFar);
         AtomicInteger activeChunkCount = new AtomicInteger(0);
+        AtomicBoolean abortHook = new AtomicBoolean();
 
         if (!"bytes".equalsIgnoreCase(connection.getHeaderField("Accept-Ranges"))) {
             log.info("Server does not support multi-threading, downloading single-threaded.");
+            log.info("Start offset: {} remaining: {}", downloadedBytesSoFar, remainingBytes);
 
             activeChunkCount.incrementAndGet();
             try {
                 ChunkData chunkData = ChunkData.builder()
-                    .chunked(false)
+                    .chunkId(0)
+                    .abortHook(abortHook)
+                    .chunked(downloadedBytesSoFar > 0)
                     .queueEntry(queueEntry)
                     .fileUrl(fileUrl)
                     .filePath(targetFile)
@@ -320,12 +323,16 @@ public class DirectHttpDownloader extends AbstractDownloader {
             }
         }
 
+        // No support for cold-start resume of chunked downloads yet
+        downloadedBytes.set(0);
+
         ExecutorService executor = Executors.newFixedThreadPool(THREAD_COUNT);
         long chunkSize = totalBytes / THREAD_COUNT;
 
         List<Future<?>> futures = new ArrayList<>();
 
         for (int i = 0; i < THREAD_COUNT; i++) {
+            int chunkId = i;
             long startByte = i * chunkSize;
             long endByte = (i == THREAD_COUNT - 1) ? totalBytes - 1 : (startByte + chunkSize - 1);
 
@@ -335,6 +342,8 @@ public class DirectHttpDownloader extends AbstractDownloader {
             futures.add(executor.submit(() -> {
                 try {
                     ChunkData chunkData = ChunkData.builder()
+                        .chunkId(chunkId)
+                        .abortHook(abortHook)
                         .chunked(true)
                         .queueEntry(queueEntry)
                         .fileUrl(fileUrl)
@@ -382,33 +391,50 @@ public class DirectHttpDownloader extends AbstractDownloader {
     private boolean downloadChunk(ChunkData chunkData) throws IOException {
         int attempt = 0;
         boolean success = false;
+        int currentByteOffset = 0;
 
-        while (attempt < MAX_RETRIES && !success && isAlive(chunkData.getQueueEntry())) {
+        Supplier<Boolean> alive = () -> isAlive(chunkData.getQueueEntry()) && !chunkData.getAbortHook().get();
+
+        while (attempt < MAX_CHUNK_RETRIES && !success && alive.get()) {
             HttpURLConnection connection = null;
             try {
                 connection = (HttpURLConnection)chunkData.getFileUrl().openConnection(getProxySettings());
                 connection.setRequestMethod("GET");
 
+                long startOffset = chunkData.getStartByte() + currentByteOffset;
+
                 if (chunkData.isChunked()) {
-                    connection.setRequestProperty("Range", "bytes=" + chunkData.getStartByte() + "-" + chunkData.getEndByte());
+                    connection.setRequestProperty("Range", "bytes=" + startOffset + "-" + chunkData.getEndByte());
                 }
 
                 int responseCode = connection.getResponseCode();
-                int expectedCode = chunkData.isChunked() ? HttpURLConnection.HTTP_PARTIAL : HttpURLConnection.HTTP_OK;
 
-                if (responseCode == expectedCode) {
+                if (responseCode == HttpURLConnection.HTTP_PARTIAL
+                    || responseCode == HttpURLConnection.HTTP_OK) {
                     try (InputStream inputStream = connection.getInputStream();
                          RandomAccessFile outputFile = new RandomAccessFile(chunkData.getFilePath(), "rw")) {
-                        outputFile.seek(chunkData.getStartByte()); // Move to the start of this chunk
+                        if (responseCode == HttpURLConnection.HTTP_PARTIAL) {
+                            log.info("Partial download accepted, resuming from {} <- offset {}", chunkData.getStartByte(), startOffset);
+                            outputFile.seek(startOffset); // Move to the start of this chunk
+                        } else if (chunkData.isChunked()) {
+                            if (chunkData.getStartByte() != 0 && chunkData.getEndByte() != chunkData.getTotalBytes() - 1) {
+                                throw new IOException("Partial download refused by server");
+                            } else {
+                                log.info("Partial download refused, resetting progress");
+                                chunkData.getDownloadedBytes().set(0);
+                            }
+                        }
 
                         long startTime = System.nanoTime();
+                        long totalDownloadedAtStart = chunkData.getDownloadedBytes().get();
                         long lastCallbackTime = System.nanoTime();
 
                         byte[] buffer = new byte[BUFFER_SIZE];
                         int bytesRead;
 
-                        while ((bytesRead = inputStream.read(buffer)) != -1 && isAlive(chunkData.getQueueEntry())) {
+                        while ((bytesRead = inputStream.read(buffer)) != -1 && alive.get()) {
                             outputFile.write(buffer, 0, bytesRead);
+                            currentByteOffset += bytesRead;
 
                             long totalDownloaded = chunkData.getDownloadedBytes().addAndGet(bytesRead);
 
@@ -421,13 +447,14 @@ public class DirectHttpDownloader extends AbstractDownloader {
                                 double progress = ((double)totalDownloaded * 100) / chunkData.getTotalBytes();
 
                                 // Speed
-                                long elapsedTimeNano = System.nanoTime() - startTime;
+                                long elapsedTimeNano = currentTime - startTime;
                                 double elapsedTimeSeconds = elapsedTimeNano / 1e9;
-                                long speed = (long)(totalDownloaded / elapsedTimeSeconds);
+                                long speed = (elapsedTimeSeconds > 0)
+                                    ? (long)((totalDownloaded - totalDownloadedAtStart) / elapsedTimeSeconds) : 0;
 
                                 // ETA
                                 long remainingBytes = chunkData.getTotalBytes() - totalDownloaded;
-                                double remainingTimeSeconds = (double)remainingBytes / speed;
+                                double remainingTimeSeconds = (speed > 0) ? (double)remainingBytes / speed : 0;
                                 long remainingTimeMillis = (long)(remainingTimeSeconds * 1000);
 
                                 chunkData.getProgressCallback().accept(
@@ -443,6 +470,7 @@ public class DirectHttpDownloader extends AbstractDownloader {
                         }
                     }
 
+                    log.info("Chunk {} is complete", chunkData.getChunkId());
                     success = true;
                 } else {
                     throw new IOException("Failed to connect with HTTP code: " + responseCode);
@@ -451,8 +479,9 @@ public class DirectHttpDownloader extends AbstractDownloader {
                 attempt++;
                 log.error("Error on attempt {}: {}", attempt, e.getMessage());
 
-                if (attempt == MAX_RETRIES) {
-                    throw new IOException("Failed to download file after " + MAX_RETRIES + " attempts.");
+                if (attempt == MAX_CHUNK_RETRIES) {
+                    chunkData.getAbortHook().set(true);
+                    throw new IOException("Failed to download file after " + MAX_CHUNK_RETRIES + " attempts.");
                 }
             } finally {
                 if (connection != null) {
@@ -499,6 +528,8 @@ public class DirectHttpDownloader extends AbstractDownloader {
     @Builder
     private static class ChunkData {
 
+        private int chunkId;
+        private AtomicBoolean abortHook;
         private boolean chunked;
         private QueueEntry queueEntry;
         private URL fileUrl;
