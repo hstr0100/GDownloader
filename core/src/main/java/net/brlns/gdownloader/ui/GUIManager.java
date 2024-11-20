@@ -329,7 +329,7 @@ public final class GUIManager {
 
         addStatusLabel(statusPanel, LIGHT_TEXT, (downloadManager) -> {
             return "<html>"
-                + downloadManager.getDownloadsRunning() + " " + l10n("gui.statusbar.running")
+                + downloadManager.getRunningDownloads() + " " + l10n("gui.statusbar.running")
                 + "<br>"
                 + downloadManager.getCompletedDownloads() + " " + l10n("gui.statusbar.completed")
                 + "</html>";
@@ -337,7 +337,7 @@ public final class GUIManager {
 
         addStatusLabel(statusPanel, LIGHT_TEXT, (downloadManager) -> {
             return "<html>"
-                + downloadManager.getQueueSize() + " " + l10n("gui.statusbar.queued")
+                + downloadManager.getQueuedDownloads() + " " + l10n("gui.statusbar.queued")
                 + "<br>"
                 + downloadManager.getFailedDownloads() + " " + l10n("gui.statusbar.failed")
                 + "</html>";
@@ -422,7 +422,7 @@ public final class GUIManager {
                 if (state) {
                     return loadIcon("/assets/pause.png", ICON);
                 } else {
-                    if (main.getDownloadManager().getQueueSize() > 0) {
+                    if (main.getDownloadManager().getQueuedDownloads() > 0) {
                         return loadIcon("/assets/play.png", QUEUE_ACTIVE_ICON);
                     } else {
                         return loadIcon("/assets/play.png", ICON);
@@ -455,6 +455,8 @@ public final class GUIManager {
             new RunnableMenuEntry(() -> main.getDownloadManager().clearQueue(QueueCategoryEnum.COMPLETED)));
         rightClickMenu.put(l10n("gui.clear_download_queue.clear_queued"),
             new RunnableMenuEntry(() -> main.getDownloadManager().clearQueue(QueueCategoryEnum.QUEUED)));
+        rightClickMenu.put(l10n("gui.clear_download_queue.clear_running"),
+            new RunnableMenuEntry(() -> main.getDownloadManager().clearQueue(QueueCategoryEnum.RUNNING)));
 
         clearQueueButton.addMouseListener(new MouseAdapter() {
             @Override
@@ -1248,7 +1250,7 @@ public final class GUIManager {
                         lastClick = System.currentTimeMillis();
                     }
                 } else if (SwingUtilities.isRightMouseButton(e)) {
-                    showRightClickMenu(card, mediaCard.getRightClickMenu(), e.getX(), e.getY());
+                    showRightClickMenu(card, mediaCard.getRightClickMenu().snapshot(), e.getX(), e.getY());
                 }
             }
 

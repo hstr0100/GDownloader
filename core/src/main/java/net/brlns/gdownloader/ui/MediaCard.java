@@ -19,8 +19,6 @@ package net.brlns.gdownloader.ui;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.image.BufferedImage;
-import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import javax.swing.JPanel;
@@ -29,7 +27,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.ui.custom.CustomDynamicLabel;
 import net.brlns.gdownloader.ui.custom.CustomProgressBar;
 import net.brlns.gdownloader.ui.custom.CustomThumbnailPanel;
-import net.brlns.gdownloader.ui.menu.IMenuEntry;
+import net.brlns.gdownloader.ui.menu.RightClickMenuEntries;
 
 import static net.brlns.gdownloader.ui.GUIManager.runOnEDT;
 
@@ -51,7 +49,7 @@ public class MediaCard {
     private double percentage = 0;
 
     private Runnable onLeftClick;
-    private Map<String, IMenuEntry> rightClickMenu = new LinkedHashMap<>();
+    private RightClickMenuEntries rightClickMenu = new RightClickMenuEntries();
     private Runnable onClose;
     private Consumer<Integer> onDrag;
     private boolean closed;

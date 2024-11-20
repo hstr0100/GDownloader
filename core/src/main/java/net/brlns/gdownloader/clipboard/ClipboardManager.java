@@ -104,41 +104,33 @@ public class ClipboardManager {
         }
     }
 
+    public void copyTextToClipboard(@NonNull String text) {
+        copyTextToClipboard(List.of(text));
+    }
+
     public void copyTextToClipboard(@NonNull List<String> texts) {
         if (texts.isEmpty()) {
             return;
         }
 
-        invalidateClipboard();
+        clipboardLock.lock();
+        try {
+            clipboard.setContents(new StringSelection(String.join(System.lineSeparator(), texts)), null);
 
-        clipboard.setContents(new StringSelection(String.join(System.lineSeparator(), texts)), null);
+            invalidateClipboard();
 
-        String lastText = texts.get(texts.size() - 1);
-        main.getGuiManager().showMessage(
-            l10n("gui.copied_to_clipboard.notification_title"),
-            lastText,
-            2000,
-            GUIManager.MessageType.INFO,
-            false
-        );
-    }
+            String displayText = texts.size() == 1 ? texts.get(texts.size() - 1)
+                : l10n("gui.copied_to_clipboard.lines", texts.size());
 
-    public void copyTextToClipboard(@NonNull String text) {
-        if (text.isEmpty()) {
-            return;
+            main.getGuiManager().showMessage(
+                l10n("gui.copied_to_clipboard.notification_title"),
+                displayText,
+                2000,
+                GUIManager.MessageType.INFO,
+                false);
+        } finally {
+            clipboardLock.unlock();
         }
-
-        invalidateClipboard();
-
-        clipboard.setContents(new StringSelection(text), null);
-
-        main.getGuiManager().showMessage(
-            l10n("gui.copied_to_clipboard.notification_title"),
-            text,
-            2000,
-            GUIManager.MessageType.INFO,
-            false
-        );
     }
 
     public boolean tryHandleDnD(@Nullable Transferable transferable) {

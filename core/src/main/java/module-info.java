@@ -53,6 +53,7 @@ module net.brlns.gdownloader {
     exports net.brlns.gdownloader.ui.themes;
     exports net.brlns.gdownloader.updater;
     exports net.brlns.gdownloader.util;
+    exports net.brlns.gdownloader.util.collection;
 
     uses javax.imageio.spi.ImageInputStreamSpi;
     uses javax.imageio.spi.ImageOutputStreamSpi;

@@ -308,7 +308,7 @@ public class GalleryDlDownloader extends AbstractDownloader {
 
             entry.updateStatus(DownloadStatusEnum.DOWNLOADING,
                 StringUtils.getStringAfterLastSeparator(lastOutput
-                    .replace(entry.getTmpDirectory().getAbsolutePath() + File.separator, "")), false);
+                    .replace(entry.getTmpDirectory().getAbsolutePath() + File.separator, ""))/*, false*/);
         } else {
             if (entry.getDownloadStarted().get()) {
                 entry.updateStatus(DownloadStatusEnum.PROCESSING, lastOutput);

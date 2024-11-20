@@ -24,6 +24,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.HashSet;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
+import net.brlns.gdownloader.util.collection.LRUCache;
 
 /**
  * @author Gabriel / hstr0100 / vertx010

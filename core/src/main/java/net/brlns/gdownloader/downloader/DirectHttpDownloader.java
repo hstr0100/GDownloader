@@ -96,7 +96,8 @@ public class DirectHttpDownloader extends AbstractDownloader {
 
     @Override
     protected boolean canConsumeUrl(String inputUrl) {
-        return !(inputUrl.contains("ytimg")
+        return main.getConfig().isDirectHttpEnabled()
+            && !(inputUrl.contains("ytimg")
             || inputUrl.contains("ggpht")
             || inputUrl.endsWith("youtube.com/"));
     }

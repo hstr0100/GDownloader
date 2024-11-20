@@ -43,14 +43,14 @@ import net.brlns.gdownloader.settings.filters.YoutubePlaylistFilter;
 import net.brlns.gdownloader.ui.GUIManager;
 import net.brlns.gdownloader.ui.MediaCard;
 import net.brlns.gdownloader.ui.menu.IMenuEntry;
-import net.brlns.gdownloader.ui.menu.NestedMenuEntry;
 import net.brlns.gdownloader.ui.menu.RunnableMenuEntry;
-import net.brlns.gdownloader.util.ConcurrentRearrangeableDeque;
-import net.brlns.gdownloader.util.ExpiringSet;
-import net.brlns.gdownloader.util.LinkedIterableBlockingQueue;
 import net.brlns.gdownloader.util.Nullable;
+import net.brlns.gdownloader.util.collection.ConcurrentRearrangeableDeque;
+import net.brlns.gdownloader.util.collection.ExpiringSet;
+import net.brlns.gdownloader.util.collection.LinkedIterableBlockingQueue;
 
 import static net.brlns.gdownloader.downloader.enums.DownloadFlagsEnum.*;
+import static net.brlns.gdownloader.downloader.enums.QueueCategoryEnum.*;
 import static net.brlns.gdownloader.lang.Language.*;
 import static net.brlns.gdownloader.settings.enums.PlayListOptionEnum.ALWAYS_ASK;
 import static net.brlns.gdownloader.settings.enums.PlayListOptionEnum.DOWNLOAD_PLAYLIST;
@@ -80,11 +80,13 @@ public class DownloadManager {
     private final ConcurrentRearrangeableDeque<QueueEntry> downloadDeque
         = new ConcurrentRearrangeableDeque<>();
 
+    // This queue has a blocking iterator, it's exclusive for the process monitor
     private final Queue<QueueEntry> inProgressDownloads = new LinkedIterableBlockingQueue<>();
+
+    private final Queue<QueueEntry> runningDownloads = new ConcurrentLinkedQueue<>();
     private final Queue<QueueEntry> completedDownloads = new ConcurrentLinkedQueue<>();
     private final Queue<QueueEntry> failedDownloads = new ConcurrentLinkedQueue<>();
 
-    private final AtomicInteger runningDownloads = new AtomicInteger();
     private final AtomicInteger downloadCounter = new AtomicInteger();
 
     private final AtomicBoolean downloadsBlocked = new AtomicBoolean(true);
@@ -140,26 +142,6 @@ public class DownloadManager {
 
         if (main.getConfig().isDebugMode()) {
             downloaders.add(new DirectHttpDownloader(this));
-        }
-    }
-
-    private void enqueueLast(QueueEntry entry) {
-        entry.getMediaCard().getRightClickMenu().putIfAbsent(_forceStartKey,
-            new RunnableMenuEntry(() -> submitDownloadTask(entry, true)));
-
-        if (!downloadDeque.contains(entry)) {
-            downloadDeque.offerLast(entry);
-            fireListeners();
-        }
-    }
-
-    private void enqueueFirst(QueueEntry entry) {
-        entry.getMediaCard().getRightClickMenu().putIfAbsent(_forceStartKey,
-            new RunnableMenuEntry(() -> submitDownloadTask(entry, true)));
-
-        if (!downloadDeque.contains(entry)) {
-            downloadDeque.offerFirst(entry);
-            fireListeners();
         }
     }
 
@@ -384,18 +366,14 @@ public class DownloadManager {
                 capturedLinks.remove(inputUrl);
                 capturedLinks.remove(filtered);
 
-                downloadDeque.remove(queueEntry);
-                failedDownloads.remove(queueEntry);
-                completedDownloads.remove(queueEntry);
-
-                fireListeners();
+                dequeueFromAll(queueEntry);
             });
 
             mediaCard.setOnLeftClick(() -> {
                 main.openDownloadsDirectory();
             });
 
-            createRightClickMenu(queueEntry);
+            queueEntry.createDefaultRightClick(this);
 
             mediaCard.setOnDrag((targetIndex) -> {
                 if (downloadDeque.contains(queueEntry)) {
@@ -482,12 +460,12 @@ public class DownloadManager {
         }
     }
 
-    public int getQueueSize() {
+    public int getQueuedDownloads() {
         return downloadDeque.size();
     }
 
-    public int getDownloadsRunning() {
-        return runningDownloads.get();
+    public int getRunningDownloads() {
+        return runningDownloads.size();
     }
 
     public int getFailedDownloads() {
@@ -508,23 +486,38 @@ public class DownloadManager {
         fireListeners();
     }
 
+    public void processQueue() {
+        while (downloadsRunning.get() && downloadsManuallyStarted.get() && !downloadDeque.isEmpty()) {
+            if (runningDownloads.size() >= main.getConfig().getMaxSimultaneousDownloads()) {
+                break;
+            }
+
+            QueueEntry entry = downloadDeque.peek();
+
+            submitDownloadTask(entry, false);
+        }
+
+        if (downloadsRunning.get() && runningDownloads.isEmpty()) {
+            stopDownloads();
+        }
+    }
+
     public void clearQueue() {
         capturedLinks.clear();
         capturedPlaylists.clear();
 
-        // Active downloads are intentionally immune to this.
-        clearQueue(QueueCategoryEnum.QUEUED, false);
-        clearQueue(QueueCategoryEnum.FAILED, false);
-        clearQueue(QueueCategoryEnum.COMPLETED, false);
+        for (QueueCategoryEnum category : QueueCategoryEnum.values()) {
+            if (category == RUNNING) {
+                continue;// Active downloads are intentionally immune to this.
+            }
+
+            clearQueue(category, false);
+        }
 
         fireListeners();
     }
 
-    public void clearQueue(QueueCategoryEnum category) {
-        clearQueue(category, true);
-    }
-
-    public void clearQueue(QueueCategoryEnum category, boolean fireListeners) {
+    private Queue<QueueEntry> getQueue(QueueCategoryEnum category) {
         Queue<QueueEntry> queue;
         switch (category) {
             case FAILED ->
@@ -533,9 +526,21 @@ public class DownloadManager {
                 queue = completedDownloads;
             case QUEUED ->
                 queue = downloadDeque;
+            case RUNNING ->
+                queue = runningDownloads;
             default ->
                 throw new IllegalArgumentException();
         }
+
+        return queue;
+    }
+
+    public void clearQueue(QueueCategoryEnum category) {
+        clearQueue(category, true);
+    }
+
+    public void clearQueue(QueueCategoryEnum category, boolean fireListeners) {
+        Queue<QueueEntry> queue = getQueue(category);
 
         QueueEntry entry;
         while ((entry = queue.poll()) != null) {
@@ -547,6 +552,69 @@ public class DownloadManager {
         }
 
         if (fireListeners) {
+            fireListeners();
+        }
+    }
+
+    private void enqueueLast(QueueEntry entry) {
+        dequeueFromAll(entry);
+
+        entry.addRightClick(_forceStartKey,
+            () -> submitDownloadTask(entry, true));
+
+        if (!downloadDeque.contains(entry)) {
+            downloadDeque.offerLast(entry);
+            fireListeners();
+        }
+    }
+
+    private void enqueueFirst(QueueEntry entry) {
+        dequeueFromAll(entry);
+
+        entry.addRightClick(_forceStartKey,
+            () -> submitDownloadTask(entry, true));
+
+        if (!downloadDeque.contains(entry)) {
+            downloadDeque.offerFirst(entry);
+            fireListeners();
+        }
+    }
+
+    private void dequeueFromAll(QueueEntry entry) {
+        boolean success = false;
+        for (QueueCategoryEnum cat : QueueCategoryEnum.values()) {
+            success = dequeue(cat, entry, false);
+        }
+
+        if (success) {
+            fireListeners();
+        }
+    }
+
+    private boolean dequeue(QueueCategoryEnum category, QueueEntry entry) {
+        return dequeue(category, entry, true);
+    }
+
+    private boolean dequeue(QueueCategoryEnum category, QueueEntry entry, boolean fireListeners) {
+        boolean success = getQueue(category).remove(entry);
+
+        if (success && fireListeners) {
+            fireListeners();
+        }
+
+        return success;
+    }
+
+    private void offerTo(QueueCategoryEnum category, QueueEntry entry) {
+        if (category == QUEUED) {
+            throw new IllegalArgumentException("Use enqueueFirst() or enqueueLast() to add to downloadDeque");
+        }
+
+        dequeueFromAll(entry);
+
+        Queue<QueueEntry> queue = getQueue(category);
+        if (!queue.contains(entry)) {
+            queue.offer(entry);
             fireListeners();
         }
     }
@@ -569,43 +637,12 @@ public class DownloadManager {
         }, 1);
     }
 
-    private void createRightClickMenu(QueueEntry queueEntry) {
-        Map<String, IMenuEntry> menu = queueEntry.getMediaCard().getRightClickMenu();
-
-        menu.clear();
-
-        menu.put(l10n("gui.open_downloads_directory"),
-            new RunnableMenuEntry(() -> main.openDownloadsDirectory()));
-        menu.put(l10n("gui.open_in_browser"),
-            new RunnableMenuEntry(() -> queueEntry.openUrl()));
-        menu.put(l10n("gui.copy_url"),
-            new RunnableMenuEntry(() -> queueEntry.copyUrlToClipboard()));
-
-        NestedMenuEntry downloadersSubmenu = new NestedMenuEntry();
-
-        for (AbstractDownloader downloader : queueEntry.getDownloaders()) {
-            DownloaderIdEnum downloaderId = downloader.getDownloaderId();
-            downloadersSubmenu.put(
-                downloaderId.getDisplayName(),
-                new RunnableMenuEntry(() -> {
-                    queueEntry.setForcedDownloader(downloaderId);
-                    restartDownload(queueEntry);
-                })
-            );
-        }
-
-        if (!downloadersSubmenu.isEmpty()) {
-            menu.put(l10n("gui.download_with"),
-                downloadersSubmenu);
-        }
-    }
-
-    private void restartDownload(QueueEntry queueEntry) {
+    protected void restartDownload(QueueEntry queueEntry) {
         restartDownload(queueEntry, true);
     }
 
-    private void restartDownload(QueueEntry queueEntry, boolean fireListeners) {
-        createRightClickMenu(queueEntry);
+    protected void restartDownload(QueueEntry queueEntry, boolean fireListeners) {
+        queueEntry.createDefaultRightClick(this);
 
         queueEntry.cleanDirectories();
 
@@ -613,28 +650,10 @@ public class DownloadManager {
         queueEntry.resetDownloaderBlacklist();
         queueEntry.resetRetryCounter();// Normaly we want the retry count to stick around, but not in this case.
 
-        failedDownloads.remove(queueEntry);
-        completedDownloads.remove(queueEntry);
         enqueueLast(queueEntry);
 
         if (fireListeners) {
             fireListeners();
-        }
-    }
-
-    public void processQueue() {
-        while (downloadsRunning.get() && downloadsManuallyStarted.get() && !downloadDeque.isEmpty()) {
-            if (runningDownloads.get() >= main.getConfig().getMaxSimultaneousDownloads()) {
-                break;
-            }
-
-            QueueEntry entry = downloadDeque.peek();
-
-            submitDownloadTask(entry, false);
-        }
-
-        if (downloadsRunning.get() && runningDownloads.get() == 0) {
-            stopDownloads();
         }
     }
 
@@ -646,7 +665,7 @@ public class DownloadManager {
             return;
         }
 
-        entry.getMediaCard().getRightClickMenu().remove(_forceStartKey);
+        entry.removeRightClick(_forceStartKey);
 
         if (force) {
             downloadsRunning.set(true);
@@ -658,8 +677,7 @@ public class DownloadManager {
             return;
         }
 
-        runningDownloads.incrementAndGet();
-        fireListeners();
+        offerTo(RUNNING, entry);
 
         Runnable downloadTask = () -> {
             try {
@@ -756,12 +774,11 @@ public class DownloadManager {
                                     throw new IllegalStateException("Unhandled NO_METHOD");
                                 }
 
-                                mediaCard.getRightClickMenu().put(
+                                entry.addRightClick(
                                     l10n("gui.restart_download"),
-                                    new RunnableMenuEntry(() -> restartDownload(entry)));
+                                    () -> restartDownload(entry));
 
-                                failedDownloads.offer(entry);
-                                fireListeners();
+                                offerTo(FAILED, entry);
                                 return;
                             }
 
@@ -779,20 +796,19 @@ public class DownloadManager {
                                 controlOptions.put(l10n("gui.delete_files"), new RunnableMenuEntry(() -> {
                                     entry.deleteMediaFiles();
 
-                                    mediaCard.getRightClickMenu().remove(l10n("gui.delete_files"));
+                                    entry.removeRightClick(l10n("gui.delete_files"));
                                     for (String key : rightClickOptions.keySet()) {
-                                        mediaCard.getRightClickMenu().remove(key);
+                                        entry.removeRightClick(key);
                                     }
                                 }));
 
-                                mediaCard.getRightClickMenu().putAll(controlOptions);
-                                mediaCard.getRightClickMenu().putAll(rightClickOptions);
+                                entry.addRightClick(controlOptions);
+                                entry.addRightClick(rightClickOptions);
 
                                 entry.updateStatus(DownloadStatusEnum.COMPLETE, l10n("gui.download_status.finished"));
                                 entry.cleanDirectories();
 
-                                completedDownloads.offer(entry);
-                                fireListeners();
+                                offerTo(COMPLETED, entry);
                                 return;
                             } else {
                                 log.error("Unexpected download state");
@@ -818,12 +834,11 @@ public class DownloadManager {
                         log.error("All downloaders failed for {}", entry.getUrl());
                     }
 
-                    mediaCard.getRightClickMenu().put(
+                    entry.addRightClick(
                         l10n("gui.restart_download"),
-                        new RunnableMenuEntry(() -> restartDownload(entry)));
+                        () -> restartDownload(entry));
 
-                    failedDownloads.offer(entry);
-                    fireListeners();
+                    offerTo(FAILED, entry);
                 } finally {
                     inProgressDownloads.remove(entry);
                 }
@@ -832,14 +847,13 @@ public class DownloadManager {
 
                 entry.updateStatus(DownloadStatusEnum.FAILED, e.getLocalizedMessage());
 
-                enqueueLast(entry);// Our fault, retry again later
+                offerTo(FAILED, entry);
 
                 GDownloader.handleException(e);
             } finally {
                 entry.getRunning().set(false);
 
-                runningDownloads.decrementAndGet();
-                fireListeners();
+                dequeue(RUNNING, entry);
             }
         };
 

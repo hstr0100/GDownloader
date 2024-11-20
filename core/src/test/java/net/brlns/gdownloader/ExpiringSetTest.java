@@ -1,7 +1,7 @@
 package net.brlns.gdownloader;
 
 import java.util.concurrent.TimeUnit;
-import net.brlns.gdownloader.util.ExpiringSet;
+import net.brlns.gdownloader.util.collection.ExpiringSet;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

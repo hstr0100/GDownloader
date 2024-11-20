@@ -24,15 +24,14 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.util.ArrayList;
-import java.util.LinkedHashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 import javax.imageio.ImageIO;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -48,10 +47,13 @@ import net.brlns.gdownloader.settings.enums.IContainerEnum;
 import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
 import net.brlns.gdownloader.ui.GUIManager;
 import net.brlns.gdownloader.ui.MediaCard;
+import net.brlns.gdownloader.ui.menu.IMenuEntry;
+import net.brlns.gdownloader.ui.menu.NestedMenuEntry;
 import net.brlns.gdownloader.ui.menu.RunnableMenuEntry;
 import net.brlns.gdownloader.util.DirectoryUtils;
 import net.brlns.gdownloader.util.Nullable;
 import net.brlns.gdownloader.util.StringUtils;
+import net.brlns.gdownloader.util.collection.ConcurrentLinkedHashSet;
 
 import static net.brlns.gdownloader.downloader.enums.DownloadStatusEnum.*;
 import static net.brlns.gdownloader.lang.Language.*;
@@ -96,9 +98,8 @@ public class QueueEntry {
     private File tmpDirectory;
     private final List<File> finalMediaFiles = new ArrayList<>();
 
-    private final ReentrantReadWriteLock logLock = new ReentrantReadWriteLock();
-    private final Set<String> errorLog = new LinkedHashSet<>();
-    private final Set<String> downloadLog = new LinkedHashSet<>();
+    private final ConcurrentLinkedHashSet<String> errorLog = new ConcurrentLinkedHashSet<>();
+    private final ConcurrentLinkedHashSet<String> downloadLog = new ConcurrentLinkedHashSet<>();
 
     @Setter
     private Process process;
@@ -128,55 +129,6 @@ public class QueueEntry {
         }
 
         main.openDownloadsDirectory();
-    }
-
-    public void logError(String output) {
-        if (output.isEmpty()) {
-            return;
-        }
-
-        logLock.writeLock().lock();
-        try {
-            errorLog.add(output);
-        } finally {
-            logLock.writeLock().unlock();
-        }
-
-        mediaCard.getRightClickMenu().put(
-            l10n("gui.copy_error_log"),
-            new RunnableMenuEntry(() -> main.getClipboardManager()
-            .copyTextToClipboard(getListFromLog(true))));
-    }
-
-    public void logOutput(String output) {
-        if (output.isEmpty()) {
-            return;
-        }
-
-        logLock.writeLock().lock();
-        try {
-            downloadLog.add(output);
-        } finally {
-            logLock.writeLock().unlock();
-        }
-
-        mediaCard.getRightClickMenu().put(
-            l10n("gui.copy_download_log"),
-            new RunnableMenuEntry(() -> main.getClipboardManager()
-            .copyTextToClipboard(getListFromLog(false))));
-    }
-
-    private List<String> getListFromLog(boolean error) {
-        logLock.readLock().lock();
-        try {
-            if (error) {
-                return new ArrayList<>(errorLog);
-            } else {
-                return new ArrayList<>(downloadLog);
-            }
-        } finally {
-            logLock.readLock().unlock();
-        }
     }
 
     @Nullable
@@ -392,4 +344,96 @@ public class QueueEntry {
             mediaCard.setProgressBarText(status.getDisplayName() + ": " + mediaCard.getPercentage() + "%");
         }
     }
+
+    public void logError(String output) {
+        if (output.isEmpty()) {
+            return;
+        }
+
+        if (!errorLog.isEmpty()) {
+            addRightClick(l10n("gui.copy_error_log"),
+                () -> main.getClipboardManager()
+                    .copyTextToClipboard(errorLog.snapshotAsList()));
+        }
+
+        errorLog.add(output);
+    }
+
+    public void logOutput(String output) {
+        if (output.isEmpty()) {
+            return;
+        }
+
+        if (!downloadLog.isEmpty()) {
+            addRightClick(l10n("gui.copy_download_log"),
+                () -> main.getClipboardManager()
+                    .copyTextToClipboard(downloadLog.snapshotAsList()));
+        }
+
+        downloadLog.add(output);
+    }
+
+    public void addRightClick(String key, Runnable runnable) {
+        addRightClick(key, new RunnableMenuEntry(runnable));
+    }
+
+    public void addRightClick(String key, IMenuEntry entry) {
+        mediaCard.getRightClickMenu().put(key, entry);
+    }
+
+    public void addRightClick(Map<String, IMenuEntry> input) {
+        mediaCard.getRightClickMenu().putAll(input);
+    }
+
+    public void removeRightClick(String key) {
+        mediaCard.getRightClickMenu().remove(key);
+    }
+
+    public void clearRightClick() {
+        mediaCard.getRightClickMenu().clear();
+    }
+
+    protected void createDefaultRightClick(DownloadManager manager) {
+        Map<String, IMenuEntry> menu = new LinkedHashMap<>();
+
+        menu.put(l10n("gui.open_downloads_directory"),
+            new RunnableMenuEntry(() -> main.openDownloadsDirectory()));
+        menu.put(l10n("gui.open_in_browser"),
+            new RunnableMenuEntry(() -> openUrl()));
+        menu.put(l10n("gui.copy_url"),
+            new RunnableMenuEntry(() -> copyUrlToClipboard()));
+
+        NestedMenuEntry downloadersSubmenu = new NestedMenuEntry();
+
+        for (AbstractDownloader downloader : getDownloaders()) {
+            DownloaderIdEnum downloaderId = downloader.getDownloaderId();
+            downloadersSubmenu.put(
+                downloaderId.getDisplayName(),
+                new RunnableMenuEntry(() -> {
+                    setForcedDownloader(downloaderId);
+                })
+            );
+        }
+
+        if (!downloadersSubmenu.isEmpty()) {
+            menu.put(l10n("gui.download_with"),
+                downloadersSubmenu);
+        }
+
+        if (!errorLog.isEmpty()) {
+            addRightClick(l10n("gui.copy_error_log"),
+                () -> main.getClipboardManager()
+                    .copyTextToClipboard(errorLog.snapshotAsList()));
+        }
+
+        if (!downloadLog.isEmpty()) {
+            addRightClick(l10n("gui.copy_download_log"),
+                () -> main.getClipboardManager()
+                    .copyTextToClipboard(downloadLog.snapshotAsList()));
+        }
+
+        clearRightClick();
+        addRightClick(menu);
+    }
+
 }
