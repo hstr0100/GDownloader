@@ -24,12 +24,15 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import javax.imageio.ImageIO;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -45,6 +48,7 @@ import net.brlns.gdownloader.settings.enums.IContainerEnum;
 import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
 import net.brlns.gdownloader.ui.GUIManager;
 import net.brlns.gdownloader.ui.MediaCard;
+import net.brlns.gdownloader.ui.menu.RunnableMenuEntry;
 import net.brlns.gdownloader.util.DirectoryUtils;
 import net.brlns.gdownloader.util.Nullable;
 import net.brlns.gdownloader.util.StringUtils;
@@ -92,6 +96,10 @@ public class QueueEntry {
     private File tmpDirectory;
     private final List<File> finalMediaFiles = new ArrayList<>();
 
+    private final ReentrantReadWriteLock logLock = new ReentrantReadWriteLock();
+    private final Set<String> errorLog = new LinkedHashSet<>();
+    private final Set<String> downloadLog = new LinkedHashSet<>();
+
     @Setter
     private Process process;
 
@@ -120,6 +128,56 @@ public class QueueEntry {
         }
 
         main.openDownloadsDirectory();
+    }
+
+    public void logError(String errorMessage) {
+        logOutput(errorMessage, true);
+    }
+
+    public void logOutput(String output) {
+        logOutput(output, false);
+    }
+
+    public void logOutput(String output, boolean error) {
+        if (output.isEmpty()) {
+            return;
+        }
+
+        logLock.writeLock().lock();
+        try {
+            if (error) {
+                errorLog.add(output);
+            } else {
+                downloadLog.add(output);
+            }
+        } finally {
+            logLock.writeLock().unlock();
+        }
+
+        if (error) {
+            mediaCard.getRightClickMenu().put(
+                l10n("gui.copy_error_log"),
+                new RunnableMenuEntry(() -> main.getClipboardManager()
+                .copyTextToClipboard(getListFromLog(true))));
+        } else {
+            mediaCard.getRightClickMenu().put(
+                l10n("gui.copy_download_log"),
+                new RunnableMenuEntry(() -> main.getClipboardManager()
+                .copyTextToClipboard(getListFromLog(false))));
+        }
+    }
+
+    private List<String> getListFromLog(boolean error) {
+        logLock.readLock().lock();
+        try {
+            if (error) {
+                return new ArrayList<>(errorLog);
+            } else {
+                return new ArrayList<>(downloadLog);
+            }
+        } finally {
+            logLock.readLock().unlock();
+        }
     }
 
     @Nullable
@@ -265,6 +323,14 @@ public class QueueEntry {
     }
 
     public void updateStatus(DownloadStatusEnum status, String text) {
+        updateStatus(status, text, true);
+    }
+
+    public void updateStatus(DownloadStatusEnum status, String text, boolean log) {
+        if (log) {
+            logOutput(text);
+        }
+
         String topText = filter.getDisplayName();
 
         if (status == DownloadStatusEnum.DOWNLOADING) {

@@ -413,7 +413,7 @@ public class YtDlpDownloader extends AbstractDownloader {
                 }
             }
 
-            entry.updateStatus(DownloadStatusEnum.DOWNLOADING, lastOutput.replace("[download] ", ""));
+            entry.updateStatus(DownloadStatusEnum.DOWNLOADING, lastOutput.replace("[download] ", ""), false);
         } else {
             if (main.getConfig().isDebugMode()) {
                 log.debug("[{}] - {}", entry.getDownloadId(), lastOutput);

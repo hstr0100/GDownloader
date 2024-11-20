@@ -708,7 +708,7 @@ public class DownloadManager {
 
                             if (entry.getRetryCounter().get() > 0) {
                                 entry.updateStatus(DownloadStatusEnum.RETRYING, l10n("gui.download_status.retrying",
-                                    String.format("%d/%d", entry.getRetryCounter().get(), MAX_DOWNLOAD_RETRIES)));
+                                    String.format("%d/%d", entry.getRetryCounter().get(), maxRetries)));
                             } else {
                                 entry.updateStatus(DownloadStatusEnum.STARTING, l10n("gui.download_status.starting"));
                             }
@@ -722,13 +722,9 @@ public class DownloadManager {
                             boolean disabled = FLAG_DOWNLOADER_DISABLED.isSet(flags);
 
                             if (FLAG_MAIN_CATEGORY_FAILED.isSet(flags) || unsupported || disabled) {
-                                mediaCard.getRightClickMenu().put(
-                                    l10n("gui.copy_error_message"),
-                                    new RunnableMenuEntry(() -> main.getClipboardManager()
-                                    .copyTextToClipboard(result.getLastOutput())));
+                                entry.logError(lastOutput);
 
-                                if (disabled || unsupported || !main.getConfig().isAutoDownloadRetry()
-                                    || entry.getRetryCounter().get() >= MAX_DOWNLOAD_RETRIES) {
+                                if (disabled || unsupported || entry.getRetryCounter().get() >= maxRetries) {
                                     log.error("Download of {} failed on {}: {} supported downloader: {}",
                                         entry.getUrl(), downloaderId, lastOutput, !unsupported);
 
@@ -738,7 +734,7 @@ public class DownloadManager {
                                         entry.getUrl(),
                                         downloaderId,
                                         entry.getRetryCounter().get() + 1,
-                                        MAX_DOWNLOAD_RETRIES,
+                                        maxRetries,
                                         lastOutput);
 
                                     downloadAttempted = true;
@@ -748,6 +744,8 @@ public class DownloadManager {
                             }
 
                             if (FLAG_NO_METHOD.isSet(flags)) {
+                                entry.logError(lastOutput);
+
                                 if (FLAG_NO_METHOD_VIDEO.isSet(flags)) {
                                     log.error("{} - No option to download.", filter);
                                     entry.updateStatus(DownloadStatusEnum.NO_METHOD, l10n("enums.download_status.no_method.video_tip"));
@@ -809,6 +807,8 @@ public class DownloadManager {
                     }
 
                     if (!lastOutput.isEmpty()) {
+                        entry.logError(lastOutput);
+
                         entry.updateStatus(DownloadStatusEnum.FAILED, lastOutput);
                     } else {
                         entry.updateStatus(DownloadStatusEnum.FAILED);

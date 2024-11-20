@@ -67,6 +67,8 @@ import static net.brlns.gdownloader.settings.enums.DownloadTypeEnum.DIRECT;
 @Slf4j
 public class DirectHttpDownloader extends AbstractDownloader {
 
+    private static final String PREFIX = "[direct-http] ";
+
     private static final int BUFFER_SIZE = 8192;
     private static final int MAX_CHUNK_RETRIES = 5;
 
@@ -144,14 +146,14 @@ public class DirectHttpDownloader extends AbstractDownloader {
 
                     entry.updateStatus(DownloadStatusEnum.DOWNLOADING,
                         String.format("%s%% of %s at %s/s ETA: %s chks %d",
-                            fmPercent, fmTotal, fmSpeed, fmRemaingTime, chunkCount));
+                            fmPercent, fmTotal, fmSpeed, fmRemaingTime, chunkCount), false);
                 });
 
-                lastOutput = "Download complete";
+                lastOutput = PREFIX + "Download complete";
 
                 entry.getDownloadStarted().set(false);
             } catch (Exception e) {
-                lastOutput = e.getMessage();
+                lastOutput = PREFIX + e.getMessage();
 
                 return new DownloadResult(FLAG_MAIN_CATEGORY_FAILED, lastOutput);
             }
@@ -160,7 +162,6 @@ public class DirectHttpDownloader extends AbstractDownloader {
                 return new DownloadResult(FLAG_STOPPED);
             }
 
-            //lastOutput = result.getValue();
             if (!success) {
                 if (lastOutput.contains("Unsupported URL")) {
                     return new DownloadResult(FLAG_UNSUPPORTED, lastOutput);

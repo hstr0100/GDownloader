@@ -104,7 +104,32 @@ public class ClipboardManager {
         }
     }
 
+    public void copyTextToClipboard(@NonNull List<String> texts) {
+        if (texts.isEmpty()) {
+            return;
+        }
+
+        invalidateClipboard();
+
+        clipboard.setContents(new StringSelection(String.join(System.lineSeparator(), texts)), null);
+
+        String lastText = texts.get(texts.size() - 1);
+        main.getGuiManager().showMessage(
+            l10n("gui.copied_to_clipboard.notification_title"),
+            lastText,
+            2000,
+            GUIManager.MessageType.INFO,
+            false
+        );
+    }
+
     public void copyTextToClipboard(@NonNull String text) {
+        if (text.isEmpty()) {
+            return;
+        }
+
+        invalidateClipboard();
+
         clipboard.setContents(new StringSelection(text), null);
 
         main.getGuiManager().showMessage(
