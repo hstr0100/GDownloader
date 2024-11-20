@@ -675,23 +675,20 @@ public class DownloadManager {
                     log.warn("Cookies are required for this website {}", entry.getOriginalUrl());
                 }
 
-                entry.resetForRestart();
                 entry.getRunning().set(true);
-
-                if (entry.getRetryCounter().get() > 0) {
-                    entry.updateStatus(DownloadStatusEnum.RETRYING, l10n("gui.download_status.retrying",
-                        String.format("%d/%d", entry.getRetryCounter().get(), MAX_DOWNLOAD_RETRIES)));
-                } else {
-                    entry.updateStatus(DownloadStatusEnum.STARTING, l10n("gui.download_status.starting"));
-                }
 
                 try {
                     inProgressDownloads.offer(entry);
 
                     DownloaderIdEnum forcedDownloader = entry.getForcedDownloader();
 
-                    while (entry.getRetryCounter().get() <= MAX_DOWNLOAD_RETRIES) {
+                    int maxRetries = !main.getConfig().isAutoDownloadRetry() ? 1 : MAX_DOWNLOAD_RETRIES;
+                    String lastOutput = "";
+
+                    while (entry.getRetryCounter().get() <= maxRetries) {
                         boolean downloadAttempted = false;
+
+                        entry.resetForRestart();
 
                         for (AbstractDownloader downloader : entry.getDownloaders()) {
                             DownloaderIdEnum downloaderId = downloader.getDownloaderId();
@@ -708,10 +705,18 @@ public class DownloadManager {
                             }
 
                             entry.setCurrentDownloader(downloaderId);
+
+                            if (entry.getRetryCounter().get() > 0) {
+                                entry.updateStatus(DownloadStatusEnum.RETRYING, l10n("gui.download_status.retrying",
+                                    String.format("%d/%d", entry.getRetryCounter().get(), MAX_DOWNLOAD_RETRIES)));
+                            } else {
+                                entry.updateStatus(DownloadStatusEnum.STARTING, l10n("gui.download_status.starting"));
+                            }
+
                             DownloadResult result = downloader.tryDownload(entry);
 
                             BitSet flags = result.getFlags();
-                            String lastOutput = result.getLastOutput();
+                            lastOutput = result.getLastOutput();
 
                             boolean unsupported = FLAG_UNSUPPORTED.isSet(flags);
                             boolean disabled = FLAG_DOWNLOADER_DISABLED.isSet(flags);
@@ -719,7 +724,8 @@ public class DownloadManager {
                             if (FLAG_MAIN_CATEGORY_FAILED.isSet(flags) || unsupported || disabled) {
                                 mediaCard.getRightClickMenu().put(
                                     l10n("gui.copy_error_message"),
-                                    new RunnableMenuEntry(() -> main.getClipboardManager().copyTextToClipboard(lastOutput)));
+                                    new RunnableMenuEntry(() -> main.getClipboardManager()
+                                    .copyTextToClipboard(result.getLastOutput())));
 
                                 if (disabled || unsupported || !main.getConfig().isAutoDownloadRetry()
                                     || entry.getRetryCounter().get() >= MAX_DOWNLOAD_RETRIES) {
@@ -802,7 +808,12 @@ public class DownloadManager {
                         entry.getRetryCounter().incrementAndGet();
                     }
 
-                    entry.updateStatus(DownloadStatusEnum.FAILED);
+                    if (!lastOutput.isEmpty()) {
+                        entry.updateStatus(DownloadStatusEnum.FAILED, lastOutput);
+                    } else {
+                        entry.updateStatus(DownloadStatusEnum.FAILED);
+                    }
+
                     if (log.isDebugEnabled()) {
                         log.error("All downloaders failed for {}", entry.getUrl());
                     }

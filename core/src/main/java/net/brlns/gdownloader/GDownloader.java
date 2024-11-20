@@ -110,6 +110,8 @@ import static net.brlns.gdownloader.lang.Language.*;
 // TODO Proxy settings should be add to the UI, fields should be validated on the fly
 // TODO Tabs in settings for the different downloaders
 // TODO Crawl for valid links that can be consumed by direct-http 
+// TODO Toolbar button to toggle different downloaders
+// TODO Right-click > download log
 /**
  * GDownloader - GUI wrapper for yt-dlp
  *

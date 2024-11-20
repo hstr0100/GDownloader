@@ -207,6 +207,11 @@ public class GenericFilter extends AbstractUrlFilter {
             case GALLERY_DL -> {
                 switch (typeEnum) {
                     case ALL -> {
+                        arguments.addAll(List.of(
+                            "--retries",
+                            "10"
+                        ));
+
                         if (config.isRandomIntervalBetweenDownloads()) {
                             arguments.addAll(List.of(
                                 "--sleep",
