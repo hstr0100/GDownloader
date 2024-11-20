@@ -20,6 +20,7 @@ import java.text.MessageFormat;
 import java.util.Locale;
 import java.util.ResourceBundle;
 import lombok.extern.slf4j.Slf4j;
+import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.settings.Settings;
 import net.brlns.gdownloader.settings.enums.LanguageEnum;
 
@@ -37,6 +38,12 @@ public class Language {
     public static String l10n(String key, Object... args) {
         if (LANGUAGE_BUNDLE == null) {
             throw new IllegalStateException("Language was not initialized");
+        }
+
+        if (!LANGUAGE_BUNDLE.containsKey(key) && log.isDebugEnabled()
+            && !GDownloader.isFromJpackage()) {
+            log.error("Unmapped language key: {}", key);
+            return key;
         }
 
         String pattern = LANGUAGE_BUNDLE.getString(key);

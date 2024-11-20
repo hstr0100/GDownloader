@@ -92,6 +92,13 @@ public class GenericFilter extends AbstractUrlFilter {
                             ));
                         }
 
+                        String proxyUrl = config.getProxySettings().createProxyUrl();
+                        if (proxyUrl != null) {
+                            arguments.addAll(List.of(
+                                "--proxy", proxyUrl
+                            ));
+                        }
+
                         if (config.isReadCookiesFromBrowser()) {
                             arguments.addAll(List.of(
                                 "--cookies-from-browser",
@@ -206,6 +213,13 @@ public class GenericFilter extends AbstractUrlFilter {
                                 "5.0-15.0",
                                 "--sleep-request",
                                 "2"
+                            ));
+                        }
+
+                        String proxyUrl = config.getProxySettings().createProxyUrl();
+                        if (proxyUrl != null) {
+                            arguments.addAll(List.of(
+                                "--proxy", proxyUrl
                             ));
                         }
 

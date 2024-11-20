@@ -107,6 +107,7 @@ import static net.brlns.gdownloader.lang.Language.*;
 // TODO Debug no console output from gallery-dl on Windows when using channels
 // TODO gallery-dl does not accept an argument specifying yt-dlp/ffmpeg location, figure out a workaround to pass the correct path to it
 // TODO Fastutil collections
+// TODO Proxy settings should be add to the UI, fields should be validated on the fly
 /**
  * GDownloader - GUI wrapper for yt-dlp
  *
@@ -569,9 +570,9 @@ public final class GDownloader {
                     }
                 } else if (os.contains("mac")) {
                     List<String> output = readOutput(
-                            "bash",
-                            "-c",
-                            "defaults read ~/Library/Preferences/com.apple.LaunchServices/com.apple.launchservices.secure | awk -F '\"' '/http;/{print window[(NR)-1]}{window[NR]=$2}'");
+                        "bash",
+                        "-c",
+                        "defaults read ~/Library/Preferences/com.apple.LaunchServices/com.apple.launchservices.secure | awk -F '\"' '/http;/{print window[(NR)-1]}{window[NR]=$2}'");
 
                     log.info("Default browser: {}", output);
 
@@ -1065,6 +1066,12 @@ public final class GDownloader {
 
     public static boolean isFromJar() {
         return getJarLocation() != null;
+    }
+
+    public static boolean isFromJpackage() {
+        String appPath = System.getProperty("jpackage.app-path");
+
+        return appPath != null;
     }
 
     @Nullable

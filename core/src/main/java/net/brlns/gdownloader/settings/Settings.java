@@ -169,6 +169,9 @@ public class Settings {
     @JsonProperty("AutoDownloadRetry")
     private boolean autoDownloadRetry = true;
 
+    @JsonProperty("ProxySettings")
+    private ProxySettings proxySettings = new ProxySettings();
+
     @Deprecated
     @JsonProperty("QualitySettings")
     private Map<WebFilterEnum, QualitySettings> qualitySettings = new TreeMap<>();

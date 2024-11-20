@@ -498,7 +498,7 @@ public class DirectHttpDownloader extends AbstractDownloader {
     }
 
     private Proxy getProxySettings() {
-        return Proxy.NO_PROXY;// TODO
+        return main.getConfig().getProxySettings().createProxy();
     }
 
     @Nullable
