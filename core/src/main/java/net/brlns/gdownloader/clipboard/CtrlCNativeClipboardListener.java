@@ -61,7 +61,7 @@ public class CtrlCNativeClipboardListener extends AbstractClipboardListener {
     }
 
     @Override
-    public boolean detectClipboardChange() {
+    protected boolean detectClipboardChange() {
         if (hasChanged.get()) {
             hasChanged.set(false);
 

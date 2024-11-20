@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.TreeMap;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
+import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.settings.enums.BrowserEnum;
 import net.brlns.gdownloader.settings.enums.LanguageEnum;
 import net.brlns.gdownloader.settings.enums.PlayListOptionEnum;
@@ -70,6 +71,23 @@ public class Settings {
 
     @JsonProperty("RespectYtDlpConfigFile")
     private boolean respectYtDlpConfigFile = false;
+
+    @JsonProperty("GalleryDlDeduplication")
+    private boolean galleryDlDeduplication = true;
+
+    @JsonProperty("GalleryDlEnabled")
+    // gallery-dl appears to be unsigned
+    // let's leave it off by default on Windows to avoid any possible issues with that
+    private boolean galleryDlEnabled = !GDownloader.isWindows();
+
+    @JsonProperty("DirectHttpEnabled")
+    private boolean directHttpEnabled = false;
+
+    @JsonProperty("DirectHttpMaxDownloadChunks")
+    private int directHttpMaxDownloadChunks = 5;
+
+    @JsonProperty("RespectGalleryDlConfigFile")
+    private boolean respectGalleryDlConfigFile = true;
 
     @JsonProperty("DownloadsPath")
     private String downloadsPath = "";
@@ -150,6 +168,9 @@ public class Settings {
 
     @JsonProperty("AutoDownloadRetry")
     private boolean autoDownloadRetry = true;
+
+    @JsonProperty("ProxySettings")
+    private ProxySettings proxySettings = new ProxySettings();
 
     @Deprecated
     @JsonProperty("QualitySettings")

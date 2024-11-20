@@ -23,6 +23,7 @@ import java.util.List;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import net.brlns.gdownloader.GDownloader;
+import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.settings.QualitySettings;
 import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.settings.enums.QualitySelectorEnum;
@@ -57,24 +58,31 @@ public class TwitchFilter extends GenericFilter {
 
     @JsonIgnore
     @Override
-    protected List<String> buildArguments(DownloadTypeEnum typeEnum, GDownloader main, File savePath) {
-        List<String> arguments = super.buildArguments(typeEnum, main, savePath);
+    protected List<String> buildArguments(DownloaderIdEnum downloaderId, DownloadTypeEnum typeEnum, GDownloader main, File savePath, String inputUrl) {
+        List<String> arguments = super.buildArguments(downloaderId, typeEnum, main, savePath, inputUrl);
 
-        switch (typeEnum) {
-            case ALL -> {
-                arguments.addAll(List.of(
-                    "--verbose",
-                    "--continue",
-                    "--hls-prefer-native"
-                ));
-            }
-            case VIDEO -> {
-                if (isEmbedThumbnailAndMetadata()) {
-                    arguments.addAll(List.of(
-                        "--parse-metadata",
-                        ":%(?P<is_live>)"
-                    ));
+        switch (downloaderId) {
+            case YT_DLP -> {
+                switch (typeEnum) {
+                    case ALL -> {
+                        arguments.addAll(List.of(
+                            "--verbose",
+                            "--continue",
+                            "--hls-prefer-native"
+                        ));
+                    }
+                    case VIDEO -> {
+                        if (isEmbedThumbnailAndMetadata()) {
+                            arguments.addAll(List.of(
+                                "--parse-metadata",
+                                ":%(?P<is_live>)"
+                            ));
+                        }
+                    }
                 }
+            }
+            default -> {
+
             }
         }
 

@@ -17,6 +17,7 @@
 package net.brlns.gdownloader.util;
 
 import java.util.concurrent.*;
+import net.brlns.gdownloader.GDownloader;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -74,12 +75,28 @@ public class PriorityThreadPoolExecutor extends ThreadPoolExecutor {
         private final int priority;
 
         public PriorityTask(Callable<V> callable, int priority) {
-            super(callable);
+            super(() -> {
+                try {
+                    return callable.call();
+                } catch (Exception e) {
+                    GDownloader.handleException(e);
+                    throw e;
+                }
+            });
+
             this.priority = priority;
         }
 
         public PriorityTask(Runnable runnable, V result, int priority) {
-            super(runnable, result);
+            super(() -> {
+                try {
+                    runnable.run();
+                } catch (Exception e) {
+                    GDownloader.handleException(e);
+                    throw e;
+                }
+            }, result);
+
             this.priority = priority;
         }
 

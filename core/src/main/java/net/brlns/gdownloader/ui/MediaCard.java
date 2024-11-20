@@ -23,12 +23,13 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
-import javax.swing.JLabel;
 import javax.swing.JPanel;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
+import net.brlns.gdownloader.ui.custom.CustomDynamicLabel;
 import net.brlns.gdownloader.ui.custom.CustomProgressBar;
 import net.brlns.gdownloader.ui.custom.CustomThumbnailPanel;
+import net.brlns.gdownloader.ui.menu.IMenuEntry;
 
 import static net.brlns.gdownloader.ui.GUIManager.runOnEDT;
 
@@ -41,18 +42,20 @@ public class MediaCard {
 
     private final int id;
 
-    private final JPanel panel;
-    private final JLabel mediaLabel;
+    private final JPanel card;
+    private final Dimension cardMaximumSize;
+    private final CustomDynamicLabel mediaLabel;
     private final CustomThumbnailPanel thumbnailPanel;
     private final CustomProgressBar progressBar;
 
     private double percentage = 0;
 
     private Runnable onLeftClick;
-    private Map<String, Runnable> rightClickMenu = new LinkedHashMap<>();
+    private Map<String, IMenuEntry> rightClickMenu = new LinkedHashMap<>();
     private Runnable onClose;
     private Consumer<Integer> onDrag;
     private boolean closed;
+    private boolean expanded;
 
     private Supplier<Boolean> validateDropTarget;
 
@@ -67,14 +70,28 @@ public class MediaCard {
         }
     }
 
-    protected void scaleThumbnail(double factor) {
-        Dimension dimension = new Dimension(
+    protected void expand(boolean expand) {
+        boolean isChanging = expanded != expand;
+        expanded = expand;
+
+        if (isChanging) {
+            scale(expand ? 1.2 : 1);
+        }
+    }
+
+    private void scale(double factor) {
+        Dimension thumbDimension = new Dimension(
             (int)(MediaCard.THUMBNAIL_WIDTH * factor),
             (int)(MediaCard.THUMBNAIL_HEIGHT * factor));
 
+        Dimension cardDimension = new Dimension(
+            (int)(cardMaximumSize.getWidth() * factor),
+            (int)(cardMaximumSize.getHeight() * factor));
+
         runOnEDT(() -> {
-            thumbnailPanel.setPreferredSize(dimension);
-            thumbnailPanel.setMinimumSize(dimension);
+            card.setMaximumSize(cardDimension);
+            thumbnailPanel.setPreferredSize(thumbDimension);
+            thumbnailPanel.setMinimumSize(thumbDimension);
         });
     }
 
@@ -92,7 +109,7 @@ public class MediaCard {
 
     public void setLabel(String... label) {
         runOnEDT(() -> {
-            mediaLabel.setText(GUIManager.wrapText(51, label));
+            mediaLabel.setFullText(label);
         });
     }
 

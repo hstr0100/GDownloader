@@ -23,6 +23,7 @@ import java.util.List;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import net.brlns.gdownloader.GDownloader;
+import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.settings.Settings;
 import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
 
@@ -50,22 +51,29 @@ public class FacebookFilter extends GenericFilter {
 
     @JsonIgnore
     @Override
-    protected List<String> buildArguments(DownloadTypeEnum typeEnum, GDownloader main, File savePath) {
+    protected List<String> buildArguments(DownloaderIdEnum downloaderId, DownloadTypeEnum typeEnum, GDownloader main, File savePath, String inputUrl) {
         Settings config = main.getConfig();
 
-        List<String> arguments = super.buildArguments(typeEnum, main, savePath);
+        List<String> arguments = super.buildArguments(downloaderId, typeEnum, main, savePath, inputUrl);
 
-        switch (typeEnum) {
-            case ALL -> {
-                if (!config.isRandomIntervalBetweenDownloads()) {
-                    // In my experience, Facebook pretty much requires this. So we add it regardless of settings.
-                    arguments.addAll(List.of(
-                        "--max-sleep-interval",
-                        "30",
-                        "--min-sleep-interval",
-                        "15"
-                    ));
+        switch (downloaderId) {
+            case YT_DLP -> {
+                switch (typeEnum) {
+                    case ALL -> {
+                        if (!config.isRandomIntervalBetweenDownloads()) {
+                            // In my experience, Facebook pretty much requires this. So we add it regardless of settings.
+                            arguments.addAll(List.of(
+                                "--max-sleep-interval",
+                                "30",
+                                "--min-sleep-interval",
+                                "15"
+                            ));
+                        }
+                    }
                 }
+            }
+            default -> {
+
             }
         }
 

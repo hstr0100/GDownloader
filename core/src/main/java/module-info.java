@@ -40,12 +40,16 @@ module net.brlns.gdownloader {
 
     exports net.brlns.gdownloader;
     exports net.brlns.gdownloader.clipboard;
+    exports net.brlns.gdownloader.downloader;
+    exports net.brlns.gdownloader.downloader.enums;
+    exports net.brlns.gdownloader.downloader.structs;
     exports net.brlns.gdownloader.settings;
     exports net.brlns.gdownloader.settings.enums;
     exports net.brlns.gdownloader.settings.filters;
     exports net.brlns.gdownloader.ui;
     exports net.brlns.gdownloader.ui.custom;
     exports net.brlns.gdownloader.ui.dnd;
+    exports net.brlns.gdownloader.ui.menu;
     exports net.brlns.gdownloader.ui.themes;
     exports net.brlns.gdownloader.updater;
     exports net.brlns.gdownloader.util;

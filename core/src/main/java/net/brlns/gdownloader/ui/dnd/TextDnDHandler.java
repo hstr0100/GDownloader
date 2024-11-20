@@ -21,6 +21,7 @@ import java.awt.datatransfer.Transferable;
 import javax.swing.JComponent;
 import javax.swing.TransferHandler;
 import javax.swing.TransferHandler.TransferSupport;
+import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.ui.GUIManager;
 import net.brlns.gdownloader.util.Nullable;
 
@@ -59,7 +60,7 @@ public class TextDnDHandler implements IDnDHandler {
 
             return manager.getMain().getClipboardManager().tryHandleDnD(transferable);
         } catch (Exception e) {
-            manager.getMain().handleException(e, false);
+            GDownloader.handleException(e, false);
         }
 
         return false;

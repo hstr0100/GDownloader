@@ -47,26 +47,69 @@ import javax.swing.plaf.FontUIResource;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.clipboard.ClipboardManager;
+import net.brlns.gdownloader.downloader.DownloadManager;
+import net.brlns.gdownloader.lang.Language;
 import net.brlns.gdownloader.settings.Settings;
 import net.brlns.gdownloader.settings.enums.BrowserEnum;
 import net.brlns.gdownloader.ui.GUIManager;
 import net.brlns.gdownloader.ui.GUIManager.MessageType;
 import net.brlns.gdownloader.ui.themes.ThemeProvider;
-import net.brlns.gdownloader.updater.AbstractGitUpdater;
-import net.brlns.gdownloader.updater.FFMpegUpdater;
-import net.brlns.gdownloader.updater.SelfUpdater;
-import net.brlns.gdownloader.updater.UpdaterBootstrap;
-import net.brlns.gdownloader.updater.YtDlpUpdater;
-import net.brlns.gdownloader.util.DirectoryUtils;
-import net.brlns.gdownloader.util.LoggerUtils;
-import net.brlns.gdownloader.util.NoFallbackAvailableException;
-import net.brlns.gdownloader.util.Nullable;
-import net.brlns.gdownloader.util.PriorityThreadPoolExecutor;
+import net.brlns.gdownloader.updater.*;
+import net.brlns.gdownloader.util.*;
 import org.slf4j.helpers.FormattingTuple;
 import org.slf4j.helpers.MessageFormatter;
 
-import static net.brlns.gdownloader.Language.*;
+import static net.brlns.gdownloader.lang.Language.*;
 
+// TODO media converter
+// TODO implement CD Ripper
+// TODO d&d files for conversion to different formats, we already have ffmpeg anyway
+//
+// TODO max simultaneous downloads should be independent per website
+// TODO silence unnecessary debug messages
+// TODO investigate adding AppImage build
+// TODO scale on resolution DPI
+// TODO save last window size in config
+// TODO keep older versions of ytdlp and retry failed downloads against them
+// TODO Advanced users can edit the config.json directly to add extra yt-dlp arguments like proxy settings. but maybe expose those settings to the ui.
+// TODO verify checksums during updates, add bouncycastle, check signatures
+// TODO write a component factory for GUIManager
+// TODO git actions build for different platforms
+// FEEDBACK Should choose to download video and audio independently on each card
+// TODO maybe add notifications for each toggled toolbar option
+// DROPPED check updates on a timer, but do not ever restart when anything is in the queue.
+// TODO individual 'retry failed download' button
+// TODO --no-playlist when single video option is active
+// TODO Artifacting seems to be happening on the scroll pane with AMD video cards
+// TODO open a window asking which videos in a playlist to download or not
+// TODO RearrangeableDeque's offerLast should be linked to the cards in the UI
+// TODO Better visual eye candy for when dragging cards
+// TODO Add setting to allow the user to manually specify the target codec for audio transcoding? currently it defaults to aac.
+// TODO Add 'Clear Completed Downloads' button.
+// TODO Javadoc, a whole lot of it.
+// TODO Refactor this very class. Separate some logic into different methods.
+// TODO Twitch settings purposefully default to suboptimal quality due to huge file sizes. Maybe consider adding a warning about this in the GUI.
+// TODO Split GUI into a different subproject from core logic.
+// TODO Investigate screen reader support (https:// www.nvaccess.org/download/)
+// TODO Send notifications when a NO_METHOD is triggered, explaining why it was triggered.
+// TODO Test downloading sections of a livestream (currently it gets stuck on status PREPARING). Note: it also leaves a zombie ffmpeg process behind dealing with the hls stream.
+// TODO The issue above is a yt-dlp bug https:// github.com/yt-dlp/yt-dlp/issues/7927
+// TODO Implement rate-limiting options internally; the way it's currently implemented does not account for concurrent or non-playlist downloads.
+// TODO Notify the user whenever a setting that requires restart was changed.
+// TODO Quit lingering ffmpeg processes spawned by yt-dlp
+// TODO Verify which exceptions are important to display to the user via GDownloader::handleException
+// TODO Add an url ignore list / Allow filters to be disabled
+// TODO Add option to clear all installed updates and start fresh. (Tackling certain issues where failed updates could break downloads)
+// TODO Optional curl/wget integration
+// TODO NTFS File path length workaround for gallery-dl
+// TODO Split main window from GUIManager
+// TODO Card multi-select support / Undo last action / try with downloader X
+// TODO Debug no console output from gallery-dl on Windows when using channels
+// TODO gallery-dl does not accept an argument specifying yt-dlp/ffmpeg location, figure out a workaround to pass the correct path to it
+// TODO Fastutil collections
+// TODO Proxy settings should be add to the UI, fields should be validated on the fly
+// TODO Tabs in settings for the different downloaders
+// TODO Crawl for valid links that can be consumed by direct-http 
 /**
  * GDownloader - GUI wrapper for yt-dlp
  *
@@ -87,6 +130,9 @@ public final class GDownloader {
 
     public static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
+    @Getter
+    private static GDownloader instance;
+
     private static String launcher;
 
     @Getter
@@ -104,7 +150,7 @@ public final class GDownloader {
     private ClipboardManager clipboardManager;
 
     @Getter
-    private YtDlpDownloader downloadManager;
+    private DownloadManager downloadManager;
 
     @Getter
     private List<AbstractGitUpdater> updaters = new ArrayList<>();
@@ -187,7 +233,7 @@ public final class GDownloader {
             clipboardManager = new ClipboardManager(this);
             clipboardManager.init();
 
-            downloadManager = new YtDlpDownloader(this);
+            downloadManager = new DownloadManager(this);
 
             guiManager = new GUIManager(this);
 
@@ -209,6 +255,10 @@ public final class GDownloader {
             updaters.add(new SelfUpdater(this));
             updaters.add(new YtDlpUpdater(this));
             updaters.add(new FFMpegUpdater(this));
+
+            if (config.isGalleryDlEnabled()) {
+                updaters.add(new GalleryDlUpdater(this));
+            }
 
             if (config.isDebugMode()) {
                 for (AbstractGitUpdater updater : updaters) {
@@ -361,7 +411,7 @@ public final class GDownloader {
                 }
             }
 
-            if (downloadManager.getYtDlpPath() == null || !downloadManager.getYtDlpPath().exists()) {
+            if (!downloadManager.isMainDownloaderInitialized()) {
                 log.error("Failed to initialize YT-DLP, the program cannot continue. Exitting...");
 
                 if (!userInitiated) {
@@ -419,6 +469,10 @@ public final class GDownloader {
 
     public void openDownloadsDirectory() {
         open(getOrCreateDownloadsDirectory());
+    }
+
+    public void openLogFile() {
+        open(LoggerUtils.getLogFile());
     }
 
     public void open(File file) {
@@ -518,9 +572,9 @@ public final class GDownloader {
                     }
                 } else if (os.contains("mac")) {
                     List<String> output = readOutput(
-                            "bash",
-                            "-c",
-                            "defaults read ~/Library/Preferences/com.apple.LaunchServices/com.apple.launchservices.secure | awk -F '\"' '/http;/{print window[(NR)-1]}{window[NR]=$2}'");
+                        "bash",
+                        "-c",
+                        "defaults read ~/Library/Preferences/com.apple.LaunchServices/com.apple.launchservices.secure | awk -F '\"' '/http;/{print window[(NR)-1]}{window[NR]=$2}'");
 
                     log.info("Default browser: {}", output);
 
@@ -844,6 +898,29 @@ public final class GDownloader {
         }
     }
 
+    public void deduplicateDownloadsDirectory() {
+        guiManager.showMessage(
+            l10n("gui.deduplication.notification_title"),
+            l10n("gui.deduplication.deduplicating"),
+            1500,
+            GUIManager.MessageType.INFO,
+            false);
+
+        globalThreadPool.submitWithPriority(() -> {
+            File directory = getDownloadsDirectory();
+            if (directory.exists()) {
+                DirectoryDeduplicator.deduplicateDirectory(directory);
+            }
+
+            guiManager.showMessage(
+                l10n("gui.deduplication.notification_title"),
+                l10n("gui.deduplication.deduplicated"),
+                2000,
+                GUIManager.MessageType.INFO,
+                false);
+        }, 0);
+    }
+
     public File getOrCreateDownloadsDirectory() {
         return getDownloadsDirectory(true);
     }
@@ -950,15 +1027,15 @@ public final class GDownloader {
         log.info("Number of available processor cores: {}", cores);
     }
 
-    public final void handleException(Throwable e) {
+    public static final void handleException(Throwable e) {
         handleException(e, true);
     }
 
-    public final void handleException(Throwable e, boolean displayToUser) {
+    public static final void handleException(Throwable e, boolean displayToUser) {
         log.error("An exception has been caught", e);
 
         if (displayToUser) {
-            guiManager.showMessage(
+            instance.getGuiManager().showMessage(
                 l10n("gui.error_popup_title"),
                 l10n("gui.error_popup", e.getLocalizedMessage()),
                 4000,
@@ -991,6 +1068,12 @@ public final class GDownloader {
 
     public static boolean isFromJar() {
         return getJarLocation() != null;
+    }
+
+    public static boolean isFromJpackage() {
+        String appPath = System.getProperty("jpackage.app-path");
+
+        return appPath != null;
     }
 
     @Nullable
@@ -1169,6 +1252,7 @@ public final class GDownloader {
             }
 
             GDownloader instance = new GDownloader();
+            GDownloader.instance = instance;
 
             if (!noGui) {
                 instance.initUi();
@@ -1193,10 +1277,10 @@ public final class GDownloader {
             }));
 
             Thread.setDefaultUncaughtExceptionHandler((Thread t, Throwable e) -> {
-                instance.handleException(e);
+                GDownloader.handleException(e);
             });
         } else {
-            System.err.println("System tray not supported???? did you run this on a calculator?");
+            log.error("System tray not supported??? did you run this on a calculator?");
         }
     }
 

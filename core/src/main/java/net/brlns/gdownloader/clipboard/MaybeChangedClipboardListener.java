@@ -42,7 +42,7 @@ public class MaybeChangedClipboardListener extends AbstractClipboardListener {
     }
 
     @Override
-    public boolean detectClipboardChange() {
+    protected boolean detectClipboardChange() {
         if (maybeOcasionallyChangedIfLucky.get()) {
             maybeOcasionallyChangedIfLucky.set(false);
 

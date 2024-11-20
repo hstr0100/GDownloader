@@ -31,6 +31,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
+import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.settings.QualitySettings;
 import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
 
@@ -144,12 +145,41 @@ public abstract class AbstractUrlFilter {
     @JsonProperty("ExtraYtDlpArguments")
     private Map<DownloadTypeEnum, List<String>> extraYtDlpArguments = new HashMap<>();
 
+    /**
+     * Represents a set of extra arguments for gallery-dl.
+     * These arguments are categorized based on the type of download (e.g. GALLERY).
+     * Arguments in the ALL category apply to all categories that depend on this filter.
+     *
+     * JSON schema:
+     *
+     * <pre>
+     * "ExtraGalleryDlArguments" : {
+     *   "ALL": [
+     *     "--config-ignore",
+     *     "--proxy",
+     *     "http://example.com:1234"
+     *   ],
+     *   "GALLERY": [
+     *     "--no-colors"
+     *   ]
+     * }
+     * </pre>
+     */
+    @JsonProperty("ExtraGalleryDlArguments")
+    private Map<DownloadTypeEnum, List<String>> extraGalleryDlArguments = new HashMap<>();
+
     @JsonProperty("QualitySettings")
     private QualitySettings qualitySettings = QualitySettings.builder().build();
 
     public AbstractUrlFilter() {
-        for (DownloadTypeEnum downloadType : DownloadTypeEnum.values()) {
+        extraYtDlpArguments.put(DownloadTypeEnum.ALL, new ArrayList<>());
+        for (DownloadTypeEnum downloadType : DownloadTypeEnum.getForDownloaderId(DownloaderIdEnum.YT_DLP)) {
             extraYtDlpArguments.put(downloadType, new ArrayList<>());
+        }
+
+        extraGalleryDlArguments.put(DownloadTypeEnum.ALL, new ArrayList<>());
+        for (DownloadTypeEnum downloadType : DownloadTypeEnum.getForDownloaderId(DownloaderIdEnum.GALLERY_DL)) {
+            extraGalleryDlArguments.put(downloadType, new ArrayList<>());
         }
     }
 
@@ -180,20 +210,33 @@ public abstract class AbstractUrlFilter {
     }
 
     @JsonIgnore
-    public List<String> getArguments(DownloadTypeEnum typeEnum, GDownloader main, File savePath) {
+    public List<String> getArguments(DownloaderIdEnum downloaderId, DownloadTypeEnum typeEnum, GDownloader main, File savePath, String inputUrl) {
         List<String> arguments = new ArrayList<>();
 
-        arguments.addAll(buildArguments(typeEnum, main, savePath));
+        arguments.addAll(buildArguments(downloaderId, typeEnum, main, savePath, inputUrl));
 
-        if (extraYtDlpArguments.containsKey(typeEnum)) {
-            arguments.addAll(extraYtDlpArguments.get(typeEnum));
+        // TODO: Map<DonwloaderIdEnum, Map<DownloadTypeEnum, List<String>>> or a struct extending that.
+        switch (downloaderId) {
+            case YT_DLP -> {
+                if (extraYtDlpArguments.containsKey(typeEnum)) {
+                    arguments.addAll(extraYtDlpArguments.get(typeEnum));
+                }
+            }
+            case GALLERY_DL -> {
+                if (extraGalleryDlArguments.containsKey(typeEnum)) {
+                    arguments.addAll(extraGalleryDlArguments.get(typeEnum));
+                }
+            }
+            default -> {
+                log.warn("Unhandled downloader id {}", downloaderId);
+            }
         }
 
         return arguments;
     }
 
     @JsonIgnore
-    protected abstract List<String> buildArguments(DownloadTypeEnum typeEnum, GDownloader main, File savePath);
+    protected abstract List<String> buildArguments(DownloaderIdEnum downloaderId, DownloadTypeEnum typeEnum, GDownloader main, File savePath, String inputUrl);
 
     @JsonIgnore
     public abstract boolean areCookiesRequired();

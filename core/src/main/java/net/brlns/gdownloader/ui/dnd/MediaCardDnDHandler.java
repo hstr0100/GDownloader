@@ -24,6 +24,7 @@ import javax.swing.JComponent;
 import javax.swing.JPanel;
 import javax.swing.TransferHandler;
 import javax.swing.TransferHandler.TransferSupport;
+import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.ui.GUIManager;
 import net.brlns.gdownloader.ui.MediaCard;
 
@@ -74,7 +75,7 @@ public class MediaCardDnDHandler implements IDnDHandler {
 
             return manager.handleMediaCardDnD(card, support.getComponent());
         } catch (Exception e) {
-            manager.getMain().handleException(e, false);
+            GDownloader.handleException(e, false);
         }
 
         return false;

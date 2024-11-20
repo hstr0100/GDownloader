@@ -17,14 +17,20 @@
 package net.brlns.gdownloader.ui.custom;
 
 import java.awt.*;
+import java.util.Collections;
+import java.util.Set;
+import java.util.WeakHashMap;
 import javax.swing.JPanel;
+import javax.swing.Timer;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.util.Nullable;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
+@Slf4j
 public class CustomProgressBar extends JPanel {
 
     private static final Font FONT = new Font("Dialog", Font.BOLD, 14);
@@ -41,6 +47,26 @@ public class CustomProgressBar extends JPanel {
 
     @Getter
     private int value = 0;
+
+    private static double phase = 0;
+    private static final Timer bounceTimer;
+    private static final Set<CustomProgressBar> activeReferences
+        = Collections.newSetFromMap(new WeakHashMap<>());
+
+    static {
+        bounceTimer = new Timer(10, e -> {
+            phase += 0.05;
+            if (phase > 2 * Math.PI) {
+                phase -= 2 * Math.PI;
+            }
+
+            synchronized (activeReferences) {
+                for (CustomProgressBar bar : activeReferences) {
+                    bar.repaint();
+                }
+            }
+        });
+    }
 
     public CustomProgressBar() {
         this(null);
@@ -59,27 +85,54 @@ public class CustomProgressBar extends JPanel {
         super.paintComponent(g);
 
         Graphics2D g2d = (Graphics2D)g;
-
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
         g2d.setColor(getBackground());
         g2d.fillRect(0, 0, getWidth(), getHeight());
 
         g2d.setColor(getForeground());
-        int width = (int)(getWidth() * (value / 100.0));
-        g2d.fillRect(0, 0, width, getHeight());
+
+        int progressBarWidth = getWidth();
+        int blockWidth = progressBarWidth / 6; // 1 / 6
+
+        if (value == -1) {
+            // Use a sine curve to slow down near the edges
+            double normalizedPosition = (Math.sin(phase) + 1) / 2;
+            int blockX = (int)(normalizedPosition * (progressBarWidth - blockWidth));
+
+            g2d.fillRect(blockX, 0, blockWidth, getHeight());
+        } else {
+            // Draw normal progress bar when value is not -1
+            int width = (int)(progressBarWidth * (value / 100.0));
+            g2d.fillRect(0, 0, width, getHeight());
+        }
 
         if (stringPainted) {
+            String stringToPaint = string.replace("-1.0%", "N/A");
             g2d.setColor(textColor);
             g2d.setFont(FONT);
             FontMetrics fm = g2d.getFontMetrics();
-            int x = (getWidth() - fm.stringWidth(string)) / 2;
+            int x = (getWidth() - fm.stringWidth(stringToPaint)) / 2;
             int y = (getHeight() + fm.getAscent() - fm.getDescent()) / 2;
-            g2d.drawString(string, x, y);
+            g2d.drawString(stringToPaint, x, y);
         }
     }
 
     public void setValue(int valueIn) {
+        synchronized (activeReferences) {
+            if (this.value == -1 && valueIn != -1) {
+                activeReferences.remove(this);
+                if (activeReferences.isEmpty()) {
+                    bounceTimer.stop();
+                }
+            } else if (this.value != -1 && valueIn == -1) {
+                activeReferences.add(this);
+                if (activeReferences.size() == 1) {
+                    bounceTimer.start();
+                }
+            }
+        }
+
         value = valueIn;
 
         repaint();

@@ -14,12 +14,13 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package net.brlns.gdownloader;
+package net.brlns.gdownloader.lang;
 
 import java.text.MessageFormat;
 import java.util.Locale;
 import java.util.ResourceBundle;
 import lombok.extern.slf4j.Slf4j;
+import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.settings.Settings;
 import net.brlns.gdownloader.settings.enums.LanguageEnum;
 
@@ -39,6 +40,12 @@ public class Language {
             throw new IllegalStateException("Language was not initialized");
         }
 
+        if (!LANGUAGE_BUNDLE.containsKey(key) && log.isDebugEnabled()
+            && !GDownloader.isFromJpackage()) {
+            log.error("Unmapped language key: {}", key);
+            return key;
+        }
+
         String pattern = LANGUAGE_BUNDLE.getString(key);
         if (pattern == null) {
             throw new IllegalArgumentException("Unknown language key: " + key);
@@ -47,7 +54,11 @@ public class Language {
         return MessageFormat.format(pattern, args);
     }
 
-    protected static void initLanguage(Settings config) {
+    public static void initLanguage(Settings config) {
+        if (LANGUAGE_BUNDLE != null) {
+            throw new IllegalStateException("Cannot initialize language twice");
+        }
+
         if (!config.isLanguageDefined()) {
             Locale defaultLocale = Locale.getDefault();
             log.info("Detected system language: {}", defaultLocale);

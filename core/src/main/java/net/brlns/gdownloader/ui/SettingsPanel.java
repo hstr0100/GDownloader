@@ -45,7 +45,7 @@ import net.brlns.gdownloader.ui.custom.CustomScrollBarUI;
 import net.brlns.gdownloader.ui.custom.CustomSliderUI;
 import net.brlns.gdownloader.ui.themes.UIColors;
 
-import static net.brlns.gdownloader.Language.*;
+import static net.brlns.gdownloader.lang.Language.*;
 import static net.brlns.gdownloader.ui.GUIManager.runOnEDT;
 import static net.brlns.gdownloader.ui.themes.ThemeProvider.*;
 import static net.brlns.gdownloader.ui.themes.UIColors.*;
@@ -151,7 +151,7 @@ public class SettingsPanel {
             };
 
             frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-            frame.setSize(950, 600);
+            frame.setSize(950, 623);
             frame.setLayout(new BorderLayout());
             frame.setResizable(false);
             frame.setLocationRelativeTo(null);
@@ -284,6 +284,20 @@ public class SettingsPanel {
                             manager.loadIcon("/assets/bin.png", ICON_HOVER, 24),
                             "gui.clear_cache.tooltip",
                             e -> main.clearCache(true)
+                        ));
+
+                        leftPanel.add(manager.createButton(
+                            manager.loadIcon("/assets/log.png", ICON, 24),
+                            manager.loadIcon("/assets/log.png", ICON_HOVER, 24),
+                            "gui.open_log.tooltip",
+                            e -> main.openLogFile()
+                        ));
+
+                        leftPanel.add(manager.createButton(
+                            manager.loadIcon("/assets/deduplicate.png", ICON, 24),
+                            manager.loadIcon("/assets/deduplicate.png", ICON_HOVER, 24),
+                            "gui.deduplication.deduplicate_downloads_directory",
+                            e -> main.deduplicateDownloadsDirectory()
                         ));
 
                         leftPanel.add(manager.createButton(
@@ -485,9 +499,9 @@ public class SettingsPanel {
     }
 
     private JPanel createGeneralSettings() {
-        JPanel generalSettingsPanel = new JPanel(new GridBagLayout());
-        generalSettingsPanel.setBackground(color(BACKGROUND));
-        generalSettingsPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        JPanel panel = new JPanel(new GridBagLayout());
+        panel.setBackground(color(BACKGROUND));
+        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
         GridBagConstraints gbcPanel = new GridBagConstraints();
         gbcPanel.insets = new Insets(5, 5, 5, 5);
@@ -495,7 +509,7 @@ public class SettingsPanel {
         gbcPanel.fill = GridBagConstraints.HORIZONTAL;
         //gbcPanel.weightx = 1;
 
-        addComboBox(generalSettingsPanel, gbcPanel,
+        addComboBox(panel, gbcPanel,
             "settings.language",
             LanguageEnum.class,
             settings::getLanguage,
@@ -503,7 +517,7 @@ public class SettingsPanel {
             true
         );
 
-        addComboBox(generalSettingsPanel, gbcPanel,
+        addComboBox(panel, gbcPanel,
             "settings.theme",
             ThemeEnum.class,
             settings::getTheme,
@@ -511,56 +525,56 @@ public class SettingsPanel {
             true
         );
 
-        addCheckBox(generalSettingsPanel, gbcPanel,
+        addCheckBox(panel, gbcPanel,
             "settings.always_on_top",
             settings::isKeepWindowAlwaysOnTop,
             settings::setKeepWindowAlwaysOnTop,
             false
         );
 
-        addCheckBox(generalSettingsPanel, gbcPanel,
+        addCheckBox(panel, gbcPanel,
             "settings.exit_on_close",
             settings::isExitOnClose,
             settings::setExitOnClose,
             false
         );
 
-        addCheckBox(generalSettingsPanel, gbcPanel,
+        addCheckBox(panel, gbcPanel,
             "settings.automatic_updates",
             settings::isAutomaticUpdates,
             settings::setAutomaticUpdates,
             false
         );
 
-        addCheckBox(generalSettingsPanel, gbcPanel,
+        addCheckBox(panel, gbcPanel,
             "settings.debug_mode",
             settings::isDebugMode,
             settings::setDebugMode,
             false
         );
 
-        addCheckBox(generalSettingsPanel, gbcPanel,
+        addCheckBox(panel, gbcPanel,
             "settings.start_on_system_startup",
             settings::isAutoStart,
             settings::setAutoStart,
             false
         );
 
-        addCheckBox(generalSettingsPanel, gbcPanel,
+        addCheckBox(panel, gbcPanel,
             "settings.play_sounds",
             settings::isPlaySounds,
             settings::setPlaySounds,
             false
         );
 
-        addCheckBox(generalSettingsPanel, gbcPanel,
+        addCheckBox(panel, gbcPanel,
             "settings.display_link_capture_notifications",
             settings::isDisplayLinkCaptureNotifications,
             settings::setDisplayLinkCaptureNotifications,
             false
         );
 
-        addCheckBox(generalSettingsPanel, gbcPanel,
+        addCheckBox(panel, gbcPanel,
             "settings.use_system_font",
             settings::isUseSystemFont,
             settings::setUseSystemFont,
@@ -573,7 +587,7 @@ public class SettingsPanel {
             gbcPanel.gridx = 0;
             gbcPanel.gridy++;
             gbcPanel.weightx = 0.5;
-            generalSettingsPanel.add(label, gbcPanel);
+            panel.add(label, gbcPanel);
 
             // Not a lot of fault tolerance here
             List<String> options = new ArrayList<>();
@@ -604,7 +618,7 @@ public class SettingsPanel {
 
             gbcPanel.gridx = 1;
             gbcPanel.weightx = 1;
-            generalSettingsPanel.add(slider, gbcPanel);
+            panel.add(slider, gbcPanel);
         }
 
         gbcPanel.gridx = 0;
@@ -615,9 +629,9 @@ public class SettingsPanel {
         gbcPanel.fill = GridBagConstraints.BOTH;
         JPanel filler = new JPanel();
         filler.setBackground(color(BACKGROUND));
-        generalSettingsPanel.add(filler, gbcPanel);
+        panel.add(filler, gbcPanel);
 
-        JScrollPane scrollPane = new JScrollPane(generalSettingsPanel);
+        JScrollPane scrollPane = new JScrollPane(panel);
         scrollPane.getVerticalScrollBar().setUI(new CustomScrollBarUI());
         scrollPane.getHorizontalScrollBar().setUI(new CustomScrollBarUI());
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
@@ -635,9 +649,9 @@ public class SettingsPanel {
     }
 
     private JPanel createDownloadSettings() {
-        JPanel downloadSettingsPanel = new JPanel(new GridBagLayout());
-        downloadSettingsPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        downloadSettingsPanel.setBackground(color(BACKGROUND));
+        JPanel panel = new JPanel(new GridBagLayout());
+        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        panel.setBackground(color(BACKGROUND));
 
         GridBagConstraints gbcPanel = new GridBagConstraints();
         gbcPanel.insets = new Insets(5, 5, 5, 5);
@@ -645,14 +659,14 @@ public class SettingsPanel {
         gbcPanel.fill = GridBagConstraints.HORIZONTAL;
         //gbcPanel.weightx = 1;
 
-        addCheckBox(downloadSettingsPanel, gbcPanel,
+        addCheckBox(panel, gbcPanel,
             "settings.read_cookies",
             settings::isReadCookiesFromBrowser,
             settings::setReadCookiesFromBrowser,
             false
         );
 
-        addComboBox(downloadSettingsPanel, gbcPanel,
+        addComboBox(panel, gbcPanel,
             "settings.browser_for_cookies",
             BrowserEnum.class,
             settings::getBrowser,
@@ -665,7 +679,7 @@ public class SettingsPanel {
 
             gbcPanel.gridx = 0;
             gbcPanel.gridy++;
-            downloadSettingsPanel.add(label, gbcPanel);
+            panel.add(label, gbcPanel);
 
             JTextField downloadPathField = new JTextField(20);
             downloadPathField.setText(main.getDownloadsDirectory().getAbsolutePath());
@@ -693,7 +707,7 @@ public class SettingsPanel {
             gbcPanel.gridx = 1;
             gbcPanel.gridwidth = 1;
             gbcPanel.weightx = 0.9;
-            downloadSettingsPanel.add(downloadPathField, gbcPanel);
+            panel.add(downloadPathField, gbcPanel);
 
             JButton selectButton = createButton(
                 "settings.select_download_directory",
@@ -716,52 +730,52 @@ public class SettingsPanel {
 
             gbcPanel.gridx = 2;
             gbcPanel.weightx = 0.1;
-            downloadSettingsPanel.add(selectButton, gbcPanel);
+            panel.add(selectButton, gbcPanel);
         }
 
-        addCheckBox(downloadSettingsPanel, gbcPanel,
+        addCheckBox(panel, gbcPanel,
             "settings.capture_any_clipboard_link",
             settings::isCaptureAnyLinks,
             settings::setCaptureAnyLinks,
             false
         );
 
-        addCheckBox(downloadSettingsPanel, gbcPanel,
+        addCheckBox(panel, gbcPanel,
             "settings.auto_download_start",
             settings::isAutoDownloadStart,
             settings::setAutoDownloadStart,
             false
         );
 
-        addCheckBox(downloadSettingsPanel, gbcPanel,
+        addCheckBox(panel, gbcPanel,
             "settings.auto_download_retry",
             settings::isAutoDownloadRetry,
             settings::setAutoDownloadRetry,
             false
         );
 
-        addCheckBox(downloadSettingsPanel, gbcPanel,
+        addCheckBox(panel, gbcPanel,
             "settings.download_audio",
             settings::isDownloadAudio,
             settings::setDownloadAudio,
             false
         );
 
-        addCheckBox(downloadSettingsPanel, gbcPanel,
+        addCheckBox(panel, gbcPanel,
             "settings.download_video",
             settings::isDownloadVideo,
             settings::setDownloadVideo,
             false
         );
 
-        addSlider(downloadSettingsPanel, gbcPanel,
+        addSlider(panel, gbcPanel,
             "settings.maximum_simultaneous_downloads",
             1, 10,
             settings::getMaxSimultaneousDownloads,
             settings::setMaxSimultaneousDownloads
         );
 
-        addComboBox(downloadSettingsPanel, gbcPanel,
+        addComboBox(panel, gbcPanel,
             "settings.playlist_download_option",
             PlayListOptionEnum.class,
             settings::getPlaylistDownloadOption,
@@ -769,28 +783,28 @@ public class SettingsPanel {
             false
         );
 
-        addCheckBox(downloadSettingsPanel, gbcPanel,
+        addCheckBox(panel, gbcPanel,
             "settings.download_youtube_channels",
             settings::isDownloadYoutubeChannels,
             settings::setDownloadYoutubeChannels,
             false
         );
 
-        addCheckBox(downloadSettingsPanel, gbcPanel,
+        addCheckBox(panel, gbcPanel,
             "settings.use_sponsor_block",
             settings::isUseSponsorBlock,
             settings::setUseSponsorBlock,
             false
         );
 
-        addCheckBox(downloadSettingsPanel, gbcPanel,
+        addCheckBox(panel, gbcPanel,
             "settings.transcode_audio_to_aac",
             settings::isTranscodeAudioToAAC,
             settings::setTranscodeAudioToAAC,
             false
         );
 
-        addCheckBox(downloadSettingsPanel, gbcPanel,
+        addCheckBox(panel, gbcPanel,
             "settings.download_subtitles",
             settings::isDownloadSubtitles,
             settings::setDownloadSubtitles,
@@ -798,32 +812,67 @@ public class SettingsPanel {
         );
 
         // TODO: this should be grayed out when download_subtitles is disabled
-        addCheckBox(downloadSettingsPanel, gbcPanel,
+        addCheckBox(panel, gbcPanel,
             "settings.download_auto_generated_subtitles",
             settings::isDownloadAutoGeneratedSubtitles,
             settings::setDownloadAutoGeneratedSubtitles,
             false
         );
 
-        addCheckBox(downloadSettingsPanel, gbcPanel,
+        addCheckBox(panel, gbcPanel,
             "settings.download_thumbnails",
             settings::isDownloadThumbnails,
             settings::setDownloadThumbnails,
             false
         );
 
-        addCheckBox(downloadSettingsPanel, gbcPanel,
+        addCheckBox(panel, gbcPanel,
             "settings.random_interval_between_downloads",
             settings::isRandomIntervalBetweenDownloads,
             settings::setRandomIntervalBetweenDownloads,
             false
         );
 
-        addCheckBox(downloadSettingsPanel, gbcPanel,
+        addCheckBox(panel, gbcPanel,
             "settings.respect_ytdlp_config_file",
             settings::isRespectYtDlpConfigFile,
             settings::setRespectYtDlpConfigFile,
             false
+        );
+
+        addCheckBox(panel, gbcPanel,
+            "settings.downloader.gallery_dl.enabled",
+            settings::isGalleryDlEnabled,
+            settings::setGalleryDlEnabled,
+            true
+        );
+
+        addCheckBox(panel, gbcPanel,
+            "settings.downloader.gallery_dl.respect_config_file",
+            settings::isRespectGalleryDlConfigFile,
+            settings::setRespectGalleryDlConfigFile,
+            false
+        );
+
+        addCheckBox(panel, gbcPanel,
+            "settings.downloader.gallery_dl.deduplicate_files",
+            settings::isGalleryDlDeduplication,
+            settings::setGalleryDlDeduplication,
+            false
+        );
+
+        addCheckBox(panel, gbcPanel,
+            "settings.downloader.direct_http.enabled",
+            settings::isDirectHttpEnabled,
+            settings::setDirectHttpEnabled,
+            true
+        );
+
+        addSlider(panel, gbcPanel,
+            "settings.downloader.direct_http.max_download_chunks",
+            1, 15,
+            settings::getDirectHttpMaxDownloadChunks,
+            settings::setDirectHttpMaxDownloadChunks
         );
 
         gbcPanel.gridx = 0;
@@ -834,9 +883,9 @@ public class SettingsPanel {
         gbcPanel.fill = GridBagConstraints.BOTH;
         JPanel filler = new JPanel();
         filler.setBackground(color(BACKGROUND));
-        downloadSettingsPanel.add(filler, gbcPanel);
+        panel.add(filler, gbcPanel);
 
-        JScrollPane scrollPane = new JScrollPane(downloadSettingsPanel);
+        JScrollPane scrollPane = new JScrollPane(panel);
         scrollPane.getVerticalScrollBar().setUI(new CustomScrollBarUI());
         scrollPane.getHorizontalScrollBar().setUI(new CustomScrollBarUI());
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
@@ -854,9 +903,9 @@ public class SettingsPanel {
     }
 
     private JPanel createResolutionSettings() {
-        JPanel resolutionPanel = new JPanel();
-        resolutionPanel.setLayout(new BoxLayout(resolutionPanel, BoxLayout.Y_AXIS));
-        resolutionPanel.setBackground(color(BACKGROUND));
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setBackground(color(BACKGROUND));
 
         // TODO: weight the display order?
         for (AbstractUrlFilter filter : settings.getUrlFilters()) {
@@ -1000,10 +1049,10 @@ public class SettingsPanel {
                 false
             );
 
-            resolutionPanel.add(itemPanel);
+            panel.add(itemPanel);
         }
 
-        JScrollPane scrollPane = new JScrollPane(resolutionPanel);
+        JScrollPane scrollPane = new JScrollPane(panel);
         scrollPane.getVerticalScrollBar().setUI(new CustomScrollBarUI());
         scrollPane.getHorizontalScrollBar().setUI(new CustomScrollBarUI());
         scrollPane.setBorder(BorderFactory.createEmptyBorder());

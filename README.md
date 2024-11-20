@@ -1,6 +1,6 @@
 # GDownloader
 
-A GUI Wrapper for [YT-DLP](https://github.com/yt-dlp/yt-dlp) written in Java.
+A user-friendly GUI wrapper for [yt-dlp](https://github.com/yt-dlp/yt-dlp) and [gallery-dl](https://github.com/mikf/gallery-dl) written in Java.
 
 ## Overview
 
@@ -10,10 +10,10 @@ It supports various platforms such as Crunchyroll, Twitch, X/Twitter, and all ot
 ## Features
 
 - Batch download videos and playlists
-- Supports multiple video platforms
-- Embeds thumbnails and subtitles in the resulting videos, when available
+- Supports multiple sites and content types
+- Embeds thumbnails and subtitles in the resulting media files, when available
 - Automatic FFMPEG setup for Windows upon first boot
-- Keeps yt-dlp always updated and ready go
+- Keeps yt-dlp and gallery-dl always updated and ready go
 - Multiple customizable settings to best suit your usage style
 
 ## Requirements
@@ -39,12 +39,12 @@ Download the latest version for your platform from the [releases page](https://g
    ```bash
    cd GDownloader
    ```
-   
+
 3. Build the project using Gradle:
    ```bash
    ./gradlew clean build jpackage
    ```
-   
+
 ## Screenshots
 
 <img src="screenshot1.png" alt="Screenshot1" width="500"/>
@@ -57,5 +57,7 @@ We welcome any feedback you may have to improve the user experience.
 ## Atributions
 
 - Icons by [IconsDB.com](https://www.iconsdb.com)
-- FFMpeg builds by [GyanD](https://github.com/GyanD/codexffmpeg)
-- YT-DLP builds by [YT-DLP](https://github.com/yt-dlp/yt-dlp)
+- FFMpeg builds by [GyanD/codexffmpeg](https://github.com/GyanD/codexffmpeg)
+- yt-dlp builds by [yt-dlp/yt-dlp](https://github.com/yt-dlp/yt-dlp)
+- gallery-dl builds by [mikf/gallery-dl](https://github.com/mikf/gallery-dl)
+
