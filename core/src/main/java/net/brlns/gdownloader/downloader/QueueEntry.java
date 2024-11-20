@@ -130,41 +130,40 @@ public class QueueEntry {
         main.openDownloadsDirectory();
     }
 
-    public void logError(String errorMessage) {
-        logOutput(errorMessage, true);
-    }
-
-    public void logOutput(String output) {
-        logOutput(output, false);
-    }
-
-    public void logOutput(String output, boolean error) {
+    public void logError(String output) {
         if (output.isEmpty()) {
             return;
         }
 
         logLock.writeLock().lock();
         try {
-            if (error) {
-                errorLog.add(output);
-            } else {
-                downloadLog.add(output);
-            }
+            errorLog.add(output);
         } finally {
             logLock.writeLock().unlock();
         }
 
-        if (error) {
-            mediaCard.getRightClickMenu().put(
-                l10n("gui.copy_error_log"),
-                new RunnableMenuEntry(() -> main.getClipboardManager()
-                .copyTextToClipboard(getListFromLog(true))));
-        } else {
-            mediaCard.getRightClickMenu().put(
-                l10n("gui.copy_download_log"),
-                new RunnableMenuEntry(() -> main.getClipboardManager()
-                .copyTextToClipboard(getListFromLog(false))));
+        mediaCard.getRightClickMenu().put(
+            l10n("gui.copy_error_log"),
+            new RunnableMenuEntry(() -> main.getClipboardManager()
+            .copyTextToClipboard(getListFromLog(true))));
+    }
+
+    public void logOutput(String output) {
+        if (output.isEmpty()) {
+            return;
         }
+
+        logLock.writeLock().lock();
+        try {
+            downloadLog.add(output);
+        } finally {
+            logLock.writeLock().unlock();
+        }
+
+        mediaCard.getRightClickMenu().put(
+            l10n("gui.copy_download_log"),
+            new RunnableMenuEntry(() -> main.getClipboardManager()
+            .copyTextToClipboard(getListFromLog(false))));
     }
 
     private List<String> getListFromLog(boolean error) {
