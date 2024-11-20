@@ -881,4 +881,18 @@ public class DownloadManager {
                 (System.currentTimeMillis() - quitTimer));
         }
     }
+
+    public void close() {
+        stopDownloads();
+
+        clearQueue(RUNNING, true);
+        clearQueue();
+
+        for (AbstractDownloader downloader : downloaders) {
+            downloader.close();
+        }
+
+        processMonitor.shutdownNow();
+        forcefulExecutor.shutdownNow();
+    }
 }

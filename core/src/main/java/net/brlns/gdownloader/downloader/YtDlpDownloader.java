@@ -343,6 +343,7 @@ public class YtDlpDownloader extends AbstractDownloader {
 
             while (manager.isRunning() && !entry.getCancelHook().get() && process.isAlive()) {
                 if (Thread.currentThread().isInterrupted()) {
+                    log.debug("Process is closing");
                     process.destroy();
                     throw new InterruptedException("Download interrupted");
                 }
@@ -367,7 +368,12 @@ public class YtDlpDownloader extends AbstractDownloader {
                     processProgress(entry, lastOutput);
                 }
 
-                Thread.sleep(100);
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    log.debug("Sleep interrupted, closing process");
+                    process.destroy();
+                }
             }
 
             entry.getDownloadStarted().set(false);
@@ -425,5 +431,10 @@ public class YtDlpDownloader extends AbstractDownloader {
                 entry.updateStatus(DownloadStatusEnum.PREPARING, lastOutput);
             }
         }
+    }
+
+    @Override
+    public void close() {
+
     }
 }

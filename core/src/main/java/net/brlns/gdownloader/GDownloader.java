@@ -44,6 +44,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.UIManager;
 import javax.swing.plaf.FontUIResource;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.clipboard.ClipboardManager;
@@ -166,6 +167,9 @@ public final class GDownloader {
     @Getter
     private final PriorityThreadPoolExecutor globalThreadPool;
 
+    @Getter(AccessLevel.PRIVATE)
+    private final ScheduledExecutorService mainTicker;
+
     private final AtomicBoolean restartRequested = new AtomicBoolean(false);
 
     public GDownloader() {
@@ -215,6 +219,8 @@ public final class GDownloader {
         globalThreadPool = new PriorityThreadPoolExecutor(
             threads, threads, 0L, TimeUnit.MILLISECONDS);
         log.info("Started global thread pool with {} threads", threads);
+
+        mainTicker = Executors.newScheduledThreadPool(1);
 
         Language.initLanguage(config);
         updateConfig();
@@ -273,8 +279,7 @@ public final class GDownloader {
 
             updateStartupStatus();
 
-            ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
-            scheduler.scheduleAtFixedRate(() -> {
+            mainTicker.scheduleAtFixedRate(() -> {
                 clipboardManager.tickClipboard();
 
                 downloadManager.processQueue();
@@ -1275,6 +1280,19 @@ public final class GDownloader {
 
                 if (instance.isRestartRequested()) {
                     instance.launchNewInstance();
+                }
+
+                try {
+                    instance.getDownloadManager().close();
+                } catch (Exception e) {
+                    log.error("There was a problem closing the download manager", e);
+                }
+
+                try {
+                    instance.getMainTicker().shutdownNow();
+                    instance.getGlobalThreadPool().shutdownNow();
+                } catch (Exception e) {
+                    log.error("There was a problem closing thread pools", e);
                 }
             }));
 

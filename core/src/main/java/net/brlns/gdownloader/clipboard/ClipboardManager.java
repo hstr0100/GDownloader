@@ -230,15 +230,15 @@ public class ClipboardManager {
 
     private void triggerRevalidation() {
         main.getGlobalThreadPool().submitWithPriority(() -> {
+            //Wait a bit for data to propagate.
             try {
-                //Wait a bit for data to propagate.
                 Thread.sleep(200);
-
-                revalidateClipboard();
-                updateClipboard();
             } catch (InterruptedException e) {
-                log.error("Interrupted", e);
+                // Ignore
             }
+
+            revalidateClipboard();
+            updateClipboard();
         }, 100);
     }
 

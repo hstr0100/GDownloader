@@ -267,7 +267,12 @@ public class GalleryDlDownloader extends AbstractDownloader {
                         processProgress(entry, lastOutput);
                     }
                 } else {
-                    Thread.sleep(100);
+                    try {
+                        Thread.sleep(100);
+                    } catch (InterruptedException e) {
+                        log.debug("Sleep interrupted, closing process");
+                        process.destroy();
+                    }
                 }
             }
 
@@ -316,5 +321,10 @@ public class GalleryDlDownloader extends AbstractDownloader {
                 entry.updateStatus(DownloadStatusEnum.PREPARING, lastOutput);
             }
         }
+    }
+
+    @Override
+    public void close() {
+
     }
 }

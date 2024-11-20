@@ -64,4 +64,6 @@ public abstract class AbstractDownloader {
     public List<DownloadTypeEnum> getDownloadTypes() {
         return DownloadTypeEnum.getForDownloaderId(getDownloaderId());
     }
+
+    public abstract void close();
 }

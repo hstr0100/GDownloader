@@ -72,6 +72,8 @@ public class DirectHttpDownloader extends AbstractDownloader {
     private static final int BUFFER_SIZE = 8192;
     private static final int MAX_CHUNK_RETRIES = 5;
 
+    private final ExecutorService chunkThreadPool = Executors.newVirtualThreadPerTaskExecutor();
+
     @Getter
     @Setter
     private Optional<File> executablePath = Optional.empty();
@@ -156,8 +158,10 @@ public class DirectHttpDownloader extends AbstractDownloader {
             } catch (Exception e) {
                 lastOutput = PREFIX + e.getMessage();
 
-                return new DownloadResult(FLAG_MAIN_CATEGORY_FAILED, lastOutput);
+                success = false;
             }
+
+            log.info(lastOutput);
 
             if (!isAlive(entry)) {
                 return new DownloadResult(FLAG_STOPPED);
@@ -333,7 +337,6 @@ public class DirectHttpDownloader extends AbstractDownloader {
         int maxDownloadChunks = Math.clamp(manager.getMain()
             .getConfig().getDirectHttpMaxDownloadChunks(), 1, 20);
 
-        ExecutorService executor = Executors.newFixedThreadPool(maxDownloadChunks);
         long chunkSize = totalBytes / maxDownloadChunks;
 
         List<Future<?>> futures = new ArrayList<>();
@@ -346,7 +349,7 @@ public class DirectHttpDownloader extends AbstractDownloader {
             log.error("Chunk {} start/end {}/{}", i, startByte, endByte);
             activeChunkCount.incrementAndGet();
 
-            futures.add(executor.submit(() -> {
+            futures.add(chunkThreadPool.submit(() -> {
                 try {
                     ChunkData chunkData = ChunkData.builder()
                         .chunkId(chunkId)
@@ -366,8 +369,6 @@ public class DirectHttpDownloader extends AbstractDownloader {
                     downloadChunk(chunkData);
                 } catch (Exception e) {
                     log.error("Error downloading chunk: " + e.getMessage());
-                    executor.shutdownNow();
-
                     throw new RuntimeException(e);
                 } finally {
                     activeChunkCount.decrementAndGet();
@@ -381,10 +382,6 @@ public class DirectHttpDownloader extends AbstractDownloader {
             }
         } catch (Exception e) {
             throw new IOException("Failed to download a chunk: " + fileUrl, e);
-        } finally {
-            if (!executor.isShutdown()) {
-                executor.shutdown();
-            }
         }
 
         if (downloadedBytes.get() != totalBytes) {
@@ -522,6 +519,11 @@ public class DirectHttpDownloader extends AbstractDownloader {
         }
 
         return URLUtils.getFileName(connection.getURL());
+    }
+
+    @Override
+    public void close() {
+        chunkThreadPool.shutdownNow();
     }
 
     @FunctionalInterface
