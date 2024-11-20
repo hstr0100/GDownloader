@@ -1126,6 +1126,10 @@ public final class GUIManager {
         card.setBorder(BorderFactory.createLineBorder(color(BACKGROUND), 5));
         card.setBackground(color(MEDIA_CARD));
 
+        int fontSize = main.getConfig().getFontSize();
+        Dimension cardDimension = new Dimension(Integer.MAX_VALUE, fontSize >= 15 ? 150 + (fontSize - 15) * 3 : 135);
+        card.setMaximumSize(cardDimension);
+
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(10, 10, 10, 10);
         gbc.fill = GridBagConstraints.BOTH;
@@ -1213,7 +1217,7 @@ public final class GUIManager {
         gbc.anchor = GridBagConstraints.CENTER;
         card.add(closeButton, gbc);
 
-        MediaCard mediaCard = new MediaCard(id, card, mediaNameLabel, thumbnailPanel, progressBar);
+        MediaCard mediaCard = new MediaCard(id, card, cardDimension, mediaNameLabel, thumbnailPanel, progressBar);
         mediaCard.expand(isFullScreen());
         mediaCard.setLabel(mediaLabel);
 
@@ -1294,7 +1298,7 @@ public final class GUIManager {
             mediaCard.close();
 
             runOnEDT(() -> {
-                queuePanel.remove(mediaCard.getPanel());
+                queuePanel.remove(mediaCard.getCard());
 
                 if (mediaCards.isEmpty()) {
                     queuePanel.add(getOrCreateEmptyQueuePanel(), BorderLayout.CENTER);
@@ -1313,7 +1317,7 @@ public final class GUIManager {
     }
 
     public boolean handleMediaCardDnD(MediaCard mediaCard, Component dropTarget) {
-        JPanel sourcePanel = mediaCard.getPanel();
+        JPanel sourcePanel = mediaCard.getCard();
 
         if (sourcePanel != null) {
             Rectangle windowBounds = appWindow.getBounds();

@@ -42,7 +42,8 @@ public class MediaCard {
 
     private final int id;
 
-    private final JPanel panel;
+    private final JPanel card;
+    private final Dimension cardMaximumSize;
     private final CustomDynamicLabel mediaLabel;
     private final CustomThumbnailPanel thumbnailPanel;
     private final CustomProgressBar progressBar;
@@ -74,18 +75,23 @@ public class MediaCard {
         expanded = expand;
 
         if (isChanging) {
-            scaleThumbnail(expand ? 1.20 : 1);
+            scale(expand ? 1.2 : 1);
         }
     }
 
-    protected void scaleThumbnail(double factor) {
-        Dimension dimension = new Dimension(
+    private void scale(double factor) {
+        Dimension thumbDimension = new Dimension(
             (int)(MediaCard.THUMBNAIL_WIDTH * factor),
             (int)(MediaCard.THUMBNAIL_HEIGHT * factor));
 
+        Dimension cardDimension = new Dimension(
+            (int)(cardMaximumSize.getWidth() * factor),
+            (int)(cardMaximumSize.getHeight() * factor));
+
         runOnEDT(() -> {
-            thumbnailPanel.setPreferredSize(dimension);
-            thumbnailPanel.setMinimumSize(dimension);
+            card.setMaximumSize(cardDimension);
+            thumbnailPanel.setPreferredSize(thumbDimension);
+            thumbnailPanel.setMinimumSize(thumbDimension);
         });
     }
 
