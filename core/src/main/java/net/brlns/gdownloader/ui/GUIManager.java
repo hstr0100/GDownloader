@@ -43,7 +43,9 @@ import lombok.Data;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
+import net.brlns.gdownloader.downloader.AbstractDownloader;
 import net.brlns.gdownloader.downloader.DownloadManager;
+import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.downloader.enums.QueueCategoryEnum;
 import net.brlns.gdownloader.ui.custom.*;
 import net.brlns.gdownloader.ui.dnd.WindowDragSourceListener;
@@ -417,57 +419,85 @@ public final class GUIManager {
             }
         ));
 
-        buttonPanel.add(createToggleDownloadsButton(
-            (state) -> {
-                if (state) {
-                    return loadIcon("/assets/pause.png", ICON);
-                } else {
-                    if (main.getDownloadManager().getQueuedDownloads() > 0) {
-                        return loadIcon("/assets/play.png", QUEUE_ACTIVE_ICON);
+        {
+            JButton toogledDownloadsButton = createToggleDownloadsButton(
+                (state) -> {
+                    if (state) {
+                        return loadIcon("/assets/pause.png", ICON);
                     } else {
-                        return loadIcon("/assets/play.png", ICON);
+                        if (main.getDownloadManager().getQueuedDownloads() > 0) {
+                            return loadIcon("/assets/play.png", QUEUE_ACTIVE_ICON);
+                        } else {
+                            return loadIcon("/assets/play.png", ICON);
+                        }
+                    }
+                },
+                (state) -> state
+                    ? loadIcon("/assets/pause.png", ICON_HOVER)
+                    : loadIcon("/assets/play.png", ICON_HOVER),
+                (state) -> state
+                    ? "gui.stop_downloads.tooltip"
+                    : "gui.start_downloads.tooltip",
+                main.getDownloadManager()::isRunning,
+                () -> {
+                    main.getDownloadManager().toggleDownloads();
+                }
+            );
+
+            toogledDownloadsButton.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseClicked(MouseEvent e) {
+                    if (SwingUtilities.isRightMouseButton(e)) {
+                        Map<String, IMenuEntry> rightClickMenu = new LinkedHashMap<>();
+
+                        for (AbstractDownloader downloader : main.getDownloadManager().getEnabledDownloaders()) {
+                            DownloaderIdEnum downloaderId = downloader.getDownloaderId();
+                            rightClickMenu.put(
+                                l10n("gui.start_downloads.download_using", downloaderId.getDisplayName()),
+                                new RunnableMenuEntry(() -> {
+                                    main.getDownloadManager().stopDownloads();
+                                    main.getDownloadManager().startDownloads(downloaderId);
+                                })
+                            );
+                        }
+
+                        showRightClickMenu(toogledDownloadsButton, rightClickMenu, e.getX(), e.getY());
                     }
                 }
-            },
-            (state) -> state
-                ? loadIcon("/assets/pause.png", ICON_HOVER)
-                : loadIcon("/assets/play.png", ICON_HOVER),
-            (state) -> state
-                ? "gui.stop_downloads.tooltip"
-                : "gui.start_downloads.tooltip",
-            main.getDownloadManager()::isRunning,
-            () -> {
-                main.getDownloadManager().toggleDownloads();
-            }
-        ));
+            });
 
-        JButton clearQueueButton = createButton(
-            loadIcon("/assets/erase.png", ICON),
-            loadIcon("/assets/erase.png", ICON_HOVER),
-            "gui.clear_download_queue.tooltip",
-            e -> main.getDownloadManager().clearQueue()
-        );
+            buttonPanel.add(toogledDownloadsButton);
+        }
 
-        Map<String, IMenuEntry> rightClickMenu = new LinkedHashMap<>();
-        rightClickMenu.put(l10n("gui.clear_download_queue.clear_failed"),
-            new RunnableMenuEntry(() -> main.getDownloadManager().clearQueue(QueueCategoryEnum.FAILED)));
-        rightClickMenu.put(l10n("gui.clear_download_queue.clear_completed"),
-            new RunnableMenuEntry(() -> main.getDownloadManager().clearQueue(QueueCategoryEnum.COMPLETED)));
-        rightClickMenu.put(l10n("gui.clear_download_queue.clear_queued"),
-            new RunnableMenuEntry(() -> main.getDownloadManager().clearQueue(QueueCategoryEnum.QUEUED)));
-        rightClickMenu.put(l10n("gui.clear_download_queue.clear_running"),
-            new RunnableMenuEntry(() -> main.getDownloadManager().clearQueue(QueueCategoryEnum.RUNNING)));
+        {
+            JButton clearQueueButton = createButton(
+                loadIcon("/assets/erase.png", ICON),
+                loadIcon("/assets/erase.png", ICON_HOVER),
+                "gui.clear_download_queue.tooltip",
+                e -> main.getDownloadManager().clearQueue()
+            );
 
-        clearQueueButton.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                if (SwingUtilities.isRightMouseButton(e)) {
-                    showRightClickMenu(clearQueueButton, rightClickMenu, e.getX(), e.getY());
+            Map<String, IMenuEntry> rightClickMenu = new LinkedHashMap<>();
+            rightClickMenu.put(l10n("gui.clear_download_queue.clear_failed"),
+                new RunnableMenuEntry(() -> main.getDownloadManager().clearQueue(QueueCategoryEnum.FAILED)));
+            rightClickMenu.put(l10n("gui.clear_download_queue.clear_completed"),
+                new RunnableMenuEntry(() -> main.getDownloadManager().clearQueue(QueueCategoryEnum.COMPLETED)));
+            rightClickMenu.put(l10n("gui.clear_download_queue.clear_queued"),
+                new RunnableMenuEntry(() -> main.getDownloadManager().clearQueue(QueueCategoryEnum.QUEUED)));
+            rightClickMenu.put(l10n("gui.clear_download_queue.clear_running"),
+                new RunnableMenuEntry(() -> main.getDownloadManager().clearQueue(QueueCategoryEnum.RUNNING)));
+
+            clearQueueButton.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseClicked(MouseEvent e) {
+                    if (SwingUtilities.isRightMouseButton(e)) {
+                        showRightClickMenu(clearQueueButton, rightClickMenu, e.getX(), e.getY());
+                    }
                 }
-            }
-        });
+            });
 
-        buttonPanel.add(clearQueueButton);
+            buttonPanel.add(clearQueueButton);
+        }
 
         buttonPanel.add(createButton(
             loadIcon("/assets/settings.png", ICON),

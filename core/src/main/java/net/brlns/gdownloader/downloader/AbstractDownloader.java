@@ -41,6 +41,8 @@ public abstract class AbstractDownloader {
         manager = managerIn;
     }
 
+    public abstract boolean isEnabled();
+
     protected abstract boolean canConsumeUrl(String inputUrl);
 
     protected abstract boolean tryQueryVideo(QueueEntry queueEntry);

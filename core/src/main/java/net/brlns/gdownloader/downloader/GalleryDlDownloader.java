@@ -66,6 +66,12 @@ public class GalleryDlDownloader extends AbstractDownloader {
     }
 
     @Override
+    public boolean isEnabled() {
+        return getExecutablePath().isPresent()
+            && main.getConfig().isGalleryDlEnabled();
+    }
+
+    @Override
     public DownloaderIdEnum getDownloaderId() {
         return DownloaderIdEnum.GALLERY_DL;
     }
@@ -77,8 +83,7 @@ public class GalleryDlDownloader extends AbstractDownloader {
 
     @Override
     protected boolean canConsumeUrl(String inputUrl) {
-        return getExecutablePath().isPresent()
-            && main.getConfig().isGalleryDlEnabled()
+        return isEnabled()
             && !(inputUrl.contains("ytimg")
             || inputUrl.contains("ggpht")
             || inputUrl.endsWith("youtube.com/"));
@@ -256,7 +261,7 @@ public class GalleryDlDownloader extends AbstractDownloader {
             String line;
             while (manager.isRunning() && !entry.getCancelHook().get() && process.isAlive()) {
                 if (Thread.currentThread().isInterrupted()) {
-                    process.destroy();
+                    process.destroyForcibly();
                     throw new InterruptedException("Download interrupted");
                 }
 
@@ -271,12 +276,10 @@ public class GalleryDlDownloader extends AbstractDownloader {
                         Thread.sleep(100);
                     } catch (InterruptedException e) {
                         log.debug("Sleep interrupted, closing process");
-                        process.destroy();
+                        process.destroyForcibly();
                     }
                 }
             }
-
-            entry.getDownloadStarted().set(false);
 
             long stopped = System.currentTimeMillis() - start;
 
@@ -299,6 +302,8 @@ public class GalleryDlDownloader extends AbstractDownloader {
 
             return null;
         } finally {
+            entry.getDownloadStarted().set(false);
+
             // Our ProcessMonitor will take care of closing the underlying process.
         }
     }

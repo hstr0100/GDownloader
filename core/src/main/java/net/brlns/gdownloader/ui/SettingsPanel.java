@@ -865,7 +865,7 @@ public class SettingsPanel {
             "settings.downloader.direct_http.enabled",
             settings::isDirectHttpEnabled,
             settings::setDirectHttpEnabled,
-            true
+            false
         );
 
         addSlider(panel, gbcPanel,

@@ -25,6 +25,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import lombok.AccessLevel;
@@ -73,7 +74,6 @@ public class DownloadManager {
     private final List<Consumer<DownloadManager>> listeners = new ArrayList<>();
 
     private final List<AbstractDownloader> downloaders = new ArrayList<>();
-
     private final Set<String> capturedLinks = Collections.synchronizedSet(new HashSet<>());
     private final Set<String> capturedPlaylists = Collections.synchronizedSet(new HashSet<>());
 
@@ -92,6 +92,8 @@ public class DownloadManager {
     private final AtomicBoolean downloadsBlocked = new AtomicBoolean(true);
     private final AtomicBoolean downloadsRunning = new AtomicBoolean(false);
     private final AtomicBoolean downloadsManuallyStarted = new AtomicBoolean(false);
+
+    private final AtomicReference<DownloaderIdEnum> suggestedDownloaderId = new AtomicReference<>(null);
 
     private final ExpiringSet<String> urlIgnoreSet = new ExpiringSet<>(TimeUnit.SECONDS, 5);
 
@@ -135,14 +137,8 @@ public class DownloadManager {
         });
 
         downloaders.add(new YtDlpDownloader(this));
-
-        if (main.getConfig().isGalleryDlEnabled()) {
-            downloaders.add(new GalleryDlDownloader(this));
-        }
-
-        if (main.getConfig().isDebugMode()) {
-            downloaders.add(new DirectHttpDownloader(this));
-        }
+        downloaders.add(new GalleryDlDownloader(this));
+        downloaders.add(new DirectHttpDownloader(this));
     }
 
     public boolean isBlocked() {
@@ -184,6 +180,12 @@ public class DownloadManager {
     private List<AbstractDownloader> getCompatibleDownloaders(String inputUrl) {
         return downloaders.stream()
             .filter(downloader -> downloader.canConsumeUrl(inputUrl))
+            .collect(Collectors.toUnmodifiableList());
+    }
+
+    public List<AbstractDownloader> getEnabledDownloaders() {
+        return downloaders.stream()
+            .filter(downloader -> downloader.isEnabled())
             .collect(Collectors.toUnmodifiableList());
     }
 
@@ -395,7 +397,7 @@ public class DownloadManager {
             enqueueLast(queueEntry);
 
             if (main.getConfig().isAutoDownloadStart() && !downloadsRunning.get()) {
-                startDownloads();
+                startDownloads(suggestedDownloaderId.get());
             }
 
             future.complete(true);
@@ -441,9 +443,15 @@ public class DownloadManager {
     }
 
     public void startDownloads() {
+        startDownloads(null);
+    }
+
+    public void startDownloads(@Nullable DownloaderIdEnum downloaderId) {
         if (!downloadsBlocked.get()) {
             downloadsRunning.set(true);
             downloadsManuallyStarted.set(true);
+            suggestedDownloaderId.set(downloaderId);
+
             fireListeners();
         }
     }
@@ -451,6 +459,8 @@ public class DownloadManager {
     public void stopDownloads() {
         downloadsRunning.set(false);
         downloadsManuallyStarted.set(false);
+        suggestedDownloaderId.set(null);
+
         fireListeners();
     }
 
@@ -482,7 +492,7 @@ public class DownloadManager {
             restartDownload(entry, false);
         }
 
-        startDownloads();
+        startDownloads(suggestedDownloaderId.get());
         fireListeners();
     }
 
@@ -699,6 +709,9 @@ public class DownloadManager {
                     inProgressDownloads.offer(entry);
 
                     DownloaderIdEnum forcedDownloader = entry.getForcedDownloader();
+                    if (forcedDownloader == null) {
+                        forcedDownloader = suggestedDownloaderId.get();
+                    }
 
                     int maxRetries = !main.getConfig().isAutoDownloadRetry() ? 1 : MAX_DOWNLOAD_RETRIES;
                     String lastOutput = "";
@@ -743,11 +756,13 @@ public class DownloadManager {
                                 entry.logError(lastOutput);
 
                                 if (disabled || unsupported || entry.getRetryCounter().get() >= maxRetries) {
+                                    entry.updateStatus(DownloadStatusEnum.FAILED, lastOutput);
                                     log.error("Download of {} failed on {}: {} supported downloader: {}",
                                         entry.getUrl(), downloaderId, lastOutput, !unsupported);
 
                                     entry.blackListDownloader(downloaderId);
                                 } else {
+                                    entry.updateStatus(DownloadStatusEnum.RETRYING, lastOutput);
                                     log.warn("Download of {} failed with {}, retrying ({}/{}): {}",
                                         entry.getUrl(),
                                         downloaderId,
@@ -885,7 +900,7 @@ public class DownloadManager {
     public void close() {
         stopDownloads();
 
-        clearQueue(RUNNING, true);
+        clearQueue(RUNNING, false);
         clearQueue();
 
         for (AbstractDownloader downloader : downloaders) {

@@ -87,6 +87,11 @@ public class DirectHttpDownloader extends AbstractDownloader {
     }
 
     @Override
+    public boolean isEnabled() {
+        return main.getConfig().isDirectHttpEnabled();
+    }
+
+    @Override
     public DownloaderIdEnum getDownloaderId() {
         return DownloaderIdEnum.DIRECT_HTTP;
     }
@@ -98,7 +103,7 @@ public class DirectHttpDownloader extends AbstractDownloader {
 
     @Override
     protected boolean canConsumeUrl(String inputUrl) {
-        return main.getConfig().isDirectHttpEnabled()
+        return isEnabled()
             && !(inputUrl.contains("ytimg")
             || inputUrl.contains("ggpht")
             || inputUrl.endsWith("youtube.com/"));
@@ -153,12 +158,13 @@ public class DirectHttpDownloader extends AbstractDownloader {
                 });
 
                 lastOutput = PREFIX + "Download complete";
-
-                entry.getDownloadStarted().set(false);
+                entry.updateStatus(DownloadStatusEnum.DOWNLOADING, lastOutput);
             } catch (Exception e) {
                 lastOutput = PREFIX + e.getMessage();
 
                 success = false;
+            } finally {
+                entry.getDownloadStarted().set(false);
             }
 
             log.info(lastOutput);
@@ -381,7 +387,7 @@ public class DirectHttpDownloader extends AbstractDownloader {
                 future.get();
             }
         } catch (Exception e) {
-            throw new IOException("Failed to download a chunk: " + fileUrl, e);
+            throw new IOException("Failed to download a chunk: " + fileUrl + ": " + e.getMessage(), e);
         }
 
         if (downloadedBytes.get() != totalBytes) {
@@ -485,7 +491,7 @@ public class DirectHttpDownloader extends AbstractDownloader {
 
                 if (attempt == MAX_CHUNK_RETRIES) {
                     chunkData.getAbortHook().set(true);
-                    throw new IOException("Failed to download file after " + MAX_CHUNK_RETRIES + " attempts.");
+                    throw new IOException("Failed to download file after " + MAX_CHUNK_RETRIES + " attempts: " + e.getMessage(), e);
                 }
             } finally {
                 if (connection != null) {
