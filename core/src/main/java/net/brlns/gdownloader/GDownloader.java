@@ -108,6 +108,8 @@ import static net.brlns.gdownloader.lang.Language.*;
 // TODO gallery-dl does not accept an argument specifying yt-dlp/ffmpeg location, figure out a workaround to pass the correct path to it
 // TODO Fastutil collections
 // TODO Proxy settings should be add to the UI, fields should be validated on the fly
+// TODO Tabs in settings for the different downloaders
+// TODO Crawl for valid links that can be consumed by direct-http 
 /**
  * GDownloader - GUI wrapper for yt-dlp
  *

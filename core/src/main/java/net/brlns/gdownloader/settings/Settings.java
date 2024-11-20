@@ -81,7 +81,7 @@ public class Settings {
     private boolean galleryDlEnabled = !GDownloader.isWindows();
 
     @JsonProperty("DirectHttpEnabled")
-    private boolean directHttpEnabled = true;
+    private boolean directHttpEnabled = false;
 
     @JsonProperty("DirectHttpMaxDownloadChunks")
     private int directHttpMaxDownloadChunks = 5;

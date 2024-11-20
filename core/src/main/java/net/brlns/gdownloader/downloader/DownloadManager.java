@@ -804,7 +804,7 @@ public class DownloadManager {
 
                     entry.updateStatus(DownloadStatusEnum.FAILED);
                     if (log.isDebugEnabled()) {
-                        log.error("All downloaders failed for {}", entry);
+                        log.error("All downloaders failed for {}", entry.getUrl());
                     }
 
                     mediaCard.getRightClickMenu().put(
