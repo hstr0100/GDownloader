@@ -310,16 +310,23 @@ public class DirectHttpDownloader extends AbstractDownloader {
             throw new IOException("Cannot determine filename: " + fileUrl);
         }
 
-        String urlPath = URLUtils.getDirectoryPath(fileUrl.toString());
+        String suggestedUrlPath = URLUtils.getDirectoryPath(fileUrl.toString());
 
-        Path targetPath = Paths.get(
-            queueEntry.getTmpDirectory().getPath(),
-            urlPath != null ? urlPath : "",
-            detectedFileName);
+        Path basePath = queueEntry.getTmpDirectory().toPath();
+        Path urlPath = Paths.get(suggestedUrlPath != null ? suggestedUrlPath : "");
+        Path targetPath = basePath.resolve(urlPath);
+
+        int pathLength = targetPath.resolve(detectedFileName).toString().length();
+
+        if (pathLength > 260 && GDownloader.isWindows()) { // Microsoft shenanigans
+            log.info("Long path detected, trimming {}", targetPath);
+            targetPath = DirectoryUtils.trimPathToFit(basePath, urlPath, detectedFileName, 260);
+            log.info("Trimmed to {}", targetPath);
+        }
 
         Files.createDirectories(targetPath);
 
-        File targetFile = targetPath.toFile();
+        File targetFile = new File(targetPath.toFile(), detectedFileName);
 
         long downloadedBytesSoFar = targetFile.exists() ? targetFile.length() : 0;
 

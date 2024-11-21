@@ -131,6 +131,25 @@ public final class DirectoryUtils {
         return directoryNames;
     }
 
+    public static Path trimPathToFit(Path basePath, Path toTrim, String fileName, int maxLength) {
+        Path currentPath = toTrim;
+
+        while (currentPath != null) {
+            String fullPath = basePath.resolve(currentPath).resolve(fileName).toString();
+            if (fullPath.length() <= maxLength) {
+                break;
+            }
+
+            currentPath = currentPath.getParent();
+        }
+
+        if (currentPath == null) {
+            throw new IllegalArgumentException("Cannot trim path to fit within the maximum length limit.");
+        }
+
+        return basePath.resolve(currentPath);
+    }
+
     private static int extractNumber(String directoryName) {
         return Integer.parseInt(directoryName.replaceAll("\\D+", ""));
     }
