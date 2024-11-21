@@ -411,6 +411,10 @@ public class QueueEntry {
                 downloaderId.getDisplayName(),
                 new RunnableMenuEntry(() -> {
                     setForcedDownloader(downloaderId);
+                    manager.stopDownload(this, () -> {
+                        manager.restartDownload(this);
+                        manager.submitDownloadTask(this, true);
+                    });
                 })
             );
         }

@@ -16,6 +16,7 @@
  */
 package net.brlns.gdownloader.util;
 
+import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -31,6 +32,8 @@ import net.brlns.gdownloader.util.collection.LRUCache;
  */
 @Slf4j
 public class DirectoryDeduplicator {
+
+    private static final int BUFFER_SIZE = 8192;
 
     // We're pretty light-weight on memory so far, even while using pure Java collections.
     // We're safe to push this one a bit.
@@ -56,8 +59,6 @@ public class DirectoryDeduplicator {
 
             traverseDirectory(directory, fileHashes);
 
-            deleteEmptyDirectories(directory);
-
             log.info("Deduplication complete {}", directory);
         } catch (Exception e) {
             log.error("Deduplication failed", e);
@@ -67,15 +68,18 @@ public class DirectoryDeduplicator {
     /**
      * Traverse the directory, compute SHA-256 for each file, and delete duplicates.
      */
-    private static void traverseDirectory(File directory, Set<String> fileHashes) throws IOException, NoSuchAlgorithmException {
+    private static boolean traverseDirectory(File directory, Set<String> fileHashes) throws IOException, NoSuchAlgorithmException {
         File[] files = directory.listFiles();
         if (files == null) {
-            return;
+            return false;
         }
+
+        boolean isDirectoryEmpty = true;
 
         // Files go first
         for (File file : files) {
             if (file.isFile()) {
+                isDirectoryEmpty = false;
                 String fileHash = getFileHash(file);
                 if (fileHashes.contains(fileHash)) {
                     log.info("Duplicate file found, deleting: {}", file.getAbsolutePath());
@@ -86,35 +90,20 @@ public class DirectoryDeduplicator {
             }
         }
 
-        // Directories go last, prioritizing files in the upper directories
+        // Directories go next
         for (File file : files) {
             if (file.isDirectory()) {
-                traverseDirectory(file, fileHashes);
-            }
-        }
-    }
-
-    /**
-     * Deletes empty directories after deduplication.
-     */
-    private static void deleteEmptyDirectories(File directory) throws IOException {
-        File[] files = directory.listFiles();
-        if (files != null && files.length == 0) {
-            log.info("Deleting empty directory: {}", directory.getAbsolutePath());
-            directory.delete();
-        } else if (files != null) {
-            for (File file : files) {
-                if (file.isDirectory()) {
-                    deleteEmptyDirectories(file);
+                boolean subDirEmpty = traverseDirectory(file, fileHashes);
+                if (subDirEmpty) {
+                    log.info("Deleting empty directory: {}", file.getAbsolutePath());
+                    file.delete();
+                } else {
+                    isDirectoryEmpty = false;
                 }
             }
-
-            files = directory.listFiles();
-            if (files != null && files.length == 0) {
-                log.info("Deleting empty directory: {}", directory.getAbsolutePath());
-                directory.delete();
-            }
         }
+
+        return isDirectoryEmpty;
     }
 
     /**
@@ -124,18 +113,16 @@ public class DirectoryDeduplicator {
         String result = HASH_CACHE.get(file);
 
         if (result != null) {
-            //if (log.isDebugEnabled()) {
-            //    log.debug("Hash cache hit for {}", file);
-            //}
-
             return result;
         }
 
         MessageDigest digest = MessageDigest.getInstance("SHA-256");
-        try (FileInputStream fis = new FileInputStream(file)) {
-            byte[] byteArray = new byte[1024];
+        // Use a buffered reader with a generous buffer size to avoid some nasty I/O trashing here
+        try (BufferedInputStream bis
+            = new BufferedInputStream(new FileInputStream(file))) {
+            byte[] byteArray = new byte[BUFFER_SIZE];
             int bytesRead;
-            while ((bytesRead = fis.read(byteArray)) != -1) {
+            while ((bytesRead = bis.read(byteArray)) != -1) {
                 digest.update(byteArray, 0, bytesRead);
             }
         }

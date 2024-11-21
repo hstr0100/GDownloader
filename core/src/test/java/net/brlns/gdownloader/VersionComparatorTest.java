@@ -14,6 +14,7 @@ class VersionComparatorTest {
         assertTrue(LockUtils.isVersionNewer("10.0.2", "10.1.0"));
         assertTrue(LockUtils.isVersionNewer("1.0.11", "1.1.0"));
         assertTrue(LockUtils.isVersionNewer("10.0.2", "10.1.2-dev"));
+        assertTrue(LockUtils.isVersionNewer("1.0.10", "1.2.0-rc1"));
     }
 
     @Test
