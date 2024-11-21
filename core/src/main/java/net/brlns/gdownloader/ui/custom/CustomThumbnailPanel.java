@@ -61,9 +61,12 @@ public class CustomThumbnailPanel extends JPanel {
     }
 
     public void setPlaceholderIcon(DownloadTypeEnum downloadType) {
+        if (image != null) {
+            return;
+        }
+
         ImageIcon iconIn = fetchIcon(downloadType);
-        if (iconIn == null || placeholderIcon == iconIn
-            || image != null) {
+        if (iconIn == null || placeholderIcon == iconIn) {
             return;
         }
 
