@@ -26,7 +26,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -36,6 +35,8 @@ import net.brlns.gdownloader.downloader.enums.DownloadStatusEnum;
 import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.downloader.enums.QueueCategoryEnum;
 import net.brlns.gdownloader.downloader.structs.DownloadResult;
+import net.brlns.gdownloader.event.EventDispatcher;
+import net.brlns.gdownloader.event.IEvent;
 import net.brlns.gdownloader.settings.enums.PlayListOptionEnum;
 import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
 import net.brlns.gdownloader.settings.filters.GenericFilter;
@@ -61,7 +62,7 @@ import static net.brlns.gdownloader.util.URLUtils.*;
  * @author Gabriel / hstr0100 / vertx010
  */
 @Slf4j
-public class DownloadManager {
+public class DownloadManager implements IEvent {
 
     private static final int MAX_DOWNLOAD_RETRIES = 10;
 
@@ -69,8 +70,6 @@ public class DownloadManager {
     private final GDownloader main;
 
     private final ExecutorService processMonitor;
-
-    private final List<Consumer<DownloadManager>> listeners = new ArrayList<>();
 
     private final List<AbstractDownloader> downloaders = new ArrayList<>();
     private final Set<String> capturedLinks = Collections.synchronizedSet(new HashSet<>());
@@ -155,10 +154,6 @@ public class DownloadManager {
         fireListeners();
     }
 
-    public void registerListener(Consumer<DownloadManager> consumer) {
-        listeners.add(consumer);
-    }
-
     public boolean isMainDownloaderInitialized() {
         return downloaders.stream().anyMatch((downloader)
             -> downloader.isMainDownloader()
@@ -198,13 +193,11 @@ public class DownloadManager {
 
         List<AbstractDownloader> compatibleDownloaders = getCompatibleDownloaders(inputUrl);
 
-        if (downloadsBlocked.get() || inputUrl == null || urlIgnoreSet.contains(inputUrl)
+        if (downloadsBlocked.get() || inputUrl == null || urlIgnoreSet.contains(inputUrl) && !force
             || compatibleDownloaders.isEmpty() || capturedLinks.contains(inputUrl)) {
             future.complete(false);
             return future;
         }
-
-        urlIgnoreSet.add(inputUrl);
 
         Optional<AbstractUrlFilter> filterOptional = getFilterForUrl(inputUrl,
             main.getConfig().isCaptureAnyLinks() || force);
@@ -225,6 +218,8 @@ public class DownloadManager {
             future.complete(false);
             return future;
         }
+
+        urlIgnoreSet.add(inputUrl);
 
         String filteredUrl;
         // TODO: move these to the appropriate classes.
@@ -465,9 +460,7 @@ public class DownloadManager {
     }
 
     private void fireListeners() {
-        for (Consumer<DownloadManager> listener : listeners) {
-            listener.accept(this);
-        }
+        EventDispatcher.dispatch(this);
     }
 
     public int getQueuedDownloads() {
@@ -766,7 +759,7 @@ public class DownloadManager {
 
                             if (entry.getRetryCounter().get() > 0) {
                                 entry.updateStatus(DownloadStatusEnum.RETRYING, l10n("gui.download_status.retrying",
-                                    String.format("%d/%d", entry.getRetryCounter().get(), maxRetries)));
+                                    String.format("%d/%d", entry.getRetryCounter().get(), maxRetries)) + ": " + lastOutput);
                             } else {
                                 entry.updateStatus(DownloadStatusEnum.STARTING, l10n("gui.download_status.starting"));
                             }

@@ -20,6 +20,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.kwhat.jnativehook.GlobalScreen;
 import com.github.kwhat.jnativehook.NativeHookException;
+import com.github.kwhat.jnativehook.mouse.NativeMouseEvent;
+import com.github.kwhat.jnativehook.mouse.NativeMouseListener;
 import java.awt.*;
 import java.awt.desktop.QuitStrategy;
 import java.awt.event.ActionEvent;
@@ -49,6 +51,8 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.clipboard.ClipboardManager;
 import net.brlns.gdownloader.downloader.DownloadManager;
+import net.brlns.gdownloader.event.EventDispatcher;
+import net.brlns.gdownloader.event.impl.NativeMouseClickEvent;
 import net.brlns.gdownloader.lang.Language;
 import net.brlns.gdownloader.settings.Settings;
 import net.brlns.gdownloader.settings.enums.BrowserEnum;
@@ -282,6 +286,15 @@ public final class GDownloader {
 
                 downloadManager.processQueue();
             }, 0, 50, TimeUnit.MILLISECONDS);
+
+            // Java doesn't natively support detecting a click outside of the program window,
+            // Which we would need for our custom context menus
+            GlobalScreen.addNativeMouseListener(new NativeMouseListener() {
+                @Override
+                public void nativeMousePressed(NativeMouseEvent e) {
+                    EventDispatcher.dispatch(new NativeMouseClickEvent(e.getPoint()));
+                }
+            });
 
             initialized = true;
 

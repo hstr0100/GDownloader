@@ -40,6 +40,8 @@ module net.brlns.gdownloader {
 
     exports net.brlns.gdownloader;
     exports net.brlns.gdownloader.clipboard;
+    exports net.brlns.gdownloader.event;
+    exports net.brlns.gdownloader.event.impl;
     exports net.brlns.gdownloader.downloader;
     exports net.brlns.gdownloader.downloader.enums;
     exports net.brlns.gdownloader.downloader.structs;

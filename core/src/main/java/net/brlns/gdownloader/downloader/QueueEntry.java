@@ -278,11 +278,11 @@ public class QueueEntry {
     }
 
     public void updateStatus(DownloadStatusEnum status, String text, boolean log) {
-        if (log) {
-            logOutput(text);
-        }
-
         if (!text.isEmpty()) {
+            if (log) {
+                logOutput(text);
+            }
+
             String topText = filter.getDisplayName();
 
             if (status == DownloadStatusEnum.DOWNLOADING) {

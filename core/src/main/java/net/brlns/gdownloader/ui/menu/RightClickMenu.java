@@ -33,11 +33,19 @@ import javax.swing.JButton;
 import javax.swing.JPanel;
 import javax.swing.JWindow;
 import javax.swing.SwingUtilities;
+import lombok.extern.slf4j.Slf4j;
+import net.brlns.gdownloader.event.EventDispatcher;
+import net.brlns.gdownloader.event.EventListener;
+import net.brlns.gdownloader.event.IEventListener;
+import net.brlns.gdownloader.event.impl.NativeMouseClickEvent;
 import net.brlns.gdownloader.ui.custom.CustomMenuButton;
+
+import static net.brlns.gdownloader.ui.GUIManager.runOnEDT;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
+@Slf4j
 public class RightClickMenu {
 
     private static final AtomicInteger WINDOW_ID = new AtomicInteger(0);
@@ -74,15 +82,9 @@ public class RightClickMenu {
 
         setPopupLocation(popupWindow, parentComponent, sourceX, sourceY);
 
-        AWTEventListener globalMouseListener = createGlobalMouseListener(popupWindow);
-        Toolkit.getDefaultToolkit().addAWTEventListener(globalMouseListener, AWTEvent.MOUSE_EVENT_MASK);
-
-        popupWindow.addWindowListener(new WindowAdapter() {
-            @Override
-            public void windowClosed(WindowEvent e) {
-                Toolkit.getDefaultToolkit().removeAWTEventListener(globalMouseListener);
-            }
-        });
+        MenuWindowAdapter windowAdapter = new MenuWindowAdapter(popupWindow);
+        windowAdapter.register();
+        popupWindow.addWindowListener(windowAdapter);
 
         popupWindow.setVisible(true);
     }
@@ -132,8 +134,26 @@ public class RightClickMenu {
     }
 
     private void setPopupLocation(JWindow popupWindow, Component parentComponent, int x, int y) {
+        GraphicsConfiguration graphicsConfig = parentComponent.getGraphicsConfiguration();
+        Rectangle screenBounds = graphicsConfig.getBounds();
+        Insets screenInsets = Toolkit.getDefaultToolkit().getScreenInsets(graphicsConfig);
+
+        Rectangle usableBounds = new Rectangle(
+            screenBounds.x + screenInsets.left,
+            screenBounds.y + screenInsets.top,
+            screenBounds.width - screenInsets.left - screenInsets.right,
+            screenBounds.height - screenInsets.top - screenInsets.bottom
+        );
+
         Point locationOnScreen = parentComponent.getLocationOnScreen();
-        popupWindow.setLocation(locationOnScreen.x + x, locationOnScreen.y + y);
+        int choosenX = locationOnScreen.x + x;
+        int choosenY = locationOnScreen.y + y;
+
+        Dimension popupSize = popupWindow.getSize();
+        int popupX = Math.max(usableBounds.x, Math.min(choosenX, usableBounds.x + usableBounds.width - popupSize.width));
+        int popupY = Math.max(usableBounds.y, Math.min(choosenY, usableBounds.y + usableBounds.height - popupSize.height));
+
+        popupWindow.setLocation(popupX, popupY);
     }
 
     private void closeOtherSubmenus(int currentWindowId, JWindow currentWindow, List<Integer> hierarchy) {
@@ -150,19 +170,6 @@ public class RightClickMenu {
         }
     }
 
-    private AWTEventListener createGlobalMouseListener(JWindow popupWindow) {
-        return (AWTEvent event) -> {
-            if (event.getID() == MouseEvent.MOUSE_CLICKED) {
-                MouseEvent me = (MouseEvent)event;
-                Component component = SwingUtilities.getDeepestComponentAt(me.getComponent(), me.getX(), me.getY());
-
-                if (component == null || !SwingUtilities.isDescendingFrom(component, popupWindow)) {
-                    popupWindow.dispose();
-                }
-            }
-        };
-    }
-
     private void closeHierarchy(List<Integer> hierarchy) {
         for (int id : hierarchy) {
             JWindow submenu = openSubmenus.get(id);
@@ -173,5 +180,68 @@ public class RightClickMenu {
         }
 
         hierarchy.clear();
+    }
+
+    private static AWTEventListener createFallbackMouseListener(JWindow popupWindow) {
+        return (AWTEvent event) -> {
+            if (event instanceof MouseEvent mouseEvent) {
+                if (mouseEvent.getID() != MouseEvent.MOUSE_PRESSED) {
+                    return;
+                }
+
+                Point clickPoint = mouseEvent.getLocationOnScreen();
+                Rectangle popupBounds = popupWindow.getBounds();
+                boolean shouldDispose = false;
+
+                if (!popupBounds.contains(clickPoint)) {
+                    shouldDispose = true;
+                } else {
+                    Component component = SwingUtilities.getDeepestComponentAt(mouseEvent.getComponent(), mouseEvent.getX(), mouseEvent.getY());
+
+                    if (component == null || !SwingUtilities.isDescendingFrom(component, popupWindow)) {
+                        shouldDispose = true;
+                    }
+                }
+
+                if (shouldDispose) {
+                    popupWindow.setVisible(false);
+                    popupWindow.dispose();
+                }
+            }
+        };
+    }
+
+    private static class MenuWindowAdapter extends WindowAdapter implements IEventListener {
+
+        private final JWindow popupWindow;
+        private final AWTEventListener globalMouseListener;
+
+        public MenuWindowAdapter(JWindow popupWindowIn) {
+            popupWindow = popupWindowIn;
+            globalMouseListener = createFallbackMouseListener(popupWindowIn);
+        }
+
+        public void register() {
+            EventDispatcher.register(this);
+            Toolkit.getDefaultToolkit().addAWTEventListener(globalMouseListener, AWTEvent.MOUSE_EVENT_MASK);
+        }
+
+        @Override
+        public void windowClosed(WindowEvent e) {
+            EventDispatcher.unregister(this);
+            Toolkit.getDefaultToolkit().removeAWTEventListener(globalMouseListener);
+        }
+
+        @EventListener
+        public void handle(NativeMouseClickEvent event) {
+            runOnEDT(() -> {
+                Rectangle bounds = popupWindow.getBounds();
+
+                if (!bounds.contains(event.getPoint())) {
+                    popupWindow.setVisible(false);
+                    popupWindow.dispose();
+                }
+            });
+        }
     }
 }

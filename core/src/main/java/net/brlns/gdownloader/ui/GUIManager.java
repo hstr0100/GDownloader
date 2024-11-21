@@ -47,6 +47,7 @@ import net.brlns.gdownloader.downloader.AbstractDownloader;
 import net.brlns.gdownloader.downloader.DownloadManager;
 import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.downloader.enums.QueueCategoryEnum;
+import net.brlns.gdownloader.event.EventDispatcher;
 import net.brlns.gdownloader.ui.custom.*;
 import net.brlns.gdownloader.ui.dnd.WindowDragSourceListener;
 import net.brlns.gdownloader.ui.dnd.WindowDropTargetListener;
@@ -364,7 +365,7 @@ public final class GUIManager {
         retryButton.setVisible(false);
         buttonPanel.add(retryButton);
 
-        main.getDownloadManager().registerListener((downloadManager) -> {
+        EventDispatcher.register(DownloadManager.class, (downloadManager) -> {
             runOnEDT(() -> {
                 boolean shouldBeVisible = downloadManager.getFailedDownloads() != 0;
                 if (retryButton.isVisible() != shouldBeVisible) {
@@ -389,7 +390,7 @@ public final class GUIManager {
             }
         ));
 
-        main.getDownloadManager().registerListener((downloadManager) -> {
+        EventDispatcher.register(DownloadManager.class, (downloadManager) -> {
             updateQueuePanelMessage();
         });
 
@@ -531,7 +532,7 @@ public final class GUIManager {
 
         // Run once to set an initial state.
         consumer.accept(main.getDownloadManager());
-        main.getDownloadManager().registerListener(consumer);
+        EventDispatcher.register(DownloadManager.class, consumer);
 
         statusPanel.add(statusLabel);
     }
@@ -544,7 +545,7 @@ public final class GUIManager {
 
         JButton button = createToggleButton(icon, hoverIcon, tooltip, watch, toggler);
 
-        main.getDownloadManager().registerListener((downloadManager) -> {
+        EventDispatcher.register(DownloadManager.class, (downloadManager) -> {
             boolean state = downloadManager.isRunning();
 
             runOnEDT(() -> {

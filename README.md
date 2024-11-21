@@ -86,6 +86,8 @@ For advanced users, you have the option to manually edit these configuration fil
 
 Please be aware that some configuration parameters may conflict with GDownloader's internal settings passed to yt-dlp or gallery-dl. It is recommended to edit these files with caution.
 
+## FAQ
+
 ### gallery-dl Support
 
 To activate gallery-dl support, navigate to `Settings` > `Download Settings` and check the option `Enable gallery-dl downloader.`
@@ -93,6 +95,12 @@ To activate gallery-dl support, navigate to `Settings` > `Download Settings` and
 ### My Downloads Are Stuck Processing
 
 If you are using a supported media player such as VLC, disabling the option `Convert audio to a widely supported codec (AAC)` under `Download Settings` will result in significant improvements in speed during the final processing step.
+
+### Why Can't I Download From A Particular Site?
+
+By default, GDownloader is configured to automatically capture links from a select number of popular websites. This is designed to minimize the capture of irrelevant unsupported links.
+To download content from a website not included in the default filter list, you can manually add the link by dragging it into the program window, selecting Right-click > `Paste URLs`, or pressing `Ctrl+V`.
+If you prefer GDownloader to capture all links without restriction, you can enable the `Capture Any Links` option in the `Download Settings` menu.
 
 ## Feedback
 
