@@ -16,6 +16,10 @@ It supports various platforms such as Crunchyroll, Twitch, X/Twitter, and all ot
 - Keeps yt-dlp and gallery-dl always updated and ready go
 - Multiple customizable settings to best suit your usage style
 
+## Motivation
+
+The motivation for this project can be found in [this Reddit thread](https://www.reddit.com/r/DataHoarder/comments/1g34i9g/gdownloader_yet_another_user_friendly_ytdlp_gui/)
+
 ## Requirements
 
 For platforms other than Windows, you need to download and install FFMPEG separately, instructions vary per platform.
