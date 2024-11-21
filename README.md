@@ -98,8 +98,8 @@ If you are using a supported media player such as VLC, disabling the option `Con
 
 ### Why Can't I Download From A Particular Site?
 
-By default, GDownloader is configured to automatically capture links from a select number of popular websites. This is designed to minimize the capture of irrelevant unsupported links.
-To download content from a website not included in the default filter list, you can manually add the link by dragging it into the program window, selecting Right-click > `Paste URLs`, or pressing `Ctrl+V`.
+By default, GDownloader is configured to automatically capture links from a select number of popular websites. This is designed to minimize the capture of irrelevant unsupported links.\
+To download content from a website not included in the default filter list, you can manually add the link by dragging it into the program window, selecting Right-click > `Paste URLs`, or pressing `Ctrl+V`.\
 If you prefer GDownloader to capture all links without restriction, you can enable the `Capture Any Links` option in the `Download Settings` menu.
 
 ## Feedback
