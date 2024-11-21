@@ -157,7 +157,7 @@ public class Settings {
     private boolean autoStart = false;
 
     @JsonProperty("ExitOnClose")
-    private boolean exitOnClose = false;
+    private boolean exitOnClose = true;
 
     @JsonProperty("TranscodeAudioToAAC")
     private boolean transcodeAudioToAAC = true;
