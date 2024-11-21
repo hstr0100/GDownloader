@@ -38,6 +38,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.ui.GUIManager;
 import net.brlns.gdownloader.util.Nullable;
+import net.brlns.gdownloader.util.collection.ExpiringSet;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
@@ -65,6 +66,8 @@ public class ClipboardManager {
     private final ReentrantLock clipboardLock = new ReentrantLock();
 
     private final List<IClipboardListener> clipboardListeners = new ArrayList<>();
+
+    private final ExpiringSet<String> urlIgnoreSet = new ExpiringSet<>(TimeUnit.SECONDS, 1);
 
     public ClipboardManager(GDownloader mainIn) {
         main = mainIn;
@@ -247,7 +250,9 @@ public class ClipboardManager {
             List<CompletableFuture<Boolean>> list = new ArrayList<>();
 
             for (String url : extractUrlsFromString(data)) {
-                if (url.startsWith("http")) {
+                if (url.startsWith("http") && !urlIgnoreSet.contains(url)) {
+                    urlIgnoreSet.add(url);
+
                     list.add(main.getDownloadManager().captureUrl(url, force));
                 }
 
