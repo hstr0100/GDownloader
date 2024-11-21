@@ -116,6 +116,7 @@ import static net.brlns.gdownloader.lang.Language.*;
 // TODO Toolbar button to toggle different downloaders
 // TODO Two column layout when in full screen
 // TODO Fix notification line wrapping
+// TODO Downloader priority settings
 /**
  * GDownloader - GUI wrapper for yt-dlp
  *

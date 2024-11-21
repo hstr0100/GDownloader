@@ -142,6 +142,8 @@ public class GalleryDlDownloader extends AbstractDownloader {
                 continue;
             }
 
+            entry.getMediaCard().setPlaceholderIcon(type);
+
             List<String> arguments = new ArrayList<>(genericArguments);
 
             List<String> downloadArguments = filter.getArguments(getDownloaderId(), type, main, tmpPath, entry.getUrl());

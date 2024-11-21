@@ -24,6 +24,7 @@ import java.util.function.Supplier;
 import javax.swing.JPanel;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
+import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.ui.custom.CustomDynamicLabel;
 import net.brlns.gdownloader.ui.custom.CustomProgressBar;
 import net.brlns.gdownloader.ui.custom.CustomThumbnailPanel;
@@ -90,6 +91,12 @@ public class MediaCard {
             card.setMaximumSize(cardDimension);
             thumbnailPanel.setPreferredSize(thumbDimension);
             thumbnailPanel.setMinimumSize(thumbDimension);
+        });
+    }
+
+    public void setPlaceholderIcon(DownloadTypeEnum downloadType) {
+        runOnEDT(() -> {
+            thumbnailPanel.setPlaceholderIcon(downloadType);
         });
     }
 

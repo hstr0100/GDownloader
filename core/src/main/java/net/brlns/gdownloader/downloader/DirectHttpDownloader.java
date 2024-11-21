@@ -141,6 +141,8 @@ public class DirectHttpDownloader extends AbstractDownloader {
                 continue;
             }
 
+            entry.getMediaCard().setPlaceholderIcon(type);
+
             try {
                 success = downloadFile(entry, (percent, total, speed, remainingTime, chunkCount) -> {
                     String fmPercent = StringUtils.formatPercent(percent);

@@ -24,7 +24,6 @@ import java.awt.image.BufferedImage;
 import java.awt.image.WritableRaster;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Queue;
@@ -48,6 +47,7 @@ import net.brlns.gdownloader.downloader.DownloadManager;
 import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.downloader.enums.QueueCategoryEnum;
 import net.brlns.gdownloader.event.EventDispatcher;
+import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.ui.custom.*;
 import net.brlns.gdownloader.ui.dnd.WindowDragSourceListener;
 import net.brlns.gdownloader.ui.dnd.WindowDropTargetListener;
@@ -1145,7 +1145,7 @@ public final class GUIManager {
         return appWindow.getExtendedState() == JFrame.MAXIMIZED_BOTH;
     }
 
-    public MediaCard addMediaCard(boolean video, String... mediaLabel) {
+    public MediaCard addMediaCard(String... mediaLabel) {
         int id = mediaCardId.incrementAndGet();
 
         JPanel card = new JPanel() {
@@ -1192,10 +1192,7 @@ public final class GUIManager {
         thumbnailPanel.setMinimumSize(new Dimension(MediaCard.THUMBNAIL_WIDTH, MediaCard.THUMBNAIL_HEIGHT));
         thumbnailPanel.setBackground(color(MEDIA_CARD_THUMBNAIL));
         thumbnailPanel.setLayout(new BorderLayout());
-
-        ImageIcon noImageIcon = loadIcon(video ? "/assets/video.png" : "/assets/winamp.png", ICON, 78);
-        JLabel imageLabel = new JLabel(noImageIcon);
-        thumbnailPanel.add(imageLabel, BorderLayout.CENTER);
+        thumbnailPanel.setPlaceholderIcon(DownloadTypeEnum.ALL);
 
         gbc.insets = new Insets(10, 0, 10, 0);
         gbc.gridx = 1;
@@ -1418,60 +1415,52 @@ public final class GUIManager {
         private final int scale;
     }
 
-    private final Map<ImageCacheKey, ImageIcon> _imageCache = new HashMap<>();
+    private static final Map<ImageCacheKey, ImageIcon> _imageCache = new ConcurrentHashMap<>();// Less contention, virtual-thread safe
 
-    public ImageIcon loadIcon(String path, UIColors color) {
+    public static ImageIcon loadIcon(String path, UIColors color) {
         return loadIcon(path, color, 36);
     }
 
-    public ImageIcon loadIcon(String path, UIColors color, int scale) {
+    public static ImageIcon loadIcon(String path, UIColors color, int scale) {
         Color themeColor = color(color);
         ImageCacheKey key = new ImageCacheKey(path, themeColor, scale);
 
-        synchronized (_imageCache) {
-            if (_imageCache.containsKey(key)) {
-                return _imageCache.get(key);
-            }
-        }
+        return _imageCache.computeIfAbsent(key, (keyIn) -> {
+            try (
+                InputStream resourceStream = GUIManager.class.getResourceAsStream(path)) {
+                BufferedImage originalImage = ImageIO.read(resourceStream);
+                if (originalImage == null) {
+                    throw new IOException("Failed to load image: " + path);
+                }
 
-        try (
-            InputStream resourceStream = GUIManager.class.getResourceAsStream(path)) {
-            BufferedImage originalImage = ImageIO.read(resourceStream);
-            if (originalImage == null) {
-                throw new IOException("Failed to load image: " + path);
-            }
+                WritableRaster raster = originalImage.getRaster();
 
-            WritableRaster raster = originalImage.getRaster();
+                for (int y = 0; y < originalImage.getHeight(); y++) {
+                    for (int x = 0; x < originalImage.getWidth(); x++) {
+                        int[] pixel = raster.getPixel(x, y, (int[])null);
 
-            for (int y = 0; y < originalImage.getHeight(); y++) {
-                for (int x = 0; x < originalImage.getWidth(); x++) {
-                    int[] pixel = raster.getPixel(x, y, (int[])null);
+                        int alpha = pixel[3];
 
-                    int alpha = pixel[3];
+                        if (alpha != 0) {
+                            pixel[0] = themeColor.getRed();
+                            pixel[1] = themeColor.getGreen();
+                            pixel[2] = themeColor.getBlue();
+                            pixel[3] = themeColor.getAlpha();
 
-                    if (alpha != 0) {
-                        pixel[0] = themeColor.getRed();
-                        pixel[1] = themeColor.getGreen();
-                        pixel[2] = themeColor.getBlue();
-                        pixel[3] = themeColor.getAlpha();
-
-                        raster.setPixel(x, y, pixel);
+                            raster.setPixel(x, y, pixel);
+                        }
                     }
                 }
+
+                Image image = originalImage.getScaledInstance(scale, scale, Image.SCALE_SMOOTH);
+
+                ImageIcon icon = new ImageIcon(image);
+
+                return icon;
+            } catch (Exception e) {
+                throw new RuntimeException(e);
             }
-
-            Image image = originalImage.getScaledInstance(scale, scale, Image.SCALE_SMOOTH);
-
-            ImageIcon icon = new ImageIcon(image);
-
-            synchronized (_imageCache) {
-                _imageCache.put(key, icon);
-            }
-
-            return icon;
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+        });
     }
 
     // https://stackoverflow.com/questions/5147768/scroll-jscrollpane-to-bottom

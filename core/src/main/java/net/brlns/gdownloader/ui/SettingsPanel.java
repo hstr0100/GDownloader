@@ -46,6 +46,7 @@ import net.brlns.gdownloader.ui.custom.CustomSliderUI;
 import net.brlns.gdownloader.ui.themes.UIColors;
 
 import static net.brlns.gdownloader.lang.Language.*;
+import static net.brlns.gdownloader.ui.GUIManager.loadIcon;
 import static net.brlns.gdownloader.ui.GUIManager.runOnEDT;
 import static net.brlns.gdownloader.ui.themes.ThemeProvider.*;
 import static net.brlns.gdownloader.ui.themes.UIColors.*;
@@ -218,7 +219,7 @@ public class SettingsPanel {
                     button.setFocusPainted(false);
                     button.setBackground(color(index == 0 ? SIDE_PANEL_SELECTED : SIDE_PANEL));
 
-                    button.setIcon(manager.loadIcon(entry.getIcon(), ICON, 60));
+                    button.setIcon(loadIcon(entry.getIcon(), ICON, 60));
 
                     Runnable action = () -> {
                         cardLayout.show(contentPanel, String.valueOf(index));
@@ -262,15 +263,15 @@ public class SettingsPanel {
                         leftPanel.setLayout(new FlowLayout(FlowLayout.LEFT, 10, 10));
 
                         leftPanel.add(manager.createButton(
-                            manager.loadIcon("/assets/shutdown.png", ICON, 24),
-                            manager.loadIcon("/assets/shutdown.png", ICON_HOVER, 24),
+                            loadIcon("/assets/shutdown.png", ICON, 24),
+                            loadIcon("/assets/shutdown.png", ICON_HOVER, 24),
                             "gui.exit.tooltip",
                             e -> System.exit(0)
                         ));
 
                         leftPanel.add(manager.createButton(
-                            manager.loadIcon("/assets/restart.png", ICON, 24),
-                            manager.loadIcon("/assets/restart.png", ICON_HOVER, 24),
+                            loadIcon("/assets/restart.png", ICON, 24),
+                            loadIcon("/assets/restart.png", ICON_HOVER, 24),
                             "gui.restart.tooltip",
                             e -> {
                                 saveSettings();
@@ -280,29 +281,29 @@ public class SettingsPanel {
                         ));
 
                         leftPanel.add(manager.createButton(
-                            manager.loadIcon("/assets/bin.png", ICON, 24),
-                            manager.loadIcon("/assets/bin.png", ICON_HOVER, 24),
+                            loadIcon("/assets/bin.png", ICON, 24),
+                            loadIcon("/assets/bin.png", ICON_HOVER, 24),
                             "gui.clear_cache.tooltip",
                             e -> main.clearCache(true)
                         ));
 
                         leftPanel.add(manager.createButton(
-                            manager.loadIcon("/assets/log.png", ICON, 24),
-                            manager.loadIcon("/assets/log.png", ICON_HOVER, 24),
+                            loadIcon("/assets/log.png", ICON, 24),
+                            loadIcon("/assets/log.png", ICON_HOVER, 24),
                             "gui.open_log.tooltip",
                             e -> main.openLogFile()
                         ));
 
                         leftPanel.add(manager.createButton(
-                            manager.loadIcon("/assets/deduplicate.png", ICON, 24),
-                            manager.loadIcon("/assets/deduplicate.png", ICON_HOVER, 24),
+                            loadIcon("/assets/deduplicate.png", ICON, 24),
+                            loadIcon("/assets/deduplicate.png", ICON_HOVER, 24),
                             "gui.deduplication.deduplicate_downloads_directory",
                             e -> main.deduplicateDownloadsDirectory()
                         ));
 
                         leftPanel.add(manager.createButton(
-                            manager.loadIcon("/assets/update.png", ICON, 24),
-                            manager.loadIcon("/assets/update.png", ICON_HOVER, 24),
+                            loadIcon("/assets/update.png", ICON, 24),
+                            loadIcon("/assets/update.png", ICON_HOVER, 24),
                             "gui.update.tooltip",
                             e -> main.checkForUpdates()
                         ));

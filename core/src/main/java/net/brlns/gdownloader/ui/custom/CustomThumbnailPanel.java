@@ -18,7 +18,14 @@ package net.brlns.gdownloader.ui.custom;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
+import javax.swing.ImageIcon;
+import javax.swing.JLabel;
 import javax.swing.JPanel;
+import net.brlns.gdownloader.GDownloader;
+import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
+
+import static net.brlns.gdownloader.ui.GUIManager.loadIcon;
+import static net.brlns.gdownloader.ui.themes.UIColors.ICON;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -28,12 +35,57 @@ public class CustomThumbnailPanel extends JPanel {
     private static final Font FONT = new Font("TimesRoman", Font.PLAIN, 16);
 
     private BufferedImage image;
+    private ImageIcon placeholderIcon;
 
     private String durationText;
 
     @SuppressWarnings("this-escape")
     public CustomThumbnailPanel() {
         setLayout(new BorderLayout());
+    }
+
+    private ImageIcon fetchIcon(DownloadTypeEnum downloadType) {
+        return switch (downloadType) {
+            case VIDEO ->
+                loadIcon("/assets/video.png", ICON, 78);
+            case AUDIO ->
+                loadIcon("/assets/winamp.png", ICON, 78);// TODO: replace this icon
+            case GALLERY, THUMBNAILS ->
+                loadIcon("/assets/picture.png", ICON, 78);
+            case DIRECT, SUBTITLES ->
+                loadIcon("/assets/internet.png", ICON, 78);
+            default ->
+                loadIcon(GDownloader.getInstance().getConfig().isDownloadVideo()
+                ? "/assets/video.png" : "/assets/winamp.png", ICON, 78);
+        };
+    }
+
+    public void setPlaceholderIcon(DownloadTypeEnum downloadType) {
+        ImageIcon iconIn = fetchIcon(downloadType);
+        if (iconIn == null || placeholderIcon == iconIn
+            || image != null) {
+            return;
+        }
+
+        placeholderIcon = iconIn;
+
+        JLabel imageLabel = null;
+        for (Component comp : getComponents()) {
+            if (comp instanceof JLabel jLabel) {
+                imageLabel = jLabel;
+                break;
+            }
+        }
+
+        if (imageLabel == null) {
+            imageLabel = new JLabel(iconIn);
+            add(imageLabel, BorderLayout.CENTER);
+        } else {
+            imageLabel.setIcon(iconIn);
+        }
+
+        revalidate();
+        repaint();
     }
 
     public void setImage(BufferedImage imageIn) {
