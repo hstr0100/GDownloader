@@ -282,23 +282,25 @@ public class QueueEntry {
             logOutput(text);
         }
 
-        String topText = filter.getDisplayName();
+        if (!text.isEmpty()) {
+            String topText = filter.getDisplayName();
 
-        if (status == DownloadStatusEnum.DOWNLOADING) {
-            downloadStarted.set(true);
+            if (status == DownloadStatusEnum.DOWNLOADING) {
+                downloadStarted.set(true);
+            }
+
+            if (currentDownloader != null) {
+                topText += " (" + currentDownloader.getDisplayName() + ")";
+            }
+
+            Optional<String> size = getDisplaySize();
+            if (size.isPresent()) {
+                topText += " (~" + size.get() + ")";
+            }
+
+            mediaCard.setLabel(topText, getTitle(), text);
+            mediaCard.setTooltip(text);
         }
-
-        if (currentDownloader != null) {
-            topText += " (" + currentDownloader.getDisplayName() + ")";
-        }
-
-        Optional<String> size = getDisplaySize();
-        if (size.isPresent()) {
-            topText += " (~" + size.get() + ")";
-        }
-
-        mediaCard.setLabel(topText, getTitle(), text);
-        mediaCard.setTooltip(text);
 
         updateStatus(status);
     }
@@ -356,7 +358,8 @@ public class QueueEntry {
                     .copyTextToClipboard(errorLog.snapshotAsList()));
         }
 
-        errorLog.add(output);
+        errorLog.remove(output);
+        errorLog.add(output);// Re-add at the bottom
     }
 
     public void logOutput(String output) {
@@ -370,6 +373,7 @@ public class QueueEntry {
                     .copyTextToClipboard(downloadLog.snapshotAsList()));
         }
 
+        downloadLog.remove(output);
         downloadLog.add(output);
     }
 
