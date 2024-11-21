@@ -20,6 +20,7 @@ import java.io.File;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
+import net.brlns.gdownloader.util.FileUtils;
 import net.brlns.gdownloader.util.Nullable;
 
 /**
@@ -71,6 +72,19 @@ public class YtDlpUpdater extends AbstractGitUpdater {
     @Override
     protected void setExecutablePath(File executablePath) {
         main.getDownloadManager().setExecutablePath(DownloaderIdEnum.YT_DLP, executablePath);
+    }
+
+    @Override
+    protected File doDownload(String url, File workDir) throws Exception {
+        File outputFile = super.doDownload(url, workDir);
+
+        File configFile = new File(workDir, "yt-dlp.conf");
+
+        if (!configFile.exists()) {
+            FileUtils.writeResourceToFile("/yt-dlp.conf", configFile);
+        }
+
+        return outputFile;
     }
 
     @Override

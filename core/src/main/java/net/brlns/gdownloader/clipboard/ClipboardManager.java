@@ -253,7 +253,7 @@ public class ClipboardManager {
 
                 // Small extra utility
                 if (main.getConfig().isLogMagnetLinks() && url.startsWith("magnet")) {
-                    main.logUrl(url, "magnets");
+                    main.logUrl("magnets", url);
                 }
             }
 

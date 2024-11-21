@@ -57,8 +57,6 @@ import net.brlns.gdownloader.ui.GUIManager.MessageType;
 import net.brlns.gdownloader.ui.themes.ThemeProvider;
 import net.brlns.gdownloader.updater.*;
 import net.brlns.gdownloader.util.*;
-import org.slf4j.helpers.FormattingTuple;
-import org.slf4j.helpers.MessageFormatter;
 
 import static net.brlns.gdownloader.lang.Language.*;
 
@@ -983,23 +981,8 @@ public final class GDownloader {
         updateConfig();
     }
 
-    private static final Object _logSync = new Object();
-
-    public void logUrl(String format, String file, Object... params) {
-        FormattingTuple ft = MessageFormatter.arrayFormat(format, params);
-        String message = ft.getMessage();
-
-        synchronized (_logSync) {
-            try (FileWriter fw = new FileWriter(getOrCreateDownloadsDirectory()
-                .toPath().resolve(file + ".txt").toFile(), true);
-                 PrintWriter pw = new PrintWriter(fw)) {
-                for (String str : message.split("\n")) {
-                    pw.println(str);
-                }
-            } catch (IOException e) {
-                log.warn("Cannot log to file", e);
-            }
-        }
+    public void logUrl(String fileName, String text, Object... replacements) {
+        FileUtils.logToFile(getOrCreateDownloadsDirectory(), fileName, text, replacements);
     }
 
     private void printDebugInformation() {
