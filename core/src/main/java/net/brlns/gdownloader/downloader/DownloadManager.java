@@ -47,7 +47,6 @@ import net.brlns.gdownloader.ui.MediaCard;
 import net.brlns.gdownloader.ui.menu.IMenuEntry;
 import net.brlns.gdownloader.util.Nullable;
 import net.brlns.gdownloader.util.collection.ConcurrentRearrangeableDeque;
-import net.brlns.gdownloader.util.collection.ExpiringSet;
 import net.brlns.gdownloader.util.collection.LinkedIterableBlockingQueue;
 
 import static net.brlns.gdownloader.downloader.enums.DownloadFlagsEnum.*;
@@ -92,8 +91,6 @@ public class DownloadManager implements IEvent {
     private final AtomicBoolean downloadsManuallyStarted = new AtomicBoolean(false);
 
     private final AtomicReference<DownloaderIdEnum> suggestedDownloaderId = new AtomicReference<>(null);
-
-    private final ExpiringSet<String> urlIgnoreSet = new ExpiringSet<>(TimeUnit.SECONDS, 5);
 
     private final ExecutorService forcefulExecutor = Executors.newCachedThreadPool();// No limits, power to ya
     private final String _forceStartKey = l10n("gui.force_download_start");
@@ -193,7 +190,7 @@ public class DownloadManager implements IEvent {
 
         List<AbstractDownloader> compatibleDownloaders = getCompatibleDownloaders(inputUrl);
 
-        if (downloadsBlocked.get() || inputUrl == null || urlIgnoreSet.contains(inputUrl) && !force
+        if (downloadsBlocked.get() || inputUrl == null
             || compatibleDownloaders.isEmpty() || capturedLinks.contains(inputUrl)) {
             future.complete(false);
             return future;
@@ -218,8 +215,6 @@ public class DownloadManager implements IEvent {
             future.complete(false);
             return future;
         }
-
-        urlIgnoreSet.add(inputUrl);
 
         String filteredUrl;
         // TODO: move these to the appropriate classes.

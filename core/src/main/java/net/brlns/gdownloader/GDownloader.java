@@ -115,6 +115,7 @@ import static net.brlns.gdownloader.lang.Language.*;
 // TODO Crawl for valid links that can be consumed by direct-http
 // TODO Toolbar button to toggle different downloaders
 // TODO Two column layout when in full screen
+// TODO Fix notification line wrapping
 /**
  * GDownloader - GUI wrapper for yt-dlp
  *
