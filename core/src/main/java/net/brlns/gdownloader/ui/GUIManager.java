@@ -1142,7 +1142,7 @@ public final class GUIManager {
     }
 
     public boolean isFullScreen() {
-        return appWindow.getExtendedState() == JFrame.MAXIMIZED_BOTH;
+        return (appWindow.getExtendedState() & JFrame.MAXIMIZED_BOTH) == JFrame.MAXIMIZED_BOTH;
     }
 
     public MediaCard addMediaCard(String... mediaLabel) {

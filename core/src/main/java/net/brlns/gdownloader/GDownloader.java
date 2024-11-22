@@ -106,7 +106,7 @@ import static net.brlns.gdownloader.lang.Language.*;
 // TODO Optional curl/wget integration
 // TODO NTFS File path length workaround for gallery-dl
 // TODO Split main window from GUIManager
-// TODO Card multi-select support / Undo last action / try with downloader X
+// TODO Card multi-select support / Undo last action
 // TODO Debug no console output from gallery-dl on Windows when using channels
 // TODO gallery-dl does not accept an argument specifying yt-dlp/ffmpeg location, figure out a workaround to pass the correct path to it
 // TODO Fastutil collections
@@ -117,6 +117,7 @@ import static net.brlns.gdownloader.lang.Language.*;
 // TODO Two column layout when in full screen
 // TODO Fix notification line wrapping
 // TODO Downloader priority settings
+// TODO Scrollbar -> faster roll speed in fullscreen
 /**
  * GDownloader - GUI wrapper for yt-dlp
  *
