@@ -212,6 +212,10 @@ public class QueueEntry {
     public void setMediaInfo(MediaInfo mediaInfoIn) {
         mediaInfo = mediaInfoIn;
 
+        if (!mediaInfo.getTitle().isEmpty()) {
+            logOutput("Title: " + mediaInfo.getTitle());
+        }
+
         Optional<BufferedImage> optional = mediaInfo.supportedThumbnails()
             .limit(5)
             .map(urlIn -> tryLoadThumbnail(urlIn))
@@ -310,6 +314,7 @@ public class QueueEntry {
 
             switch (status) {
                 case QUERYING -> {
+                    logOutput("Url: " + originalUrl);
                     mediaCard.setPercentage(100);
                     mediaCard.setProgressBarTextAndColors(status.getDisplayName(), Color.MAGENTA);
                 }
