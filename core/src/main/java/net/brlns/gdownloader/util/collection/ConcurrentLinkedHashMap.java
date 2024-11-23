@@ -16,23 +16,24 @@
  */
 package net.brlns.gdownloader.util.collection;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-public class ConcurrentLinkedHashMap<K, V> implements Map<K, V> {
+public class ConcurrentLinkedHashMap<K, V> extends LinkedHashMap<K, V> {
 
-    private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
-
-    private final LinkedHashMap<K, V> map = new LinkedHashMap<>();
+    private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock(true);
 
     @Override
     public V put(K key, V value) {
         lock.writeLock().lock();
         try {
-            return map.put(key, value);
+            return super.put(key, value);
         } finally {
             lock.writeLock().unlock();
         }
@@ -42,7 +43,7 @@ public class ConcurrentLinkedHashMap<K, V> implements Map<K, V> {
     public V remove(Object key) {
         lock.writeLock().lock();
         try {
-            return map.remove(key);
+            return super.remove(key);
         } finally {
             lock.writeLock().unlock();
         }
@@ -52,7 +53,7 @@ public class ConcurrentLinkedHashMap<K, V> implements Map<K, V> {
     public V get(Object key) {
         lock.readLock().lock();
         try {
-            return map.get(key);
+            return super.get(key);
         } finally {
             lock.readLock().unlock();
         }
@@ -62,7 +63,7 @@ public class ConcurrentLinkedHashMap<K, V> implements Map<K, V> {
     public boolean containsKey(Object key) {
         lock.readLock().lock();
         try {
-            return map.containsKey(key);
+            return super.containsKey(key);
         } finally {
             lock.readLock().unlock();
         }
@@ -72,7 +73,7 @@ public class ConcurrentLinkedHashMap<K, V> implements Map<K, V> {
     public boolean containsValue(Object value) {
         lock.readLock().lock();
         try {
-            return map.containsValue(value);
+            return super.containsValue(value);
         } finally {
             lock.readLock().unlock();
         }
@@ -82,7 +83,7 @@ public class ConcurrentLinkedHashMap<K, V> implements Map<K, V> {
     public int size() {
         lock.readLock().lock();
         try {
-            return map.size();
+            return super.size();
         } finally {
             lock.readLock().unlock();
         }
@@ -92,7 +93,7 @@ public class ConcurrentLinkedHashMap<K, V> implements Map<K, V> {
     public boolean isEmpty() {
         lock.readLock().lock();
         try {
-            return map.isEmpty();
+            return super.isEmpty();
         } finally {
             lock.readLock().unlock();
         }
@@ -102,7 +103,7 @@ public class ConcurrentLinkedHashMap<K, V> implements Map<K, V> {
     public void putAll(Map<? extends K, ? extends V> otherMap) {
         lock.writeLock().lock();
         try {
-            map.putAll(otherMap);
+            super.putAll(otherMap);
         } finally {
             lock.writeLock().unlock();
         }
@@ -112,7 +113,7 @@ public class ConcurrentLinkedHashMap<K, V> implements Map<K, V> {
     public void clear() {
         lock.writeLock().lock();
         try {
-            map.clear();
+            super.clear();
         } finally {
             lock.writeLock().unlock();
         }
@@ -122,7 +123,7 @@ public class ConcurrentLinkedHashMap<K, V> implements Map<K, V> {
     public Set<K> keySet() {
         lock.readLock().lock();
         try {
-            return new HashSet<>(map.keySet());
+            return super.keySet();
         } finally {
             lock.readLock().unlock();
         }
@@ -132,7 +133,7 @@ public class ConcurrentLinkedHashMap<K, V> implements Map<K, V> {
     public Collection<V> values() {
         lock.readLock().lock();
         try {
-            return new ArrayList<>(map.values());
+            return super.values();
         } finally {
             lock.readLock().unlock();
         }
@@ -142,7 +143,7 @@ public class ConcurrentLinkedHashMap<K, V> implements Map<K, V> {
     public Set<Map.Entry<K, V>> entrySet() {
         lock.readLock().lock();
         try {
-            return new HashSet<>(map.entrySet());
+            return super.entrySet();
         } finally {
             lock.readLock().unlock();
         }
@@ -152,7 +153,7 @@ public class ConcurrentLinkedHashMap<K, V> implements Map<K, V> {
     public boolean equals(Object o) {
         lock.readLock().lock();
         try {
-            return map.equals(o);
+            return super.equals(o);
         } finally {
             lock.readLock().unlock();
         }
@@ -162,7 +163,7 @@ public class ConcurrentLinkedHashMap<K, V> implements Map<K, V> {
     public int hashCode() {
         lock.readLock().lock();
         try {
-            return map.hashCode();
+            return super.hashCode();
         } finally {
             lock.readLock().unlock();
         }

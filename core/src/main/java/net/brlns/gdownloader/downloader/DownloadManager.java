@@ -309,9 +309,10 @@ public class DownloadManager implements IEvent {
                         } else {
                             urlIgnoreSet.add(playlist);
 
+                            String sep = System.lineSeparator();
                             main.getGuiManager().showConfirmDialog(
                                 l10n("dialog.confirm"),
-                                l10n("dialog.download_playlist") + "\n\n" + playlist,
+                                l10n("dialog.download_playlist") + sep + sep + playlist,
                                 30000,
                                 defaultOption,
                                 playlistDialogOption,
@@ -594,7 +595,9 @@ public class DownloadManager implements IEvent {
     private void dequeueFromAll(QueueEntry entry) {
         boolean success = false;
         for (QueueCategoryEnum cat : QueueCategoryEnum.values()) {
-            success = dequeue(cat, entry, false);
+            if (dequeue(cat, entry, false)) {
+                success = true;
+            }
         }
 
         if (success) {

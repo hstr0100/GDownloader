@@ -24,6 +24,7 @@ import java.awt.event.ComponentEvent;
 import javax.swing.JLabel;
 import javax.swing.SwingUtilities;
 import lombok.Getter;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.ui.GUIManager;
 
@@ -40,6 +41,9 @@ public class CustomDynamicLabel extends JLabel {
             updateTruncatedText();
         }
     };
+
+    @Setter
+    private boolean lineWrapping = false;
 
     private String[] fullText;
 
@@ -89,25 +93,47 @@ public class CustomDynamicLabel extends JLabel {
         }
 
         int availableWidth = getWidth() - getInsets().left - getInsets().right - 10;
+        if (availableWidth <= 10) {// Likely size 0 at the time it was called, ignore
+            return;
+        }
+
         FontMetrics fontMetrics = getFontMetrics(getFont());
         String[] truncatedText = new String[fullText.length];
 
         for (int i = 0; i < fullText.length; i++) {
             String line = fullText[i];
-            if (fontMetrics.stringWidth(line) <= availableWidth) {
+            if (line.isEmpty() || fontMetrics.stringWidth(line) <= availableWidth) {
                 truncatedText[i] = line;
                 continue;
             }
 
-            String ellipsis = "...";
-            int ellipsisWidth = fontMetrics.stringWidth(ellipsis);
-            StringBuilder truncatedLine = new StringBuilder(line);
+            if (!lineWrapping) {
+                String ellipsis = "...";
+                int ellipsisWidth = fontMetrics.stringWidth(ellipsis);
+                StringBuilder truncatedLine = new StringBuilder(line);
 
-            while (fontMetrics.stringWidth(truncatedLine.toString()) + ellipsisWidth > availableWidth && truncatedLine.length() > 0) {
-                truncatedLine.deleteCharAt(truncatedLine.length() - 1);
+                while (fontMetrics.stringWidth(truncatedLine.toString()) + ellipsisWidth > availableWidth
+                    && truncatedLine.length() > 0) {
+                    truncatedLine.deleteCharAt(truncatedLine.length() - 1);
+                }
+
+                truncatedText[i] = truncatedLine + ellipsis;
+            } else {
+                StringBuilder wrappedLine = new StringBuilder();
+                StringBuilder currentLine = new StringBuilder();
+
+                for (char c : line.toCharArray()) {
+                    currentLine.append(c);
+                    if (fontMetrics.stringWidth(currentLine.toString()) > availableWidth) {
+                        wrappedLine.append(currentLine.substring(0, currentLine.length() - 1))
+                            .append(System.lineSeparator());
+                        currentLine = new StringBuilder().append(c);
+                    }
+                }
+
+                wrappedLine.append(currentLine);
+                truncatedText[i] = wrappedLine.toString();
             }
-
-            truncatedText[i] = truncatedLine + ellipsis;
         }
 
         setText(GUIManager.wrapTextInHtml(Integer.MAX_VALUE, truncatedText));

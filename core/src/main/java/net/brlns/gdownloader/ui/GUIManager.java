@@ -49,9 +49,6 @@ import net.brlns.gdownloader.downloader.DownloadManager;
 import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.downloader.enums.QueueCategoryEnum;
 import net.brlns.gdownloader.event.EventDispatcher;
-import net.brlns.gdownloader.event.EventListener;
-import net.brlns.gdownloader.event.IEventListener;
-import net.brlns.gdownloader.event.impl.NativeMouseClickEvent;
 import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.ui.custom.*;
 import net.brlns.gdownloader.ui.dnd.WindowDragSourceListener;
@@ -76,7 +73,7 @@ import static net.brlns.gdownloader.ui.themes.UIColors.*;
  */
 // TODO add custom tooltip to all buttons
 @Slf4j
-public final class GUIManager implements IEventListener {
+public final class GUIManager {
 
     static {
         ToolTipManager.sharedInstance().setInitialDelay(0);
@@ -209,8 +206,6 @@ public final class GUIManager implements IEventListener {
         assert SwingUtilities.isEventDispatchThread();
 
         if (appWindow == null) {
-            EventDispatcher.register(this);
-
             // note to self, tooltips only show up when focused
             String version = System.getProperty("jpackage.app-version");
 
@@ -877,8 +872,9 @@ public final class GUIManager implements IEventListener {
             dialogPanel.setOpaque(false);
             dialogPanel.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0));
 
-            JLabel dialogLabel = new JLabel();
-            dialogLabel.setText(wrapTextInHtml(50, message));
+            CustomDynamicLabel dialogLabel = new CustomDynamicLabel();
+            dialogLabel.setLineWrapping(true);
+            dialogLabel.setFullText(message.split(System.lineSeparator()));
             dialogLabel.setForeground(color(FOREGROUND));
             dialogLabel.setHorizontalAlignment(SwingConstants.CENTER);
             dialogPanel.add(dialogLabel, BorderLayout.CENTER);
@@ -1049,8 +1045,8 @@ public final class GUIManager implements IEventListener {
             messagePanel.setOpaque(false);
             messagePanel.setBorder(BorderFactory.createEmptyBorder(10, 0, 20, 0));
 
-            JLabel messageLabel = new JLabel();
-            messageLabel.setText(wrapTextInHtml(50, nextMessage.getMessage()));
+            CustomDynamicLabel messageLabel = new CustomDynamicLabel();
+            messageLabel.setFullText(nextMessage.getMessage().split(System.lineSeparator()));
             messageLabel.setForeground(textColor);
             messageLabel.setHorizontalAlignment(SwingConstants.CENTER);
             messagePanel.add(messageLabel, BorderLayout.CENTER);
@@ -1179,10 +1175,8 @@ public final class GUIManager implements IEventListener {
     private void adjustMediaCards() {
         assert SwingUtilities.isEventDispatchThread();
 
-        boolean fullScreen = isFullScreen();
-
         for (MediaCard card : mediaCards.values()) {
-            card.expand(fullScreen);
+            card.adjustScale(appWindow.getWidth());
         }
 
         queuePanel.revalidate();
@@ -1292,7 +1286,7 @@ public final class GUIManager implements IEventListener {
         card.add(closeButton, gbc);
 
         MediaCard mediaCard = new MediaCard(id, card, cardDimension, mediaNameLabel, thumbnailPanel, progressBar);
-        mediaCard.expand(isFullScreen());
+        mediaCard.adjustScale(appWindow.getWidth());
         mediaCard.setLabel(mediaLabel);
 
         card.setTransferHandler(new WindowTransferHandler(this));
@@ -1405,6 +1399,8 @@ public final class GUIManager implements IEventListener {
         if (mediaCard != null) {
             mediaCard.close();
 
+            selectedMediaCards.remove(mediaCard);
+
             runOnEDT(() -> {
                 queuePanel.remove(mediaCard.getCard());
 
@@ -1417,20 +1413,6 @@ public final class GUIManager implements IEventListener {
                 appWindow.repaint();
             });
         }
-    }
-
-    @EventListener
-    public void handle(NativeMouseClickEvent event) {
-        runOnEDT(() -> {
-            Point point = event.getPoint();
-
-            mediaCards.values().stream()
-                .filter(entry -> entry.getCard().contains(point))
-                .findFirst()
-                .ifPresent(entry -> {
-                    deselectAllMediaCards();
-                });
-        });
     }
 
     private void updateMediaCardSelectionState() {
@@ -1637,15 +1619,20 @@ public final class GUIManager implements IEventListener {
 
     public static String wrapTextInHtml(int maxLineLength, String... lines) {
         if (maxLineLength < 20) {
-            throw new IllegalArgumentException("Line length too short" + maxLineLength);
+            throw new IllegalArgumentException("Line length too short: " + maxLineLength);
         }
 
         StringBuilder wrappedText = new StringBuilder();
 
         for (String text : lines) {
-            text = text.replace("\n", "<br>");
+            text = text.replace(System.lineSeparator(), "<br>");
 
             for (String line : text.split("<br>")) {
+                if (line.isEmpty()) {
+                    wrappedText.append("<br>");
+                    continue;
+                }
+
                 if (line.length() > maxLineLength) {
                     int count = 0;
 
@@ -1728,6 +1715,8 @@ public final class GUIManager implements IEventListener {
                 if (component != null) {
                     showRightClickMenu(component, getRightClickMenu(), e.getX(), e.getY());
                 }
+            } else if (SwingUtilities.isLeftMouseButton(e)) {
+                deselectAllMediaCards();
             }
         }
     }

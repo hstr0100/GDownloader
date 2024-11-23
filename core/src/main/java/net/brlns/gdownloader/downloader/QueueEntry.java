@@ -394,7 +394,6 @@ public class QueueEntry {
         mediaCard.getRightClickMenu().clear();
     }
 
-    @SuppressWarnings("unchecked")
     protected void createDefaultRightClick(DownloadManager manager) {
         Map<String, IMenuEntry> menu = new LinkedHashMap<>();
 

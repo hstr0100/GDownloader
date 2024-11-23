@@ -63,7 +63,7 @@ public final class FileUtils {
         synchronized (_logSync) {
             try (FileWriter fw = new FileWriter(resolvedFile, true);
                  PrintWriter pw = new PrintWriter(fw)) {
-                for (String str : message.split("\n")) {
+                for (String str : message.split(System.lineSeparator())) {
                     pw.println(str);
                 }
             } catch (IOException e) {

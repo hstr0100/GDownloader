@@ -18,6 +18,9 @@ package net.brlns.gdownloader.ui;
 
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.GraphicsDevice;
+import java.awt.GraphicsEnvironment;
+import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -56,7 +59,6 @@ public class MediaCard {
     private Runnable onClose;
     private Consumer<Integer> onDrag;
     private boolean closed;
-    private boolean expanded;
 
     private Supplier<Boolean> validateDropTarget;
 
@@ -71,13 +73,16 @@ public class MediaCard {
         }
     }
 
-    protected void expand(boolean expand) {
-        boolean isChanging = expanded != expand;
-        expanded = expand;
+    public void adjustScale(int panelWidth) {
+        GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+        GraphicsDevice gs = ge.getDefaultScreenDevice();
+        Rectangle screenBounds = gs.getDefaultConfiguration().getBounds();
+        double screenWidth = screenBounds.getWidth();
 
-        if (isChanging) {
-            scale(expand ? 1.2 : 1);
-        }
+        double targetWidth = screenWidth * 0.9;
+        double scaleFactor = (panelWidth >= targetWidth) ? 1.2 : 1;
+
+        scale(scaleFactor);
     }
 
     private void scale(double factor) {
