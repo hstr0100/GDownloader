@@ -101,7 +101,7 @@ public final class GUIManager {
 
     private final AtomicBoolean isShowingMessage = new AtomicBoolean();
 
-    private final ConcurrentLinkedHashSet<MediaCard> selectedMediaCards = new ConcurrentLinkedHashSet<>();
+    private final ConcurrentLinkedHashSet<Integer> selectedMediaCards = new ConcurrentLinkedHashSet<>();
     private final AtomicReference<MediaCard> lastSelectedMediaCard = new AtomicReference<>(null);
     private final AtomicBoolean isMultiSelectMode = new AtomicBoolean();
 
@@ -1292,6 +1292,8 @@ public final class GUIManager {
         card.setTransferHandler(new WindowTransferHandler(this));
 
         MouseAdapter listener = new MouseAdapter() {
+            private long lastClick = System.currentTimeMillis();
+
             @Override
             public void mousePressed(MouseEvent e) {
                 if (isMultiSelectMode.get() && selectedMediaCards.size() > 1) {
@@ -1314,13 +1316,15 @@ public final class GUIManager {
                 if (SwingUtilities.isLeftMouseButton(e)) {
                     MediaCard lastCard = lastSelectedMediaCard.get();
 
+                    int cardId = mediaCard.getId();
+
                     if (e.isControlDown()) {
                         isMultiSelectMode.set(true);
 
-                        if (selectedMediaCards.contains(mediaCard)) {
-                            selectedMediaCards.remove(mediaCard);
+                        if (selectedMediaCards.contains(cardId)) {
+                            selectedMediaCards.remove(cardId);
                         } else {
-                            selectedMediaCards.add(mediaCard);
+                            selectedMediaCards.add(cardId);
                         }
 
                         updateMediaCardSelectionState();
@@ -1329,7 +1333,15 @@ public final class GUIManager {
 
                         selectMediaCardRange(lastCard, mediaCard);
                     } else {
-                        selectedMediaCards.replaceAll(Collections.singletonList(mediaCard));
+                        if (e.getClickCount() == 2) {
+                            if (mediaCard.getOnLeftClick() != null && (System.currentTimeMillis() - lastClick) > 50) {
+                                mediaCard.getOnLeftClick().run();
+
+                                lastClick = System.currentTimeMillis();
+                            }
+                        }
+
+                        selectedMediaCards.replaceAll(Collections.singletonList(cardId));
                         lastSelectedMediaCard.set(mediaCard);
 
                         updateMediaCardSelectionState();
@@ -1337,7 +1349,13 @@ public final class GUIManager {
                 } else if (SwingUtilities.isRightMouseButton(e)) {
                     List<RightClickMenuEntries> dependents = new ArrayList<>();
 
-                    for (MediaCard selected : selectedMediaCards) {
+                    for (int cardId : selectedMediaCards) {
+                        MediaCard selected = mediaCards.get(cardId);
+                        if (selected == null) {
+                            log.error("Cannot find media card, id {}", cardId);
+                            continue;
+                        }
+
                         if (selected == mediaCard) {
                             continue;
                         }
@@ -1399,7 +1417,7 @@ public final class GUIManager {
         if (mediaCard != null) {
             mediaCard.close();
 
-            selectedMediaCards.remove(mediaCard);
+            selectedMediaCards.remove(mediaCard.getId());
 
             runOnEDT(() -> {
                 queuePanel.remove(mediaCard.getCard());
@@ -1425,7 +1443,7 @@ public final class GUIManager {
     }
 
     private void selectAllMediaCards() {
-        selectedMediaCards.replaceAll(mediaCards.values());
+        selectedMediaCards.replaceAll(mediaCards.keySet());
 
         updateMediaCardSelectionState();
     }
@@ -1437,7 +1455,7 @@ public final class GUIManager {
     }
 
     private boolean isMediaCardSelected(MediaCard card) {
-        return selectedMediaCards.contains(card);
+        return selectedMediaCards.contains(card.getId());
     }
 
     private void selectMediaCardRange(MediaCard start, MediaCard end) {
@@ -1451,7 +1469,7 @@ public final class GUIManager {
         int minIndex = Math.min(startIndex, endIndex);
         int maxIndex = Math.max(startIndex, endIndex);
 
-        List<MediaCard> cardsToAdd = new ArrayList<>();
+        List<Integer> cardsToAdd = new ArrayList<>();
         for (int i = minIndex; i <= maxIndex; i++) {
             MediaCard card = getMediaCardAt(i);
 
@@ -1460,7 +1478,7 @@ public final class GUIManager {
                 continue;
             }
 
-            cardsToAdd.add(card);
+            cardsToAdd.add(card.getId());
         }
 
         selectedMediaCards.replaceAll(cardsToAdd);
