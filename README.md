@@ -90,7 +90,7 @@ Please be aware that some configuration parameters may conflict with GDownloader
 
 ### gallery-dl Support
 
-To activate gallery-dl support, navigate to `Settings` > `Download Settings` and check the option `Enable gallery-dl downloader.` then, restart the program.
+To activate gallery-dl support, navigate to `Settings` > `Download Settings`, scroll down to the bottom and check the option `Enable gallery-dl downloader.` then, restart the program.
 
 ### My Downloads Are Stuck Processing
 
