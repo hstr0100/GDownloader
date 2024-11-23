@@ -47,6 +47,7 @@ import net.brlns.gdownloader.ui.MediaCard;
 import net.brlns.gdownloader.ui.menu.IMenuEntry;
 import net.brlns.gdownloader.util.Nullable;
 import net.brlns.gdownloader.util.collection.ConcurrentRearrangeableDeque;
+import net.brlns.gdownloader.util.collection.ExpiringSet;
 import net.brlns.gdownloader.util.collection.LinkedIterableBlockingQueue;
 
 import static net.brlns.gdownloader.downloader.enums.DownloadFlagsEnum.*;
@@ -91,6 +92,8 @@ public class DownloadManager implements IEvent {
     private final AtomicBoolean downloadsManuallyStarted = new AtomicBoolean(false);
 
     private final AtomicReference<DownloaderIdEnum> suggestedDownloaderId = new AtomicReference<>(null);
+
+    private final ExpiringSet<String> urlIgnoreSet = new ExpiringSet<>(TimeUnit.SECONDS, 20);
 
     private final ExecutorService forcefulExecutor = Executors.newCachedThreadPool();// No limits, power to ya
     private final String _forceStartKey = l10n("gui.force_download_start");
@@ -299,15 +302,23 @@ public class DownloadManager implements IEvent {
                             future.complete(false);
                         });
 
-                        main.getGuiManager().showConfirmDialog(
-                            l10n("dialog.confirm"),
-                            l10n("dialog.download_playlist") + "\n\n" + playlist,
-                            30000,
-                            defaultOption,
-                            playlistDialogOption,
-                            singleDialogOption);
+                        // TODO: This whole section needs to be refactored
+                        if (urlIgnoreSet.contains(playlist)) {// Temporary fix for double popups
+                            future.complete(false);
+                            return future;
+                        } else {
+                            urlIgnoreSet.add(playlist);
 
-                        return future;
+                            main.getGuiManager().showConfirmDialog(
+                                l10n("dialog.confirm"),
+                                l10n("dialog.download_playlist") + "\n\n" + playlist,
+                                30000,
+                                defaultOption,
+                                playlistDialogOption,
+                                singleDialogOption);
+
+                            return future;
+                        }
                     } else {
                         // TODO I'm assuming this is a wanted behavior - having subsequent links being treated as individual videos
                         // It's odd that you'd download a whole playlist and then an individual video from it though, maybe investigate use cases

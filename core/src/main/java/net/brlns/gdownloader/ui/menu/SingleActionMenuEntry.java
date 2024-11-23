@@ -24,7 +24,7 @@ import lombok.Getter;
  */
 @Getter
 @AllArgsConstructor
-public class RunnableMenuEntry implements IMenuEntry {
+public class SingleActionMenuEntry implements IMenuEntry {
 
     private final Runnable runnable;
 

@@ -16,11 +16,9 @@
  */
 package net.brlns.gdownloader.ui.menu;
 
-import java.util.LinkedHashMap;
-
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-public class NestedMenuEntry extends LinkedHashMap<String, IMenuEntry> implements IMenuEntry {
+public class NestedMenuEntry extends RightClickMenuEntries implements IMenuEntry {
 
 }

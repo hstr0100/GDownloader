@@ -61,8 +61,9 @@ import static net.brlns.gdownloader.lang.Language.l10n;
 import static net.brlns.gdownloader.settings.enums.DownloadTypeEnum.DIRECT;
 
 // TODO: Resume chunked
-// TODO: Proxy
+// TODO: Add proxy settings to UI as a floating window that validates fields.
 // TODO: Do not consume unsupported urls
+// TODO: Clipboard: deep scan current webpage for valid download urls. Add settings to configure scan depth and external links
 // TODO: ftp
 // TODO: Throttling, chunked downloads are easily saturating all available downlink bandwidth
 /**

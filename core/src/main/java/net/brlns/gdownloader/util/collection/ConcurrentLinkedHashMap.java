@@ -16,19 +16,19 @@
  */
 package net.brlns.gdownloader.util.collection;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-public class ConcurrentLinkedHashMap<K, V> {
+public class ConcurrentLinkedHashMap<K, V> implements Map<K, V> {
 
     private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
     private final LinkedHashMap<K, V> map = new LinkedHashMap<>();
 
+    @Override
     public V put(K key, V value) {
         lock.writeLock().lock();
         try {
@@ -38,7 +38,8 @@ public class ConcurrentLinkedHashMap<K, V> {
         }
     }
 
-    public V remove(K key) {
+    @Override
+    public V remove(Object key) {
         lock.writeLock().lock();
         try {
             return map.remove(key);
@@ -47,7 +48,8 @@ public class ConcurrentLinkedHashMap<K, V> {
         }
     }
 
-    public V get(K key) {
+    @Override
+    public V get(Object key) {
         lock.readLock().lock();
         try {
             return map.get(key);
@@ -56,7 +58,8 @@ public class ConcurrentLinkedHashMap<K, V> {
         }
     }
 
-    public boolean containsKey(K key) {
+    @Override
+    public boolean containsKey(Object key) {
         lock.readLock().lock();
         try {
             return map.containsKey(key);
@@ -65,6 +68,17 @@ public class ConcurrentLinkedHashMap<K, V> {
         }
     }
 
+    @Override
+    public boolean containsValue(Object value) {
+        lock.readLock().lock();
+        try {
+            return map.containsValue(value);
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+
+    @Override
     public int size() {
         lock.readLock().lock();
         try {
@@ -74,6 +88,17 @@ public class ConcurrentLinkedHashMap<K, V> {
         }
     }
 
+    @Override
+    public boolean isEmpty() {
+        lock.readLock().lock();
+        try {
+            return map.isEmpty();
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+
+    @Override
     public void putAll(Map<? extends K, ? extends V> otherMap) {
         lock.writeLock().lock();
         try {
@@ -83,21 +108,63 @@ public class ConcurrentLinkedHashMap<K, V> {
         }
     }
 
-    public Map<K, V> snapshot() {
-        lock.readLock().lock();
-        try {
-            return new LinkedHashMap<>(map);
-        } finally {
-            lock.readLock().unlock();
-        }
-    }
-
+    @Override
     public void clear() {
         lock.writeLock().lock();
         try {
             map.clear();
         } finally {
             lock.writeLock().unlock();
+        }
+    }
+
+    @Override
+    public Set<K> keySet() {
+        lock.readLock().lock();
+        try {
+            return new HashSet<>(map.keySet());
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+
+    @Override
+    public Collection<V> values() {
+        lock.readLock().lock();
+        try {
+            return new ArrayList<>(map.values());
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+
+    @Override
+    public Set<Map.Entry<K, V>> entrySet() {
+        lock.readLock().lock();
+        try {
+            return new HashSet<>(map.entrySet());
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        lock.readLock().lock();
+        try {
+            return map.equals(o);
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+
+    @Override
+    public int hashCode() {
+        lock.readLock().lock();
+        try {
+            return map.hashCode();
+        } finally {
+            lock.readLock().unlock();
         }
     }
 }

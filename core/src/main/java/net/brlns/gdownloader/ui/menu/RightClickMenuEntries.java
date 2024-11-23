@@ -16,11 +16,18 @@
  */
 package net.brlns.gdownloader.ui.menu;
 
-import net.brlns.gdownloader.util.collection.ConcurrentLinkedHashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-public class RightClickMenuEntries extends ConcurrentLinkedHashMap<String, IMenuEntry> {
+public class RightClickMenuEntries extends LinkedHashMap<String, IMenuEntry> {
 
+    public static RightClickMenuEntries fromMap(Map<String, IMenuEntry> mapIn) {
+        RightClickMenuEntries menuEntries = new RightClickMenuEntries();
+        menuEntries.putAll(mapIn);
+
+        return menuEntries;
+    }
 }

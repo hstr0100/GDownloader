@@ -16,16 +16,13 @@
  */
 package net.brlns.gdownloader.util.collection;
 
-import java.util.ArrayList;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-public class ConcurrentLinkedHashSet<T> {
+public class ConcurrentLinkedHashSet<T> implements Iterable<T> {
 
     private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
@@ -35,6 +32,25 @@ public class ConcurrentLinkedHashSet<T> {
         lock.writeLock().lock();
         try {
             return set.add(element);
+        } finally {
+            lock.writeLock().unlock();
+        }
+    }
+
+    public boolean replaceAll(Collection<T> elements) {
+        lock.writeLock().lock();
+        try {
+            set.clear();
+            return set.addAll(elements);
+        } finally {
+            lock.writeLock().unlock();
+        }
+    }
+
+    public boolean addAll(Collection<T> elements) {
+        lock.writeLock().lock();
+        try {
+            return set.addAll(elements);
         } finally {
             lock.writeLock().unlock();
         }
@@ -89,6 +105,37 @@ public class ConcurrentLinkedHashSet<T> {
         lock.readLock().lock();
         try {
             return set.isEmpty();
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+
+    @Override
+    public Iterator<T> iterator() {
+        lock.readLock().lock();
+        try {
+            return new Iterator<>() {
+                private final Iterator<T> iterator = new ArrayList<>(set).iterator();
+
+                @Override
+                public boolean hasNext() {
+                    return iterator.hasNext();
+                }
+
+                @Override
+                public T next() {
+                    if (!hasNext()) {
+                        throw new NoSuchElementException();
+                    }
+
+                    return iterator.next();
+                }
+
+                @Override
+                public void remove() {
+                    throw new UnsupportedOperationException("Remove is not supported");
+                }
+            };
         } finally {
             lock.readLock().unlock();
         }

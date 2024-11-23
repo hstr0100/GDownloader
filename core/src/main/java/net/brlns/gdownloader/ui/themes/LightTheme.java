@@ -43,6 +43,7 @@ public class LightTheme extends AbstractTheme {
         put(SIDE_PANEL, new Color(242, 242, 242));
         put(MEDIA_CARD_HOVER, new Color(218, 218, 218));
         put(MEDIA_CARD, new Color(242, 242, 242));
+        put(MEDIA_CARD_SELECTED, new Color(200, 200, 200));
         put(MEDIA_CARD_THUMBNAIL, new Color(180, 180, 180));
         put(LIGHT_TEXT, new Color(102, 102, 102));
         put(BUTTON_FOREGROUND, Color.DARK_GRAY);

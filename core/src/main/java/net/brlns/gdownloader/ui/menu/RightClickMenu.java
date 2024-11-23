@@ -22,11 +22,8 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
@@ -57,11 +54,13 @@ public class RightClickMenu {
         this.alwaysOnTop = alwaysOnTop;
     }
 
-    public void showMenu(Component parentComponent, Map<String, IMenuEntry> actions, int sourceX, int sourceY) {
-        showMenu(parentComponent, actions, sourceX, sourceY, new ArrayList<>());
+    public void showMenu(Component parentComponent, RightClickMenuEntries actions,
+        Collection<RightClickMenuEntries> dependents, int sourceX, int sourceY) {
+        showMenu(parentComponent, actions, dependents, sourceX, sourceY, new ArrayList<>());
     }
 
-    public void showMenu(Component parentComponent, Map<String, IMenuEntry> actions, int sourceX, int sourceY, List<Integer> hierarchy) {
+    public void showMenu(Component parentComponent, RightClickMenuEntries actions,
+        Collection<RightClickMenuEntries> dependents, int sourceX, int sourceY, List<Integer> hierarchy) {
         assert SwingUtilities.isEventDispatchThread();
 
         if (actions.isEmpty()) {
@@ -76,7 +75,7 @@ public class RightClickMenu {
         openSubmenus.put(id, popupWindow);
         hierarchy.add(id);
 
-        JPanel popupPanel = createPopupPanel(actions, id, popupWindow, hierarchy);
+        JPanel popupPanel = createPopupPanel(actions, dependents, id, popupWindow, hierarchy);
         popupWindow.add(popupPanel, BorderLayout.CENTER);
         popupWindow.pack();
 
@@ -89,7 +88,8 @@ public class RightClickMenu {
         popupWindow.setVisible(true);
     }
 
-    private JPanel createPopupPanel(Map<String, IMenuEntry> actions, int currentId, JWindow popupWindow, List<Integer> hierarchy) {
+    private JPanel createPopupPanel(RightClickMenuEntries actions, Collection<RightClickMenuEntries> dependents,
+        int currentId, JWindow popupWindow, List<Integer> hierarchy) {
         JPanel popupPanel = new JPanel();
         popupPanel.setLayout(new GridLayout(actions.size(), 1));
         popupPanel.setBackground(Color.DARK_GRAY);
@@ -97,17 +97,54 @@ public class RightClickMenu {
         popupPanel.setOpaque(true);
 
         for (Map.Entry<String, IMenuEntry> entry : actions.entrySet()) {
-            JButton button = new CustomMenuButton(entry.getKey());
+            String key = entry.getKey();
             IMenuEntry value = entry.getValue();
+            JButton button = new CustomMenuButton(key);
 
             button.addActionListener(e -> {
                 switch (value) {
+                    // Runs itself and any other entry that matches the same key
                     case RunnableMenuEntry runnable -> {
-                        runnable.getRunnable().run();
                         closeHierarchy(hierarchy);
+                        runnable.getRunnable().run();
+
+                        // This will fail by design if any of the maps have incompatible values.
+                        dependents.forEach(dependent -> {
+                            RunnableMenuEntry depEntry = (RunnableMenuEntry)dependent.get(key);
+                            if (depEntry != null) {
+                                depEntry.getRunnable().run();
+                            }
+                        });
                     }
+                    // Ignores all dependents and run only the main caller
+                    case SingleActionMenuEntry single -> {
+                        closeHierarchy(hierarchy);
+                        single.getRunnable().run();
+                    }
+                    // Calls on all dependents to gather their values and returns them as a list to the main caller
+                    case MultiActionMenuEntry<?> multi -> {
+                        closeHierarchy(hierarchy);
+
+                        List<IMenuEntry> allEntries = new ArrayList<>();
+                        allEntries.add(multi);
+
+                        dependents.forEach(dependent -> {
+                            IMenuEntry depEntry = dependent.get(key);
+                            if (depEntry instanceof MultiActionMenuEntry<?>) {
+                                allEntries.add(depEntry);
+                            }
+                        });
+
+                        multi.processActions(allEntries);
+                    }
+                    // Submenu entry, recurse
                     case NestedMenuEntry nested -> {
-                        showMenu(button, nested, button.getWidth(),
+                        List<RightClickMenuEntries> depNested = new ArrayList<>();
+                        dependents.forEach(dependent -> {
+                            depNested.add((NestedMenuEntry)dependent.get(key));
+                        });
+
+                        showMenu(button, nested, depNested, button.getWidth(),
                             nested.size() <= 1 ? 0 : -((nested.size() - 1) * button.getHeight()), hierarchy);
                     }
                     default ->
@@ -121,7 +158,12 @@ public class RightClickMenu {
                     closeOtherSubmenus(currentId, popupWindow, hierarchy);
 
                     if (value instanceof NestedMenuEntry nested) {
-                        showMenu(button, nested, button.getWidth(),
+                        List<RightClickMenuEntries> depNested = new ArrayList<>();
+                        dependents.forEach(dependent -> {
+                            depNested.add((NestedMenuEntry)dependent.get(key));
+                        });
+
+                        showMenu(button, nested, depNested, button.getWidth(),
                             nested.size() <= 1 ? 0 : -((nested.size() - 1) * button.getHeight()), hierarchy);
                     }
                 }

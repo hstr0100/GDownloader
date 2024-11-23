@@ -16,6 +16,11 @@
  */
 package net.brlns.gdownloader.ui.menu;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
@@ -24,8 +29,22 @@ import lombok.Getter;
  */
 @Getter
 @AllArgsConstructor
-public class RunnableMenuEntry implements IMenuEntry {
+public class MultiActionMenuEntry<T> implements IMenuEntry {
 
-    private final Runnable runnable;
+    private final Supplier<T> source;
 
+    private final Consumer<Collection<T>> action;
+
+    @SuppressWarnings("unchecked")
+    public void processActions(List<IMenuEntry> entries) {
+        List<T> list = new ArrayList<>();
+
+        for (IMenuEntry entry : entries) {
+            MultiActionMenuEntry<T> dependentAction = (MultiActionMenuEntry<T>)entry;
+
+            list.add(dependentAction.getSource().get());
+        }
+
+        action.accept(list);
+    }
 }

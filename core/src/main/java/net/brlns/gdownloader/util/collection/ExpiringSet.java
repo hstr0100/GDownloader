@@ -71,6 +71,14 @@ public class ExpiringSet<T> {
 
     private void removeExpiredEntries() {
         long currentTime = System.currentTimeMillis();
-        map.keySet().removeIf(key -> currentTime - map.get(key) >= expirationTimeMillis);
+
+        map.keySet().removeIf(key -> {
+            Long millis = map.get(key);
+            if (millis == null) {
+                return true;
+            }
+
+            return currentTime - millis >= expirationTimeMillis;
+        });
     }
 }

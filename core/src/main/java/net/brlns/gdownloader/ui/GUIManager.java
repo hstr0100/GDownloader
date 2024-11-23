@@ -24,17 +24,19 @@ import java.awt.image.BufferedImage;
 import java.awt.image.WritableRaster;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.List;
+import java.util.*;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import javax.imageio.ImageIO;
+import javax.swing.Timer;
 import javax.swing.*;
 import javax.swing.plaf.ColorUIResource;
 import javax.swing.plaf.basic.BasicButtonUI;
@@ -47,6 +49,9 @@ import net.brlns.gdownloader.downloader.DownloadManager;
 import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.downloader.enums.QueueCategoryEnum;
 import net.brlns.gdownloader.event.EventDispatcher;
+import net.brlns.gdownloader.event.EventListener;
+import net.brlns.gdownloader.event.IEventListener;
+import net.brlns.gdownloader.event.impl.NativeMouseClickEvent;
 import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.ui.custom.*;
 import net.brlns.gdownloader.ui.dnd.WindowDragSourceListener;
@@ -54,11 +59,13 @@ import net.brlns.gdownloader.ui.dnd.WindowDropTargetListener;
 import net.brlns.gdownloader.ui.dnd.WindowTransferHandler;
 import net.brlns.gdownloader.ui.menu.IMenuEntry;
 import net.brlns.gdownloader.ui.menu.RightClickMenu;
+import net.brlns.gdownloader.ui.menu.RightClickMenuEntries;
 import net.brlns.gdownloader.ui.menu.RunnableMenuEntry;
 import net.brlns.gdownloader.ui.themes.ThemeProvider;
 import net.brlns.gdownloader.ui.themes.UIColors;
 import net.brlns.gdownloader.updater.AbstractGitUpdater;
 import net.brlns.gdownloader.util.Nullable;
+import net.brlns.gdownloader.util.collection.ConcurrentLinkedHashSet;
 
 import static net.brlns.gdownloader.lang.Language.*;
 import static net.brlns.gdownloader.ui.themes.ThemeProvider.*;
@@ -69,7 +76,7 @@ import static net.brlns.gdownloader.ui.themes.UIColors.*;
  */
 // TODO add custom tooltip to all buttons
 @Slf4j
-public final class GUIManager {
+public final class GUIManager implements IEventListener {
 
     static {
         ToolTipManager.sharedInstance().setInitialDelay(0);
@@ -96,6 +103,10 @@ public final class GUIManager {
     private final AtomicInteger mediaCardId = new AtomicInteger();
 
     private final AtomicBoolean isShowingMessage = new AtomicBoolean();
+
+    private final ConcurrentLinkedHashSet<MediaCard> selectedMediaCards = new ConcurrentLinkedHashSet<>();
+    private final AtomicReference<MediaCard> lastSelectedMediaCard = new AtomicReference<>(null);
+    private final AtomicBoolean isMultiSelectMode = new AtomicBoolean();
 
     @Getter
     private final GDownloader main;
@@ -198,6 +209,8 @@ public final class GUIManager {
         assert SwingUtilities.isEventDispatchThread();
 
         if (appWindow == null) {
+            EventDispatcher.register(this);
+
             // note to self, tooltips only show up when focused
             String version = System.getProperty("jpackage.app-version");
 
@@ -288,6 +301,26 @@ public final class GUIManager {
             queueScrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
             queueScrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
             mainPanel.add(queueScrollPane, BorderLayout.CENTER);
+
+            InputMap inputMap = queuePanel.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
+            ActionMap actionMap = queuePanel.getActionMap();
+            inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_A, KeyEvent.CTRL_DOWN_MASK), "selectAllCards");
+            actionMap.put("selectAllCards", new AbstractAction() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    selectAllMediaCards();
+                }
+            });
+
+            KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(e -> {
+                if (e.getID() == KeyEvent.KEY_RELEASED) {
+                    if (!e.isControlDown() && !e.isShiftDown()) {
+                        isMultiSelectMode.set(false);
+                    }
+                }
+
+                return false;
+            });
 
             appWindow.add(mainPanel);
 
@@ -449,7 +482,7 @@ public final class GUIManager {
                 @Override
                 public void mouseClicked(MouseEvent e) {
                     if (SwingUtilities.isRightMouseButton(e)) {
-                        Map<String, IMenuEntry> rightClickMenu = new LinkedHashMap<>();
+                        RightClickMenuEntries rightClickMenu = new RightClickMenuEntries();
 
                         for (AbstractDownloader downloader : main.getDownloadManager().getEnabledDownloaders()) {
                             DownloaderIdEnum downloaderId = downloader.getDownloaderId();
@@ -478,7 +511,7 @@ public final class GUIManager {
                 e -> main.getDownloadManager().clearQueue()
             );
 
-            Map<String, IMenuEntry> rightClickMenu = new LinkedHashMap<>();
+            RightClickMenuEntries rightClickMenu = new RightClickMenuEntries();
             rightClickMenu.put(l10n("gui.clear_download_queue.clear_failed"),
                 new RunnableMenuEntry(() -> main.getDownloadManager().clearQueue(QueueCategoryEnum.FAILED)));
             rightClickMenu.put(l10n("gui.clear_download_queue.clear_completed"),
@@ -1128,6 +1161,21 @@ public final class GUIManager {
         return Math.min(totalHeight + 110, 220);
     }
 
+    public boolean isFullScreen() {
+        return (appWindow.getExtendedState() & JFrame.MAXIMIZED_BOTH) == JFrame.MAXIMIZED_BOTH;
+    }
+
+    private void showRightClickMenu(Component parentComponent, RightClickMenuEntries actions, int x, int y) {
+        showRightClickMenu(parentComponent, actions, Collections.emptyList(), x, y);
+    }
+
+    private void showRightClickMenu(Component parentComponent, RightClickMenuEntries actions,
+        Collection<RightClickMenuEntries> dependents, int x, int y) {
+
+        RightClickMenu rightClickMenu = new RightClickMenu(main.getConfig().isKeepWindowAlwaysOnTop());
+        rightClickMenu.showMenu(parentComponent, actions, dependents, x, y);
+    }
+
     private void adjustMediaCards() {
         assert SwingUtilities.isEventDispatchThread();
 
@@ -1139,10 +1187,6 @@ public final class GUIManager {
 
         queuePanel.revalidate();
         queuePanel.repaint();
-    }
-
-    public boolean isFullScreen() {
-        return (appWindow.getExtendedState() & JFrame.MAXIMIZED_BOTH) == JFrame.MAXIMIZED_BOTH;
     }
 
     public MediaCard addMediaCard(String... mediaLabel) {
@@ -1254,10 +1298,12 @@ public final class GUIManager {
         card.setTransferHandler(new WindowTransferHandler(this));
 
         MouseAdapter listener = new MouseAdapter() {
-            private long lastClick = System.currentTimeMillis();
-
             @Override
             public void mousePressed(MouseEvent e) {
+                if (isMultiSelectMode.get() && selectedMediaCards.size() > 1) {
+                    return;
+                }
+
                 Component component = e.getComponent();
 
                 if (component.equals(dragLabel)) {
@@ -1272,24 +1318,56 @@ public final class GUIManager {
             @Override
             public void mouseClicked(MouseEvent e) {
                 if (SwingUtilities.isLeftMouseButton(e)) {
-                    if (mediaCard.getOnLeftClick() != null && (System.currentTimeMillis() - lastClick) > 50) {
-                        mediaCard.getOnLeftClick().run();
+                    MediaCard lastCard = lastSelectedMediaCard.get();
 
-                        lastClick = System.currentTimeMillis();
+                    if (e.isControlDown()) {
+                        isMultiSelectMode.set(true);
+
+                        if (selectedMediaCards.contains(mediaCard)) {
+                            selectedMediaCards.remove(mediaCard);
+                        } else {
+                            selectedMediaCards.add(mediaCard);
+                        }
+
+                        updateMediaCardSelectionState();
+                    } else if (e.isShiftDown() && lastCard != null) {
+                        isMultiSelectMode.set(true);
+
+                        selectMediaCardRange(lastCard, mediaCard);
+                    } else {
+                        selectedMediaCards.replaceAll(Collections.singletonList(mediaCard));
+                        lastSelectedMediaCard.set(mediaCard);
+
+                        updateMediaCardSelectionState();
                     }
                 } else if (SwingUtilities.isRightMouseButton(e)) {
-                    showRightClickMenu(card, mediaCard.getRightClickMenu().snapshot(), e.getX(), e.getY());
+                    List<RightClickMenuEntries> dependents = new ArrayList<>();
+
+                    for (MediaCard selected : selectedMediaCards) {
+                        if (selected == mediaCard) {
+                            continue;
+                        }
+
+                        dependents.add(RightClickMenuEntries.fromMap(selected.getRightClickMenu()));
+                    }
+
+                    showRightClickMenu(card, RightClickMenuEntries.fromMap(mediaCard.getRightClickMenu()),
+                        dependents, e.getX(), e.getY());
                 }
             }
 
             @Override
             public void mouseEntered(MouseEvent e) {
-                card.setBackground(color(MEDIA_CARD_HOVER));
+                if (!isMediaCardSelected(mediaCard) && !isMultiSelectMode.get()) {
+                    card.setBackground(color(MEDIA_CARD_HOVER));
+                }
             }
 
             @Override
             public void mouseExited(MouseEvent e) {
-                card.setBackground(color(MEDIA_CARD));
+                if (!isMediaCardSelected(mediaCard) && !isMultiSelectMode.get()) {
+                    card.setBackground(color(MEDIA_CARD));
+                }
             }
         };
 
@@ -1341,9 +1419,73 @@ public final class GUIManager {
         }
     }
 
-    private void showRightClickMenu(Component parentComponent, Map<String, IMenuEntry> actions, int x, int y) {
-        RightClickMenu rightClickMenu = new RightClickMenu(main.getConfig().isKeepWindowAlwaysOnTop());
-        rightClickMenu.showMenu(parentComponent, actions, x, y);
+    @EventListener
+    public void handle(NativeMouseClickEvent event) {
+        runOnEDT(() -> {
+            Point point = event.getPoint();
+
+            mediaCards.values().stream()
+                .filter(entry -> entry.getCard().contains(point))
+                .findFirst()
+                .ifPresent(entry -> {
+                    deselectAllMediaCards();
+                });
+        });
+    }
+
+    private void updateMediaCardSelectionState() {
+        for (MediaCard mediaCard : mediaCards.values()) {
+            boolean isSelected = isMediaCardSelected(mediaCard);
+
+            JPanel card = mediaCard.getCard();
+            card.setBackground(isSelected ? color(MEDIA_CARD_SELECTED) : color(MEDIA_CARD));
+        }
+    }
+
+    private void selectAllMediaCards() {
+        selectedMediaCards.replaceAll(mediaCards.values());
+
+        updateMediaCardSelectionState();
+    }
+
+    private void deselectAllMediaCards() {
+        selectedMediaCards.clear();
+
+        updateMediaCardSelectionState();
+    }
+
+    private boolean isMediaCardSelected(MediaCard card) {
+        return selectedMediaCards.contains(card);
+    }
+
+    private void selectMediaCardRange(MediaCard start, MediaCard end) {
+        int startIndex = getComponentIndex(start.getCard());
+        int endIndex = getComponentIndex(end.getCard());
+
+        if (startIndex == -1 || endIndex == -1) {
+            return;
+        }
+
+        int minIndex = Math.min(startIndex, endIndex);
+        int maxIndex = Math.max(startIndex, endIndex);
+
+        List<MediaCard> cardsToAdd = new ArrayList<>();
+        for (int i = minIndex; i <= maxIndex; i++) {
+            MediaCard card = getMediaCardAt(i);
+
+            if (card == null) {
+                log.error("Cannot find card for index {}", i);
+                continue;
+            }
+
+            cardsToAdd.add(card);
+        }
+
+        selectedMediaCards.replaceAll(cardsToAdd);
+
+        runOnEDT(() -> {
+            updateMediaCardSelectionState();
+        });
     }
 
     public boolean handleMediaCardDnD(MediaCard mediaCard, Component dropTarget) {
@@ -1405,6 +1547,18 @@ public final class GUIManager {
         }
 
         return -1;
+    }
+
+    @Nullable
+    private MediaCard getMediaCardAt(int index) {
+        if (index < 0 || index > queuePanel.getComponents().length) {
+            log.error("Index {} is out of bounds", index);
+            return null;
+        }
+
+        Component component = queuePanel.getComponents()[index];
+
+        return (MediaCard)((JPanel)component).getClientProperty("MEDIA_CARD");
     }
 
     @Data
@@ -1550,13 +1704,13 @@ public final class GUIManager {
 
     private final class DefaultMouseAdapter extends MouseAdapter {
 
-        private final Map<String, IMenuEntry> rightClickMenu = new LinkedHashMap<>();
+        private final RightClickMenuEntries rightClickMenu = new RightClickMenuEntries();
 
         private final IMenuEntry _cachedClipboardRunnable = new RunnableMenuEntry(() -> {
             main.getClipboardManager().updateClipboard(null, true);
         });
 
-        private Map<String, IMenuEntry> getRightClickMenu() {
+        private RightClickMenuEntries getRightClickMenu() {
             String clipboardKey = l10n("gui.paste_url_from_clipboard");
             if (main.getClipboardManager().isClipboardEmpty()) {
                 rightClickMenu.remove(clipboardKey);

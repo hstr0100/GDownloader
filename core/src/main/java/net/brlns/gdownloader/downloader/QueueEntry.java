@@ -32,6 +32,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 import javax.imageio.ImageIO;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -48,8 +49,10 @@ import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
 import net.brlns.gdownloader.ui.GUIManager;
 import net.brlns.gdownloader.ui.MediaCard;
 import net.brlns.gdownloader.ui.menu.IMenuEntry;
+import net.brlns.gdownloader.ui.menu.MultiActionMenuEntry;
 import net.brlns.gdownloader.ui.menu.NestedMenuEntry;
 import net.brlns.gdownloader.ui.menu.RunnableMenuEntry;
+import net.brlns.gdownloader.ui.menu.SingleActionMenuEntry;
 import net.brlns.gdownloader.util.DirectoryUtils;
 import net.brlns.gdownloader.util.Nullable;
 import net.brlns.gdownloader.util.StringUtils;
@@ -150,10 +153,6 @@ public class QueueEntry {
 
     public void blackListDownloader(DownloaderIdEnum downloaderId) {
         downloaderBlacklist.add(downloaderId);
-    }
-
-    public void copyUrlToClipboard() {
-        main.getClipboardManager().copyTextToClipboard(originalUrl);
     }
 
     public void deleteMediaFiles() {
@@ -354,8 +353,7 @@ public class QueueEntry {
 
         if (!errorLog.isEmpty()) {
             addRightClick(l10n("gui.copy_error_log"),
-                () -> main.getClipboardManager()
-                    .copyTextToClipboard(errorLog.snapshotAsList()));
+                constructLogMenu(errorLog));
         }
 
         errorLog.remove(output);
@@ -369,8 +367,7 @@ public class QueueEntry {
 
         if (!downloadLog.isEmpty()) {
             addRightClick(l10n("gui.copy_download_log"),
-                () -> main.getClipboardManager()
-                    .copyTextToClipboard(downloadLog.snapshotAsList()));
+                constructLogMenu(downloadLog));
         }
 
         downloadLog.remove(output);
@@ -397,15 +394,21 @@ public class QueueEntry {
         mediaCard.getRightClickMenu().clear();
     }
 
+    @SuppressWarnings("unchecked")
     protected void createDefaultRightClick(DownloadManager manager) {
         Map<String, IMenuEntry> menu = new LinkedHashMap<>();
 
         menu.put(l10n("gui.open_downloads_directory"),
-            new RunnableMenuEntry(() -> main.openDownloadsDirectory()));
+            new SingleActionMenuEntry(() -> main.openDownloadsDirectory()));
         menu.put(l10n("gui.open_in_browser"),
             new RunnableMenuEntry(() -> openUrl()));
         menu.put(l10n("gui.copy_url"),
-            new RunnableMenuEntry(() -> copyUrlToClipboard()));
+            new MultiActionMenuEntry<>(() -> originalUrl, (entries) -> {
+                List<String> finalText = entries.stream()
+                    .collect(Collectors.toList());
+
+                main.getClipboardManager().copyTextToClipboard(finalText);
+            }));
 
         NestedMenuEntry downloadersSubmenu = new NestedMenuEntry();
 
@@ -428,20 +431,40 @@ public class QueueEntry {
                 downloadersSubmenu);
         }
 
+        clearRightClick();
+
+        addRightClick(menu);
+
         if (!errorLog.isEmpty()) {
             addRightClick(l10n("gui.copy_error_log"),
-                () -> main.getClipboardManager()
-                    .copyTextToClipboard(errorLog.snapshotAsList()));
+                constructLogMenu(errorLog));
         }
 
         if (!downloadLog.isEmpty()) {
             addRightClick(l10n("gui.copy_download_log"),
-                () -> main.getClipboardManager()
-                    .copyTextToClipboard(downloadLog.snapshotAsList()));
+                constructLogMenu(downloadLog));
         }
+    }
 
-        clearRightClick();
-        addRightClick(menu);
+    private IMenuEntry constructLogMenu(ConcurrentLinkedHashSet<String> logEntries) {
+        return new MultiActionMenuEntry<>(() -> logEntries.snapshotAsList(), (entries) -> {
+            List<String> finalText = new ArrayList<>();
+
+            for (List<String> entry : entries) {
+                StringBuilder builder = new StringBuilder();
+                for (String line : entry) {
+                    builder.append(line).append(System.lineSeparator());
+                }
+
+                if (entries.size() > 1) {
+                    builder.append("---");
+                }
+
+                finalText.add(builder.toString());
+            }
+
+            main.getClipboardManager().copyTextToClipboard(finalText);
+        });
     }
 
 }
