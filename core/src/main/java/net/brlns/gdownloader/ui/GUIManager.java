@@ -306,6 +306,13 @@ public final class GUIManager {
                     selectAllMediaCards();
                 }
             });
+            inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0), "deleteSelectedCards");
+            actionMap.put("deleteSelectedCards", new AbstractAction() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    deleteSelectedMediaCards();
+                }
+            });
 
             KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(e -> {
                 if (e.getID() == KeyEvent.KEY_RELEASED) {
@@ -1273,7 +1280,13 @@ public final class GUIManager {
             loadIcon("/assets/x-mark.png", ICON, 16),
             loadIcon("/assets/x-mark.png", ICON_CLOSE, 16),
             "gui.remove_from_queue.tooltip",
-            e -> removeMediaCard(id)
+            e -> {
+                if (isMediaCardSelected(id)) {
+                    deleteSelectedMediaCards();
+                }
+
+                removeMediaCard(id);
+            }
         );
         closeButton.setPreferredSize(new Dimension(16, 16));
 
@@ -1448,6 +1461,16 @@ public final class GUIManager {
         updateMediaCardSelectionState();
     }
 
+    private void deleteSelectedMediaCards() {
+        for (int cardId : selectedMediaCards) {
+            removeMediaCard(cardId);
+        }
+
+        selectedMediaCards.clear();
+
+        updateMediaCardSelectionState();
+    }
+
     private void deselectAllMediaCards() {
         selectedMediaCards.clear();
 
@@ -1455,7 +1478,11 @@ public final class GUIManager {
     }
 
     private boolean isMediaCardSelected(MediaCard card) {
-        return selectedMediaCards.contains(card.getId());
+        return isMediaCardSelected(card.getId());
+    }
+
+    private boolean isMediaCardSelected(int cardId) {
+        return selectedMediaCards.contains(cardId);
     }
 
     private void selectMediaCardRange(MediaCard start, MediaCard end) {
