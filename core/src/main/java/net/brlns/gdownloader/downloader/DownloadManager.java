@@ -303,7 +303,7 @@ public class DownloadManager implements IEvent {
                         });
 
                         // TODO: This whole section needs to be refactored
-                        if (urlIgnoreSet.contains(playlist)) {// Temporary fix for double popups
+                        if (urlIgnoreSet.contains(playlist) && !force) {// Temporary fix for double popups
                             future.complete(false);
                             return future;
                         } else {
@@ -489,7 +489,7 @@ public class DownloadManager implements IEvent {
     public void retryFailedDownloads() {
         QueueEntry entry;
         while ((entry = failedDownloads.poll()) != null) {
-            restartDownload(entry, false);
+            resetDownload(entry, false);
         }
 
         startDownloads(suggestedDownloaderId.get());
@@ -651,11 +651,11 @@ public class DownloadManager implements IEvent {
         }, 1);
     }
 
-    protected void restartDownload(QueueEntry queueEntry) {
-        restartDownload(queueEntry, true);
+    protected void resetDownload(QueueEntry queueEntry) {
+        resetDownload(queueEntry, true);
     }
 
-    protected void restartDownload(QueueEntry queueEntry, boolean fireListeners) {
+    protected void resetDownload(QueueEntry queueEntry, boolean fireListeners) {
         queueEntry.createDefaultRightClick(this);
 
         queueEntry.cleanDirectories();
@@ -712,7 +712,7 @@ public class DownloadManager implements IEvent {
         }
 
         entry.addRightClick(_restartKey, () -> stopDownload(entry, () -> {
-            restartDownload(entry);
+            resetDownload(entry);
             submitDownloadTask(entry, true);
         }));
 

@@ -847,7 +847,7 @@ public final class GUIManager {
         DialogButton onClose, DialogButton... buttons) {
 
         runOnEDT(() -> {
-            JDialog dialog = new JDialog(appWindow, title, Dialog.ModalityType.APPLICATION_MODAL) {
+            JDialog dialog = new JDialog(appWindow, title, Dialog.ModalityType.MODELESS) {
                 private boolean actionPerformed = false;
 
                 @Override
