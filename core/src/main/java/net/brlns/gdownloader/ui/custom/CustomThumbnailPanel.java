@@ -49,14 +49,14 @@ public class CustomThumbnailPanel extends JPanel {
             case VIDEO ->
                 loadIcon("/assets/video.png", ICON, 78);
             case AUDIO ->
-                loadIcon("/assets/winamp.png", ICON, 78);// TODO: replace this icon
+                loadIcon("/assets/music.png", ICON, 78);
             case GALLERY, THUMBNAILS ->
                 loadIcon("/assets/picture.png", ICON, 78);
             case DIRECT, SUBTITLES ->
                 loadIcon("/assets/internet.png", ICON, 78);
             default ->
                 loadIcon(GDownloader.getInstance().getConfig().isDownloadVideo()
-                ? "/assets/video.png" : "/assets/winamp.png", ICON, 78);
+                ? "/assets/video.png" : "/assets/music.png", ICON, 78);
         };
     }
 
