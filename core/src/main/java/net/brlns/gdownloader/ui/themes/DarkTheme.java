@@ -43,7 +43,7 @@ public class DarkTheme extends AbstractTheme {
         put(SIDE_PANEL, new Color(134, 134, 134));
         put(MEDIA_CARD_HOVER, new Color(56, 56, 56));
         put(MEDIA_CARD, new Color(80, 80, 80));
-        put(MEDIA_CARD_SELECTED, new Color(110, 110, 110));
+        put(MEDIA_CARD_SELECTED, new Color(120, 120, 120));
         put(MEDIA_CARD_THUMBNAIL, new Color(74, 74, 74));
         put(LIGHT_TEXT, Color.LIGHT_GRAY);
         put(BUTTON_FOREGROUND, Color.DARK_GRAY);
