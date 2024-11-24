@@ -160,7 +160,7 @@ public class Settings {
     private boolean exitOnClose = true;
 
     @JsonProperty("TranscodeAudioToAAC")
-    private boolean transcodeAudioToAAC = false;
+    private boolean transcodeAudioToAAC = true;
 
     // TODO add more sounds
     @JsonProperty("PlaySounds")
