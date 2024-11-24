@@ -295,6 +295,13 @@ public class SettingsPanel {
                         ));
 
                         leftPanel.add(manager.createButton(
+                            loadIcon("/assets/wrench.png", ICON, 24),
+                            loadIcon("/assets/wrench.png", ICON_HOVER, 24),
+                            "gui.open_config.tooltip",
+                            e -> main.openConfigFile()
+                        ));
+
+                        leftPanel.add(manager.createButton(
                             loadIcon("/assets/deduplicate.png", ICON, 24),
                             loadIcon("/assets/deduplicate.png", ICON_HOVER, 24),
                             "gui.deduplication.deduplicate_downloads_directory",

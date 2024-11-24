@@ -69,7 +69,6 @@ import static net.brlns.gdownloader.lang.Language.*;
 // TODO d&d files for conversion to different formats, we already have ffmpeg anyway
 //
 // TODO max simultaneous downloads should be independent per website
-// TODO silence unnecessary debug messages
 // TODO investigate adding AppImage build
 // TODO scale on resolution DPI
 // TODO save last window size in config
@@ -79,18 +78,14 @@ import static net.brlns.gdownloader.lang.Language.*;
 // TODO write a component factory for GUIManager
 // TODO git actions build for different platforms
 // FEEDBACK Should choose to download video and audio independently on each card
-// TODO maybe add notifications for each toggled toolbar option
 // DROPPED check updates on a timer, but do not ever restart when anything is in the queue.
-// TODO individual 'retry failed download' button
 // TODO --no-playlist when single video option is active
 // TODO Artifacting seems to be happening on the scroll pane with AMD video cards
 // TODO open a window asking which videos in a playlist to download or not
 // TODO RearrangeableDeque's offerLast should be linked to the cards in the UI
 // TODO Better visual eye candy for when dragging cards
 // TODO Add setting to allow the user to manually specify the target codec for audio transcoding? currently it defaults to aac.
-// TODO Add 'Clear Completed Downloads' button.
 // TODO Javadoc, a whole lot of it.
-// TODO Refactor this very class. Separate some logic into different methods.
 // TODO Twitch settings purposefully default to suboptimal quality due to huge file sizes. Maybe consider adding a warning about this in the GUI.
 // TODO Split GUI into a different subproject from core logic.
 // TODO Investigate screen reader support (https:// www.nvaccess.org/download/)
@@ -103,10 +98,9 @@ import static net.brlns.gdownloader.lang.Language.*;
 // TODO Verify which exceptions are important to display to the user via GDownloader::handleException
 // TODO Add an url ignore list / Allow filters to be disabled
 // TODO Add option to clear all installed updates and start fresh. (Tackling certain issues where failed updates could break downloads)
-// TODO Optional curl/wget integration
+// TODO Wget integration
 // TODO NTFS File path length workaround for gallery-dl
 // TODO Split main window from GUIManager
-// TODO Card multi-select support / Undo last action
 // TODO Debug no console output from gallery-dl on Windows when using channels
 // TODO gallery-dl does not accept an argument specifying yt-dlp/ffmpeg location, figure out a workaround to pass the correct path to it
 // TODO Fastutil collections
@@ -496,6 +490,10 @@ public final class GDownloader {
 
     public void openLogFile() {
         open(LoggerUtils.getLogFile());
+    }
+
+    public void openConfigFile() {
+        open(configFile);
     }
 
     public void open(File file) {

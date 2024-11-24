@@ -126,13 +126,18 @@ public class EventDispatcher {
         Runnable eventRunnable = () -> {
             for (Handler handler : eventHandlers) {
                 try {
-                    if (handler instanceof MethodHandler methodHandler) {
-                        methodHandler.getMethod()
-                            .invoke(methodHandler.getListener(), event);
-                    } else if (handler instanceof LambdaHandler<?> lambdaHandler) {
-                        @SuppressWarnings("unchecked")
-                        Consumer<IEvent> consumer = (Consumer<IEvent>)lambdaHandler.getListener();
-                        consumer.accept(event);
+                    switch (handler) {
+                        case MethodHandler methodHandler -> {
+                            methodHandler.getMethod().invoke(
+                                methodHandler.getListener(), event);
+                        }
+                        case LambdaHandler<?> lambdaHandler -> {
+                            @SuppressWarnings("unchecked")
+                            Consumer<IEvent> consumer = (Consumer<IEvent>)lambdaHandler.getListener();
+                            consumer.accept(event);
+                        }
+                        default -> {
+                        }
                     }
                 } catch (Exception e) {
                     GDownloader.handleException(e);
