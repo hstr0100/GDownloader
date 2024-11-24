@@ -1057,6 +1057,14 @@ public class SettingsPanel {
                 false
             );
 
+            addComboBox(itemPanel, gbcItem,
+                "settings.audio_codec",
+                AudioCodecEnum.class,
+                qualitySettings::getAudioCodec,
+                qualitySettings::setAudioCodec,
+                false
+            );
+
             panel.add(itemPanel);
         }
 

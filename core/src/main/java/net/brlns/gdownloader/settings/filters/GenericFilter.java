@@ -28,6 +28,7 @@ import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.settings.QualitySettings;
 import net.brlns.gdownloader.settings.Settings;
 import net.brlns.gdownloader.settings.enums.AudioBitrateEnum;
+import net.brlns.gdownloader.settings.enums.AudioCodecEnum;
 import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.settings.enums.VideoContainerEnum;
 import net.brlns.gdownloader.util.URLUtils;
@@ -145,11 +146,24 @@ public class GenericFilter extends AbstractUrlFilter {
                             }
                         }
 
-                        if (config.isTranscodeAudioToAAC()) {
+                        String codec = null;
+                        if (quality.getAudioCodec() != AudioCodecEnum.NO_CODEC) {
+                            // Check if the user has selected a custom audio codec.
+                            codec = quality.getAudioCodec().getFfmpegCodecName();
+                        } else if (config.isTranscodeAudioToAAC()) {
+                            // If no custom codec is set, check if "Convert audio to a widely supported codec" is enabled.
+                            // If enabled, default to "aac".
+                            codec = "aac"; // Opus is not supported by some native video players
+                        }
+
+                        // If no codec is defined, the default audio codec provided by the source will be passed through.
+                        if (codec != null) {
+                            // Transcode audio (Note: This can be very slow on some machines).
                             arguments.addAll(List.of(
                                 "--postprocessor-args",
-                                // Opus is not supported by some native video players
-                                "ffmpeg:-c:a aac -b:a " + (audioBitrate == AudioBitrateEnum.NO_AUDIO ? 320 : audioBitrate.getValue()) + "k"
+                                // Use the selected codec. Default bitrate is 320 kbps unless otherwise specified.
+                                "ffmpeg:-c:a " + codec + " -b:a "
+                                + (audioBitrate == AudioBitrateEnum.NO_AUDIO ? 320 : audioBitrate.getValue()) + "k"
                             ));
                         }
                     }

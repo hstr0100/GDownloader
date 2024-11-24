@@ -58,6 +58,10 @@ public class QualitySettings {
     private FPSEnum fps = FPSEnum.FPS_60;
 
     @Builder.Default
+    @JsonProperty("AudioCodec")
+    private AudioCodecEnum audioCodec = AudioCodecEnum.NO_CODEC;
+
+    @Builder.Default
     @JsonProperty("AudioContainer")
     private AudioContainerEnum audioContainer = AudioContainerEnum.MP3;
 
