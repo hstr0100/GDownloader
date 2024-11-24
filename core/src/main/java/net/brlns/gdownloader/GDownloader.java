@@ -84,7 +84,6 @@ import static net.brlns.gdownloader.lang.Language.*;
 // TODO open a window asking which videos in a playlist to download or not
 // TODO RearrangeableDeque's offerLast should be linked to the cards in the UI
 // TODO Better visual eye candy for when dragging cards
-// TODO Add setting to allow the user to manually specify the target codec for audio transcoding? currently it defaults to aac.
 // TODO Javadoc, a whole lot of it.
 // TODO Twitch settings purposefully default to suboptimal quality due to huge file sizes. Maybe consider adding a warning about this in the GUI.
 // TODO Split GUI into a different subproject from core logic.
@@ -1226,7 +1225,7 @@ public final class GDownloader {
         UpdaterBootstrap.tryOta(args, fromOta);
 
         System.setProperty("sun.java2d.uiScale", String.valueOf(uiScale));// Does not accept double
-        System.setProperty("sun.java2d.opengl", "true");
+        System.setProperty("sun.java2d.opengl", !isLinuxAndAmdGpu() ? "true" : "false");
 
         if (SystemTray.isSupported()) {
             log.info("Starting...");
@@ -1330,5 +1329,49 @@ public final class GDownloader {
                     UIManager.put(key, new FontUIResource(newFont));
                 }
             });
+    }
+
+    // [xcb] Unknown sequence number while processing queue
+    // [xcb] You called XInitThreads, this is not your fault
+    // [xcb] Aborting, sorry about that.
+    // java: ../../src/xcb_io.c:278: poll_for_event: Assertion `!xcb_xlib_threads_sequence_lost' failed.
+    // Aborted (core dumped)
+    private static boolean isLinuxAndAmdGpu() {
+        if (!isLinux()) {
+            return false;
+        }
+
+        try {
+            Process process = Runtime.getRuntime().exec(new String[] {"/bin/bash", "-c", "lspci | grep VGA"});
+            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+
+            boolean isAMD = false;
+
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String lower = line.toLowerCase();
+                if (lower.contains("amd")
+                    || lower.contains("radeon")
+                    || lower.contains("advanced micro devices")) {
+                    isAMD = true;
+                    break;
+                }
+            }
+
+            process.waitFor();
+
+            if (isAMD) {
+                log.error("Detected AMD Graphics, disabling HW acceleration due to a known issue.");
+                return true;
+            }
+        } catch (Exception e) {
+            log.error("Unable to query for GPU info.");
+
+            if (log.isDebugEnabled()) {
+                log.error("Exception: ", e);
+            }
+        }
+
+        return false;
     }
 }

@@ -355,54 +355,61 @@ public class DownloadManager implements IEvent {
 
             log.info("Captured {}", inputUrl);
 
-            MediaCard mediaCard = main.getGuiManager().addMediaCard("");
-
-            int downloadId = downloadCounter.incrementAndGet();
-
-            QueueEntry queueEntry = new QueueEntry(main, mediaCard, filter, inputUrl, filteredUrl, downloadId, compatibleDownloaders);
-            queueEntry.updateStatus(DownloadStatusEnum.QUERYING, l10n("gui.download_status.querying"));
-
-            String filtered = filteredUrl;
-            mediaCard.setOnClose(() -> {
-                queueEntry.close();
-
-                capturedPlaylists.remove(inputUrl);
-                capturedLinks.remove(inputUrl);
-                capturedLinks.remove(filtered);
-
-                dequeueFromAll(queueEntry);
-            });
-
-            mediaCard.setOnLeftClick(() -> {
-                main.openDownloadsDirectory();
-            });
-
-            queueEntry.createDefaultRightClick(this);
-
-            mediaCard.setOnDrag((targetIndex) -> {
-                if (downloadDeque.contains(queueEntry)) {
-                    try {
-                        downloadDeque.moveToPosition(queueEntry,
-                            Math.clamp(targetIndex, 0, downloadDeque.size() - 1));
-                    } catch (Exception e) {
-                        GDownloader.handleException(e, false);
+            main.getGuiManager().addMediaCard("")
+                .whenComplete((mediaCard, ex) -> {
+                    if (ex != null) {
+                        GDownloader.handleException(ex);
+                        return;
                     }
-                }
-            });
 
-            mediaCard.setValidateDropTarget(() -> {
-                return downloadDeque.contains(queueEntry);
-            });
+                    int downloadId = downloadCounter.incrementAndGet();
 
-            queryVideo(queueEntry);
+                    QueueEntry queueEntry = new QueueEntry(main, mediaCard, filter, inputUrl, filteredUrl, downloadId, compatibleDownloaders);
+                    queueEntry.updateStatus(DownloadStatusEnum.QUERYING, l10n("gui.download_status.querying"));
 
-            enqueueLast(queueEntry);
+                    String filtered = filteredUrl;
+                    mediaCard.setOnClose(() -> {
+                        queueEntry.close();
 
-            if (main.getConfig().isAutoDownloadStart() && !downloadsRunning.get()) {
-                startDownloads(suggestedDownloaderId.get());
-            }
+                        capturedPlaylists.remove(inputUrl);
+                        capturedLinks.remove(inputUrl);
+                        capturedLinks.remove(filtered);
 
-            future.complete(true);
+                        dequeueFromAll(queueEntry);
+                    });
+
+                    mediaCard.setOnLeftClick(() -> {
+                        main.openDownloadsDirectory();
+                    });
+
+                    queueEntry.createDefaultRightClick(this);
+
+                    mediaCard.setOnDrag((targetIndex) -> {
+                        if (downloadDeque.contains(queueEntry)) {
+                            try {
+                                downloadDeque.moveToPosition(queueEntry,
+                                    Math.clamp(targetIndex, 0, downloadDeque.size() - 1));
+                            } catch (Exception e) {
+                                GDownloader.handleException(e, false);
+                            }
+                        }
+                    });
+
+                    mediaCard.setValidateDropTarget(() -> {
+                        return downloadDeque.contains(queueEntry);
+                    });
+
+                    queryVideo(queueEntry);
+
+                    enqueueLast(queueEntry);
+
+                    if (main.getConfig().isAutoDownloadStart() && !downloadsRunning.get()) {
+                        startDownloads(suggestedDownloaderId.get());
+                    }
+
+                    future.complete(true);
+                });
+
             return future;
         }
 
