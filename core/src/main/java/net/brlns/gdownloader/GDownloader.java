@@ -113,6 +113,7 @@ import static net.brlns.gdownloader.lang.Language.*;
 // TODO Downloader priority settings
 // TODO Scrollbar -> faster roll speed in fullscreen
 // TODO Dynamically reorder downloads based on their status or order in queue -> RUNNING, QUEUED, <others>, FAILED
+// TODO Notifications are appearing below the main window when in fullscreen mode.
 // TODO Pack media card UI insertions into batches and run them on a ticker, to avoid freezing the UI when adding a large amount of items.
 /**
  * GDownloader - GUI wrapper for yt-dlp

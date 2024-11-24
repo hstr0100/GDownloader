@@ -1362,18 +1362,20 @@ public final class GUIManager {
                 } else if (SwingUtilities.isRightMouseButton(e)) {
                     List<RightClickMenuEntries> dependents = new ArrayList<>();
 
-                    for (int cardId : selectedMediaCards) {
-                        MediaCard selected = mediaCards.get(cardId);
-                        if (selected == null) {
-                            log.error("Cannot find media card, id {}", cardId);
-                            continue;
-                        }
+                    if (isMediaCardSelected(mediaCard)) {
+                        for (int cardId : selectedMediaCards) {
+                            MediaCard selected = mediaCards.get(cardId);
+                            if (selected == null) {
+                                log.error("Cannot find media card, id {}", cardId);
+                                continue;
+                            }
 
-                        if (selected == mediaCard) {
-                            continue;
-                        }
+                            if (selected == mediaCard) {
+                                continue;
+                            }
 
-                        dependents.add(RightClickMenuEntries.fromMap(selected.getRightClickMenu()));
+                            dependents.add(RightClickMenuEntries.fromMap(selected.getRightClickMenu()));
+                        }
                     }
 
                     showRightClickMenu(card, RightClickMenuEntries.fromMap(mediaCard.getRightClickMenu()),
