@@ -33,6 +33,7 @@ import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.downloader.enums.DownloadStatusEnum;
 import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.downloader.structs.DownloadResult;
+import net.brlns.gdownloader.settings.Settings;
 import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
 import net.brlns.gdownloader.ui.menu.IMenuEntry;
@@ -79,6 +80,11 @@ public class GalleryDlDownloader extends AbstractDownloader {
     @Override
     public boolean isMainDownloader() {
         return false;
+    }
+
+    @Override
+    public DownloadTypeEnum getFirstArchivableType(Settings configIn) {
+        return GALLERY;
     }
 
     @Override
@@ -129,7 +135,7 @@ public class GalleryDlDownloader extends AbstractDownloader {
             ));
         }
 
-        genericArguments.addAll(filter.getArguments(getDownloaderId(), ALL, main, tmpPath, entry.getUrl()));
+        genericArguments.addAll(filter.getArguments(this, ALL, manager, tmpPath, entry.getUrl()));
 
         boolean success = false;
         String lastOutput = "";
@@ -146,7 +152,7 @@ public class GalleryDlDownloader extends AbstractDownloader {
 
             List<String> arguments = new ArrayList<>(genericArguments);
 
-            List<String> downloadArguments = filter.getArguments(getDownloaderId(), type, main, tmpPath, entry.getUrl());
+            List<String> downloadArguments = filter.getArguments(this, type, manager, tmpPath, entry.getUrl());
             arguments.addAll(downloadArguments);
 
             if (main.getConfig().isDebugMode()) {

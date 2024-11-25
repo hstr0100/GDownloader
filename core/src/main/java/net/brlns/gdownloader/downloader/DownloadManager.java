@@ -27,7 +27,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
-import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
@@ -66,7 +65,7 @@ public class DownloadManager implements IEvent {
 
     private static final int MAX_DOWNLOAD_RETRIES = 10;
 
-    @Getter(AccessLevel.PROTECTED)
+    @Getter
     private final GDownloader main;
 
     private final ExecutorService processMonitor;

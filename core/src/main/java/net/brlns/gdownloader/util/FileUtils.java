@@ -19,6 +19,7 @@ package net.brlns.gdownloader.util;
 import java.io.*;
 import java.nio.file.Files;
 import lombok.extern.slf4j.Slf4j;
+import net.brlns.gdownloader.GDownloader;
 import org.slf4j.helpers.FormattingTuple;
 import org.slf4j.helpers.MessageFormatter;
 
@@ -27,6 +28,24 @@ import org.slf4j.helpers.MessageFormatter;
  */
 @Slf4j
 public final class FileUtils {
+
+    @Nullable
+    public static File getOrCreate(File dir, String... path) {
+        File file = new File(dir, String.join(File.separator, path));
+
+        try {
+            Files.createDirectories(file.getParentFile().toPath());
+
+            if (!file.exists()) {
+                file.createNewFile();
+            }
+        } catch (Exception e) {
+            log.error("Cannot create file: {}", file);
+            GDownloader.handleException(e);
+        }
+
+        return file;
+    }
 
     public static void writeResourceToFile(String resourcePath, File destination) {
         try {

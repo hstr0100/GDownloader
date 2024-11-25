@@ -31,6 +31,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
+import net.brlns.gdownloader.downloader.AbstractDownloader;
+import net.brlns.gdownloader.downloader.DownloadManager;
 import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.settings.QualitySettings;
 import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
@@ -210,13 +212,13 @@ public abstract class AbstractUrlFilter {
     }
 
     @JsonIgnore
-    public List<String> getArguments(DownloaderIdEnum downloaderId, DownloadTypeEnum typeEnum, GDownloader main, File savePath, String inputUrl) {
+    public List<String> getArguments(AbstractDownloader downloader, DownloadTypeEnum typeEnum, DownloadManager manager, File savePath, String inputUrl) {
         List<String> arguments = new ArrayList<>();
 
-        arguments.addAll(buildArguments(downloaderId, typeEnum, main, savePath, inputUrl));
+        arguments.addAll(buildArguments(downloader, typeEnum, manager, savePath, inputUrl));
 
         // TODO: Map<DonwloaderIdEnum, Map<DownloadTypeEnum, List<String>>> or a struct extending that.
-        switch (downloaderId) {
+        switch (downloader.getDownloaderId()) {
             case YT_DLP -> {
                 if (extraYtDlpArguments.containsKey(typeEnum)) {
                     arguments.addAll(extraYtDlpArguments.get(typeEnum));
@@ -228,7 +230,7 @@ public abstract class AbstractUrlFilter {
                 }
             }
             default -> {
-                log.warn("Unhandled downloader id {}", downloaderId);
+                log.warn("Unhandled downloader id {}", downloader.getDownloaderId());
             }
         }
 
@@ -236,7 +238,7 @@ public abstract class AbstractUrlFilter {
     }
 
     @JsonIgnore
-    protected abstract List<String> buildArguments(DownloaderIdEnum downloaderId, DownloadTypeEnum typeEnum, GDownloader main, File savePath, String inputUrl);
+    protected abstract List<String> buildArguments(AbstractDownloader downloader, DownloadTypeEnum typeEnum, DownloadManager manager, File savePath, String inputUrl);
 
     @JsonIgnore
     public abstract boolean areCookiesRequired();

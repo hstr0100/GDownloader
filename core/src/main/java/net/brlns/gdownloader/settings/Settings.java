@@ -69,6 +69,9 @@ public class Settings {
     @JsonProperty("DownloadYoutubeChannels")
     private boolean downloadYoutubeChannels = false;
 
+    @JsonProperty("RecordToDownloadArchive")
+    private boolean recordToDownloadArchive = false;
+
     @JsonProperty("RespectYtDlpConfigFile")
     private boolean respectYtDlpConfigFile = false;
 

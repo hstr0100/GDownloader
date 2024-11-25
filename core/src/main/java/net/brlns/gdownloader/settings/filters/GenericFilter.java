@@ -23,14 +23,17 @@ import java.util.ArrayList;
 import java.util.List;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
-import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
+import net.brlns.gdownloader.downloader.AbstractDownloader;
+import net.brlns.gdownloader.downloader.DownloadManager;
 import net.brlns.gdownloader.settings.QualitySettings;
 import net.brlns.gdownloader.settings.Settings;
 import net.brlns.gdownloader.settings.enums.AudioBitrateEnum;
 import net.brlns.gdownloader.settings.enums.AudioCodecEnum;
 import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.settings.enums.VideoContainerEnum;
+import net.brlns.gdownloader.util.FileUtils;
 import net.brlns.gdownloader.util.URLUtils;
 
 import static net.brlns.gdownloader.lang.Language.*;
@@ -39,6 +42,7 @@ import static net.brlns.gdownloader.lang.Language.*;
  * @author Gabriel / hstr0100 / vertx010
  */
 @Data
+@Slf4j
 @EqualsAndHashCode(callSuper = true)
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class GenericFilter extends AbstractUrlFilter {
@@ -66,14 +70,20 @@ public class GenericFilter extends AbstractUrlFilter {
 
     @JsonIgnore
     @Override
-    protected List<String> buildArguments(DownloaderIdEnum downloaderId, DownloadTypeEnum typeEnum, GDownloader main, File savePath, String inputUrl) {
-        Settings config = main.getConfig();
+    protected List<String> buildArguments(AbstractDownloader downloader, DownloadTypeEnum typeEnum, DownloadManager manager, File savePath, String inputUrl) {
+        Settings config = manager.getMain().getConfig();
         QualitySettings quality = getQualitySettings();
         AudioBitrateEnum audioBitrate = quality.getAudioBitrate();
 
+        File archiveFile = null;
+        if (config.isRecordToDownloadArchive()) {
+            archiveFile = FileUtils.getOrCreate(GDownloader.getWorkDirectory(),
+                downloader.getDownloaderId().getDisplayName() + "_archive.txt");
+        }
+
         List<String> arguments = new ArrayList<>();
 
-        switch (downloaderId) {
+        switch (downloader.getDownloaderId()) {
             case YT_DLP -> {
                 switch (typeEnum) {
                     case ALL -> {
@@ -103,7 +113,7 @@ public class GenericFilter extends AbstractUrlFilter {
                         if (config.isReadCookiesFromBrowser()) {
                             arguments.addAll(List.of(
                                 "--cookies-from-browser",
-                                main.getBrowserForCookies().getName()
+                                manager.getMain().getBrowserForCookies().getName()
                             ));
                         }
 
@@ -166,6 +176,13 @@ public class GenericFilter extends AbstractUrlFilter {
                                 + (audioBitrate == AudioBitrateEnum.NO_AUDIO ? 320 : audioBitrate.getValue()) + "k"
                             ));
                         }
+
+                        if (archiveFile != null && downloader.getFirstArchivableType(config) == typeEnum) {
+                            arguments.addAll(List.of(
+                                "--download-archive",
+                                archiveFile.getAbsolutePath()
+                            ));
+                        }
                     }
                     case AUDIO -> {
                         if (audioBitrate != AudioBitrateEnum.NO_AUDIO) {
@@ -188,6 +205,13 @@ public class GenericFilter extends AbstractUrlFilter {
                                 arguments.addAll(List.of(
                                     "--embed-thumbnail",
                                     "--embed-metadata"
+                                ));
+                            }
+
+                            if (archiveFile != null && downloader.getFirstArchivableType(config) == typeEnum) {
+                                arguments.addAll(List.of(
+                                    "--download-archive",
+                                    archiveFile.getAbsolutePath()
                                 ));
                             }
                         }
@@ -245,7 +269,7 @@ public class GenericFilter extends AbstractUrlFilter {
                         if (config.isReadCookiesFromBrowser()) {
                             arguments.addAll(List.of(
                                 "--cookies-from-browser",
-                                main.getBrowserForCookies().getName()
+                                manager.getMain().getBrowserForCookies().getName()
                             ));
                         }
                     }
@@ -256,6 +280,13 @@ public class GenericFilter extends AbstractUrlFilter {
                             "-D",
                             savePath.getAbsolutePath() + (fileName != null ? File.separator + fileName : "")
                         ));
+
+                        if (archiveFile != null && downloader.getFirstArchivableType(config) == typeEnum) {
+                            arguments.addAll(List.of(
+                                "--download-archive",
+                                archiveFile.getAbsolutePath()
+                            ));
+                        }
                     }
                     default ->
                         throw new IllegalArgumentException();

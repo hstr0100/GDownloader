@@ -35,6 +35,7 @@ import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.downloader.structs.DownloadResult;
 import net.brlns.gdownloader.downloader.structs.MediaInfo;
 import net.brlns.gdownloader.settings.QualitySettings;
+import net.brlns.gdownloader.settings.Settings;
 import net.brlns.gdownloader.settings.enums.AudioBitrateEnum;
 import net.brlns.gdownloader.settings.enums.AudioContainerEnum;
 import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
@@ -82,6 +83,25 @@ public class YtDlpDownloader extends AbstractDownloader {
     @Override
     public boolean isMainDownloader() {
         return true;
+    }
+
+    @Nullable
+    @Override
+    public DownloadTypeEnum getFirstArchivableType(Settings configIn) {
+        for (DownloadTypeEnum type : DownloadTypeEnum.values()) {
+            boolean supported = getDownloadTypes().contains(type);
+
+            if (!supported) {
+                continue;
+            }
+
+            if (type == VIDEO && configIn.isDownloadVideo()
+                || type == AUDIO && configIn.isDownloadAudio()) {
+                return type;
+            }
+        }
+
+        return null;
     }
 
     @Override
@@ -187,7 +207,7 @@ public class YtDlpDownloader extends AbstractDownloader {
             genericArguments.add("--ignore-config");
         }
 
-        genericArguments.addAll(filter.getArguments(getDownloaderId(), ALL, main, tmpPath, entry.getUrl()));
+        genericArguments.addAll(filter.getArguments(this, ALL, manager, tmpPath, entry.getUrl()));
 
         boolean success = false;
         String lastOutput = "";
@@ -207,7 +227,7 @@ public class YtDlpDownloader extends AbstractDownloader {
 
             List<String> arguments = new ArrayList<>(genericArguments);
 
-            List<String> downloadArguments = filter.getArguments(getDownloaderId(), type, main, tmpPath, entry.getUrl());
+            List<String> downloadArguments = filter.getArguments(this, type, manager, tmpPath, entry.getUrl());
             arguments.addAll(downloadArguments);
 
             if (main.getConfig().isDebugMode()) {
@@ -240,6 +260,10 @@ public class YtDlpDownloader extends AbstractDownloader {
                     log.error("Failed to download {}: {}", type, lastOutput);
                 }
             } else {
+                if (lastOutput.contains("recorded in the archive")) {
+                    return new DownloadResult(FLAG_SUCCESS, lastOutput);
+                }
+
                 success = true;
             }
         }

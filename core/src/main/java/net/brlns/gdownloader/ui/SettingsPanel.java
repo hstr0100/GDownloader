@@ -842,6 +842,13 @@ public class SettingsPanel {
         );
 
         addCheckBox(panel, gbcPanel,
+            "settings.record_to_download_archive",
+            settings::isRecordToDownloadArchive,
+            settings::setRecordToDownloadArchive,
+            false
+        );
+
+        addCheckBox(panel, gbcPanel,
             "settings.respect_ytdlp_config_file",
             settings::isRespectYtDlpConfigFile,
             settings::setRespectYtDlpConfigFile,

@@ -47,6 +47,7 @@ import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.downloader.enums.DownloadStatusEnum;
 import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.downloader.structs.DownloadResult;
+import net.brlns.gdownloader.settings.Settings;
 import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.ui.menu.IMenuEntry;
 import net.brlns.gdownloader.ui.menu.RunnableMenuEntry;
@@ -104,6 +105,11 @@ public class DirectHttpDownloader extends AbstractDownloader {
     @Override
     public boolean isMainDownloader() {
         return false;
+    }
+
+    @Override
+    public DownloadTypeEnum getFirstArchivableType(Settings configIn) {
+        return DIRECT;
     }
 
     @Override
