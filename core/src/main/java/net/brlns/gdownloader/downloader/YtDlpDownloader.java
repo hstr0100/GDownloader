@@ -35,7 +35,6 @@ import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.downloader.structs.DownloadResult;
 import net.brlns.gdownloader.downloader.structs.MediaInfo;
 import net.brlns.gdownloader.settings.QualitySettings;
-import net.brlns.gdownloader.settings.Settings;
 import net.brlns.gdownloader.settings.enums.AudioBitrateEnum;
 import net.brlns.gdownloader.settings.enums.AudioContainerEnum;
 import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
@@ -85,23 +84,9 @@ public class YtDlpDownloader extends AbstractDownloader {
         return true;
     }
 
-    @Nullable
     @Override
-    public DownloadTypeEnum getFirstArchivableType(Settings configIn) {
-        for (DownloadTypeEnum type : DownloadTypeEnum.values()) {
-            boolean supported = getDownloadTypes().contains(type);
-
-            if (!supported) {
-                continue;
-            }
-
-            if (type == VIDEO && configIn.isDownloadVideo()
-                || type == AUDIO && configIn.isDownloadAudio()) {
-                return type;
-            }
-        }
-
-        return null;
+    public List<DownloadTypeEnum> getArchivableTypes() {
+        return List.of(VIDEO, AUDIO);
     }
 
     @Override
@@ -212,14 +197,16 @@ public class YtDlpDownloader extends AbstractDownloader {
         boolean success = false;
         String lastOutput = "";
 
+        boolean alreadyDownloaded = false;
+
         for (DownloadTypeEnum type : DownloadTypeEnum.values()) {
             boolean supported = getDownloadTypes().contains(type);
 
             if (!supported
                 || type == VIDEO && !downloadVideo
                 || type == AUDIO && !main.getConfig().isDownloadAudio()
-                || type == SUBTITLES && !main.getConfig().isDownloadSubtitles()
-                || type == THUMBNAILS && !main.getConfig().isDownloadThumbnails()) {
+                || type == SUBTITLES && (alreadyDownloaded || !main.getConfig().isDownloadSubtitles())
+                || type == THUMBNAILS && (alreadyDownloaded || !main.getConfig().isDownloadThumbnails())) {
                 continue;
             }
 
@@ -261,7 +248,7 @@ public class YtDlpDownloader extends AbstractDownloader {
                 }
             } else {
                 if (lastOutput.contains("recorded in the archive")) {
-                    return new DownloadResult(FLAG_SUCCESS, lastOutput);
+                    alreadyDownloaded = true;
                 }
 
                 success = true;

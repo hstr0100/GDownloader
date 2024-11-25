@@ -24,7 +24,6 @@ import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.downloader.structs.DownloadResult;
-import net.brlns.gdownloader.settings.Settings;
 import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.ui.menu.IMenuEntry;
 
@@ -62,7 +61,7 @@ public abstract class AbstractDownloader {
 
     public abstract boolean isMainDownloader();
 
-    public abstract DownloadTypeEnum getFirstArchivableType(Settings configIn);
+    public abstract List<DownloadTypeEnum> getArchivableTypes();
 
     public abstract DownloaderIdEnum getDownloaderId();
 

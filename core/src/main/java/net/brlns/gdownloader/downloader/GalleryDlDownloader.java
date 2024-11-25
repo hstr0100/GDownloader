@@ -33,7 +33,6 @@ import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.downloader.enums.DownloadStatusEnum;
 import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.downloader.structs.DownloadResult;
-import net.brlns.gdownloader.settings.Settings;
 import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
 import net.brlns.gdownloader.ui.menu.IMenuEntry;
@@ -83,8 +82,8 @@ public class GalleryDlDownloader extends AbstractDownloader {
     }
 
     @Override
-    public DownloadTypeEnum getFirstArchivableType(Settings configIn) {
-        return GALLERY;
+    public List<DownloadTypeEnum> getArchivableTypes() {
+        return Collections.singletonList(GALLERY);
     }
 
     @Override
