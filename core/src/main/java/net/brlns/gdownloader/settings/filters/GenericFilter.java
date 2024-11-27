@@ -305,9 +305,8 @@ public class GenericFilter extends AbstractUrlFilter {
     @Nullable
     private File getArchiveFile(AbstractDownloader downloader, DownloadTypeEnum downloadType) {
         List<DownloadTypeEnum> supported = downloader.getArchivableTypes();
-        boolean isArchivable = supported.contains(downloadType);
 
-        if (isArchivable) {
+        if (supported.contains(downloadType)) {
             File oldArchive = new File(GDownloader.getWorkDirectory(),
                 downloader.getDownloaderId().getDisplayName()
                 + "_archive.txt");

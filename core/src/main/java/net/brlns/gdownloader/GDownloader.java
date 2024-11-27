@@ -989,7 +989,7 @@ public final class GDownloader {
         if (!oldDir.equals(newDir)) {
             downloadManager.stopDownloads();
 
-            DirectoryUtils.deleteRecursively(oldDir.toPath());
+            clearCache();
         }
 
         config.setDownloadsPath(newDir.getAbsolutePath());
