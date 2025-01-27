@@ -117,6 +117,9 @@ public class Settings {
     @JsonProperty("ExtraYtDlpArguments")
     private String extraYtDlpArguments = "";
 
+    @JsonProperty("ImpersonateBrowser")
+    private boolean impersonateBrowser;
+
     @JsonProperty("DownloadAudio")
     private boolean downloadAudio = true;
 

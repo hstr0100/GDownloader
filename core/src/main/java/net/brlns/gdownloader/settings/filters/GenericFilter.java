@@ -107,6 +107,13 @@ public class GenericFilter extends AbstractUrlFilter {
                             ));
                         }
 
+                        if (config.isImpersonateBrowser()) {
+                            arguments.addAll(List.of(
+                                "--impersonate",
+                                "chrome:windows-10"
+                            ));
+                        }
+
                         String proxyUrl = config.getProxySettings().createProxyUrl();
                         if (proxyUrl != null) {
                             arguments.addAll(List.of(
@@ -253,6 +260,13 @@ public class GenericFilter extends AbstractUrlFilter {
                                 "5.0-15.0",
                                 "--sleep-request",
                                 "2"
+                            ));
+                        }
+
+                        if (config.isImpersonateBrowser()) {
+                            arguments.addAll(List.of(
+                                "--user-agent",
+                                "browser"
                             ));
                         }
 

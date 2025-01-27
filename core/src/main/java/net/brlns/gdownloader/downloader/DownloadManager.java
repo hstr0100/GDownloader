@@ -748,7 +748,7 @@ public class DownloadManager implements IEvent {
                         forcedDownloader = suggestedDownloaderId.get();
                     }
 
-                    int maxRetries = !main.getConfig().isAutoDownloadRetry() ? 1 : MAX_DOWNLOAD_RETRIES;
+                    int maxRetries = main.getConfig().isAutoDownloadRetry() ? MAX_DOWNLOAD_RETRIES : 1;
                     String lastOutput = "";
 
                     while (entry.getRetryCounter().get() <= maxRetries) {

@@ -742,6 +742,13 @@ public class SettingsPanel {
         }
 
         addCheckBox(panel, gbcPanel,
+            "settings.impersonate_browser",
+            settings::isImpersonateBrowser,
+            settings::setImpersonateBrowser,
+            false
+        );
+
+        addCheckBox(panel, gbcPanel,
             "settings.capture_any_clipboard_link",
             settings::isCaptureAnyLinks,
             settings::setCaptureAnyLinks,
