@@ -297,7 +297,7 @@ public final class GUIManager {
             queueScrollPane.setBorder(BorderFactory.createEmptyBorder());
             queueScrollPane.setBackground(color(BACKGROUND));
             //queueScrollPane.getViewport().setBackground(color(BACKGROUND));
-            queueScrollPane.getVerticalScrollBar().setUnitIncrement(4);
+            queueScrollPane.getVerticalScrollBar().setUnitIncrement(8);
             queueScrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
             queueScrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
             mainPanel.add(queueScrollPane, BorderLayout.CENTER);
