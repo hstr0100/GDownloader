@@ -1189,6 +1189,7 @@ public final class GDownloader {
         boolean noGui = false;
         int uiScale = 1;
         boolean fromOta = false;
+        boolean disableHWAccel = false;
 
         for (int i = 0; i < args.length; i++) {
             if (args[i].equalsIgnoreCase("--no-gui")) {
@@ -1202,6 +1203,11 @@ public final class GDownloader {
             if (args[i].equalsIgnoreCase("--from-ota")) {
                 log.info("Sucessfully updated from ota");
                 fromOta = true;
+            }
+
+            if (args[i].equalsIgnoreCase("--disable-hwaccel")) {
+                log.info("Disabled hardware acceleration");
+                disableHWAccel = true;
             }
 
             if (args[i].equalsIgnoreCase("--launcher")) {
@@ -1225,7 +1231,7 @@ public final class GDownloader {
         UpdaterBootstrap.tryOta(args, fromOta);
 
         System.setProperty("sun.java2d.uiScale", String.valueOf(uiScale));// Does not accept double
-        System.setProperty("sun.java2d.opengl", !isLinuxAndAmdGpu() ? "true" : "false");
+        System.setProperty("sun.java2d.opengl", !disableHWAccel && !isLinuxAndAmdGpu() ? "true" : "false");
 
         if (SystemTray.isSupported()) {
             log.info("Starting...");
