@@ -18,7 +18,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up JDK
         uses: actions/setup-java@v3
@@ -40,13 +40,15 @@ jobs:
         run: ./gradlew jpackage
 
       - name: Upload Shaded JAR
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: GDownloader.jar
-          path: build/libs/*.jar
+          path: core/build/libs/*.jar
+          overwrite: true
 
       - name: Upload Native Image
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: GDownloader.deb
-          path: build/jpackage/*
+          path: core/build/jpackage/*
+          overwrite: true
