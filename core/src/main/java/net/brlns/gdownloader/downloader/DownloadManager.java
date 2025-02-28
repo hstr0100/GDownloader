@@ -63,8 +63,6 @@ import static net.brlns.gdownloader.util.URLUtils.*;
 @Slf4j
 public class DownloadManager implements IEvent {
 
-    private static final int MAX_DOWNLOAD_RETRIES = 10;
-
     @Getter
     private final GDownloader main;
 
@@ -748,7 +746,7 @@ public class DownloadManager implements IEvent {
                         forcedDownloader = suggestedDownloaderId.get();
                     }
 
-                    int maxRetries = main.getConfig().isAutoDownloadRetry() ? MAX_DOWNLOAD_RETRIES : 1;
+                    int maxRetries = main.getConfig().isAutoDownloadRetry() ? main.getConfig().getMaxDownloadRetries() : 1;
                     String lastOutput = "";
 
                     while (entry.getRetryCounter().get() <= maxRetries) {

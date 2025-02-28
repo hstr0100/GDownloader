@@ -118,7 +118,11 @@ public class Settings {
     private String extraYtDlpArguments = "";
 
     @JsonProperty("ImpersonateBrowser")
-    private boolean impersonateBrowser;
+    private boolean impersonateBrowser = false;
+
+    //TODO: UI
+    @JsonProperty("MaxDownloadRetries")
+    private int maxDownloadRetries = 10;
 
     @JsonProperty("DownloadAudio")
     private boolean downloadAudio = true;
@@ -224,6 +228,7 @@ public class Settings {
         // https://github.com/yt-dlp/yt-dlp/issues/10927
         if (isReadCookies() && getBrowser() == BrowserEnum.FIREFOX) {
             setReadCookiesFromBrowser(true);
+            setReadCookies(false);
         }
     }
 }

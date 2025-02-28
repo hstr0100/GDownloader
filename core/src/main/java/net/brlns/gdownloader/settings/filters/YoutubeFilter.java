@@ -43,7 +43,7 @@ public class YoutubeFilter extends GenericFilter {
     @SuppressWarnings("this-escape")
     public YoutubeFilter() {
         setId(ID);
-        setFilterName("Youtube");
+        setFilterName("Youtube Videos");
         setUrlRegex("^(https?:\\/\\/)?(www\\.)?(youtube\\.com|youtu\\.be)(?!.*(\\/live|\\/playlist|list=)).*$");
         setVideoNamePattern("%(title).60s (%(uploader_id)s %(upload_date)s %(resolution)s).%(ext)s");
         setAudioNamePattern("%(title).60s (%(audio_bitrate)s).%(ext)s");

@@ -154,7 +154,7 @@ public class SettingsPanel {
             frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
             frame.setSize(950, 623);
             frame.setLayout(new BorderLayout());
-            frame.setResizable(false);
+            //frame.setResizable(false);
             frame.setLocationRelativeTo(null);
             frame.setIconImage(main.getGuiManager().getAppIcon());
 

@@ -98,6 +98,13 @@ public class GenericFilter extends AbstractUrlFilter {
                             }
                         }
 
+                        if (config.isAutoDownloadRetry()) {
+                            arguments.addAll(List.of(
+                                "--fragment-retries",
+                                "10"
+                            ));
+                        }
+
                         if (config.isRandomIntervalBetweenDownloads()) {
                             arguments.addAll(List.of(
                                 "--max-sleep-interval",

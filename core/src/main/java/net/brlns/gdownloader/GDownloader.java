@@ -114,6 +114,7 @@ import static net.brlns.gdownloader.lang.Language.*;
 // TODO Dynamically reorder downloads based on their status or order in queue -> RUNNING, QUEUED, <others>, FAILED
 // TODO Notifications are appearing below the main window when in fullscreen mode.
 // TODO Pack media card UI insertions into batches and run them on a ticker, to avoid freezing the UI when adding a large amount of items.
+// TODO About page
 /**
  * GDownloader - GUI wrapper for yt-dlp
  *

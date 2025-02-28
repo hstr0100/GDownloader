@@ -41,7 +41,7 @@ public class YoutubePlaylistFilter extends YoutubeFilter {
     @SuppressWarnings("this-escape")
     public YoutubePlaylistFilter() {
         setId(ID);
-        setFilterName("Youtube Playlists");
+        setFilterName("Youtube Playlists/Channels");
         setUrlRegex("^(https?:\\/\\/)?(www\\.)?youtube\\.com.*(list=|\\/playlist).*$");
         setVideoNamePattern("%(playlist)s/%(title).60s (%(uploader_id)s %(upload_date)s %(resolution)s).%(ext)s");
         setAudioNamePattern("%(playlist)s/%(title).60s (%(audio_bitrate)s).%(ext)s");
