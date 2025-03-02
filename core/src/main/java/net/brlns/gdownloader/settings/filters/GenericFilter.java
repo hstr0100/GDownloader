@@ -204,7 +204,7 @@ public class GenericFilter extends AbstractUrlFilter {
                                 "-o",
                                 savePath.getAbsolutePath() + "/" + audioPatternWithBitrate,
                                 "-f",
-                                "bestaudio",
+                                "bestaudio/worstvideo*+bestaudio/best",
                                 "--extract-audio",
                                 "--audio-format",
                                 quality.getAudioContainer().getValue(),
