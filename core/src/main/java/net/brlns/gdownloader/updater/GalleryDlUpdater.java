@@ -58,6 +58,12 @@ public class GalleryDlUpdater extends AbstractGitUpdater {
         return getBinaryName();
     }
 
+    @Override
+    @Nullable
+    public String getSystemBinaryName() {
+        return "gallery-dl";
+    }
+
     @Nullable
     @Override
     protected String getLockFileName() {

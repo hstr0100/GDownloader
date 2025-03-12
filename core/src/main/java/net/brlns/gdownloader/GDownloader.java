@@ -1273,7 +1273,7 @@ public final class GDownloader {
 
             instance.checkForUpdates(false);
 
-            log.info("Started");
+            log.info("{} is initialized", REGISTRY_APP_NAME);
 
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                 instance.clearCache();

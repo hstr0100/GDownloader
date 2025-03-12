@@ -58,6 +58,12 @@ public class SelfUpdater extends AbstractGitUpdater {
         return "gdownloader_ota.zip";
     }
 
+    @Override
+    @Nullable
+    public String getSystemBinaryName() {
+        return null;
+    }
+
     @Nullable
     @Override
     protected String getLockFileName() {

@@ -90,6 +90,9 @@ public abstract class AbstractGitUpdater {
     protected abstract String getRuntimeBinaryName();
 
     @Nullable
+    protected abstract String getSystemBinaryName();
+
+    @Nullable
     protected abstract String getLockFileName();
 
     public abstract boolean isSupported();
@@ -118,6 +121,13 @@ public abstract class AbstractGitUpdater {
             }
         }
 
+        File systemFallback = PlatformExecutableLocator.locateExecutable(getSystemBinaryName());
+        if (systemFallback != null) {
+            finishUpdate(systemFallback);
+            log.info("Selected platform installation as fallback {}", getRepo());
+            return;
+        }
+
         notifyStatus(UpdateStatus.FAILED);
 
         throw new NoFallbackAvailableException();
@@ -137,6 +147,17 @@ public abstract class AbstractGitUpdater {
         notifyProgress(UpdateStatus.CHECKING, 0);
 
         File workDir = GDownloader.getWorkDirectory();
+
+        if (main.getConfig().isPreferSystemExecutables()) {
+            File systemFallback = PlatformExecutableLocator.locateExecutable(getSystemBinaryName());
+            if (systemFallback != null) {
+                finishUpdate(systemFallback);
+                log.info("Selected preferred platform binary {} for {}", systemFallback, getRepo());
+                return;
+            } else {
+                log.error("{} not installed natively, falling back to portable installation managed by GDownloader", getRepo());
+            }
+        }
 
         if (!main.getConfig().isAutomaticUpdates() && !force) {
             log.info("Automatic updates are disabled {}", getRepo());

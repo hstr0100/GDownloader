@@ -58,6 +58,12 @@ public class YtDlpUpdater extends AbstractGitUpdater {
         return getBinaryName();
     }
 
+    @Override
+    @Nullable
+    public String getSystemBinaryName() {
+        return "yt-dlp";
+    }
+
     @Nullable
     @Override
     protected String getLockFileName() {

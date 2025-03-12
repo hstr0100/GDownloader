@@ -62,6 +62,12 @@ public class FFMpegUpdater extends AbstractGitUpdater {
         return "ffmpeg";
     }
 
+    @Override
+    @Nullable
+    public String getSystemBinaryName() {
+        return getRuntimeBinaryName();
+    }
+
     @Nullable
     @Override
     protected String getLockFileName() {

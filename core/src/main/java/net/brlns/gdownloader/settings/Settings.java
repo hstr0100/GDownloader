@@ -53,6 +53,9 @@ public class Settings {
     @JsonProperty("LanguageDefined")
     private boolean languageDefined = false;
 
+    @JsonProperty("PreferSystemExecutables")
+    private boolean preferSystemExecutables = false;
+
     @JsonProperty("Language")
     private LanguageEnum language = LanguageEnum.ENGLISH;
 

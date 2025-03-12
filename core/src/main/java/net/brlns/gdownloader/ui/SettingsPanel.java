@@ -863,6 +863,13 @@ public class SettingsPanel {
         );
 
         addCheckBox(panel, gbcPanel,
+            "settings.prefer_system_executables",
+            settings::isPreferSystemExecutables,
+            settings::setPreferSystemExecutables,
+            true
+        );
+
+        addCheckBox(panel, gbcPanel,
             "settings.respect_ytdlp_config_file",
             settings::isRespectYtDlpConfigFile,
             settings::setRespectYtDlpConfigFile,
