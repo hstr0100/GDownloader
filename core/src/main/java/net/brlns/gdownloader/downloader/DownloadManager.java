@@ -638,6 +638,15 @@ public class DownloadManager implements IEvent {
     }
 
     private void queryVideo(QueueEntry queueEntry) {
+        if (!main.getConfig().isQueryMetadata()) {
+            if (queueEntry.getDownloadStatus() == DownloadStatusEnum.QUERYING) {
+                queueEntry.updateStatus(DownloadStatusEnum.QUEUED,
+                    l10n("gui.download_status.not_started"));
+            }
+
+            return;
+        }
+
         main.getGlobalThreadPool().submitWithPriority(() -> {
             if (queueEntry.getCancelHook().get()) {
                 return;
@@ -650,7 +659,8 @@ public class DownloadManager implements IEvent {
             }
 
             if (queueEntry.getDownloadStatus() == DownloadStatusEnum.QUERYING) {
-                queueEntry.updateStatus(DownloadStatusEnum.QUEUED, l10n("gui.download_status.not_started"));
+                queueEntry.updateStatus(DownloadStatusEnum.QUEUED,
+                    l10n("gui.download_status.not_started"));
             }
         }, 1);
     }

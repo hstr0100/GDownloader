@@ -66,6 +66,9 @@ public class Settings {
     @JsonProperty("BrowserForCookies")
     private BrowserEnum browser = BrowserEnum.UNSET;
 
+    @JsonProperty("QueryMetadata")
+    private boolean queryMetadata = true;
+
     @JsonProperty("DownloadYoutubeChannels")
     private boolean downloadYoutubeChannels = false;
 

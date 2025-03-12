@@ -856,6 +856,13 @@ public class SettingsPanel {
         );
 
         addCheckBox(panel, gbcPanel,
+            "settings.query_metadata",
+            settings::isQueryMetadata,
+            settings::setQueryMetadata,
+            false
+        );
+
+        addCheckBox(panel, gbcPanel,
             "settings.respect_ytdlp_config_file",
             settings::isRespectYtDlpConfigFile,
             settings::setRespectYtDlpConfigFile,
