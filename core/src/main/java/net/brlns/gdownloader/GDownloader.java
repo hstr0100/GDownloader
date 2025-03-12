@@ -441,7 +441,7 @@ public final class GDownloader {
             }
 
             if (!downloadManager.isMainDownloaderInitialized()) {
-                log.error("Failed to initialize YT-DLP, the program cannot continue. Exitting...");
+                log.error("Failed to initialize YT-DLP, the program cannot continue. Exiting...");
 
                 if (!userInitiated) {
                     System.exit(0);

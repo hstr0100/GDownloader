@@ -121,7 +121,7 @@ public abstract class AbstractGitUpdater {
             }
         }
 
-        File systemFallback = PlatformExecutableLocator.locateExecutable(getSystemBinaryName());
+        File systemFallback = SystemExecutableLocator.locateExecutable(getSystemBinaryName());
         if (systemFallback != null) {
             finishUpdate(systemFallback);
             log.info("Selected platform installation as fallback {}", getRepo());
@@ -149,7 +149,7 @@ public abstract class AbstractGitUpdater {
         File workDir = GDownloader.getWorkDirectory();
 
         if (main.getConfig().isPreferSystemExecutables()) {
-            File systemFallback = PlatformExecutableLocator.locateExecutable(getSystemBinaryName());
+            File systemFallback = SystemExecutableLocator.locateExecutable(getSystemBinaryName());
             if (systemFallback != null) {
                 finishUpdate(systemFallback);
                 log.info("Selected preferred platform binary {} for {}", systemFallback, getRepo());

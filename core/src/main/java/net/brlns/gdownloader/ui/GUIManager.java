@@ -235,7 +235,7 @@ public final class GUIManager {
                 @Override
                 public void windowClosing(WindowEvent e) {
                     if (!main.isSystemTrayInitialized()) {
-                        log.info("System tray not available, exitting...");
+                        log.info("System tray not available, exiting...");
                         System.exit(0);
                     }
 

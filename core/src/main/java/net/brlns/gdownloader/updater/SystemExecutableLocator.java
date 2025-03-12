@@ -31,7 +31,7 @@ import net.brlns.gdownloader.util.Nullable;
  * For these platforms, we need to fall back to system binaries.
  */
 @Slf4j
-public final class PlatformExecutableLocator {
+public final class SystemExecutableLocator {
 
     @Nullable
     public static File locateExecutable(String executableName) {
