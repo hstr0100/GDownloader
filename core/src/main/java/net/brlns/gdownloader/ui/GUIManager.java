@@ -234,6 +234,11 @@ public final class GUIManager {
             appWindow.addWindowListener(new WindowAdapter() {
                 @Override
                 public void windowClosing(WindowEvent e) {
+                    if (!main.isSystemTrayInitialized()) {
+                        log.info("System tray not available, exitting...");
+                        System.exit(0);
+                    }
+
                     adjustMessageWindowPosition();
                 }
 

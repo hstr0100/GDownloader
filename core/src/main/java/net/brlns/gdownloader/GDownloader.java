@@ -143,7 +143,10 @@ public final class GDownloader {
     @Getter
     private static boolean portable;
 
-    private final SystemTray tray;
+    @Getter
+    private boolean systemTrayInitialized;
+
+    private SystemTray tray;
     private TrayIcon trayIcon = null;
 
     private File configFile;
@@ -237,8 +240,6 @@ public final class GDownloader {
             setUIFontSize(config.getFontSize());
         }
 
-        tray = SystemTray.getSystemTray();
-
         try {
             clipboardManager = new ClipboardManager(this);
             clipboardManager.init();
@@ -248,19 +249,31 @@ public final class GDownloader {
             guiManager = new GUIManager(this);
 
             // Register to the system tray
-            Image image = Toolkit.getDefaultToolkit().createImage(
-                getClass().getResource(guiManager.getCurrentTrayIconPath()));
+            if (SystemTray.isSupported()) {
+                try {
+                    tray = SystemTray.getSystemTray();
 
-            trayIcon = new TrayIcon(image, REGISTRY_APP_NAME, buildPopupMenu());
-            trayIcon.setImageAutoSize(true);
+                    Image image = Toolkit.getDefaultToolkit().createImage(
+                        getClass().getResource(guiManager.getCurrentTrayIconPath()));
 
-            trayIcon.addActionListener((ActionEvent e) -> {
-                if (initialized) {
-                    guiManager.createAndShowGUI();
+                    trayIcon = new TrayIcon(image, REGISTRY_APP_NAME, buildPopupMenu());
+                    trayIcon.setImageAutoSize(true);
+
+                    trayIcon.addActionListener((ActionEvent e) -> {
+                        if (initialized) {
+                            guiManager.createAndShowGUI();
+                        }
+                    });
+
+                    tray.add(trayIcon);
+
+                    systemTrayInitialized = true;
+                } catch (AWTException e) {
+                    handleException(e);
                 }
-            });
-
-            tray.add(trayIcon);
+            } else {
+                log.error("System tray not supported? did you run this on a calculator?");
+            }
 
             updaters.add(new SelfUpdater(this));
             updaters.add(new YtDlpUpdater(this));
@@ -301,8 +314,6 @@ public final class GDownloader {
             globalThreadPool.submitWithPriority(() -> {
                 clearCache();
             }, 100);
-
-            // SysTray is daemon and will hold the program open after main exits.
         } catch (Exception e) {
             handleException(e);
         }
@@ -1234,80 +1245,76 @@ public final class GDownloader {
         System.setProperty("sun.java2d.uiScale", String.valueOf(uiScale));// Does not accept double
         System.setProperty("sun.java2d.opengl", !disableHWAccel && !isLinuxAndAmdGpu() ? "true" : "false");
 
-        if (SystemTray.isSupported()) {
-            log.info("Starting...");
+        log.info("Starting...");
 
-            try {
-                UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-            } catch (Exception e) {
-                // Default to Java's look and feel
-            }
-
-            try {
-                Desktop.getDesktop().enableSuddenTermination();
-                Desktop.getDesktop().setQuitStrategy(QuitStrategy.CLOSE_ALL_WINDOWS);
-            } catch (Exception e) {
-                // Not windows
-            }
-
-            try {
-                GlobalScreen.registerNativeHook();
-
-                // Get the logger for "com.github.kwhat.jnativehook" and set the level to off.
-                Logger logger = Logger.getLogger(GlobalScreen.class.getPackage().getName());
-                logger.setLevel(Level.OFF);
-
-                logger.setUseParentHandlers(false);
-            } catch (NativeHookException e) {
-                log.error("There was a problem registering the native hook.", e);
-
-                System.exit(1);
-            }
-
-            GDownloader instance = new GDownloader();
-            GDownloader.instance = instance;
-
-            if (!noGui) {
-                instance.initUi();
-            }
-
-            instance.checkForUpdates(false);
-
-            log.info("{} is initialized", REGISTRY_APP_NAME);
-
-            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-                instance.clearCache();
-
-                try {
-                    GlobalScreen.unregisterNativeHook();
-                } catch (NativeHookException e) {
-                    log.error("There was a problem unregistering the native hook.", e);
-                }
-
-                if (instance.isRestartRequested()) {
-                    instance.launchNewInstance();
-                }
-
-                try {
-                    instance.getDownloadManager().close();
-                } catch (Exception e) {
-                    log.error("There was a problem closing the download manager", e);
-                }
-
-                try {
-                    instance.getMainTicker().shutdownNow();
-                    instance.getGlobalThreadPool().shutdownNow();
-                } catch (Exception e) {
-                    log.error("There was a problem closing thread pools", e);
-                }
-            }));
-
-            Thread.setDefaultUncaughtExceptionHandler((Thread t, Throwable e) -> {
-                GDownloader.handleException(e);
-            });
-        } else {
-            log.error("System tray not supported??? did you run this on a calculator?");
+        try {
+            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+        } catch (Exception e) {
+            // Default to Java's look and feel
         }
+
+        try {
+            Desktop.getDesktop().enableSuddenTermination();
+            Desktop.getDesktop().setQuitStrategy(QuitStrategy.CLOSE_ALL_WINDOWS);
+        } catch (Exception e) {
+            // Not windows
+        }
+
+        try {
+            GlobalScreen.registerNativeHook();
+
+            // Get the logger for "com.github.kwhat.jnativehook" and set the level to off.
+            Logger logger = Logger.getLogger(GlobalScreen.class.getPackage().getName());
+            logger.setLevel(Level.OFF);
+
+            logger.setUseParentHandlers(false);
+        } catch (NativeHookException e) {
+            log.error("There was a problem registering the native hook.", e);
+
+            System.exit(1);
+        }
+
+        GDownloader instance = new GDownloader();
+        GDownloader.instance = instance;
+
+        if (!noGui) {
+            instance.initUi();
+        }
+
+        instance.checkForUpdates(false);
+
+        log.info("{} is initialized", REGISTRY_APP_NAME);
+
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            instance.clearCache();
+
+            try {
+                GlobalScreen.unregisterNativeHook();
+            } catch (NativeHookException e) {
+                log.error("There was a problem unregistering the native hook.", e);
+            }
+
+            if (instance.isRestartRequested()) {
+                instance.launchNewInstance();
+            }
+
+            try {
+                instance.getDownloadManager().close();
+            } catch (Exception e) {
+                log.error("There was a problem closing the download manager", e);
+            }
+
+            try {
+                instance.getMainTicker().shutdownNow();
+                instance.getGlobalThreadPool().shutdownNow();
+            } catch (Exception e) {
+                log.error("There was a problem closing thread pools", e);
+            }
+        }));
+
+        Thread.setDefaultUncaughtExceptionHandler((Thread t, Throwable e) -> {
+            GDownloader.handleException(e);
+        });
     }
 
     public static void setUIFont(FontUIResource fontResource) {

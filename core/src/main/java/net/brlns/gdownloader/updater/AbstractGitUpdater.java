@@ -157,6 +157,15 @@ public abstract class AbstractGitUpdater {
             } else {
                 log.error("{} not installed natively, falling back to portable installation managed by GDownloader", getRepo());
             }
+        } else {
+            if (this instanceof YtDlpUpdater
+                && main.getConfig().isImpersonateBrowser()
+                && (ArchVersionEnum.getArchVersion() == ArchVersionEnum.LINUX_ARM
+                || ArchVersionEnum.getArchVersion() == ArchVersionEnum.LINUX_ARM64)) {
+                log.error("Browser Impersonation is not available on this platform. Please install yt-dlp"
+                    + " with curl_cffi using: \'pip install yt-dlp[default,curl_cffi]\'"
+                    + " and enable \'Prefer System yt-dlp Installation\' under \'Download Settings\'");
+            }
         }
 
         if (!main.getConfig().isAutomaticUpdates() && !force) {
