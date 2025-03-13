@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 hstr0100
+ * Copyright (C) 2025 hstr0100
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,18 +22,37 @@ import net.brlns.gdownloader.GDownloader;
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-public class PriorityThreadPoolExecutor extends ThreadPoolExecutor {
+public class PriorityVirtualThreadExecutor {
 
-    public PriorityThreadPoolExecutor(int corePoolSize, int maximumPoolSize, long keepAliveTime, TimeUnit unit) {
-        super(corePoolSize, maximumPoolSize, keepAliveTime, unit, new PriorityBlockingQueue<>());
+    private final ExecutorService virtualThreadExecutor;
+    private final PriorityBlockingQueue<PriorityTask<?>> taskQueue;
+
+    public PriorityVirtualThreadExecutor() {
+        virtualThreadExecutor = Executors.newVirtualThreadPerTaskExecutor();
+        taskQueue = new PriorityBlockingQueue<>();
+
+        Thread dispatcher = new Thread(this::dispatchTasks);
+        dispatcher.setName("PriorityTaskDispatcher");
+        dispatcher.setDaemon(true);
+        dispatcher.start();
     }
 
-    @Override
+    private void dispatchTasks() {
+        while (true) {
+            try {
+                PriorityTask<?> task = taskQueue.take();
+                virtualThreadExecutor.execute(task);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
+            }
+        }
+    }
+
     public <T> Future<T> submit(Callable<T> task) {
         return submitWithPriority(task, 0);
     }
 
-    @Override
     public Future<?> submit(Runnable task) {
         return submitWithPriority(task, null, 0);
     }
@@ -41,7 +60,7 @@ public class PriorityThreadPoolExecutor extends ThreadPoolExecutor {
     public <T> Future<T> submitWithPriority(Callable<T> task, int priority) {
         PriorityTask<T> priorityTask = new PriorityTask<>(task, priority);
 
-        execute(priorityTask);
+        taskQueue.add(priorityTask);
 
         return priorityTask;
     }
@@ -49,7 +68,7 @@ public class PriorityThreadPoolExecutor extends ThreadPoolExecutor {
     public <T> Future<T> submitWithPriority(Runnable task, T result, int priority) {
         PriorityTask<T> priorityTask = new PriorityTask<>(task, result, priority);
 
-        execute(priorityTask);
+        taskQueue.add(priorityTask);
 
         return priorityTask;
     }
@@ -58,23 +77,19 @@ public class PriorityThreadPoolExecutor extends ThreadPoolExecutor {
         return submitWithPriority(task, null, priority);
     }
 
-    public void resize(int newCorePoolSize, int newMaxPoolSize) {
-        int currentMaxPoolSize = getMaximumPoolSize();
+    public void shutdown() {
+        virtualThreadExecutor.shutdown();
+    }
 
-        int tempSize = Math.min(currentMaxPoolSize, newMaxPoolSize);
-
-        setCorePoolSize(tempSize);
-        setMaximumPoolSize(tempSize);
-
-        setMaximumPoolSize(newMaxPoolSize);
-        setCorePoolSize(newCorePoolSize);
+    public void shutdownNow() {
+        virtualThreadExecutor.shutdownNow();
     }
 
     private class PriorityTask<V> extends FutureTask<V> implements Comparable<PriorityTask<V>> {
 
         private final int priority;
 
-        public PriorityTask(Callable<V> callable, int priority) {
+        public PriorityTask(Callable<V> callable, int priorityIn) {
             super(() -> {
                 try {
                     return callable.call();
@@ -84,10 +99,10 @@ public class PriorityThreadPoolExecutor extends ThreadPoolExecutor {
                 }
             });
 
-            this.priority = priority;
+            priority = priorityIn;
         }
 
-        public PriorityTask(Runnable runnable, V result, int priority) {
+        public PriorityTask(Runnable runnable, V result, int priorityIn) {
             super(() -> {
                 try {
                     runnable.run();
@@ -97,7 +112,7 @@ public class PriorityThreadPoolExecutor extends ThreadPoolExecutor {
                 }
             }, result);
 
-            this.priority = priority;
+            priority = priorityIn;
         }
 
         @Override

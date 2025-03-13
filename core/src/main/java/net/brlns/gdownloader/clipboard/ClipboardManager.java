@@ -295,7 +295,7 @@ public class ClipboardManager {
             });
 
             try {
-                futures.get(1l, TimeUnit.MINUTES);
+                futures.get(10l, TimeUnit.MINUTES);
             } catch (InterruptedException | ExecutionException e) {
                 GDownloader.handleException(e);
             } catch (TimeoutException e) {

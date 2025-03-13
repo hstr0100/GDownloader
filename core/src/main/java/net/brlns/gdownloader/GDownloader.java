@@ -113,9 +113,9 @@ import static net.brlns.gdownloader.lang.Language.*;
 // TODO Scrollbar -> faster roll speed in fullscreen
 // TODO Dynamically reorder downloads based on their status or order in queue -> RUNNING, QUEUED, <others>, FAILED
 // TODO Notifications are appearing below the main window when in fullscreen mode.
-// TODO Pack media card UI insertions into batches and run them on a ticker, to avoid freezing the UI when adding a large amount of items.
 // TODO About page
 // TODO Persist previous downloads after a program restart
+// TODO Migrate away from AWT event listeners; they start throwing StackOverflow errors all over the place if we attempt to load thousands of items.
 /**
  * GDownloader - GUI wrapper for yt-dlp
  *
@@ -171,7 +171,7 @@ public final class GDownloader {
     private boolean initialized = false;
 
     @Getter
-    private final PriorityThreadPoolExecutor globalThreadPool;
+    private final PriorityVirtualThreadExecutor globalThreadPool;
 
     @Getter(AccessLevel.PRIVATE)
     private final ScheduledExecutorService mainTicker;
@@ -221,10 +221,8 @@ public final class GDownloader {
             printDebugInformation();
         }
 
-        int threads = calculateThreadPoolSize(config);
-        globalThreadPool = new PriorityThreadPoolExecutor(
-            threads, threads, 0L, TimeUnit.MILLISECONDS);
-        log.info("Started global thread pool with {} threads", threads);
+        globalThreadPool = new PriorityVirtualThreadExecutor();
+        log.info("Started global virtual-thread pool");
 
         mainTicker = Executors.newScheduledThreadPool(1);
 
@@ -319,18 +317,6 @@ public final class GDownloader {
         } catch (Exception e) {
             handleException(e);
         }
-    }
-
-    private int calculateThreadPoolSize(Settings config) {
-        int cores = Runtime.getRuntime().availableProcessors();
-
-        int extraThreads = 1;
-        // We add up to 4 extra threads for clipboard management and the updater.
-        if (config.isMonitorClipboardForLinks()) {
-            extraThreads = Math.clamp(cores, 1, 4);
-        }
-
-        return config.getMaxSimultaneousDownloads() + extraThreads;
     }
 
     public void clearCache() {
@@ -667,19 +653,6 @@ public final class GDownloader {
 
                 if (config.isDebugMode()) {
                     log.debug("Cached browser changed to {}", configIn.getBrowser());
-                }
-            }
-
-            if (globalThreadPool != null) {
-                int threads = calculateThreadPoolSize(configIn);
-
-                if (globalThreadPool.getCorePoolSize() != threads
-                    || globalThreadPool.getMaximumPoolSize() != threads) {
-                    globalThreadPool.resize(threads, threads);
-
-                    if (config.isDebugMode()) {
-                        log.debug("Resized global thread pool to {} threads", threads);
-                    }
                 }
             }
 

@@ -17,7 +17,6 @@
 package net.brlns.gdownloader.ui;
 
 import java.awt.Color;
-import java.awt.Dimension;
 import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
 import java.awt.Rectangle;
@@ -25,17 +24,17 @@ import java.awt.image.BufferedImage;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
-import javax.swing.JPanel;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
-import net.brlns.gdownloader.ui.custom.CustomDynamicLabel;
-import net.brlns.gdownloader.ui.custom.CustomProgressBar;
-import net.brlns.gdownloader.ui.custom.CustomThumbnailPanel;
 import net.brlns.gdownloader.ui.menu.IMenuEntry;
 import net.brlns.gdownloader.util.collection.ConcurrentLinkedHashMap;
 
 import static net.brlns.gdownloader.ui.GUIManager.runOnEDT;
+import static net.brlns.gdownloader.ui.MediaCard.*;
+import static net.brlns.gdownloader.ui.MediaCard.UpdateType.*;
+import net.brlns.gdownloader.ui.custom.CustomMediaCardUI;
+import net.brlns.gdownloader.util.Nullable;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -46,13 +45,20 @@ public class MediaCard {
 
     private final int id;
 
-    private final JPanel card;
-    private final Dimension cardMaximumSize;
-    private final CustomDynamicLabel mediaLabel;
-    private final CustomThumbnailPanel thumbnailPanel;
-    private final CustomProgressBar progressBar;
+    @Nullable
+    private CustomMediaCardUI ui;
 
     private double percentage = 0;
+    private double scale = 0;
+    private String tooltipText;
+    private String thumbnailTooltipText;
+    private String[] labelText;
+    private String progressBarText;
+    private Color progressBarBackgroundColor;
+    private Color progressBarTextColor;
+    private BufferedImage thumbnailImage;
+    private long thumbnailDuration;
+    private DownloadTypeEnum placeholderIconType;
 
     private Runnable onLeftClick;
     private Map<String, IMenuEntry> rightClickMenu = new ConcurrentLinkedHashMap<>();
@@ -73,6 +79,11 @@ public class MediaCard {
         }
     }
 
+    public void setUi(CustomMediaCardUI uiIn) {
+        ui = uiIn;
+        updateUI(ALL);
+    }
+
     public void adjustScale(int panelWidth) {
         GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
         GraphicsDevice gs = ge.getDefaultScreenDevice();
@@ -82,78 +93,134 @@ public class MediaCard {
         double targetWidth = screenWidth * 0.9;
         double scaleFactor = (panelWidth >= targetWidth) ? 1.2 : 1;
 
-        scale(scaleFactor);
+        scale = scaleFactor;
+        updateUI(SCALE);
     }
 
-    private void scale(double factor) {
-        Dimension thumbDimension = new Dimension(
-            (int)(MediaCard.THUMBNAIL_WIDTH * factor),
-            (int)(MediaCard.THUMBNAIL_HEIGHT * factor));
-
-        Dimension cardDimension = new Dimension(
-            (int)(cardMaximumSize.getWidth() * factor),
-            (int)(cardMaximumSize.getHeight() * factor));
-
-        runOnEDT(() -> {
-            card.setMaximumSize(cardDimension);
-            thumbnailPanel.setPreferredSize(thumbDimension);
-            thumbnailPanel.setMinimumSize(thumbDimension);
-        });
+    public void setPlaceholderIcon(DownloadTypeEnum downloadTypeIn) {
+        placeholderIconType = downloadTypeIn;
+        updateUI(PLACEHOLDER_ICON);
     }
 
-    public void setPlaceholderIcon(DownloadTypeEnum downloadType) {
-        runOnEDT(() -> {
-            thumbnailPanel.setPlaceholderIcon(downloadType);
-        });
+    public void setTooltip(String tooltipTextIn) {
+        tooltipText = tooltipTextIn;
+        updateUI(TOOLTIP);
     }
 
-    public void setTooltip(String tooltipText) {
-        runOnEDT(() -> {
-            mediaLabel.setToolTipText(tooltipText);
-        });
+    public void setThumbnailTooltip(String tooltipTextIn) {
+        thumbnailTooltipText = tooltipTextIn;
+        updateUI(THUMBNAIL_TOOLTIP);
     }
 
-    public void setThumbnailTooltip(String tooltipText) {
-        runOnEDT(() -> {
-            thumbnailPanel.setToolTipText(tooltipText);
-        });
-    }
-
-    public void setLabel(String... label) {
-        runOnEDT(() -> {
-            mediaLabel.setFullText(label);
-        });
+    public void setLabel(String... labelIn) {
+        labelText = labelIn;
+        updateUI(LABEL_TEXT);
     }
 
     public void setPercentage(double percentageIn) {
         percentage = percentageIn;
+        updateUI(PROGRESS_BAR);
+    }
+
+    public void setProgressBarText(String textIn) {
+        progressBarText = textIn;
+        updateUI(PROGRESS_BAR);
+    }
+
+    public void setProgressBarTextAndColors(String textIn, Color backgroundColorIn) {
+        setProgressBarTextAndColors(textIn, backgroundColorIn, Color.WHITE);
+    }
+
+    public void setProgressBarTextAndColors(String textIn, Color backgroundColorIn, Color textColorIn) {
+        progressBarText = textIn;
+        progressBarBackgroundColor = backgroundColorIn;
+        progressBarTextColor = textColorIn;
+        updateUI(PROGRESS_BAR);
+    }
+
+    public void setThumbnailAndDuration(BufferedImage imgIn, long durationIn) {
+        thumbnailImage = imgIn;
+        thumbnailDuration = durationIn;
+        updateUI(THUMBNAIL_IMAGE);
+    }
+
+    public void updateUI(UpdateType updateType) {
+        if (ui == null) {
+            return; // No UI available, skip updates
+        }
 
         runOnEDT(() -> {
-            progressBar.setValue((int)percentageIn);
+            switch (updateType) {
+                case ALL -> {
+                    if (labelText != null) {
+                        ui.updateLabel(labelText);
+                    }
+                    if (scale != 0) {
+                        ui.updateScale(scale);
+                    }
+                    if (tooltipText != null) {
+                        ui.updateTooltip(tooltipText);
+                    }
+                    if (thumbnailTooltipText != null) {
+                        ui.updateThumbnailTooltip(thumbnailTooltipText);
+                    }
+                    if (progressBarText != null) {
+                        ui.updateProgressBar(percentage, progressBarText, progressBarBackgroundColor, progressBarTextColor);
+                    }
+                    if (thumbnailImage != null) {
+                        ui.updateThumbnail(thumbnailImage, thumbnailDuration);
+                    }
+                    if (placeholderIconType != null) {
+                        ui.updatePlaceholderIcon(placeholderIconType);
+                    }
+                }
+                case LABEL_TEXT -> {
+                    if (labelText != null) {
+                        ui.updateLabel(labelText);
+                    }
+                }
+                case SCALE -> {
+                    if (scale != 0) {
+                        ui.updateScale(scale);
+                    }
+                }
+                case TOOLTIP -> {
+                    if (tooltipText != null) {
+                        ui.updateTooltip(tooltipText);
+                    }
+                }
+                case THUMBNAIL_TOOLTIP -> {
+                    if (thumbnailTooltipText != null) {
+                        ui.updateThumbnailTooltip(thumbnailTooltipText);
+                    }
+                }
+                case PROGRESS_BAR -> {
+                    if (progressBarText != null) {
+                        ui.updateProgressBar(percentage, progressBarText, progressBarBackgroundColor, progressBarTextColor);
+                    }
+                }
+                case THUMBNAIL_IMAGE -> {
+                    if (thumbnailImage != null) {
+                        ui.updateThumbnail(thumbnailImage, thumbnailDuration);
+                    }
+                }
+                case PLACEHOLDER_ICON -> {
+                    if (placeholderIconType != null) {
+                        ui.updatePlaceholderIcon(placeholderIconType);
+                    }
+                }
+            }
         });
     }
 
-    public void setProgressBarText(String text) {
-        runOnEDT(() -> {
-            progressBar.setString(text);
-        });
-    }
-
-    public void setProgressBarTextAndColors(String text, Color backgroundColor) {
-        setProgressBarTextAndColors(text, backgroundColor, Color.WHITE);
-    }
-
-    public void setProgressBarTextAndColors(String text, Color backgroundColor, Color textColor) {
-        runOnEDT(() -> {
-            progressBar.setString(text);
-            progressBar.setForeground(backgroundColor);
-            progressBar.setTextColor(textColor);
-        });
-    }
-
-    public void setThumbnailAndDuration(BufferedImage img, long duration) {
-        runOnEDT(() -> {
-            thumbnailPanel.setImageAndDuration(img, duration);
-        });
+    public static enum UpdateType {
+        ALL,
+        SCALE,
+        LABEL_TEXT,
+        TOOLTIP,
+        THUMBNAIL_TOOLTIP,
+        PROGRESS_BAR,
+        THUMBNAIL_IMAGE,
+        PLACEHOLDER_ICON
     }
 }

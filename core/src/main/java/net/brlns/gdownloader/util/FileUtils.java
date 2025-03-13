@@ -18,6 +18,7 @@ package net.brlns.gdownloader.util;
 
 import java.io.*;
 import java.nio.file.Files;
+import java.util.concurrent.locks.ReentrantLock;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
 import org.slf4j.helpers.FormattingTuple;
@@ -70,7 +71,7 @@ public final class FileUtils {
         }
     }
 
-    private static final Object _logSync = new Object();
+    private static final ReentrantLock logLock = new ReentrantLock();
 
     public static void logToFile(File baseDir, String fileName, String text, Object... replacements) {
         FormattingTuple ft = MessageFormatter.arrayFormat(text, replacements);
@@ -79,15 +80,16 @@ public final class FileUtils {
         File resolvedFile = baseDir.toPath()
             .resolve(fileName + ".txt").toFile();
 
-        synchronized (_logSync) {
-            try (FileWriter fw = new FileWriter(resolvedFile, true);
-                 PrintWriter pw = new PrintWriter(fw)) {
-                for (String str : message.split(System.lineSeparator())) {
-                    pw.println(str);
-                }
-            } catch (IOException e) {
-                log.warn("Cannot log to file", e);
+        logLock.lock();
+        try (FileWriter fw = new FileWriter(resolvedFile, true);
+             PrintWriter pw = new PrintWriter(fw)) {
+            for (String str : message.split(System.lineSeparator())) {
+                pw.println(str);
             }
+        } catch (IOException e) {
+            log.warn("Cannot log to file", e);
+        } finally {
+            logLock.unlock();
         }
     }
 
