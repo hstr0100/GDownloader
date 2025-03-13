@@ -130,6 +130,10 @@ public class Settings {
     @JsonProperty("MaxDownloadRetries")
     private int maxDownloadRetries = 10;
 
+    //TODO: UI
+    @JsonProperty("MaxFragmentRetries")
+    private int maxFragmentRetries = 10;
+
     @JsonProperty("DownloadAudio")
     private boolean downloadAudio = true;
 

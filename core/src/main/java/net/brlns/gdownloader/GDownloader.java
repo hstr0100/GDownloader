@@ -115,6 +115,7 @@ import static net.brlns.gdownloader.lang.Language.*;
 // TODO Notifications are appearing below the main window when in fullscreen mode.
 // TODO Pack media card UI insertions into batches and run them on a ticker, to avoid freezing the UI when adding a large amount of items.
 // TODO About page
+// TODO Persist previous downloads after a program restart
 /**
  * GDownloader - GUI wrapper for yt-dlp
  *
@@ -269,6 +270,7 @@ public final class GDownloader {
 
                     systemTrayInitialized = true;
                 } catch (AWTException e) {
+                    log.error("Error initializing the system tray");
                     handleException(e);
                 }
             } else {
@@ -441,7 +443,7 @@ public final class GDownloader {
             }
 
             if (!downloadManager.isMainDownloaderInitialized()) {
-                log.error("Failed to initialize YT-DLP, the program cannot continue. Exiting...");
+                log.error("Failed to initialize yt-dlp, the program cannot continue. Exiting...");
 
                 if (!userInitiated) {
                     System.exit(0);
@@ -1052,7 +1054,7 @@ public final class GDownloader {
     public static final void handleException(Throwable e, boolean displayToUser) {
         log.error("An exception has been caught", e);
 
-        if (displayToUser) {
+        if (displayToUser && instance != null) {
             instance.getGuiManager().showMessage(
                 l10n("gui.error_popup_title"),
                 l10n("gui.error_popup", e.getLocalizedMessage()),

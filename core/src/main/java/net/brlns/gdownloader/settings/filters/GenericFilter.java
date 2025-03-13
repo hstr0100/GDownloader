@@ -101,7 +101,7 @@ public class GenericFilter extends AbstractUrlFilter {
                         if (config.isAutoDownloadRetry()) {
                             arguments.addAll(List.of(
                                 "--fragment-retries",
-                                "10"
+                                String.valueOf(config.getMaxFragmentRetries())
                             ));
                         }
 

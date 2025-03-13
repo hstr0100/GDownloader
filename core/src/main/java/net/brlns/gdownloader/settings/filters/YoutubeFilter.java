@@ -68,15 +68,7 @@ public class YoutubeFilter extends GenericFilter {
                             ));
                         }
                     }
-                    case VIDEO -> {
-                        if (isEmbedThumbnailAndMetadata()) {
-                            arguments.addAll(List.of(
-                                "--parse-metadata",
-                                "description:(?s)(?P<meta_comment>.+)"
-                            ));
-                        }
-                    }
-                    case AUDIO -> {
+                    case VIDEO, AUDIO -> {
                         if (isEmbedThumbnailAndMetadata()) {
                             arguments.addAll(List.of(
                                 "--parse-metadata",
