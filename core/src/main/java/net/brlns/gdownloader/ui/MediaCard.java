@@ -27,14 +27,13 @@ import java.util.function.Supplier;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
+import net.brlns.gdownloader.ui.custom.CustomMediaCardUI;
 import net.brlns.gdownloader.ui.menu.IMenuEntry;
+import net.brlns.gdownloader.util.Nullable;
 import net.brlns.gdownloader.util.collection.ConcurrentLinkedHashMap;
 
 import static net.brlns.gdownloader.ui.GUIManager.runOnEDT;
-import static net.brlns.gdownloader.ui.MediaCard.*;
 import static net.brlns.gdownloader.ui.MediaCard.UpdateType.*;
-import net.brlns.gdownloader.ui.custom.CustomMediaCardUI;
-import net.brlns.gdownloader.util.Nullable;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
