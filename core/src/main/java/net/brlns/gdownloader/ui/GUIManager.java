@@ -1449,15 +1449,13 @@ public final class GUIManager {
                             } else if (entry.getUpdateType() == CARD_REMOVE) {
                                 CustomMediaCardUI ui = mediaCard.getUi();
                                 if (ui != null) {
-                                    runOnEDT(() -> {
-                                        queuePanel.remove(ui.getCard());
+                                    queuePanel.remove(ui.getCard());
 
-                                        if (mediaCards.isEmpty()) {
-                                            queuePanel.add(getOrCreateEmptyQueuePanel(), BorderLayout.CENTER);
-                                        }
+                                    if (mediaCards.isEmpty()) {
+                                        queuePanel.add(getOrCreateEmptyQueuePanel(), BorderLayout.CENTER);
+                                    }
 
-                                        appWindow.removeComponentListener(ui.getMediaNameLabel().getListener());
-                                    });
+                                    appWindow.removeComponentListener(ui.getMediaNameLabel().getListener());
                                 }
                             }
                         }
