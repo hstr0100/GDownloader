@@ -364,7 +364,7 @@ public class DownloadManager implements IEvent {
 
                 log.info("Captured {}", inputUrl);
 
-                MediaCard mediaCard = main.getGuiManager().addMediaCard("");
+                MediaCard mediaCard = main.getGuiManager().addMediaCard(filteredUrl);
 
                 int downloadId = downloadCounter.incrementAndGet();
 

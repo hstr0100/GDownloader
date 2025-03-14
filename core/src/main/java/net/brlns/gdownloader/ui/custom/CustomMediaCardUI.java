@@ -20,6 +20,7 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.image.BufferedImage;
 import javax.swing.JPanel;
+import javax.swing.SwingUtilities;
 import lombok.Data;
 import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
 
@@ -49,18 +50,22 @@ public class CustomMediaCardUI {
     }
 
     public void updateLabel(String... labelText) {
+        assert SwingUtilities.isEventDispatchThread();
         mediaNameLabel.setFullText(labelText);
     }
 
     public void updateTooltip(String tooltipText) {
+        assert SwingUtilities.isEventDispatchThread();
         mediaNameLabel.setToolTipText(tooltipText);
     }
 
     public void updateThumbnailTooltip(String tooltipText) {
+        assert SwingUtilities.isEventDispatchThread();
         thumbnailPanel.setToolTipText(tooltipText);
     }
 
     public void updateProgressBar(double percentage, String text, Color backgroundColor, Color textColor) {
+        assert SwingUtilities.isEventDispatchThread();
         progressBar.setValue((int)percentage);
         progressBar.setString(text);
         progressBar.setForeground(backgroundColor);
@@ -68,14 +73,17 @@ public class CustomMediaCardUI {
     }
 
     public void updateThumbnail(BufferedImage img, long duration) {
+        assert SwingUtilities.isEventDispatchThread();
         thumbnailPanel.setImageAndDuration(img, duration);
     }
 
     public void updatePlaceholderIcon(DownloadTypeEnum downloadType) {
+        assert SwingUtilities.isEventDispatchThread();
         thumbnailPanel.setPlaceholderIcon(downloadType);
     }
 
     public void updateScale(double factor) {
+        assert SwingUtilities.isEventDispatchThread();
         Dimension thumbDimension = new Dimension(
             (int)(THUMBNAIL_WIDTH * factor),
             (int)(THUMBNAIL_HEIGHT * factor));
