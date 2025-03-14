@@ -93,9 +93,9 @@ public class PriorityVirtualThreadExecutor {
             super(() -> {
                 try {
                     return callable.call();
-                } catch (Exception e) {
-                    GDownloader.handleException(e);
-                    throw e;
+                } catch (Throwable t) {// Assertions are not exceptions. If we don't catch them here, they're gone.
+                    GDownloader.handleException(t);
+                    throw t;
                 }
             });
 
@@ -106,9 +106,9 @@ public class PriorityVirtualThreadExecutor {
             super(() -> {
                 try {
                     runnable.run();
-                } catch (Exception e) {
-                    GDownloader.handleException(e);
-                    throw e;
+                } catch (Throwable t) {
+                    GDownloader.handleException(t);
+                    throw t;
                 }
             }, result);
 

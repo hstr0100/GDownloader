@@ -24,6 +24,7 @@ import java.awt.datatransfer.Transferable;
 import java.net.URI;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -268,7 +269,14 @@ public class ClipboardManager {
                 int captured = 0;
 
                 List<Boolean> results = list.stream()
-                    .map(CompletableFuture::join)
+                    .map(future -> {
+                        try {
+                            return future.join();
+                        } catch (CompletionException e) {
+                            GDownloader.handleException(e.getCause());
+                            return false;
+                        }
+                    })
                     .collect(Collectors.toList());
 
                 for (boolean result : results) {

@@ -1214,7 +1214,7 @@ public final class GUIManager {
 
             runOnEDT(() -> {
                 if (log.isDebugEnabled()) {
-                    log.info("Items in queue: {}", mediaCardUIUpdateQueue.size());
+                    log.debug("Items in queue: {}", mediaCardUIUpdateQueue.size());
                 }
 
                 boolean scrollToBottom = false;
@@ -1469,10 +1469,6 @@ public final class GUIManager {
                     currentlyUpdatingMediaCards.set(false);
 
                     if (mediaCardUIUpdateQueue.isEmpty()) {
-                        if (log.isDebugEnabled()) {
-                            log.info("Update queue has cleared");
-                        }
-
                         queuePanel.setIgnoreRepaint(false);
 
                         setUpAppWindow();

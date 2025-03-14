@@ -389,7 +389,7 @@ public final class GDownloader {
                     }
                 }, 5);
             } else {
-                log.info("Updater " + updater.getClass().getName() + " is not supported in this platform or runtime method.");
+                log.info("Updater " + updater.getClass().getName() + " is not supported on this platform or runtime method.");
                 latch.countDown();
             }
         }
