@@ -59,6 +59,9 @@ public class Settings {
     @JsonProperty("Language")
     private LanguageEnum language = LanguageEnum.ENGLISH;
 
+    @JsonProperty("AutoScrollToBottom")
+    private boolean autoScrollToBottom = true;
+
     @Deprecated
     @JsonProperty("ReadCookies")
     private boolean readCookies = false;

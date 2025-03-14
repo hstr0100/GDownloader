@@ -583,6 +583,13 @@ public class SettingsPanel {
         );
 
         addCheckBox(panel, gbcPanel,
+            "settings.auto_scroll_to_bottom",
+            settings::isAutoScrollToBottom,
+            settings::setAutoScrollToBottom,
+            false
+        );
+
+        addCheckBox(panel, gbcPanel,
             "settings.use_system_font",
             settings::isUseSystemFont,
             settings::setUseSystemFont,

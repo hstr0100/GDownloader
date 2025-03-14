@@ -1217,6 +1217,8 @@ public final class GUIManager {
                     log.info("Items in queue: {}", mediaCardUIUpdateQueue.size());
                 }
 
+                boolean scrollToBottom = false;
+
                 queuePanel.setIgnoreRepaint(true);
 
                 try {
@@ -1446,6 +1448,8 @@ public final class GUIManager {
 
                                 queuePanel.remove(getOrCreateEmptyQueuePanel());
                                 queuePanel.add(card);
+
+                                scrollToBottom = true;
                             } else if (entry.getUpdateType() == CARD_REMOVE) {
                                 CustomMediaCardUI ui = mediaCard.getUi();
                                 if (ui != null) {
@@ -1465,6 +1469,10 @@ public final class GUIManager {
                     currentlyUpdatingMediaCards.set(false);
 
                     if (mediaCardUIUpdateQueue.isEmpty()) {
+                        if (log.isDebugEnabled()) {
+                            log.info("Update queue has cleared");
+                        }
+
                         queuePanel.setIgnoreRepaint(false);
 
                         setUpAppWindow();
@@ -1473,10 +1481,12 @@ public final class GUIManager {
                             appWindow.setVisible(true);
                         }
 
+                        if (main.getConfig().isAutoScrollToBottom() && scrollToBottom) {
+                            scrollToBottom(queueScrollPane);
+                        }
+
                         appWindow.revalidate();
                         appWindow.repaint();
-
-                        scrollToBottom(queueScrollPane);
                     }
                 }
             });
