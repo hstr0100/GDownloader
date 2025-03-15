@@ -16,6 +16,7 @@
  */
 package net.brlns.gdownloader.downloader;
 
+import jakarta.annotation.Nullable;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
@@ -39,7 +40,7 @@ import net.brlns.gdownloader.ui.menu.IMenuEntry;
 import net.brlns.gdownloader.ui.menu.RunnableMenuEntry;
 import net.brlns.gdownloader.util.DirectoryDeduplicator;
 import net.brlns.gdownloader.util.DirectoryUtils;
-import net.brlns.gdownloader.util.Nullable;
+import net.brlns.gdownloader.util.FileUtils;
 import net.brlns.gdownloader.util.Pair;
 import net.brlns.gdownloader.util.StringUtils;
 
@@ -217,6 +218,7 @@ public class GalleryDlDownloader extends AbstractDownloader {
                         log.info("Created directory: {}", targetPath);
                     } else {
                         Files.createDirectories(targetPath.getParent());
+                        targetPath = FileUtils.ensureUniqueFileName(targetPath);
                         Files.move(path, targetPath, StandardCopyOption.REPLACE_EXISTING);
                         //entry.getFinalMediaFiles().add(targetPath.toFile());
                         log.info("Moved file: {}", targetPath);

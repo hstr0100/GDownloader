@@ -16,6 +16,7 @@
  */
 package net.brlns.gdownloader.updater;
 
+import jakarta.annotation.Nullable;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -25,7 +26,6 @@ import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.util.ArchiveUtils;
 import net.brlns.gdownloader.util.DirectoryUtils;
-import net.brlns.gdownloader.util.Nullable;
 
 /**
  * @author Gabriel / hstr0100 / vertx010

@@ -16,12 +16,12 @@
  */
 package net.brlns.gdownloader.ui.custom;
 
+import jakarta.annotation.Nullable;
 import java.awt.Color;
 import java.awt.Graphics;
 import javax.swing.JButton;
 import lombok.Getter;
 import lombok.Setter;
-import net.brlns.gdownloader.util.Nullable;
 
 /**
  * @author Gabriel / hstr0100 / vertx010

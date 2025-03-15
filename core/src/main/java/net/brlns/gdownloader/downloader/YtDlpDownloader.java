@@ -16,6 +16,7 @@
  */
 package net.brlns.gdownloader.downloader;
 
+import jakarta.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -44,7 +45,7 @@ import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
 import net.brlns.gdownloader.ui.menu.IMenuEntry;
 import net.brlns.gdownloader.ui.menu.RunnableMenuEntry;
 import net.brlns.gdownloader.util.DirectoryUtils;
-import net.brlns.gdownloader.util.Nullable;
+import net.brlns.gdownloader.util.FileUtils;
 import net.brlns.gdownloader.util.Pair;
 
 import static net.brlns.gdownloader.downloader.enums.DownloadFlagsEnum.*;
@@ -287,6 +288,7 @@ public class YtDlpDownloader extends AbstractDownloader {
                         log.info("Created directory: {}", targetPath);
                     } else {
                         Files.createDirectories(targetPath.getParent());
+                        targetPath = FileUtils.ensureUniqueFileName(targetPath);
                         Files.move(path, targetPath, StandardCopyOption.REPLACE_EXISTING);
                         entry.getFinalMediaFiles().add(targetPath.toFile());
                         updateRightClickOptions(path, quality, rightClickOptions, entry);

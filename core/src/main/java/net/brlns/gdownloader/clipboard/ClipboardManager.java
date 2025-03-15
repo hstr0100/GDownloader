@@ -16,6 +16,7 @@
  */
 package net.brlns.gdownloader.clipboard;
 
+import jakarta.annotation.Nullable;
 import java.awt.Toolkit;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.DataFlavor;
@@ -38,7 +39,6 @@ import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.ui.GUIManager;
-import net.brlns.gdownloader.util.Nullable;
 import net.brlns.gdownloader.util.collection.ExpiringSet;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -81,9 +81,6 @@ public class ClipboardManager {
         //TODO: X11/Wayland. X11 will be a mess.
         clipboardListeners.add(new MaybeChangedClipboardListener());
         clipboardListeners.add(new CtrlCNativeClipboardListener());
-    }
-
-    public void init() {
     }
 
     public void unblock() {

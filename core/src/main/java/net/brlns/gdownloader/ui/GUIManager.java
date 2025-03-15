@@ -16,6 +16,7 @@
  */
 package net.brlns.gdownloader.ui;
 
+import jakarta.annotation.Nullable;
 import java.awt.*;
 import java.awt.dnd.DragSource;
 import java.awt.dnd.DropTarget;
@@ -61,7 +62,6 @@ import net.brlns.gdownloader.ui.menu.RunnableMenuEntry;
 import net.brlns.gdownloader.ui.themes.ThemeProvider;
 import net.brlns.gdownloader.ui.themes.UIColors;
 import net.brlns.gdownloader.updater.AbstractGitUpdater;
-import net.brlns.gdownloader.util.Nullable;
 import net.brlns.gdownloader.util.collection.ConcurrentLinkedHashSet;
 
 import static net.brlns.gdownloader.lang.Language.*;
@@ -1206,287 +1206,287 @@ public final class GUIManager {
     }
 
     private void processMediaCardQueue() {
-        if (!mediaCardUIUpdateQueue.isEmpty()) {
-            if (currentlyUpdatingMediaCards.get()
-                || (System.currentTimeMillis() - lastMediaCardQueueUpdate.get()) < 100) {
-                return;// Give the EDT some room for breathing
+        if (mediaCardUIUpdateQueue.isEmpty()
+            || currentlyUpdatingMediaCards.get()
+            // Give the EDT some room for breathing
+            || (System.currentTimeMillis() - lastMediaCardQueueUpdate.get()) < 100) {
+            return;
+        }
+
+        runOnEDT(() -> {
+            if (log.isDebugEnabled()) {
+                log.debug("Items in queue: {}", mediaCardUIUpdateQueue.size());
             }
 
-            runOnEDT(() -> {
-                if (log.isDebugEnabled()) {
-                    log.debug("Items in queue: {}", mediaCardUIUpdateQueue.size());
-                }
+            boolean scrollToBottom = false;
 
-                boolean scrollToBottom = false;
+            queuePanel.setIgnoreRepaint(true);
 
-                queuePanel.setIgnoreRepaint(true);
+            try {
+                int count = 0;
+                while (!mediaCardUIUpdateQueue.isEmpty()) {
+                    if (++count == 256) {// Process in batches of 255 items every 100ms
+                        break;
+                    }
 
-                try {
-                    int count = 0;
-                    while (!mediaCardUIUpdateQueue.isEmpty()) {
-                        if (++count == 256) {// Process in batches of 255 items every 100ms
-                            break;
-                        }
+                    MediaCardUIUpdateEntry entry = mediaCardUIUpdateQueue.poll();
+                    if (entry != null) {
+                        MediaCard mediaCard = entry.getMediaCard();
 
-                        MediaCardUIUpdateEntry entry = mediaCardUIUpdateQueue.poll();
-                        if (entry != null) {
-                            MediaCard mediaCard = entry.getMediaCard();
-
-                            if (entry.getUpdateType() == CARD_ADD) {
-                                JPanel card = new JPanel() {
-                                    @Override
-                                    public Dimension getMaximumSize() {
-                                        int availableWidth = appWindow.getWidth() - getInsets().left - getInsets().right;
-                                        return new Dimension(availableWidth, super.getMaximumSize().height);
-                                    }
-                                };
-                                card.setLayout(new GridBagLayout());
-                                card.setBorder(BorderFactory.createLineBorder(color(BACKGROUND), 5));
-                                card.setBackground(color(MEDIA_CARD));
-
-                                int fontSize = main.getConfig().getFontSize();
-                                Dimension cardDimension = new Dimension(Integer.MAX_VALUE, fontSize >= 15 ? 150 + (fontSize - 15) * 3 : 135);
-                                card.setMaximumSize(cardDimension);
-
-                                GridBagConstraints gbc = new GridBagConstraints();
-                                gbc.insets = new Insets(10, 10, 10, 10);
-                                gbc.fill = GridBagConstraints.BOTH;
-
-                                // Dragidy-draggy-nub-thingy
-                                JPanel dragPanel = new JPanel(new BorderLayout());
-                                dragPanel.setPreferredSize(new Dimension(24, 24));
-                                dragPanel.setMinimumSize(new Dimension(24, 24));
-                                dragPanel.setMaximumSize(new Dimension(24, 24));
-                                dragPanel.setBackground(new Color(0, 0, 0, 0));
-
-                                ImageIcon dragIcon = loadIcon("/assets/drag.png", ICON, 24);
-                                JLabel dragLabel = new JLabel(dragIcon);
-                                dragLabel.setHorizontalAlignment(SwingConstants.CENTER);
-                                dragPanel.add(dragLabel, BorderLayout.CENTER);
-
-                                gbc.gridx = 0;
-                                gbc.gridy = 0;
-                                gbc.gridheight = 2;
-                                gbc.weightx = 0;
-                                gbc.weighty = 0;
-                                card.add(dragPanel, gbc);
-
-                                // Thumbnail
-                                CustomThumbnailPanel thumbnailPanel = new CustomThumbnailPanel();
-                                thumbnailPanel.setPreferredSize(new Dimension(
-                                    CustomMediaCardUI.THUMBNAIL_WIDTH, CustomMediaCardUI.THUMBNAIL_HEIGHT));
-                                thumbnailPanel.setMinimumSize(new Dimension(
-                                    CustomMediaCardUI.THUMBNAIL_WIDTH, CustomMediaCardUI.THUMBNAIL_HEIGHT));
-                                thumbnailPanel.setBackground(color(MEDIA_CARD_THUMBNAIL));
-                                thumbnailPanel.setLayout(new BorderLayout());
-                                thumbnailPanel.setPlaceholderIcon(DownloadTypeEnum.ALL);
-
-                                gbc.insets = new Insets(10, 0, 10, 0);
-                                gbc.gridx = 1;
-                                gbc.gridy = 0;
-                                gbc.gridheight = 2;
-                                gbc.weightx = 0;
-                                gbc.weighty = 0;
-                                card.add(thumbnailPanel, gbc);
-
-                                CustomDynamicLabel mediaNameLabel = new CustomDynamicLabel();
-                                mediaNameLabel.setForeground(color(FOREGROUND));
-                                gbc.insets = new Insets(10, 10, 10, 10);
-                                gbc.gridx = 2;
-                                gbc.gridy = 0;
-                                gbc.gridheight = 1;
-                                gbc.weightx = 1;
-                                gbc.fill = GridBagConstraints.HORIZONTAL;
-                                gbc.weighty = 0;
-                                card.add(mediaNameLabel, gbc);
-
-                                appWindow.addComponentListener(mediaNameLabel.getListener());
-
-                                CustomProgressBar progressBar = new CustomProgressBar(Color.WHITE);
-                                progressBar.setValue(100);
-                                progressBar.setStringPainted(true);
-                                progressBar.setString(l10n("enums.download_status.queued"));
-                                progressBar.setForeground(Color.GRAY);
-                                progressBar.setBackground(Color.GRAY);
-                                //progressBar.setBorderPainted(false);
-                                progressBar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 15));
-
-                                gbc.gridx = 2;
-                                gbc.gridy = 1;
-                                gbc.weightx = 1;
-                                gbc.weighty = 0;
-                                gbc.fill = GridBagConstraints.BOTH;
-                                card.add(progressBar, gbc);
-
-                                JButton closeButton = createButton(
-                                    loadIcon("/assets/x-mark.png", ICON, 16),
-                                    loadIcon("/assets/x-mark.png", ICON_CLOSE, 16),
-                                    "gui.remove_from_queue.tooltip",
-                                    e -> {
-                                        if (isMediaCardSelected(mediaCard.getId())) {
-                                            deleteSelectedMediaCards();
-                                        }
-
-                                        removeMediaCard(mediaCard.getId());
-                                    }
-                                );
-                                closeButton.setPreferredSize(new Dimension(16, 16));
-
-                                gbc.gridx = 3;
-                                gbc.gridy = 0;
-                                gbc.gridheight = 2;
-                                gbc.weightx = 0;
-                                gbc.weighty = 0;
-                                gbc.anchor = GridBagConstraints.CENTER;
-                                card.add(closeButton, gbc);
-
-                                card.setTransferHandler(new WindowTransferHandler(this));
-
-                                MouseAdapter listener = new MouseAdapter() {
-                                    private long lastClick = System.currentTimeMillis();
-
-                                    @Override
-                                    public void mousePressed(MouseEvent e) {
-                                        if (isMultiSelectMode.get() && selectedMediaCards.size() > 1) {
-                                            return;
-                                        }
-
-                                        Component component = e.getComponent();
-
-                                        if (component.equals(dragLabel)) {
-                                            TransferHandler handler = card.getTransferHandler();
-
-                                            if (handler != null) {// peace of mind
-                                                handler.exportAsDrag(card, e, TransferHandler.MOVE);
-                                            }
-                                        }
-                                    }
-
-                                    @Override
-                                    public void mouseClicked(MouseEvent e) {
-                                        if (SwingUtilities.isLeftMouseButton(e)) {
-                                            MediaCard lastCard = lastSelectedMediaCard.get();
-
-                                            int cardId = mediaCard.getId();
-
-                                            if (e.isControlDown()) {
-                                                isMultiSelectMode.set(true);
-
-                                                if (selectedMediaCards.contains(cardId)) {
-                                                    selectedMediaCards.remove(cardId);
-                                                } else {
-                                                    selectedMediaCards.add(cardId);
-                                                }
-
-                                                updateMediaCardSelectionState();
-                                            } else if (e.isShiftDown() && lastCard != null) {
-                                                isMultiSelectMode.set(true);
-
-                                                selectMediaCardRange(lastCard, mediaCard);
-                                            } else {
-                                                if (e.getClickCount() == 2) {
-                                                    if (mediaCard.getOnLeftClick() != null && (System.currentTimeMillis() - lastClick) > 50) {
-                                                        mediaCard.getOnLeftClick().run();
-
-                                                        lastClick = System.currentTimeMillis();
-                                                    }
-                                                }
-
-                                                selectedMediaCards.replaceAll(Collections.singletonList(cardId));
-                                                lastSelectedMediaCard.set(mediaCard);
-
-                                                updateMediaCardSelectionState();
-                                            }
-                                        } else if (SwingUtilities.isRightMouseButton(e)) {
-                                            List<RightClickMenuEntries> dependents = new ArrayList<>();
-
-                                            if (isMediaCardSelected(mediaCard)) {
-                                                for (int cardId : selectedMediaCards) {
-                                                    MediaCard selected = mediaCards.get(cardId);
-                                                    if (selected == null) {
-                                                        log.error("Cannot find media card, id {}", cardId);
-                                                        continue;
-                                                    }
-
-                                                    if (selected == mediaCard) {
-                                                        continue;
-                                                    }
-
-                                                    dependents.add(RightClickMenuEntries.fromMap(selected.getRightClickMenu()));
-                                                }
-                                            }
-
-                                            showRightClickMenu(card, RightClickMenuEntries.fromMap(mediaCard.getRightClickMenu()),
-                                                dependents, e.getX(), e.getY());
-                                        }
-                                    }
-
-                                    @Override
-                                    public void mouseEntered(MouseEvent e) {
-                                        if (!isMediaCardSelected(mediaCard) && !isMultiSelectMode.get()) {
-                                            card.setBackground(color(MEDIA_CARD_HOVER));
-                                        }
-                                    }
-
-                                    @Override
-                                    public void mouseExited(MouseEvent e) {
-                                        if (!isMediaCardSelected(mediaCard) && !isMultiSelectMode.get()) {
-                                            card.setBackground(color(MEDIA_CARD));
-                                        }
-                                    }
-                                };
-
-                                card.addMouseListener(listener);
-                                dragLabel.addMouseListener(listener);
-                                mediaNameLabel.addMouseListener(listener);
-
-                                card.putClientProperty("MEDIA_CARD", mediaCard);
-
-                                mediaCard.setUi(new CustomMediaCardUI(
-                                    card, cardDimension, mediaNameLabel, thumbnailPanel, progressBar
-                                ));
-
-                                queuePanel.remove(getOrCreateEmptyQueuePanel());
-                                queuePanel.add(card);
-
-                                scrollToBottom = true;
-                            } else if (entry.getUpdateType() == CARD_REMOVE) {
-                                CustomMediaCardUI ui = mediaCard.getUi();
-                                if (ui != null) {
-                                    queuePanel.remove(ui.getCard());
-
-                                    if (mediaCards.isEmpty()) {
-                                        queuePanel.add(getOrCreateEmptyQueuePanel(), BorderLayout.CENTER);
-                                    }
-
-                                    appWindow.removeComponentListener(ui.getMediaNameLabel().getListener());
+                        if (entry.getUpdateType() == CARD_ADD) {
+                            JPanel card = new JPanel() {
+                                @Override
+                                public Dimension getMaximumSize() {
+                                    int availableWidth = appWindow.getWidth() - getInsets().left - getInsets().right;
+                                    return new Dimension(availableWidth, super.getMaximumSize().height);
                                 }
+                            };
+                            card.setLayout(new GridBagLayout());
+                            card.setBorder(BorderFactory.createLineBorder(color(BACKGROUND), 5));
+                            card.setBackground(color(MEDIA_CARD));
+
+                            int fontSize = main.getConfig().getFontSize();
+                            Dimension cardDimension = new Dimension(Integer.MAX_VALUE, fontSize >= 15 ? 150 + (fontSize - 15) * 3 : 135);
+                            card.setMaximumSize(cardDimension);
+
+                            GridBagConstraints gbc = new GridBagConstraints();
+                            gbc.insets = new Insets(10, 10, 10, 10);
+                            gbc.fill = GridBagConstraints.BOTH;
+
+                            // Dragidy-draggy-nub-thingy
+                            JPanel dragPanel = new JPanel(new BorderLayout());
+                            dragPanel.setPreferredSize(new Dimension(24, 24));
+                            dragPanel.setMinimumSize(new Dimension(24, 24));
+                            dragPanel.setMaximumSize(new Dimension(24, 24));
+                            dragPanel.setBackground(new Color(0, 0, 0, 0));
+
+                            ImageIcon dragIcon = loadIcon("/assets/drag.png", ICON, 24);
+                            JLabel dragLabel = new JLabel(dragIcon);
+                            dragLabel.setHorizontalAlignment(SwingConstants.CENTER);
+                            dragPanel.add(dragLabel, BorderLayout.CENTER);
+
+                            gbc.gridx = 0;
+                            gbc.gridy = 0;
+                            gbc.gridheight = 2;
+                            gbc.weightx = 0;
+                            gbc.weighty = 0;
+                            card.add(dragPanel, gbc);
+
+                            // Thumbnail
+                            CustomThumbnailPanel thumbnailPanel = new CustomThumbnailPanel();
+                            thumbnailPanel.setPreferredSize(new Dimension(
+                                CustomMediaCardUI.THUMBNAIL_WIDTH, CustomMediaCardUI.THUMBNAIL_HEIGHT));
+                            thumbnailPanel.setMinimumSize(new Dimension(
+                                CustomMediaCardUI.THUMBNAIL_WIDTH, CustomMediaCardUI.THUMBNAIL_HEIGHT));
+                            thumbnailPanel.setBackground(color(MEDIA_CARD_THUMBNAIL));
+                            thumbnailPanel.setLayout(new BorderLayout());
+                            thumbnailPanel.setPlaceholderIcon(DownloadTypeEnum.ALL);
+
+                            gbc.insets = new Insets(10, 0, 10, 0);
+                            gbc.gridx = 1;
+                            gbc.gridy = 0;
+                            gbc.gridheight = 2;
+                            gbc.weightx = 0;
+                            gbc.weighty = 0;
+                            card.add(thumbnailPanel, gbc);
+
+                            CustomDynamicLabel mediaNameLabel = new CustomDynamicLabel();
+                            mediaNameLabel.setForeground(color(FOREGROUND));
+                            gbc.insets = new Insets(10, 10, 10, 10);
+                            gbc.gridx = 2;
+                            gbc.gridy = 0;
+                            gbc.gridheight = 1;
+                            gbc.weightx = 1;
+                            gbc.fill = GridBagConstraints.HORIZONTAL;
+                            gbc.weighty = 0;
+                            card.add(mediaNameLabel, gbc);
+
+                            appWindow.addComponentListener(mediaNameLabel.getListener());
+
+                            CustomProgressBar progressBar = new CustomProgressBar(Color.WHITE);
+                            progressBar.setValue(100);
+                            progressBar.setStringPainted(true);
+                            progressBar.setString(l10n("enums.download_status.queued"));
+                            progressBar.setForeground(Color.GRAY);
+                            progressBar.setBackground(Color.GRAY);
+                            //progressBar.setBorderPainted(false);
+                            progressBar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 15));
+
+                            gbc.gridx = 2;
+                            gbc.gridy = 1;
+                            gbc.weightx = 1;
+                            gbc.weighty = 0;
+                            gbc.fill = GridBagConstraints.BOTH;
+                            card.add(progressBar, gbc);
+
+                            JButton closeButton = createButton(
+                                loadIcon("/assets/x-mark.png", ICON, 16),
+                                loadIcon("/assets/x-mark.png", ICON_CLOSE, 16),
+                                "gui.remove_from_queue.tooltip",
+                                e -> {
+                                    if (isMediaCardSelected(mediaCard.getId())) {
+                                        deleteSelectedMediaCards();
+                                    }
+
+                                    removeMediaCard(mediaCard.getId());
+                                }
+                            );
+                            closeButton.setPreferredSize(new Dimension(16, 16));
+
+                            gbc.gridx = 3;
+                            gbc.gridy = 0;
+                            gbc.gridheight = 2;
+                            gbc.weightx = 0;
+                            gbc.weighty = 0;
+                            gbc.anchor = GridBagConstraints.CENTER;
+                            card.add(closeButton, gbc);
+
+                            card.setTransferHandler(new WindowTransferHandler(this));
+
+                            MouseAdapter listener = new MouseAdapter() {
+                                private long lastClick = System.currentTimeMillis();
+
+                                @Override
+                                public void mousePressed(MouseEvent e) {
+                                    if (isMultiSelectMode.get() && selectedMediaCards.size() > 1) {
+                                        return;
+                                    }
+
+                                    Component component = e.getComponent();
+
+                                    if (component.equals(dragLabel)) {
+                                        TransferHandler handler = card.getTransferHandler();
+
+                                        if (handler != null) {// peace of mind
+                                            handler.exportAsDrag(card, e, TransferHandler.MOVE);
+                                        }
+                                    }
+                                }
+
+                                @Override
+                                public void mouseClicked(MouseEvent e) {
+                                    if (SwingUtilities.isLeftMouseButton(e)) {
+                                        MediaCard lastCard = lastSelectedMediaCard.get();
+
+                                        int cardId = mediaCard.getId();
+
+                                        if (e.isControlDown()) {
+                                            isMultiSelectMode.set(true);
+
+                                            if (selectedMediaCards.contains(cardId)) {
+                                                selectedMediaCards.remove(cardId);
+                                            } else {
+                                                selectedMediaCards.add(cardId);
+                                            }
+
+                                            updateMediaCardSelectionState();
+                                        } else if (e.isShiftDown() && lastCard != null) {
+                                            isMultiSelectMode.set(true);
+
+                                            selectMediaCardRange(lastCard, mediaCard);
+                                        } else {
+                                            if (e.getClickCount() == 2) {
+                                                if (mediaCard.getOnLeftClick() != null && (System.currentTimeMillis() - lastClick) > 50) {
+                                                    mediaCard.getOnLeftClick().run();
+
+                                                    lastClick = System.currentTimeMillis();
+                                                }
+                                            }
+
+                                            selectedMediaCards.replaceAll(Collections.singletonList(cardId));
+                                            lastSelectedMediaCard.set(mediaCard);
+
+                                            updateMediaCardSelectionState();
+                                        }
+                                    } else if (SwingUtilities.isRightMouseButton(e)) {
+                                        List<RightClickMenuEntries> dependents = new ArrayList<>();
+
+                                        if (isMediaCardSelected(mediaCard)) {
+                                            for (int cardId : selectedMediaCards) {
+                                                MediaCard selected = mediaCards.get(cardId);
+                                                if (selected == null) {
+                                                    log.error("Cannot find media card, id {}", cardId);
+                                                    continue;
+                                                }
+
+                                                if (selected == mediaCard) {
+                                                    continue;
+                                                }
+
+                                                dependents.add(RightClickMenuEntries.fromMap(selected.getRightClickMenu()));
+                                            }
+                                        }
+
+                                        showRightClickMenu(card, RightClickMenuEntries.fromMap(mediaCard.getRightClickMenu()),
+                                            dependents, e.getX(), e.getY());
+                                    }
+                                }
+
+                                @Override
+                                public void mouseEntered(MouseEvent e) {
+                                    if (!isMediaCardSelected(mediaCard) && !isMultiSelectMode.get()) {
+                                        card.setBackground(color(MEDIA_CARD_HOVER));
+                                    }
+                                }
+
+                                @Override
+                                public void mouseExited(MouseEvent e) {
+                                    if (!isMediaCardSelected(mediaCard) && !isMultiSelectMode.get()) {
+                                        card.setBackground(color(MEDIA_CARD));
+                                    }
+                                }
+                            };
+
+                            card.addMouseListener(listener);
+                            dragLabel.addMouseListener(listener);
+                            mediaNameLabel.addMouseListener(listener);
+
+                            card.putClientProperty("MEDIA_CARD", mediaCard);
+
+                            mediaCard.setUi(new CustomMediaCardUI(
+                                card, cardDimension, mediaNameLabel, thumbnailPanel, progressBar
+                            ));
+
+                            queuePanel.remove(getOrCreateEmptyQueuePanel());
+                            queuePanel.add(card);
+
+                            scrollToBottom = true;
+                        } else if (entry.getUpdateType() == CARD_REMOVE) {
+                            CustomMediaCardUI ui = mediaCard.getUi();
+                            if (ui != null) {
+                                queuePanel.remove(ui.getCard());
+
+                                if (mediaCards.isEmpty()) {
+                                    queuePanel.add(getOrCreateEmptyQueuePanel(), BorderLayout.CENTER);
+                                }
+
+                                appWindow.removeComponentListener(ui.getMediaNameLabel().getListener());
                             }
                         }
                     }
-                } finally {
-                    lastMediaCardQueueUpdate.set(System.currentTimeMillis());
-                    currentlyUpdatingMediaCards.set(false);
-
-                    if (mediaCardUIUpdateQueue.isEmpty()) {
-                        queuePanel.setIgnoreRepaint(false);
-
-                        setUpAppWindow();
-
-                        if (!appWindow.isVisible()) {
-                            appWindow.setVisible(true);
-                        }
-
-                        if (main.getConfig().isAutoScrollToBottom() && scrollToBottom) {
-                            scrollToBottom(queueScrollPane);
-                        }
-
-                        appWindow.revalidate();
-                        appWindow.repaint();
-                    }
                 }
-            });
-        }
+            } finally {
+                lastMediaCardQueueUpdate.set(System.currentTimeMillis());
+                currentlyUpdatingMediaCards.set(false);
+
+                if (mediaCardUIUpdateQueue.isEmpty()) {
+                    queuePanel.setIgnoreRepaint(false);
+
+                    setUpAppWindow();
+
+                    if (!appWindow.isVisible()) {
+                        appWindow.setVisible(true);
+                    }
+
+                    if (main.getConfig().isAutoScrollToBottom() && scrollToBottom) {
+                        scrollToBottom(queueScrollPane);
+                    }
+
+                    appWindow.revalidate();
+                    appWindow.repaint();
+                }
+            }
+        });
     }
 
     public MediaCard addMediaCard(String... mediaLabel) {

@@ -17,6 +17,7 @@
 package net.brlns.gdownloader.updater;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import jakarta.annotation.Nullable;
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -43,7 +44,6 @@ import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.settings.enums.ISettingsEnum;
 import net.brlns.gdownloader.util.NoFallbackAvailableException;
-import net.brlns.gdownloader.util.Nullable;
 import net.brlns.gdownloader.util.Pair;
 
 import static net.brlns.gdownloader.util.LockUtils.*;

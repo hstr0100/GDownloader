@@ -16,6 +16,7 @@
  */
 package net.brlns.gdownloader.util;
 
+import jakarta.annotation.Nullable;
 import java.io.File;
 import java.io.UnsupportedEncodingException;
 import java.net.*;

@@ -16,10 +16,10 @@
  */
 package net.brlns.gdownloader.ui.dnd;
 
+import jakarta.annotation.Nullable;
 import java.awt.datatransfer.Transferable;
 import javax.swing.JComponent;
 import javax.swing.TransferHandler.TransferSupport;
-import net.brlns.gdownloader.util.Nullable;
 
 /**
  * @author Gabriel / hstr0100 / vertx010

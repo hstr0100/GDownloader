@@ -16,8 +16,11 @@
  */
 package net.brlns.gdownloader.util;
 
+import jakarta.annotation.Nullable;
 import java.io.*;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.concurrent.locks.ReentrantLock;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
@@ -69,6 +72,36 @@ public final class FileUtils {
         } catch (IOException e) {
             log.error("Unable to write resource to file: {}", resourcePath, e);
         }
+    }
+
+    public static Path ensureUniqueFileName(Path path) {
+        if (path == null) {
+            throw new IllegalArgumentException("Input path cannot be null.");
+        }
+
+        Path directory = (path.getParent() != null) ? path.getParent() : Paths.get("");
+        String fileName = path.getFileName().toString();
+
+        String baseName = fileName;
+        String extension = "";
+
+        // Extract base name and extension
+        int dotIndex = fileName.lastIndexOf('.');
+        if (dotIndex > 0 && !fileName.startsWith(".")) {
+            baseName = fileName.substring(0, dotIndex);
+            extension = fileName.substring(dotIndex);
+        }
+
+        int counter = 1;
+        Path uniquePath = path;
+
+        // Append _number until a unique file name is found
+        while (Files.exists(uniquePath)) {
+            uniquePath = directory.resolve(baseName + "_" + counter + extension);
+            counter++;
+        }
+
+        return uniquePath;
     }
 
     private static final ReentrantLock logLock = new ReentrantLock();

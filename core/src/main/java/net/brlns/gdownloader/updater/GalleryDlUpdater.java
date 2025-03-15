@@ -16,12 +16,12 @@
  */
 package net.brlns.gdownloader.updater;
 
+import jakarta.annotation.Nullable;
 import java.io.File;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.util.FileUtils;
-import net.brlns.gdownloader.util.Nullable;
 
 /**
  * @author Gabriel / hstr0100 / vertx010

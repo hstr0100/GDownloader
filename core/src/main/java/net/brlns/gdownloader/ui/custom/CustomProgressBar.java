@@ -16,6 +16,7 @@
  */
 package net.brlns.gdownloader.ui.custom;
 
+import jakarta.annotation.Nullable;
 import java.awt.*;
 import java.util.Collections;
 import java.util.Set;
@@ -25,7 +26,6 @@ import javax.swing.Timer;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import net.brlns.gdownloader.util.Nullable;
 
 /**
  * @author Gabriel / hstr0100 / vertx010

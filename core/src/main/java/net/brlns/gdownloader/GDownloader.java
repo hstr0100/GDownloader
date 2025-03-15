@@ -22,6 +22,7 @@ import com.github.kwhat.jnativehook.GlobalScreen;
 import com.github.kwhat.jnativehook.NativeHookException;
 import com.github.kwhat.jnativehook.mouse.NativeMouseEvent;
 import com.github.kwhat.jnativehook.mouse.NativeMouseListener;
+import jakarta.annotation.Nullable;
 import java.awt.*;
 import java.awt.desktop.QuitStrategy;
 import java.awt.event.ActionEvent;
@@ -116,6 +117,7 @@ import static net.brlns.gdownloader.lang.Language.*;
 // TODO About page
 // TODO Persist previous downloads after a program restart
 // TODO Migrate away from AWT event listeners; they start throwing StackOverflow errors all over the place if we attempt to load thousands of items.
+// TODO Confirm dialog before clearing DL queue
 /**
  * GDownloader - GUI wrapper for yt-dlp
  *
@@ -241,8 +243,6 @@ public final class GDownloader {
 
         try {
             clipboardManager = new ClipboardManager(this);
-            clipboardManager.init();
-
             downloadManager = new DownloadManager(this);
 
             guiManager = new GUIManager(this);

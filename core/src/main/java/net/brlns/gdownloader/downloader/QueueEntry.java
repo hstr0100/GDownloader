@@ -16,6 +16,7 @@
  */
 package net.brlns.gdownloader.downloader;
 
+import jakarta.annotation.Nullable;
 import java.awt.Color;
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -54,7 +55,6 @@ import net.brlns.gdownloader.ui.menu.NestedMenuEntry;
 import net.brlns.gdownloader.ui.menu.RunnableMenuEntry;
 import net.brlns.gdownloader.ui.menu.SingleActionMenuEntry;
 import net.brlns.gdownloader.util.DirectoryUtils;
-import net.brlns.gdownloader.util.Nullable;
 import net.brlns.gdownloader.util.StringUtils;
 import net.brlns.gdownloader.util.collection.ConcurrentLinkedHashSet;
 

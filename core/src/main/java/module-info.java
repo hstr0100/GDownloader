@@ -29,6 +29,7 @@ module net.brlns.gdownloader {
 
     requires transitive com.github.kwhat.jnativehook;
     requires transitive com.fasterxml.jackson.databind;
+    requires transitive jakarta.annotation;
     requires com.fasterxml.jackson.annotation;
     requires com.fasterxml.jackson.core;
     requires org.jsoup;
@@ -40,11 +41,11 @@ module net.brlns.gdownloader {
 
     exports net.brlns.gdownloader;
     exports net.brlns.gdownloader.clipboard;
-    exports net.brlns.gdownloader.event;
-    exports net.brlns.gdownloader.event.impl;
     exports net.brlns.gdownloader.downloader;
     exports net.brlns.gdownloader.downloader.enums;
     exports net.brlns.gdownloader.downloader.structs;
+    exports net.brlns.gdownloader.event;
+    exports net.brlns.gdownloader.event.impl;
     exports net.brlns.gdownloader.settings;
     exports net.brlns.gdownloader.settings.enums;
     exports net.brlns.gdownloader.settings.filters;

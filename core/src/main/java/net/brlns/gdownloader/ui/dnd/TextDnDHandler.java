@@ -16,6 +16,7 @@
  */
 package net.brlns.gdownloader.ui.dnd;
 
+import jakarta.annotation.Nullable;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.Transferable;
 import javax.swing.JComponent;
@@ -23,7 +24,6 @@ import javax.swing.TransferHandler;
 import javax.swing.TransferHandler.TransferSupport;
 import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.ui.GUIManager;
-import net.brlns.gdownloader.util.Nullable;
 
 /**
  * @author Gabriel / hstr0100 / vertx010

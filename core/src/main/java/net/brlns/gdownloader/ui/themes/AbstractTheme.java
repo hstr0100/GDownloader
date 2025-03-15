@@ -16,6 +16,7 @@
  */
 package net.brlns.gdownloader.ui.themes;
 
+import jakarta.annotation.PostConstruct;
 import java.awt.Color;
 import java.util.HashMap;
 import java.util.Map;
@@ -32,6 +33,7 @@ public abstract class AbstractTheme {
         init();
     }
 
+    @PostConstruct
     private void init() {
         initColors();
 
