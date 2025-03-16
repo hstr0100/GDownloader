@@ -32,25 +32,56 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "queue_entries",
-    uniqueConstraints = @UniqueConstraint(columnNames = "download_id")
-)
+@Table(name = "media_info")
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class QueueEntryModel implements Serializable {
+public class MediaInfoModel implements Serializable {
 
-    // Chaos ensues if these fields are not public
     @Id
     @Column(name = "download_id")
-    public long downloadId;// = 1l;
+    public long downloadId;
 
-    @Column(name = "url", length = 2048)
-    public String url;// = "https://www.youtube.com/watch?v=NgWkPTKDY_k&list=PLDOjCqYj3ys3TEe8HCR7_cYH7X7dU28_B&index=15";
+    @Column(name = "id", length = 256)
+    public String id;
 
-    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER, optional = true)
-    @JoinColumn(name = "download_id", referencedColumnName = "download_id", nullable = true)
-    public MediaInfoModel mediaInfo;// = null;
+    @Column(name = "title", length = 2048)
+    public String title;
 
-    public QueueEntryModel(String url) {
-        this.url = url;
-    }
+    @Column(name = "thumbnail", columnDefinition = "TEXT")
+    public String base64EncodedThumbnail;
+
+    @Column(name = "description", columnDefinition = "TEXT")
+    public String description;
+
+    @Column(name = "channel_id", length = 256)
+    public String channelId;
+
+    @Column(name = "channel_url", length = 2048)
+    public String channelUrl;
+
+    @Column(name = "duration")
+    public long duration;
+
+    @Column(name = "view_count")
+    public int viewCount;
+
+    @Column(name = "upload_date", length = 48)
+    public String uploadDate;
+
+    @Column(name = "timestamp")
+    public long timestamp;
+
+    @Column(name = "width")
+    public int width;
+
+    @Column(name = "height")
+    public int height;
+
+    @Column(name = "resolution", length = 48)
+    public String resolution;
+
+    @Column(name = "filesize_approx")
+    public long filesizeApprox;
+
+    @Column(name = "fps")
+    public int fps;
 }

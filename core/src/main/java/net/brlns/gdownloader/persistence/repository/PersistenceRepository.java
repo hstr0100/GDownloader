@@ -24,6 +24,9 @@ import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.persistence.AbstractDatabase;
 
+/**
+ * @author Gabriel / hstr0100 / vertx010
+ */
 @Slf4j
 public class PersistenceRepository<K, T> extends AbstractDatabase {
 
@@ -45,12 +48,19 @@ public class PersistenceRepository<K, T> extends AbstractDatabase {
             String jpql = "SELECT e FROM " + entityClass.getSimpleName() + " e";
             TypedQuery<T> query = em.createQuery(jpql, entityClass);
 
-            log.info("Get {}:", query.getResultList());
+            if (log.isDebugEnabled()) {
+                log.info("Get All: {}", query.getResultList());
+            }
+
             return query.getResultList();
         }
     }
 
     public void insertAll(List<T> entities) {
+        if (log.isDebugEnabled()) {
+            log.info("Insert All: {}", entities);
+        }
+
         try (EntityManager em = getEmf().createEntityManager()) {
             em.getTransaction().begin();
 
@@ -58,19 +68,21 @@ public class PersistenceRepository<K, T> extends AbstractDatabase {
                 em.merge(entity);
             }
 
-            em.flush();
-
+            //em.flush();
             em.getTransaction().commit();
         }
     }
 
     public T upsert(T entity) {
-        log.info("Upsert {}:", entity);
+        if (log.isDebugEnabled()) {
+            log.info("Upsert: {}", entity);
+        }
+
         try (EntityManager em = getEmf().createEntityManager()) {
             em.getTransaction().begin();
 
             em.merge(entity);
-            em.flush();
+            //em.flush();
 
             em.getTransaction().commit();
         }
@@ -79,13 +91,17 @@ public class PersistenceRepository<K, T> extends AbstractDatabase {
     }
 
     public boolean remove(K id) {
+        if (log.isDebugEnabled()) {
+            log.info("Remove: {}", id);
+        }
+
         try (EntityManager em = getEmf().createEntityManager()) {
             em.getTransaction().begin();
 
             T entity = em.find(entityClass, id);
             if (entity != null) {
                 em.remove(entity);
-                em.flush();
+                //em.flush();
 
                 em.getTransaction().commit();
 
@@ -99,6 +115,10 @@ public class PersistenceRepository<K, T> extends AbstractDatabase {
     }
 
     public Optional<T> getById(K id) {
+        if (log.isDebugEnabled()) {
+            log.info("Get: {}", id);
+        }
+
         try (EntityManager em = getEmf().createEntityManager()) {
             T entity = em.find(entityClass, id);
 

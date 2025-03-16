@@ -56,6 +56,7 @@ import net.brlns.gdownloader.ui.menu.NestedMenuEntry;
 import net.brlns.gdownloader.ui.menu.RunnableMenuEntry;
 import net.brlns.gdownloader.ui.menu.SingleActionMenuEntry;
 import net.brlns.gdownloader.util.DirectoryUtils;
+import net.brlns.gdownloader.util.ImageUtils;
 import net.brlns.gdownloader.util.StringUtils;
 import net.brlns.gdownloader.util.collection.ConcurrentLinkedHashSet;
 
@@ -219,15 +220,28 @@ public class QueueEntry {
             logOutput("Title: " + mediaInfo.getTitle());
         }
 
-        Optional<BufferedImage> optional = mediaInfo.supportedThumbnails()
-            .limit(5)
-            .map(urlIn -> tryLoadThumbnail(urlIn))
-            .filter(Optional::isPresent)
-            .map(Optional::get)
-            .findFirst();
+        String base64encoded = mediaInfo.getBase64EncodedThumbnail();
+
+        Optional<BufferedImage> optional = Optional.ofNullable(
+            ImageUtils.base64ToBufferedImage(base64encoded)
+        ).or(() -> {
+            return mediaInfo.supportedThumbnails()
+                .limit(5)
+                .map(this::tryLoadThumbnail)
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .findFirst();
+        });
 
         optional.ifPresentOrElse(
-            img -> mediaCard.setThumbnailAndDuration(img, mediaInfo.getDuration()),
+            img -> {
+                if (base64encoded.isEmpty()) {
+                    mediaInfo.setBase64EncodedThumbnail(
+                        ImageUtils.bufferedImageToBase64(img, "jpg"));
+                }
+
+                mediaCard.setThumbnailAndDuration(img, mediaInfo.getDuration());
+            },
             () -> {
                 if (main.getConfig().isDebugMode()) {
                     log.error("Failed to load a valid thumbnail");

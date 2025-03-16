@@ -42,12 +42,13 @@ import net.brlns.gdownloader.downloader.enums.DownloadStatusEnum;
 import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.downloader.enums.QueueCategoryEnum;
 import net.brlns.gdownloader.downloader.structs.DownloadResult;
+import net.brlns.gdownloader.downloader.structs.MediaInfo;
 import net.brlns.gdownloader.event.EventDispatcher;
 import net.brlns.gdownloader.event.IEvent;
 import net.brlns.gdownloader.persistence.model.CounterTypeEnum;
 import net.brlns.gdownloader.persistence.model.QueueEntryModel;
 import net.brlns.gdownloader.persistence.repository.CounterRepository;
-import net.brlns.gdownloader.persistence.repository.PersistenceRepository;
+import net.brlns.gdownloader.persistence.repository.QueueEntryRepository;
 import net.brlns.gdownloader.settings.enums.PlayListOptionEnum;
 import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
 import net.brlns.gdownloader.settings.filters.GenericFilter;
@@ -78,7 +79,7 @@ public class DownloadManager implements IEvent {
     private final GDownloader main;
 
     private final CounterRepository counterRepository;
-    private final PersistenceRepository<Long, QueueEntryModel> queueEntryRepository;
+    private final QueueEntryRepository queueEntryRepository;
 
     private final ExecutorService processMonitor;
 
@@ -163,13 +164,13 @@ public class DownloadManager implements IEvent {
     @PostConstruct
     public void init() {
         try {
-            if (counterRepository.init()) {
+            if (counterRepository.isInitialized()) {
                 long nextId = counterRepository.getCurrentValue(CounterTypeEnum.DOWNLOAD_ID);
                 main.getDownloadManager().getDownloadCounter().set(nextId);
                 log.info("Current download id: {}", nextId);
             }
 
-            if (queueEntryRepository.init()) {
+            if (queueEntryRepository.isInitialized()) {
                 main.getGlobalThreadPool().submitWithPriority(() -> {
                     List<CompletableFuture<Boolean>> list = new ArrayList<>();
 
@@ -496,6 +497,10 @@ public class DownloadManager implements IEvent {
                     return downloadDeque.contains(queueEntry);
                 });
 
+                if (model != null && model.getMediaInfo() != null) {
+                    queueEntry.setMediaInfo(MediaInfo.fromModel(model.getMediaInfo()));
+                }
+
                 queryVideo(queueEntry);
 
                 enqueueLast(queueEntry);
@@ -754,7 +759,7 @@ public class DownloadManager implements IEvent {
     }
 
     private void queryVideo(QueueEntry queueEntry) {
-        if (!main.getConfig().isQueryMetadata()) {
+        if (!main.getConfig().isQueryMetadata() || queueEntry.getMediaInfo() != null) {
             if (queueEntry.getDownloadStatus() == DownloadStatusEnum.QUERYING) {
                 queueEntry.updateStatus(DownloadStatusEnum.QUEUED,
                     l10n("gui.download_status.not_started"));

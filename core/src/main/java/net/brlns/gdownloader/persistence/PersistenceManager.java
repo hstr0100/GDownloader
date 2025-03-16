@@ -16,19 +16,41 @@
  */
 package net.brlns.gdownloader.persistence;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.PropertyName;
+import com.fasterxml.jackson.databind.introspect.Annotated;
+import com.fasterxml.jackson.databind.introspect.JacksonAnnotationIntrospector;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import java.io.File;
 import lombok.Getter;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
-import net.brlns.gdownloader.persistence.model.QueueEntryModel;
 import net.brlns.gdownloader.persistence.repository.CounterRepository;
-import net.brlns.gdownloader.persistence.repository.PersistenceRepository;
+import net.brlns.gdownloader.persistence.repository.MediaInfoRepository;
+import net.brlns.gdownloader.persistence.repository.QueueEntryRepository;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
 @Slf4j
 public class PersistenceManager {
+
+    public static final ObjectMapper MODEL_MAPPER = JsonMapper.builder()
+        .annotationIntrospector(new JacksonAnnotationIntrospector() {
+            @Override
+            public PropertyName findNameForSerialization(Annotated a) {
+                return null; // Ignore @JsonProperty as our db fields do not match the json DTOs
+            }
+
+            @Override
+            public PropertyName findNameForDeserialization(Annotated a) {
+                return null;
+            }
+        })
+        .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+        .build();
 
     private final GDownloader main;
     private final File dbDir;
@@ -37,14 +59,24 @@ public class PersistenceManager {
     private final CounterRepository counterRepository;
 
     @Getter
-    private final PersistenceRepository<Long, QueueEntryModel> queueEntryRepository;
+    private final QueueEntryRepository queueEntryRepository;
 
+    @Getter
+    private final MediaInfoRepository mediaInfoRepository;
+
+    @SneakyThrows
     public PersistenceManager(GDownloader mainIn) {
         main = mainIn;
         dbDir = new File(GDownloader.getWorkDirectory(), "db");
 
         counterRepository = new CounterRepository(dbDir);
-        queueEntryRepository = new PersistenceRepository<>(dbDir, QueueEntryModel.class);
+        counterRepository.init();
+
+        queueEntryRepository = new QueueEntryRepository(dbDir);
+        queueEntryRepository.init();
+
+        mediaInfoRepository = new MediaInfoRepository(dbDir);
+        mediaInfoRepository.init();
     }
 
     public void close() {
