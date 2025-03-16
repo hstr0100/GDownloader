@@ -42,6 +42,7 @@ import lombok.Setter;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
+import net.brlns.gdownloader.downloader.enums.CloseReasonEnum;
 import net.brlns.gdownloader.downloader.enums.DownloadStatusEnum;
 import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.downloader.structs.MediaInfo;
@@ -77,7 +78,7 @@ public class QueueEntry {
     private final AbstractUrlFilter filter;
     private final String originalUrl;
     private final String url;
-    private final int downloadId;
+    private final long downloadId;
     private final List<AbstractDownloader> downloaders;
 
     private final List<DownloaderIdEnum> downloaderBlacklist = new CopyOnWriteArrayList<>();
@@ -189,14 +190,16 @@ public class QueueEntry {
         }
     }
 
-    public void close() {
+    public void close(CloseReasonEnum reason) {
         cancelHook.set(true);
 
         if (process != null) {
             process.destroy();
         }
 
-        cleanDirectories();
+        if (reason != CloseReasonEnum.SHUTDOWN) {
+            cleanDirectories();
+        }
     }
 
     public void resetForRestart() {

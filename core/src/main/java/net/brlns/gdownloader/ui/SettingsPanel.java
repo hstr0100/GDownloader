@@ -856,6 +856,13 @@ public class SettingsPanel {
         );
 
         addCheckBox(panel, gbcPanel,
+            "settings.remove_successful_downloads",
+            settings::isRemoveSuccessfulDownloads,
+            settings::setRemoveSuccessfulDownloads,
+            false
+        );
+
+        addCheckBox(panel, gbcPanel,
             "settings.record_to_download_archive",
             settings::isRecordToDownloadArchive,
             settings::setRecordToDownloadArchive,

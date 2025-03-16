@@ -251,7 +251,7 @@ public class ClipboardManager {
                 if (url.startsWith("http") && !urlIgnoreSet.contains(url)) {
                     urlIgnoreSet.add(url);
 
-                    list.add(main.getDownloadManager().captureUrl(url, force));
+                    list.add(main.getDownloadManager().captureUrl(url, null, force));
                 }
 
                 // Small extra utility

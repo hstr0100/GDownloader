@@ -55,6 +55,7 @@ import net.brlns.gdownloader.downloader.DownloadManager;
 import net.brlns.gdownloader.event.EventDispatcher;
 import net.brlns.gdownloader.event.impl.NativeMouseClickEvent;
 import net.brlns.gdownloader.lang.Language;
+import net.brlns.gdownloader.persistence.PersistenceManager;
 import net.brlns.gdownloader.settings.Settings;
 import net.brlns.gdownloader.settings.enums.BrowserEnum;
 import net.brlns.gdownloader.ui.GUIManager;
@@ -118,6 +119,7 @@ import static net.brlns.gdownloader.lang.Language.*;
 // TODO Persist previous downloads after a program restart
 // TODO Migrate away from AWT event listeners; they start throwing StackOverflow errors all over the place if we attempt to load thousands of items.
 // TODO Confirm dialog before clearing DL queue
+// TODO SpotDL downloader
 /**
  * GDownloader - GUI wrapper for yt-dlp
  *
@@ -162,6 +164,9 @@ public final class GDownloader {
 
     @Getter
     private DownloadManager downloadManager;
+
+    @Getter
+    private PersistenceManager persistenceManager;
 
     @Getter
     private List<AbstractGitUpdater> updaters = new ArrayList<>();
@@ -242,6 +247,7 @@ public final class GDownloader {
         }
 
         try {
+            persistenceManager = new PersistenceManager(this);
             clipboardManager = new ClipboardManager(this);
             downloadManager = new DownloadManager(this);
 
@@ -310,10 +316,6 @@ public final class GDownloader {
             });
 
             initialized = true;
-
-            globalThreadPool.submitWithPriority(() -> {
-                clearCache();
-            }, 100);
         } catch (Exception e) {
             handleException(e);
         }
@@ -438,6 +440,10 @@ public final class GDownloader {
 
             downloadManager.unblock();
             clipboardManager.unblock();
+
+            if (!userInitiated) {
+                downloadManager.init();
+            }
         }, 5);
 
         return true;
@@ -1261,8 +1267,6 @@ public final class GDownloader {
         log.info("{} is initialized", REGISTRY_APP_NAME);
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            instance.clearCache();
-
             try {
                 GlobalScreen.unregisterNativeHook();
             } catch (NativeHookException e) {
@@ -1277,6 +1281,12 @@ public final class GDownloader {
                 instance.getDownloadManager().close();
             } catch (Exception e) {
                 log.error("There was a problem closing the download manager", e);
+            }
+
+            try {
+                instance.getPersistenceManager().close();
+            } catch (Exception e) {
+                log.error("There was a problem closing the persistence manager", e);
             }
 
             try {

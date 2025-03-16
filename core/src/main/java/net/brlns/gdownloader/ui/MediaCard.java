@@ -27,6 +27,7 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
+import net.brlns.gdownloader.downloader.enums.CloseReasonEnum;
 import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.ui.custom.CustomMediaCardUI;
 import net.brlns.gdownloader.ui.menu.IMenuEntry;
@@ -61,7 +62,7 @@ public class MediaCard {
 
     private Runnable onLeftClick;
     private Map<String, IMenuEntry> rightClickMenu = new ConcurrentLinkedHashMap<>();
-    private Runnable onClose;
+    private Consumer<CloseReasonEnum> onClose;
     private Consumer<Integer> onDrag;
     private boolean closed;
 
@@ -70,11 +71,11 @@ public class MediaCard {
     protected static final int THUMBNAIL_WIDTH = 170;
     protected static final int THUMBNAIL_HEIGHT = (int)(THUMBNAIL_WIDTH / 16.0 * 9.0);
 
-    public void close() {
+    public void close(CloseReasonEnum reason) {
         closed = true;
 
         if (onClose != null) {
-            onClose.run();
+            onClose.accept(reason);
         }
     }
 

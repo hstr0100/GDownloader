@@ -35,6 +35,12 @@ application {
     applicationDefaultJvmArgs = ['--add-exports=java.management/sun.management=ALL-UNNAMED']
 }
 
+repositories {
+    maven {
+        url = "https://m2.objectdb.com"
+    }
+}
+
 dependencies {
     implementation(project(path: ':twelvemonkeys', configuration: 'moduleJar'))
     implementation("ch.qos.logback:logback-classic:$logbackVersion")
@@ -45,6 +51,8 @@ dependencies {
     implementation("net.java.dev.jna:jna:$jnaVersion")
     implementation("net.java.dev.jna:jna-platform:$jnaVersion")
     implementation("jakarta.annotation:jakarta.annotation-api:$jakartaAnnotationVersion")
+    implementation("jakarta.persistence:jakarta.persistence-api:$jakartaPersistenceVersion")
+    implementation("com.objectdb:objectdb-jk:$objectdbVersion")
 
     compileOnly("org.projectlombok:lombok:$lombokVersion")
     annotationProcessor("org.projectlombok:lombok:$lombokVersion")
