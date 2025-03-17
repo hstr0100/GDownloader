@@ -248,6 +248,8 @@ public final class GDownloader {
 
         try {
             persistenceManager = new PersistenceManager(this);
+            persistenceManager.init();
+
             clipboardManager = new ClipboardManager(this);
             downloadManager = new DownloadManager(this);
 

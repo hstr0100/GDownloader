@@ -17,15 +17,16 @@
 package net.brlns.gdownloader.persistence.repository;
 
 import jakarta.persistence.EntityManagerFactory;
-import net.brlns.gdownloader.persistence.model.QueueEntryModel;
+import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 
-/**
- * @author Gabriel / hstr0100 / vertx010
- */
-public class QueueEntryRepository extends PersistenceRepository<Long, QueueEntryModel> {
+@Slf4j
+public abstract class AbstractRepository {
 
-    public QueueEntryRepository(EntityManagerFactory emfIn) {
-        super(emfIn, QueueEntryModel.class);
+    @Getter
+    private final EntityManagerFactory emf;
+
+    public AbstractRepository(EntityManagerFactory emfIn) {
+        emf = emfIn;
     }
-
 }

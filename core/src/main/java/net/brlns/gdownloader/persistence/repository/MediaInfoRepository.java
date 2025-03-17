@@ -17,7 +17,7 @@
 package net.brlns.gdownloader.persistence.repository;
 
 import jakarta.persistence.EntityManager;
-import java.io.File;
+import jakarta.persistence.EntityManagerFactory;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.persistence.model.MediaInfoModel;
 import net.brlns.gdownloader.persistence.model.QueueEntryModel;
@@ -26,10 +26,10 @@ import net.brlns.gdownloader.persistence.model.QueueEntryModel;
  * @author Gabriel / hstr0100 / vertx010
  */
 @Slf4j
-public class MediaInfoRepository extends QueueEntryRepository {
+public class MediaInfoRepository extends PersistenceRepository<Long, MediaInfoModel> {
 
-    public MediaInfoRepository(File filePathIn) {
-        super(filePathIn);
+    public MediaInfoRepository(EntityManagerFactory emfIn) {
+        super(emfIn, MediaInfoModel.class);
     }
 
     public void addMediaInfo(MediaInfoModel mediaInfo) {

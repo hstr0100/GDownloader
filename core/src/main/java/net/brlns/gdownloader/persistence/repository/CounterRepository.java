@@ -17,9 +17,8 @@
 package net.brlns.gdownloader.persistence.repository;
 
 import jakarta.persistence.EntityManager;
-import java.io.File;
+import jakarta.persistence.EntityManagerFactory;
 import lombok.extern.slf4j.Slf4j;
-import net.brlns.gdownloader.persistence.AbstractDatabase;
 import net.brlns.gdownloader.persistence.model.CounterModel;
 import net.brlns.gdownloader.persistence.model.CounterTypeEnum;
 
@@ -27,15 +26,10 @@ import net.brlns.gdownloader.persistence.model.CounterTypeEnum;
  * @author Gabriel / hstr0100 / vertx010
  */
 @Slf4j
-public class CounterRepository extends AbstractDatabase {
+public class CounterRepository extends AbstractRepository {
 
-    public CounterRepository(File filePathIn) {
-        super(filePathIn);
-    }
-
-    @Override
-    protected String getDbFileName() {
-        return "counters.db";
+    public CounterRepository(EntityManagerFactory emfIn) {
+        super(emfIn);
     }
 
     public long getCurrentValue(CounterTypeEnum counterType) {

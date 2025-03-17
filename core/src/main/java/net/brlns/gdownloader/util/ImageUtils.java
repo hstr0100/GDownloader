@@ -16,6 +16,7 @@
  */
 package net.brlns.gdownloader.util;
 
+import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
@@ -30,9 +31,8 @@ import net.brlns.gdownloader.GDownloader;
 public final class ImageUtils {
 
     @Nullable
-    public static String bufferedImageToBase64(BufferedImage image, String format) {
-        try {
-            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+    public static String bufferedImageToBase64(@Nonnull BufferedImage image, String format) {
+        try (ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
             ImageIO.write(image, format, bos);
             byte[] imageBytes = bos.toByteArray();
 
@@ -44,7 +44,7 @@ public final class ImageUtils {
     }
 
     @Nullable
-    public static BufferedImage base64ToBufferedImage(String base64Image) {
+    public static BufferedImage base64ToBufferedImage(@Nullable String base64Image) {
         if (base64Image == null || base64Image.isEmpty()) {
             return null;
         }
@@ -52,8 +52,9 @@ public final class ImageUtils {
         try {
             byte[] imageBytes = Base64.getDecoder().decode(base64Image);
 
-            ByteArrayInputStream bis = new ByteArrayInputStream(imageBytes);
-            return ImageIO.read(bis);
+            try (ByteArrayInputStream bis = new ByteArrayInputStream(imageBytes)) {
+                return ImageIO.read(bis);
+            }
         } catch (Exception e) {
             GDownloader.handleException(e);
             return null;

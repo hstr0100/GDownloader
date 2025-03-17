@@ -45,10 +45,9 @@ import net.brlns.gdownloader.downloader.structs.DownloadResult;
 import net.brlns.gdownloader.downloader.structs.MediaInfo;
 import net.brlns.gdownloader.event.EventDispatcher;
 import net.brlns.gdownloader.event.IEvent;
+import net.brlns.gdownloader.persistence.PersistenceManager;
 import net.brlns.gdownloader.persistence.model.CounterTypeEnum;
 import net.brlns.gdownloader.persistence.model.QueueEntryModel;
-import net.brlns.gdownloader.persistence.repository.CounterRepository;
-import net.brlns.gdownloader.persistence.repository.QueueEntryRepository;
 import net.brlns.gdownloader.settings.enums.PlayListOptionEnum;
 import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
 import net.brlns.gdownloader.settings.filters.GenericFilter;
@@ -78,8 +77,7 @@ public class DownloadManager implements IEvent {
     @Getter
     private final GDownloader main;
 
-    private final CounterRepository counterRepository;
-    private final QueueEntryRepository queueEntryRepository;
+    private final PersistenceManager persistence;
 
     private final ExecutorService processMonitor;
 
@@ -121,8 +119,7 @@ public class DownloadManager implements IEvent {
     public DownloadManager(GDownloader mainIn) {
         main = mainIn;
 
-        counterRepository = main.getPersistenceManager().getCounterRepository();
-        queueEntryRepository = main.getPersistenceManager().getQueueEntryRepository();
+        persistence = main.getPersistenceManager();
 
         processMonitor = Executors.newSingleThreadExecutor();
         processMonitor.submit(() -> {
@@ -164,17 +161,15 @@ public class DownloadManager implements IEvent {
     @PostConstruct
     public void init() {
         try {
-            if (counterRepository.isInitialized()) {
-                long nextId = counterRepository.getCurrentValue(CounterTypeEnum.DOWNLOAD_ID);
+            if (persistence.isInitialized()) {
+                long nextId = persistence.getCounters().getCurrentValue(CounterTypeEnum.DOWNLOAD_ID);
                 main.getDownloadManager().getDownloadCounter().set(nextId);
                 log.info("Current download id: {}", nextId);
-            }
 
-            if (queueEntryRepository.isInitialized()) {
                 main.getGlobalThreadPool().submitWithPriority(() -> {
                     List<CompletableFuture<Boolean>> list = new ArrayList<>();
 
-                    for (QueueEntryModel model : queueEntryRepository.getAll()) {
+                    for (QueueEntryModel model : persistence.getQueueEntries().getAll()) {
                         list.add(captureUrl(model.getUrl(), model, true));
                     }
 
@@ -269,6 +264,7 @@ public class DownloadManager implements IEvent {
         return captureUrl(inputUrl, model, force, main.getConfig().getPlaylistDownloadOption());
     }
 
+    // TODO: persistence needs to bypass filters
     public CompletableFuture<Boolean> captureUrl(@Nullable String inputUrl, @Nullable QueueEntryModel model, boolean force, PlayListOptionEnum playlistOption) {
         CompletableFuture<Boolean> future = new CompletableFuture<>();
 
@@ -447,8 +443,8 @@ public class DownloadManager implements IEvent {
                 // If a model exists, restore the previous downloadId so that the correct directory is reattached.
                 long downloadId = model == null ? downloadCounter.incrementAndGet() : model.getDownloadId();
 
-                if (counterRepository.isInitialized()) {
-                    counterRepository.setCurrentValue(CounterTypeEnum.DOWNLOAD_ID, downloadId);
+                if (persistence.isInitialized()) {
+                    persistence.getCounters().setCurrentValue(CounterTypeEnum.DOWNLOAD_ID, downloadId);
                 }
 
                 QueueEntry queueEntry = new QueueEntry(main, mediaCard, filter, inputUrl, filteredUrl, downloadId, compatibleDownloaders);
@@ -470,8 +466,8 @@ public class DownloadManager implements IEvent {
                     dequeueFromAll(queueEntry);
 
                     if (reason != CloseReasonEnum.SHUTDOWN) {
-                        if (queueEntryRepository.isInitialized()) {
-                            queueEntryRepository.remove(queueEntry.getDownloadId());
+                        if (persistence.isInitialized()) {
+                            persistence.getQueueEntries().remove(queueEntry.getDownloadId());
                         }
                     }
                 });
@@ -515,8 +511,8 @@ public class DownloadManager implements IEvent {
                         .url(filteredUrl)
                         .build();
 
-                    if (queueEntryRepository.isInitialized()) {
-                        queueEntryRepository.upsert(dbEntry);
+                    if (persistence.isInitialized()) {
+                        persistence.getQueueEntries().upsert(dbEntry);
                     }
                 }
 

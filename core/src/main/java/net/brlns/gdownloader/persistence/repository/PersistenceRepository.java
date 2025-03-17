@@ -17,30 +17,24 @@
 package net.brlns.gdownloader.persistence.repository;
 
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.TypedQuery;
-import java.io.File;
 import java.util.List;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
-import net.brlns.gdownloader.persistence.AbstractDatabase;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
 @Slf4j
-public class PersistenceRepository<K, T> extends AbstractDatabase {
+public class PersistenceRepository<K, T> extends AbstractRepository {
 
     private final Class<T> entityClass;
 
-    public PersistenceRepository(File filePathIn, Class<T> entityClassIn) {
-        super(filePathIn);
+    public PersistenceRepository(EntityManagerFactory emfIn, Class<T> entityClassIn) {
+        super(emfIn);
 
         entityClass = entityClassIn;
-    }
-
-    @Override
-    protected String getDbFileName() {
-        return "persistence.db";
     }
 
     public List<T> getAll() {

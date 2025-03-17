@@ -16,7 +16,6 @@
  */
 package net.brlns.gdownloader.persistence.model;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import java.io.Serializable;
 import lombok.AllArgsConstructor;
@@ -35,7 +34,6 @@ import lombok.NoArgsConstructor;
 @Table(name = "queue_entries",
     uniqueConstraints = @UniqueConstraint(columnNames = "download_id")
 )
-@JsonIgnoreProperties(ignoreUnknown = true)
 public class QueueEntryModel implements Serializable {
 
     // Chaos ensues if these fields are not public

@@ -16,7 +16,6 @@
  */
 package net.brlns.gdownloader.persistence.model;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import java.io.Serializable;
 import lombok.AllArgsConstructor;
@@ -33,7 +32,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Entity
 @Table(name = "media_info")
-@JsonIgnoreProperties(ignoreUnknown = true)
 public class MediaInfoModel implements Serializable {
 
     @Id
@@ -46,10 +44,10 @@ public class MediaInfoModel implements Serializable {
     @Column(name = "title", length = 2048)
     public String title;
 
-    @Column(name = "thumbnail", columnDefinition = "TEXT")
+    @Column(name = "thumbnail", columnDefinition = "MEDIUMTEXT")
     public String base64EncodedThumbnail;
 
-    @Column(name = "description", columnDefinition = "TEXT")
+    @Column(name = "description", columnDefinition = "MEDIUMTEXT")
     public String description;
 
     @Column(name = "channel_id", length = 256)

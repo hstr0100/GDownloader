@@ -35,7 +35,7 @@ import net.brlns.gdownloader.downloader.enums.DownloadStatusEnum;
 import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.downloader.structs.DownloadResult;
 import net.brlns.gdownloader.downloader.structs.MediaInfo;
-import net.brlns.gdownloader.persistence.repository.MediaInfoRepository;
+import net.brlns.gdownloader.persistence.PersistenceManager;
 import net.brlns.gdownloader.settings.QualitySettings;
 import net.brlns.gdownloader.settings.enums.AudioBitrateEnum;
 import net.brlns.gdownloader.settings.enums.AudioContainerEnum;
@@ -145,9 +145,9 @@ public class YtDlpDownloader extends AbstractDownloader {
 
                 queueEntry.setMediaInfo(info);
 
-                MediaInfoRepository mediaInfoRepository = main.getPersistenceManager().getMediaInfoRepository();
-                if (!queueEntry.getCancelHook().get() && mediaInfoRepository.isInitialized()) {
-                    mediaInfoRepository.addMediaInfo(info.toModel(queueEntry.getDownloadId()));
+                PersistenceManager persistence = main.getPersistenceManager();
+                if (!queueEntry.getCancelHook().get() && persistence.isInitialized()) {
+                    persistence.getMediaInfos().addMediaInfo(info.toModel(queueEntry.getDownloadId()));
                 }
 
                 return true;
