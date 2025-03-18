@@ -47,10 +47,13 @@ public class PersistenceRepository<K, T> extends AbstractRepository {
             }
 
             return query.getResultList();
+        } catch (Exception e) {
+            log.error("Failed to obtain entities", e);
+            return List.of();
         }
     }
 
-    public void insertAll(List<T> entities) {
+    public boolean insertAll(List<T> entities) {
         if (log.isDebugEnabled()) {
             log.info("Insert All: {}", entities);
         }
@@ -62,12 +65,15 @@ public class PersistenceRepository<K, T> extends AbstractRepository {
                 em.merge(entity);
             }
 
-            //em.flush();
             em.getTransaction().commit();
+            return true;
+        } catch (Exception e) {
+            log.error("Failed to insert entities", e);
+            return false;
         }
     }
 
-    public T upsert(T entity) {
+    public boolean upsert(T entity) {
         if (log.isDebugEnabled()) {
             log.info("Upsert: {}", entity);
         }
@@ -76,12 +82,13 @@ public class PersistenceRepository<K, T> extends AbstractRepository {
             em.getTransaction().begin();
 
             em.merge(entity);
-            //em.flush();
 
             em.getTransaction().commit();
+            return true;
+        } catch (Exception e) {
+            log.error("Failed to upsert entity", e);
+            return false;
         }
-
-        return entity;
     }
 
     public boolean remove(K id) {
@@ -95,7 +102,6 @@ public class PersistenceRepository<K, T> extends AbstractRepository {
             T entity = em.find(entityClass, id);
             if (entity != null) {
                 em.remove(entity);
-                //em.flush();
 
                 em.getTransaction().commit();
 
@@ -105,6 +111,9 @@ public class PersistenceRepository<K, T> extends AbstractRepository {
 
                 return false;
             }
+        } catch (Exception e) {
+            log.error("Failed to remove entity", e);
+            return false;
         }
     }
 
@@ -117,6 +126,9 @@ public class PersistenceRepository<K, T> extends AbstractRepository {
             T entity = em.find(entityClass, id);
 
             return Optional.ofNullable(entity);
+        } catch (Exception e) {
+            log.error("Failed to obtain entity", e);
+            return Optional.empty();
         }
     }
 }

@@ -35,7 +35,7 @@ import lombok.NoArgsConstructor;
 public class MediaInfoModel implements Serializable {
 
     @Id
-    @Column(name = "download_id")
+    @Column(name = "media_info_id")
     public long downloadId;
 
     @Column(name = "id", length = 256)
@@ -44,10 +44,10 @@ public class MediaInfoModel implements Serializable {
     @Column(name = "title", length = 2048)
     public String title;
 
-    @Column(name = "thumbnail", columnDefinition = "MEDIUMTEXT")
+    @Column(name = "thumbnail", columnDefinition = "LONGVARCHAR")
     public String base64EncodedThumbnail;
 
-    @Column(name = "description", columnDefinition = "MEDIUMTEXT")
+    @Column(name = "description", columnDefinition = "LONGVARCHAR")
     public String description;
 
     @Column(name = "channel_id", length = 256)
@@ -82,4 +82,25 @@ public class MediaInfoModel implements Serializable {
 
     @Column(name = "fps")
     public int fps;
+
+    @Override
+    public String toString() {
+        return "MediaInfoModel{"
+            + "downloadId=" + downloadId
+            + ", id='" + id + '\''
+            + ", title='" + title + '\''
+            + ", channelId='" + channelId + '\''
+            + ", channelUrl='" + channelUrl + '\''
+            + ", duration=" + duration
+            + ", viewCount=" + viewCount
+            + ", uploadDate='" + uploadDate + '\''
+            + ", timestamp=" + timestamp
+            + ", width=" + width
+            + ", height=" + height
+            + ", resolution='" + resolution + '\''
+            + ", filesizeApprox=" + filesizeApprox
+            + ", fps=" + fps
+            + '}';
+    }
+
 }

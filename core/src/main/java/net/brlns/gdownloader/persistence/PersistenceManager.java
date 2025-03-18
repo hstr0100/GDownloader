@@ -29,27 +29,21 @@ import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 import lombok.Getter;
-import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.persistence.repository.CounterRepository;
 import net.brlns.gdownloader.persistence.repository.MediaInfoRepository;
 import net.brlns.gdownloader.persistence.repository.QueueEntryRepository;
+import org.eclipse.persistence.config.PersistenceUnitProperties;
 
 /**
- * Nitrite v4.3.1-SNAPSHOT with Jackson (v4.3.0 is broken with JPMS) was one of
- * the most unreliable pieces of software I have used in recent memory.
- *
- * Instead, this class now relies on ObjectDB. because at some point,
- * you just stop trying to fix the sinking ship and grab a lifeboat.
- *
- * ObjectDB is not FOSS though and that doesn't quite jive with me, so for
- * the final release we might use a different database back-end
- *
- * TODO: Currently all write operations are fire-and-forget, we can make them async
+ * This class relies on HSQLDB and EclipseLink JPA.
+ * This combination has been very reliable in my tests and has a relatively small footprint (<10MB).
  *
  * @author Gabriel / hstr0100 / vertx010
  */
+// TODO: restore dl status
+// TODO: persist already_queried state
 @Slf4j
 public class PersistenceManager {
 
@@ -85,7 +79,6 @@ public class PersistenceManager {
     @Getter
     private MediaInfoRepository mediaInfos;
 
-    @SneakyThrows
     public PersistenceManager(GDownloader mainIn) {
         main = mainIn;
         databaseDirectory = new File(GDownloader.getWorkDirectory(), "db");
@@ -106,10 +99,10 @@ public class PersistenceManager {
 
             Map<String, String> properties = new HashMap<>();
 
-            properties.put("objectdb.recovery", "true");
-            properties.put("objectdb.recovery.sync", "true");
+            properties.put(PersistenceUnitProperties.JDBC_URL, "jdbc:hsqldb:file:" + databaseFile
+                + ";sql.syntax_pgs=true;hsqldb.lob_compressed=true;hsqldb.script_format=3");
 
-            emf = Persistence.createEntityManagerFactory("objectdb:" + databaseFile, properties);
+            emf = Persistence.createEntityManagerFactory("hsqldbPU", properties);
 
             if (emf == null) {
                 throw new RuntimeException("Cannot create database.");
@@ -144,6 +137,6 @@ public class PersistenceManager {
     }
 
     private String getDbFileName() {
-        return "persistence.db";
+        return "persistence";
     }
 }

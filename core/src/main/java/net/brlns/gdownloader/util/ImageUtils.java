@@ -18,6 +18,8 @@ package net.brlns.gdownloader.util;
 
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -59,5 +61,27 @@ public final class ImageUtils {
             GDownloader.handleException(e);
             return null;
         }
+    }
+
+    public static BufferedImage downscaleImage(BufferedImage originalImage, int maxWidth) {
+        int originalWidth = originalImage.getWidth();
+        int originalHeight = originalImage.getHeight();
+
+        if (originalWidth <= maxWidth) {
+            return originalImage;
+        }
+
+        float aspectRatio = (float)originalHeight / originalWidth;
+        int newWidth = maxWidth;
+        int newHeight = Math.round(maxWidth * aspectRatio);
+
+        BufferedImage resizedImage = new BufferedImage(newWidth, newHeight, originalImage.getType());
+
+        Graphics2D g = resizedImage.createGraphics();
+        g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+        g.drawImage(originalImage, 0, 0, newWidth, newHeight, null);
+        g.dispose();
+
+        return resizedImage;
     }
 }

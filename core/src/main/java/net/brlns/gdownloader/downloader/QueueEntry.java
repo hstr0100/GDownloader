@@ -236,8 +236,11 @@ public class QueueEntry {
         optional.ifPresentOrElse(
             img -> {
                 if (base64encoded.isEmpty()) {
+                    // Downscale thumbnails to save space and resources, we don't need the full resolution here.
+                    BufferedImage downscaledImage = ImageUtils.downscaleImage(img, 240);
+
                     mediaInfo.setBase64EncodedThumbnail(
-                        ImageUtils.bufferedImageToBase64(img, "jpg"));
+                        ImageUtils.bufferedImageToBase64(downscaledImage, "jpg"));
                 }
 
                 mediaCard.setThumbnailAndDuration(img, mediaInfo.getDuration());

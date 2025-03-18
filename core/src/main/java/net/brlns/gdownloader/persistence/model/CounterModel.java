@@ -27,9 +27,7 @@ import lombok.NoArgsConstructor;
  * @author Gabriel / hstr0100 / vertx010
  */
 @Entity
-@Table(name = "counters",
-    uniqueConstraints = @UniqueConstraint(columnNames = "type")
-)
+@Table(name = "counters")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

@@ -1483,12 +1483,12 @@ public final class GUIManager {
                         appWindow.setVisible(true);
                     }
 
-                    if (main.getConfig().isAutoScrollToBottom() && scrollToBottom) {
-                        scrollToBottom(queueScrollPane);
-                    }
-
                     appWindow.revalidate();
                     appWindow.repaint();
+                }
+
+                if (main.getConfig().isAutoScrollToBottom() && scrollToBottom) {
+                    scrollToBottom(queueScrollPane);
                 }
             }
         });

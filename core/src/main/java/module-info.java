@@ -33,7 +33,8 @@ module net.brlns.gdownloader {
     requires transitive jakarta.persistence;
     requires com.fasterxml.jackson.annotation;
     requires com.fasterxml.jackson.core;
-    requires com.objectdb;
+    requires eclipselink;
+    requires org.hsqldb;
     requires org.jsoup;
     requires org.slf4j;
     requires ch.qos.logback.classic;

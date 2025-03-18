@@ -38,7 +38,7 @@ public class MediaInfoRepository extends PersistenceRepository<Long, MediaInfoMo
         }
 
         if (log.isDebugEnabled()) {
-            log.info("Add Media Info: {}", mediaInfo);
+            log.info("Add MediaInfo for id {} title: {}", mediaInfo.getDownloadId(), mediaInfo.getTitle());
         }
 
         try (EntityManager em = getEmf().createEntityManager()) {
@@ -46,9 +46,15 @@ public class MediaInfoRepository extends PersistenceRepository<Long, MediaInfoMo
 
             QueueEntryModel queueEntry = em.find(QueueEntryModel.class, mediaInfo.getDownloadId());
             if (queueEntry != null) {
-                queueEntry.setMediaInfo(mediaInfo);
+                MediaInfoModel existingInfo = em.find(MediaInfoModel.class, mediaInfo.getDownloadId());
+                if (existingInfo == null) {
+                    em.persist(mediaInfo);
+                } else {
+                    em.merge(mediaInfo);
+                }
 
-                em.merge(mediaInfo);
+                queueEntry.setMediaInfo(mediaInfo);
+                em.merge(queueEntry);
             }
 
             em.getTransaction().commit();

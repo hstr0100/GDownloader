@@ -31,21 +31,19 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "queue_entries",
-    uniqueConstraints = @UniqueConstraint(columnNames = "download_id")
-)
+@Table(name = "queue_entries")
 public class QueueEntryModel implements Serializable {
 
     // Chaos ensues if these fields are not public
     @Id
-    @Column(name = "download_id")
+    @Column(name = "queue_entry_id")
     public long downloadId;// = 1l;
 
     @Column(name = "url", length = 2048)
     public String url;// = "https://www.youtube.com/watch?v=NgWkPTKDY_k&list=PLDOjCqYj3ys3TEe8HCR7_cYH7X7dU28_B&index=15";
 
     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER, optional = true)
-    @JoinColumn(name = "download_id", referencedColumnName = "download_id", nullable = true)
+    @JoinColumn(name = "media_info_id", referencedColumnName = "media_info_id", nullable = true)
     public MediaInfoModel mediaInfo;// = null;
 
     public QueueEntryModel(String url) {
