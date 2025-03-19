@@ -35,12 +35,6 @@ application {
     applicationDefaultJvmArgs = ['--add-exports=java.management/sun.management=ALL-UNNAMED']
 }
 
-repositories {
-    maven {
-        url = "https://m2.objectdb.com"
-    }
-}
-
 dependencies {
     implementation(project(path: ':twelvemonkeys', configuration: 'moduleJar'))
     implementation("ch.qos.logback:logback-classic:$logbackVersion")
