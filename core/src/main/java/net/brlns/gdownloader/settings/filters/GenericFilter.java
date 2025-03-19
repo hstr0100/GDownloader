@@ -18,7 +18,6 @@ package net.brlns.gdownloader.settings.filters;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import jakarta.annotation.Nullable;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
@@ -34,7 +33,6 @@ import net.brlns.gdownloader.settings.enums.AudioBitrateEnum;
 import net.brlns.gdownloader.settings.enums.AudioCodecEnum;
 import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.settings.enums.VideoContainerEnum;
-import net.brlns.gdownloader.util.FileUtils;
 import net.brlns.gdownloader.util.URLUtils;
 
 import static net.brlns.gdownloader.lang.Language.*;

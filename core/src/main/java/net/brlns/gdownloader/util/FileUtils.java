@@ -21,6 +21,8 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
@@ -126,7 +128,7 @@ public final class FileUtils {
         }
     }
 
-    public static boolean removeLineContainingIfExists(File file, String searchString) throws IOException {
+    public static boolean removeLineIfExists(File file, String searchString) throws IOException {
         if (file == null || !file.exists() || searchString == null) {
             return false; // Exit silently
         }
@@ -139,12 +141,10 @@ public final class FileUtils {
             return false;
         }
 
-        File tempFile = new File(file.getAbsolutePath() + ".tmp");
+        List<String> lines = new ArrayList<>();
         boolean lineRemoved = false;
 
-        try (BufferedReader reader = new BufferedReader(new FileReader(file));
-             BufferedWriter writer = new BufferedWriter(new FileWriter(tempFile))) {
-
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
             String currentLine;
             while ((currentLine = reader.readLine()) != null) {
                 if (currentLine.contains(searchString)) {
@@ -152,7 +152,21 @@ public final class FileUtils {
                     continue;
                 }
 
-                writer.write(currentLine);
+                lines.add(currentLine);
+            }
+        } catch (IOException e) {
+            throw e;
+        }
+
+        if (!lineRemoved) {
+            return false;
+        }
+
+        File tempFile = new File(file.getAbsolutePath() + ".tmp");
+        try (
+            BufferedWriter writer = new BufferedWriter(new FileWriter(tempFile))) {
+            for (String line : lines) {
+                writer.write(line);
                 writer.newLine();
             }
         } catch (IOException e) {
@@ -161,14 +175,6 @@ public final class FileUtils {
             }
 
             throw e;
-        }
-
-        if (!lineRemoved) {
-            if (!tempFile.delete()) {
-                tempFile.deleteOnExit();
-            }
-
-            return false;
         }
 
         if (!file.delete()) {

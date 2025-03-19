@@ -19,7 +19,6 @@ package net.brlns.gdownloader.downloader;
 import jakarta.annotation.Nullable;
 import jakarta.annotation.PostConstruct;
 import java.io.File;
-import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -861,12 +860,12 @@ public class DownloadManager implements IEvent {
         try {
             for (AbstractDownloader downloader : queueEntry.getDownloaders()) {
                 for (DownloadTypeEnum downloadType : DownloadTypeEnum.values()) {
-                    FileUtils.removeLineContainingIfExists(
+                    FileUtils.removeLineIfExists(
                         getArchiveFile(downloader, downloadType),
                         queueEntry.getMediaInfo().getId());
                 }
             }
-        } catch (IOException e) {
+        } catch (Exception e) {
             log.error("Failed to remove archive entry for video: {}", queueEntry.getUrl(), e);
         }
     }
