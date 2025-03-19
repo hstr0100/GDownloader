@@ -163,37 +163,42 @@ public class DownloadManager implements IEvent {
                 log.info("Current download id: {}", nextId);
 
                 main.getGlobalThreadPool().submitWithPriority(() -> {
-                    int count = 0;
-                    for (QueueEntryEntity entity : persistence.getQueueEntries().getAll()) {
-                        String downloadUrl = entity.getUrl();
+                    linkCaptureLock.lock();// Intentionally block url capture during the entire restoring proccess
+                    try {
+                        int count = 0;
+                        for (QueueEntryEntity entity : persistence.getQueueEntries().getAll()) {
+                            String downloadUrl = entity.getUrl();
 
-                        capturedLinks.add(downloadUrl);
-                        capturedLinks.add(entity.getOriginalUrl());
+                            capturedLinks.add(downloadUrl);
+                            capturedLinks.add(entity.getOriginalUrl());
 
-                        List<AbstractDownloader> compatibleDownloaders = getCompatibleDownloaders(downloadUrl);
+                            List<AbstractDownloader> compatibleDownloaders = getCompatibleDownloaders(downloadUrl);
 
-                        if (compatibleDownloaders.isEmpty()) {
-                            log.error("No compatible downloaders found for: {}", downloadUrl);
-                            continue;
+                            if (compatibleDownloaders.isEmpty()) {
+                                log.error("No compatible downloaders found for: {}", downloadUrl);
+                                continue;
+                            }
+
+                            MediaCard mediaCard = main.getGuiManager().addMediaCard(downloadUrl);
+
+                            QueueEntry queueEntry = QueueEntry.fromEntity(entity, mediaCard, compatibleDownloaders);
+
+                            if (queueEntry.getCurrentQueueCategory() == QueueCategoryEnum.RUNNING) {
+                                queueEntry.updateStatus(DownloadStatusEnum.STOPPED, l10n("gui.download_status.not_started"));
+                            }
+
+                            initializeAndEnqueueEntry(queueEntry);
+
+                            count++;
                         }
 
-                        MediaCard mediaCard = main.getGuiManager().addMediaCard(downloadUrl);
-
-                        QueueEntry queueEntry = QueueEntry.fromEntity(entity, mediaCard, compatibleDownloaders);
-
-                        if (queueEntry.getCurrentQueueCategory() == QueueCategoryEnum.RUNNING) {
-                            queueEntry.updateStatus(DownloadStatusEnum.STOPPED, l10n("gui.download_status.not_started"));
+                        if (count > 0) {
+                            log.info("Successfully restored {} downloads", count);
+                        } else {
+                            log.info("No downloads to restore");
                         }
-
-                        initializeAndEnqueueEntry(queueEntry);
-
-                        count++;
-                    }
-
-                    if (count > 0) {
-                        log.info("Successfully restored {} downloads", count);
-                    } else {
-                        log.info("No downloads to restore");
+                    } finally {
+                        linkCaptureLock.unlock();
                     }
                 }, 30);
             }
@@ -508,9 +513,9 @@ public class DownloadManager implements IEvent {
         if (category != null) {
             switch (category) {
                 case FAILED ->
-                    offerTo(FAILED, queueEntry);
+                    offerTo(FAILED, queueEntry, false);
                 case COMPLETED ->
-                    offerTo(COMPLETED, queueEntry);
+                    offerTo(COMPLETED, queueEntry, false);
                 case RUNNING ->
                     enqueueFirst(queueEntry);
                 default ->
@@ -750,6 +755,10 @@ public class DownloadManager implements IEvent {
     }
 
     private void offerTo(QueueCategoryEnum category, QueueEntry entry) {
+        offerTo(category, entry, true);
+    }
+
+    private void offerTo(QueueCategoryEnum category, QueueEntry entry, boolean checkpoint) {
         if (category == QUEUED) {
             throw new IllegalArgumentException("Use enqueueFirst() or enqueueLast() to add to downloadDeque");
         }
@@ -764,6 +773,10 @@ public class DownloadManager implements IEvent {
                 resetDownload(entry);
                 submitDownloadTask(entry, true);
             }));
+
+            if (checkpoint && persistence.isInitialized()) {
+                persistence.getQueueEntries().upsert(entry.toEntity());
+            }
 
             queue.offer(entry);
             fireListeners();
