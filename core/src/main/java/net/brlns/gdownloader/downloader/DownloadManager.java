@@ -21,13 +21,10 @@ import jakarta.annotation.PostConstruct;
 import java.io.File;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -42,7 +39,6 @@ import net.brlns.gdownloader.downloader.enums.DownloadStatusEnum;
 import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.downloader.enums.QueueCategoryEnum;
 import net.brlns.gdownloader.downloader.structs.DownloadResult;
-import net.brlns.gdownloader.downloader.structs.MediaInfo;
 import net.brlns.gdownloader.event.EventDispatcher;
 import net.brlns.gdownloader.event.IEvent;
 import net.brlns.gdownloader.persistence.PersistenceManager;
@@ -167,49 +163,39 @@ public class DownloadManager implements IEvent {
                 log.info("Current download id: {}", nextId);
 
                 main.getGlobalThreadPool().submitWithPriority(() -> {
-                    List<CompletableFuture<Boolean>> list = new ArrayList<>();
-
+                    int count = 0;
                     for (QueueEntryModel model : persistence.getQueueEntries().getAll()) {
-                        list.add(captureUrl(model.getUrl(), model, true));
-                    }
+                        String downloadUrl = model.getUrl();
 
-                    CompletableFuture<Void> futures = CompletableFuture.allOf(list.toArray(CompletableFuture[]::new));
+                        capturedLinks.add(downloadUrl);
+                        capturedLinks.add(model.getOriginalUrl());
 
-                    futures.thenRun(() -> {
-                        int captured = 0;
+                        List<AbstractDownloader> compatibleDownloaders = getCompatibleDownloaders(downloadUrl);
 
-                        List<Boolean> results = list.stream()
-                            .map(future -> {
-                                try {
-                                    return future.join();
-                                } catch (CompletionException e) {
-                                    GDownloader.handleException(e.getCause());
-                                    return false;
-                                }
-                            })
-                            .collect(Collectors.toList());
-
-                        for (boolean result : results) {
-                            if (result) {
-                                captured++;
-                            }
+                        if (compatibleDownloaders.isEmpty()) {
+                            log.error("No compatible downloaders found for: {}", downloadUrl);
+                            continue;
                         }
 
-                        if (captured > 0) {
-                            log.info("Successfully restored {} downloads", captured);
-                        } else {
-                            log.info("No downloads to restore");
-                        }
-                    });
+                        MediaCard mediaCard = main.getGuiManager().addMediaCard(downloadUrl);
 
-                    try {
-                        futures.get(10l, TimeUnit.MINUTES);
-                    } catch (InterruptedException | ExecutionException e) {
-                        GDownloader.handleException(e);
-                    } catch (TimeoutException e) {
-                        log.warn("Timed out waiting for futures");
+                        QueueEntry queueEntry = QueueEntry.fromModel(model, mediaCard, compatibleDownloaders);
+
+                        if (queueEntry.getCurrentQueueCategory() == QueueCategoryEnum.RUNNING) {
+                            queueEntry.updateStatus(DownloadStatusEnum.STOPPED, l10n("gui.download_status.not_started"));
+                        }
+
+                        initializeAndEnqueueEntry(queueEntry);
+
+                        count++;
                     }
-                }, 20);
+
+                    if (count > 0) {
+                        log.info("Successfully restored {} downloads", count);
+                    } else {
+                        log.info("No downloads to restore");
+                    }
+                }, 30);
             }
         } catch (Exception e) {
             GDownloader.handleException(e);
@@ -264,7 +250,6 @@ public class DownloadManager implements IEvent {
         return captureUrl(inputUrl, model, force, main.getConfig().getPlaylistDownloadOption());
     }
 
-    // TODO: persistence needs to bypass filters
     public CompletableFuture<Boolean> captureUrl(@Nullable String inputUrl, @Nullable QueueEntryModel model, boolean force, PlayListOptionEnum playlistOption) {
         CompletableFuture<Boolean> future = new CompletableFuture<>();
 
@@ -447,73 +432,21 @@ public class DownloadManager implements IEvent {
                     persistence.getCounters().setCurrentValue(CounterTypeEnum.DOWNLOAD_ID, downloadId);
                 }
 
-                QueueEntry queueEntry = new QueueEntry(main, mediaCard, filter, inputUrl, filteredUrl, downloadId, compatibleDownloaders);
+                QueueEntry queueEntry = new QueueEntry(
+                    main,
+                    mediaCard,
+                    filter,
+                    inputUrl,
+                    filteredUrl,
+                    downloadId,
+                    compatibleDownloaders);
+
                 queueEntry.updateStatus(DownloadStatusEnum.QUERYING, l10n("gui.download_status.querying"));
 
-                String filtered = filteredUrl;
-                mediaCard.setOnClose((reason) -> {
-                    queueEntry.close(reason);
+                initializeAndEnqueueEntry(queueEntry);
 
-                    linkCaptureLock.lock();
-                    try {
-                        capturedPlaylists.remove(inputUrl);
-                        capturedLinks.remove(inputUrl);
-                        capturedLinks.remove(filtered);
-                    } finally {
-                        linkCaptureLock.unlock();
-                    }
-
-                    dequeueFromAll(queueEntry);
-
-                    if (reason != CloseReasonEnum.SHUTDOWN) {
-                        if (persistence.isInitialized()) {
-                            persistence.getQueueEntries().remove(queueEntry.getDownloadId());
-                        }
-                    }
-                });
-
-                mediaCard.setOnLeftClick(() -> {
-                    main.openDownloadsDirectory();
-                });
-
-                queueEntry.createDefaultRightClick(this);
-
-                mediaCard.setOnDrag((targetIndex) -> {
-                    if (downloadDeque.contains(queueEntry)) {
-                        try {
-                            downloadDeque.moveToPosition(queueEntry,
-                                Math.clamp(targetIndex, 0, downloadDeque.size() - 1));
-                        } catch (Exception e) {
-                            GDownloader.handleException(e, false);
-                        }
-                    }
-                });
-
-                mediaCard.setValidateDropTarget(() -> {
-                    return downloadDeque.contains(queueEntry);
-                });
-
-                if (model != null && model.getMediaInfo() != null) {
-                    queueEntry.setMediaInfo(MediaInfo.fromModel(model.getMediaInfo()));
-                }
-
-                queryVideo(queueEntry);
-
-                enqueueLast(queueEntry);
-
-                if (main.getConfig().isAutoDownloadStart() && !downloadsRunning.get()) {
-                    startDownloads(suggestedDownloaderId.get());
-                }
-
-                if (model == null) {
-                    QueueEntryModel dbEntry = QueueEntryModel.builder()
-                        .downloadId(downloadId)
-                        .url(filteredUrl)
-                        .build();
-
-                    if (persistence.isInitialized()) {
-                        persistence.getQueueEntries().upsert(dbEntry);
-                    }
+                if (persistence.isInitialized()) {
+                    persistence.getQueueEntries().upsert(queueEntry.toModel());
                 }
 
                 future.complete(true);
@@ -525,6 +458,72 @@ public class DownloadManager implements IEvent {
 
         future.complete(false);
         return future;
+    }
+
+    private void initializeAndEnqueueEntry(QueueEntry queueEntry) {
+        queueEntry.getMediaCard().setOnClose((reason) -> {
+            queueEntry.close(reason);
+
+            linkCaptureLock.lock();
+            try {
+                capturedPlaylists.remove(queueEntry.getUrl());
+                capturedLinks.remove(queueEntry.getUrl());
+                capturedLinks.remove(queueEntry.getOriginalUrl());
+            } finally {
+                linkCaptureLock.unlock();
+            }
+
+            dequeueFromAll(queueEntry);
+
+            if (reason != CloseReasonEnum.SHUTDOWN) {
+                if (persistence.isInitialized()) {
+                    persistence.getQueueEntries().remove(queueEntry.getDownloadId());
+                }
+            }
+        });
+
+        queueEntry.getMediaCard().setOnLeftClick(() -> {
+            main.openDownloadsDirectory();
+        });
+
+        queueEntry.createDefaultRightClick(this);
+
+        queueEntry.getMediaCard().setOnDrag((targetIndex) -> {
+            if (downloadDeque.contains(queueEntry)) {
+                try {
+                    downloadDeque.moveToPosition(queueEntry,
+                        Math.clamp(targetIndex, 0, downloadDeque.size() - 1));
+                } catch (Exception e) {
+                    GDownloader.handleException(e, false);
+                }
+            }
+        });
+
+        queueEntry.getMediaCard().setValidateDropTarget(() -> {
+            return downloadDeque.contains(queueEntry);
+        });
+
+        queryVideo(queueEntry);
+
+        QueueCategoryEnum category = queueEntry.getCurrentQueueCategory();
+        if (category != null) {
+            switch (category) {
+                case FAILED ->
+                    offerTo(FAILED, queueEntry);
+                case COMPLETED ->
+                    offerTo(COMPLETED, queueEntry);
+                case RUNNING ->
+                    enqueueFirst(queueEntry);
+                default ->
+                    enqueueLast(queueEntry);
+            }
+        } else {
+            enqueueLast(queueEntry);
+        }
+
+        if (main.getConfig().isAutoDownloadStart() && !downloadsRunning.get()) {
+            startDownloads(suggestedDownloaderId.get());
+        }
     }
 
     private Optional<AbstractUrlFilter> getFilterForUrl(String url, boolean allowAnyLink) {
@@ -679,6 +678,13 @@ public class DownloadManager implements IEvent {
 
         QueueEntry entry;
         while ((entry = queue.poll()) != null) {
+            // TODO: more checkpoints
+            if (reason == CloseReasonEnum.SHUTDOWN
+                && persistence.isInitialized()
+                && !entry.getCancelHook().get()) {
+                persistence.getQueueEntries().upsert(entry.toModel());
+            }
+
             main.getGuiManager().removeMediaCard(entry.getMediaCard().getId(), reason);
         }
 
@@ -695,6 +701,8 @@ public class DownloadManager implements IEvent {
             () -> submitDownloadTask(entry, true));
 
         if (!downloadDeque.contains(entry)) {
+            entry.setCurrentQueueCategory(QUEUED);
+
             downloadDeque.offerLast(entry);
             fireListeners();
         }
@@ -708,6 +716,8 @@ public class DownloadManager implements IEvent {
             () -> submitDownloadTask(entry, true));
 
         if (!downloadDeque.contains(entry)) {
+            entry.setCurrentQueueCategory(QUEUED);
+
             downloadDeque.offerFirst(entry);
             fireListeners();
         }
@@ -749,13 +759,20 @@ public class DownloadManager implements IEvent {
 
         Queue<QueueEntry> queue = getQueue(category);
         if (!queue.contains(entry)) {
+            entry.setCurrentQueueCategory(category);
+
+            entry.addRightClick(_restartKey, () -> stopDownload(entry, () -> {
+                resetDownload(entry);
+                submitDownloadTask(entry, true);
+            }));
+
             queue.offer(entry);
             fireListeners();
         }
     }
 
     private void queryVideo(QueueEntry queueEntry) {
-        if (!main.getConfig().isQueryMetadata() || queueEntry.getMediaInfo() != null) {
+        if (!main.getConfig().isQueryMetadata() || queueEntry.getQueried().get()) {
             if (queueEntry.getDownloadStatus() == DownloadStatusEnum.QUERYING) {
                 queueEntry.updateStatus(DownloadStatusEnum.QUEUED,
                     l10n("gui.download_status.not_started"));
@@ -851,11 +868,6 @@ public class DownloadManager implements IEvent {
         if (mediaCard.isClosed()) {
             return;
         }
-
-        entry.addRightClick(_restartKey, () -> stopDownload(entry, () -> {
-            resetDownload(entry);
-            submitDownloadTask(entry, true);
-        }));
 
         offerTo(RUNNING, entry);
 

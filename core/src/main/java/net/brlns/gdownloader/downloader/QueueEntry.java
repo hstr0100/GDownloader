@@ -45,7 +45,9 @@ import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.downloader.enums.CloseReasonEnum;
 import net.brlns.gdownloader.downloader.enums.DownloadStatusEnum;
 import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
+import net.brlns.gdownloader.downloader.enums.QueueCategoryEnum;
 import net.brlns.gdownloader.downloader.structs.MediaInfo;
+import net.brlns.gdownloader.persistence.model.QueueEntryModel;
 import net.brlns.gdownloader.settings.enums.IContainerEnum;
 import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
 import net.brlns.gdownloader.ui.GUIManager;
@@ -90,11 +92,16 @@ public class QueueEntry {
     @Setter
     private DownloaderIdEnum currentDownloader;
 
+    @Setter
+    private QueueCategoryEnum currentQueueCategory;
+
     private DownloadStatusEnum downloadStatus;
+    private String lastStatusMessage;
 
     private final AtomicBoolean downloadStarted = new AtomicBoolean(false);
     private final AtomicBoolean cancelHook = new AtomicBoolean(false);
     private final AtomicBoolean running = new AtomicBoolean(false);
+    private final AtomicBoolean queried = new AtomicBoolean(false);
     private final AtomicInteger retryCounter = new AtomicInteger();
 
     private MediaInfo mediaInfo;
@@ -215,6 +222,7 @@ public class QueueEntry {
 
     public void setMediaInfo(MediaInfo mediaInfoIn) {
         mediaInfo = mediaInfoIn;
+        queried.set(true);
 
         if (!mediaInfo.getTitle().isEmpty()) {
             logOutput("Title: " + mediaInfo.getTitle());
@@ -305,6 +313,8 @@ public class QueueEntry {
             if (log) {
                 logOutput(text);
             }
+
+            lastStatusMessage = text;
 
             String topText = filter.getDisplayName();
 
@@ -491,4 +501,96 @@ public class QueueEntry {
         });
     }
 
+    public QueueEntryModel toModel() {
+        QueueEntryModel model = new QueueEntryModel();
+
+        model.setOriginalUrl(getOriginalUrl());
+        model.setUrl(getUrl());
+        model.setDownloadId(getDownloadId());
+        model.setFilter(getFilter());
+
+        model.setDownloaderBlacklist(new ArrayList<>(getDownloaderBlacklist()));
+
+        model.setForcedDownloader(getForcedDownloader());
+
+        model.setCurrentDownloader(getCurrentDownloader());
+        model.setCurrentQueueCategory(getCurrentQueueCategory());
+        model.setDownloadStatus(getDownloadStatus());
+        model.setLastStatusMessage(getLastStatusMessage());
+
+        model.setDownloadStarted(getDownloadStarted().get());
+        //model.setCancelHook(getCancelHook().get());
+        model.setRunning(isRunning());
+
+        model.setRetryCounter(getRetryCounter().get());
+        model.setQueried(getQueried().get());
+
+        if (getMediaInfo() != null) {
+            model.setMediaInfo(getMediaInfo().toModel(getDownloadId()));
+        }
+
+        if (getTmpDirectory() != null) {
+            model.setTmpDirectoryPath(getTmpDirectory().getAbsolutePath());
+        }
+
+        model.setFinalMediaFilePaths(getFinalMediaFiles().stream()
+            .map(File::getAbsolutePath)
+            .collect(Collectors.toCollection(ArrayList::new)));
+
+        model.setErrorLog(getErrorLog().snapshotAsList());
+        model.setDownloadLog(getDownloadLog().snapshotAsList());
+
+        return model;
+    }
+
+    public static QueueEntry fromModel(QueueEntryModel model, MediaCard mediaCard, List<AbstractDownloader> downloaders) {
+        QueueEntry queueEntry = new QueueEntry(
+            GDownloader.getInstance(),
+            mediaCard,
+            model.getFilter(),
+            model.getOriginalUrl(),
+            model.getUrl(),
+            model.getDownloadId(),
+            downloaders
+        );
+
+        queueEntry.resetDownloaderBlacklist();
+        for (DownloaderIdEnum downloaderId : model.getDownloaderBlacklist()) {
+            queueEntry.blackListDownloader(downloaderId);
+        }
+
+        queueEntry.setForcedDownloader(model.getForcedDownloader());
+        queueEntry.setCurrentDownloader(model.getCurrentDownloader());
+        queueEntry.setCurrentQueueCategory(model.getCurrentQueueCategory());
+
+        if (model.getDownloadStatus() != null && model.getLastStatusMessage() != null) {
+            queueEntry.updateStatus(model.getDownloadStatus(), model.getLastStatusMessage(), false);
+        }
+
+        queueEntry.getDownloadStarted().set(model.isDownloadStarted());
+        //queueEntry.getCancelHook().set(model.isCancelHook());
+        queueEntry.getRunning().set(model.isRunning());
+        queueEntry.getRetryCounter().set(model.getRetryCounter());
+        queueEntry.getQueried().set(model.isQueried());
+
+        if (model.getMediaInfo() != null) {
+            queueEntry.setMediaInfo(MediaInfo.fromModel(model.getMediaInfo()));
+        }
+
+        if (model.getTmpDirectoryPath() != null && !model.getTmpDirectoryPath().isEmpty()) {
+            queueEntry.setTmpDirectory(new File(model.getTmpDirectoryPath()));
+        }
+
+        for (String path : model.getFinalMediaFilePaths()) {
+            queueEntry.getFinalMediaFiles().add(new File(path));
+        }
+
+        queueEntry.getErrorLog().clear();
+        queueEntry.getErrorLog().addAll(model.getErrorLog());
+
+        queueEntry.getDownloadLog().clear();
+        queueEntry.getDownloadLog().addAll(model.getDownloadLog());
+
+        return queueEntry;
+    }
 }

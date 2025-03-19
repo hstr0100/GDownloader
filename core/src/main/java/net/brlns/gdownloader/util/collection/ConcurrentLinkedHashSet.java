@@ -83,7 +83,7 @@ public class ConcurrentLinkedHashSet<T> implements Iterable<T> {
         }
     }
 
-    public List<T> snapshotAsList() {
+    public ArrayList<T> snapshotAsList() {
         lock.readLock().lock();
         try {
             return new ArrayList<>(set);

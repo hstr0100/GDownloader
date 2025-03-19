@@ -6,6 +6,8 @@
     <persistence-unit name="hsqldbPU" transaction-type="RESOURCE_LOCAL">
         <provider>org.eclipse.persistence.jpa.PersistenceProvider</provider>
 
+        <class>net.brlns.gdownloader.persistence.converter.UrlFilterConverter</class>
+
         <class>net.brlns.gdownloader.persistence.model.CounterModel</class>
         <class>net.brlns.gdownloader.persistence.model.MediaInfoModel</class>
         <class>net.brlns.gdownloader.persistence.model.QueueEntryModel</class>

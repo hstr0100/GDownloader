@@ -19,7 +19,6 @@ package net.brlns.gdownloader.persistence.model;
 import jakarta.persistence.*;
 import java.io.Serializable;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -31,12 +30,12 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class CounterModel implements Serializable {
 
     @Id
     @Column(name = "type")
-    public String type;
+    @Enumerated(EnumType.STRING)
+    public CounterTypeEnum type;
 
     @Column(name = "value")
     public long value;

@@ -34,9 +34,9 @@ public class CounterRepository extends AbstractRepository {
 
     public long getCurrentValue(CounterTypeEnum counterType) {
         try (EntityManager em = getEmf().createEntityManager()) {
-            CounterModel counter = em.find(CounterModel.class, counterType.getName());
+            CounterModel counter = em.find(CounterModel.class, counterType);
             if (counter == null) {
-                counter = new CounterModel(counterType.getName(), 0);
+                counter = new CounterModel(counterType, 0);
 
                 upsert(counter);
             }
@@ -49,7 +49,7 @@ public class CounterRepository extends AbstractRepository {
         long curr = getCurrentValue(CounterTypeEnum.DOWNLOAD_ID);
 
         if (value > curr) {// Value always go up
-            CounterModel counter = new CounterModel(counterType.getName(), value);
+            CounterModel counter = new CounterModel(counterType, value);
 
             upsert(counter);
         }

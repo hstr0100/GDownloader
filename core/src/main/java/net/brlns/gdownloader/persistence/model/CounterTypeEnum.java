@@ -23,11 +23,5 @@ import lombok.Getter;
  */
 @Getter
 public enum CounterTypeEnum {
-    DOWNLOAD_ID("download_id");
-
-    private final String name;
-
-    private CounterTypeEnum(String nameIn) {
-        name = nameIn;
-    }
+    DOWNLOAD_ID;
 }

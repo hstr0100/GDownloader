@@ -19,7 +19,6 @@ package net.brlns.gdownloader.persistence.model;
 import jakarta.persistence.*;
 import java.io.Serializable;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -27,7 +26,6 @@ import lombok.NoArgsConstructor;
  * @author Gabriel / hstr0100 / vertx010
  */
 @Data
-@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
