@@ -18,7 +18,6 @@ package net.brlns.gdownloader.settings.filters;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import jakarta.annotation.Nullable;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
@@ -34,7 +33,6 @@ import net.brlns.gdownloader.settings.enums.AudioBitrateEnum;
 import net.brlns.gdownloader.settings.enums.AudioCodecEnum;
 import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.settings.enums.VideoContainerEnum;
-import net.brlns.gdownloader.util.FileUtils;
 import net.brlns.gdownloader.util.URLUtils;
 
 import static net.brlns.gdownloader.lang.Language.*;
@@ -78,7 +76,7 @@ public class GenericFilter extends AbstractUrlFilter {
 
         List<String> arguments = new ArrayList<>();
 
-        File archiveFile = getArchiveFile(downloader, typeEnum);
+        File archiveFile = manager.getArchiveFile(downloader, typeEnum);
 
         switch (downloader.getDownloaderId()) {
             case YT_DLP -> {
@@ -323,28 +321,4 @@ public class GenericFilter extends AbstractUrlFilter {
         return true;
     }
 
-    @Nullable
-    private File getArchiveFile(AbstractDownloader downloader, DownloadTypeEnum downloadType) {
-        List<DownloadTypeEnum> supported = downloader.getArchivableTypes();
-
-        if (supported.contains(downloadType)) {
-            File oldArchive = new File(GDownloader.getWorkDirectory(),
-                downloader.getDownloaderId().getDisplayName()
-                + "_archive.txt");
-
-            File newArchive = new File(GDownloader.getWorkDirectory(),
-                downloader.getDownloaderId().getDisplayName()
-                + "_archive_"
-                + downloadType.name().toLowerCase()
-                + ".txt");
-
-            if (oldArchive.exists()) {
-                oldArchive.renameTo(newArchive);
-            }
-
-            return FileUtils.getOrCreate(newArchive);
-        }
-
-        return null;
-    }
 }

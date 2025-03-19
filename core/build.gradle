@@ -45,6 +45,9 @@ dependencies {
     implementation("net.java.dev.jna:jna:$jnaVersion")
     implementation("net.java.dev.jna:jna-platform:$jnaVersion")
     implementation("jakarta.annotation:jakarta.annotation-api:$jakartaAnnotationVersion")
+    implementation("jakarta.persistence:jakarta.persistence-api:$jakartaPersistenceVersion")
+    implementation("org.eclipse.persistence:eclipselink:$eclipselinkVersion")
+    implementation("org.hsqldb:hsqldb:$hsqldbVersion")
 
     compileOnly("org.projectlombok:lombok:$lombokVersion")
     annotationProcessor("org.projectlombok:lombok:$lombokVersion")

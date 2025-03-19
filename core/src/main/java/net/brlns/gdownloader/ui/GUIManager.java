@@ -47,6 +47,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.downloader.AbstractDownloader;
 import net.brlns.gdownloader.downloader.DownloadManager;
+import net.brlns.gdownloader.downloader.enums.CloseReasonEnum;
 import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.downloader.enums.QueueCategoryEnum;
 import net.brlns.gdownloader.event.EventDispatcher;
@@ -525,18 +526,22 @@ public final class GUIManager {
                 loadIcon("/assets/erase.png", ICON),
                 loadIcon("/assets/erase.png", ICON_HOVER),
                 "gui.clear_download_queue.tooltip",
-                e -> main.getDownloadManager().clearQueue()
+                e -> main.getDownloadManager().clearQueue(CloseReasonEnum.MANUAL)
             );
 
             RightClickMenuEntries rightClickMenu = new RightClickMenuEntries();
             rightClickMenu.put(l10n("gui.clear_download_queue.clear_failed"),
-                new RunnableMenuEntry(() -> main.getDownloadManager().clearQueue(QueueCategoryEnum.FAILED)));
+                new RunnableMenuEntry(() -> main.getDownloadManager()
+                .clearQueue(QueueCategoryEnum.FAILED, CloseReasonEnum.MANUAL)));
             rightClickMenu.put(l10n("gui.clear_download_queue.clear_completed"),
-                new RunnableMenuEntry(() -> main.getDownloadManager().clearQueue(QueueCategoryEnum.COMPLETED)));
+                new RunnableMenuEntry(() -> main.getDownloadManager()
+                .clearQueue(QueueCategoryEnum.COMPLETED, CloseReasonEnum.MANUAL)));
             rightClickMenu.put(l10n("gui.clear_download_queue.clear_queued"),
-                new RunnableMenuEntry(() -> main.getDownloadManager().clearQueue(QueueCategoryEnum.QUEUED)));
+                new RunnableMenuEntry(() -> main.getDownloadManager()
+                .clearQueue(QueueCategoryEnum.QUEUED, CloseReasonEnum.MANUAL)));
             rightClickMenu.put(l10n("gui.clear_download_queue.clear_running"),
-                new RunnableMenuEntry(() -> main.getDownloadManager().clearQueue(QueueCategoryEnum.RUNNING)));
+                new RunnableMenuEntry(() -> main.getDownloadManager()
+                .clearQueue(QueueCategoryEnum.RUNNING, CloseReasonEnum.MANUAL)));
 
             clearQueueButton.addMouseListener(new MouseAdapter() {
                 @Override
@@ -1328,7 +1333,7 @@ public final class GUIManager {
                                         deleteSelectedMediaCards();
                                     }
 
-                                    removeMediaCard(mediaCard.getId());
+                                    removeMediaCard(mediaCard.getId(), CloseReasonEnum.MANUAL);
                                 }
                             );
                             closeButton.setPreferredSize(new Dimension(16, 16));
@@ -1478,12 +1483,12 @@ public final class GUIManager {
                         appWindow.setVisible(true);
                     }
 
-                    if (main.getConfig().isAutoScrollToBottom() && scrollToBottom) {
-                        scrollToBottom(queueScrollPane);
-                    }
-
                     appWindow.revalidate();
                     appWindow.repaint();
+                }
+
+                if (main.getConfig().isAutoScrollToBottom() && scrollToBottom) {
+                    scrollToBottom(queueScrollPane);
                 }
             }
         });
@@ -1502,11 +1507,11 @@ public final class GUIManager {
         return mediaCard;
     }
 
-    public void removeMediaCard(int id) {
+    public void removeMediaCard(int id, CloseReasonEnum reason) {
         MediaCard mediaCard = mediaCards.remove(id);
 
         if (mediaCard != null) {
-            mediaCard.close();
+            mediaCard.close(reason);
 
             selectedMediaCards.remove(mediaCard.getId());
 
@@ -1534,7 +1539,7 @@ public final class GUIManager {
 
     private void deleteSelectedMediaCards() {
         for (int cardId : selectedMediaCards) {
-            removeMediaCard(cardId);
+            removeMediaCard(cardId, CloseReasonEnum.MANUAL);
         }
 
         selectedMediaCards.clear();

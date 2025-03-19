@@ -42,9 +42,12 @@ import lombok.Setter;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
+import net.brlns.gdownloader.downloader.enums.CloseReasonEnum;
 import net.brlns.gdownloader.downloader.enums.DownloadStatusEnum;
 import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
+import net.brlns.gdownloader.downloader.enums.QueueCategoryEnum;
 import net.brlns.gdownloader.downloader.structs.MediaInfo;
+import net.brlns.gdownloader.persistence.entity.QueueEntryEntity;
 import net.brlns.gdownloader.settings.enums.IContainerEnum;
 import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
 import net.brlns.gdownloader.ui.GUIManager;
@@ -55,6 +58,7 @@ import net.brlns.gdownloader.ui.menu.NestedMenuEntry;
 import net.brlns.gdownloader.ui.menu.RunnableMenuEntry;
 import net.brlns.gdownloader.ui.menu.SingleActionMenuEntry;
 import net.brlns.gdownloader.util.DirectoryUtils;
+import net.brlns.gdownloader.util.ImageUtils;
 import net.brlns.gdownloader.util.StringUtils;
 import net.brlns.gdownloader.util.collection.ConcurrentLinkedHashSet;
 
@@ -77,7 +81,7 @@ public class QueueEntry {
     private final AbstractUrlFilter filter;
     private final String originalUrl;
     private final String url;
-    private final int downloadId;
+    private final long downloadId;
     private final List<AbstractDownloader> downloaders;
 
     private final List<DownloaderIdEnum> downloaderBlacklist = new CopyOnWriteArrayList<>();
@@ -88,11 +92,16 @@ public class QueueEntry {
     @Setter
     private DownloaderIdEnum currentDownloader;
 
+    @Setter
+    private QueueCategoryEnum currentQueueCategory;
+
     private DownloadStatusEnum downloadStatus;
+    private String lastStatusMessage;
 
     private final AtomicBoolean downloadStarted = new AtomicBoolean(false);
     private final AtomicBoolean cancelHook = new AtomicBoolean(false);
     private final AtomicBoolean running = new AtomicBoolean(false);
+    private final AtomicBoolean queried = new AtomicBoolean(false);
     private final AtomicInteger retryCounter = new AtomicInteger();
 
     private MediaInfo mediaInfo;
@@ -189,14 +198,16 @@ public class QueueEntry {
         }
     }
 
-    public void close() {
+    public void close(CloseReasonEnum reason) {
         cancelHook.set(true);
 
         if (process != null) {
             process.destroy();
         }
 
-        cleanDirectories();
+        if (reason != CloseReasonEnum.SHUTDOWN) {
+            cleanDirectories();
+        }
     }
 
     public void resetForRestart() {
@@ -211,20 +222,37 @@ public class QueueEntry {
 
     public void setMediaInfo(MediaInfo mediaInfoIn) {
         mediaInfo = mediaInfoIn;
+        queried.set(true);
 
         if (!mediaInfo.getTitle().isEmpty()) {
             logOutput("Title: " + mediaInfo.getTitle());
         }
 
-        Optional<BufferedImage> optional = mediaInfo.supportedThumbnails()
-            .limit(5)
-            .map(urlIn -> tryLoadThumbnail(urlIn))
-            .filter(Optional::isPresent)
-            .map(Optional::get)
-            .findFirst();
+        String base64encoded = mediaInfo.getBase64EncodedThumbnail();
+
+        Optional<BufferedImage> optional = Optional.ofNullable(
+            ImageUtils.base64ToBufferedImage(base64encoded)
+        ).or(() -> {
+            return mediaInfo.supportedThumbnails()
+                .limit(5)
+                .map(this::tryLoadThumbnail)
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .findFirst();
+        });
 
         optional.ifPresentOrElse(
-            img -> mediaCard.setThumbnailAndDuration(img, mediaInfo.getDuration()),
+            img -> {
+                // Downscale thumbnails to save space and resources, we don't need the full resolution here.
+                BufferedImage downscaledImage = ImageUtils.downscaleImage(img, 240);
+
+                if (base64encoded.isEmpty()) {
+                    mediaInfo.setBase64EncodedThumbnail(
+                        ImageUtils.bufferedImageToBase64(downscaledImage, "jpg"));
+                }
+
+                mediaCard.setThumbnailAndDuration(downscaledImage, mediaInfo.getDuration());
+            },
             () -> {
                 if (main.getConfig().isDebugMode()) {
                     log.error("Failed to load a valid thumbnail");
@@ -285,6 +313,8 @@ public class QueueEntry {
             if (log) {
                 logOutput(text);
             }
+
+            lastStatusMessage = text;
 
             String topText = filter.getDisplayName();
 
@@ -471,4 +501,96 @@ public class QueueEntry {
         });
     }
 
+    public QueueEntryEntity toEntity() {
+        QueueEntryEntity entity = new QueueEntryEntity();
+
+        entity.setOriginalUrl(getOriginalUrl());
+        entity.setUrl(getUrl());
+        entity.setDownloadId(getDownloadId());
+        entity.setFilter(getFilter());
+
+        entity.getDownloaderBlacklist().addAll(getDownloaderBlacklist());
+
+        entity.setForcedDownloader(getForcedDownloader());
+
+        entity.setCurrentDownloader(getCurrentDownloader());
+        entity.setCurrentQueueCategory(getCurrentQueueCategory());
+        entity.setDownloadStatus(getDownloadStatus());
+        entity.setLastStatusMessage(getLastStatusMessage());
+
+        entity.setDownloadStarted(getDownloadStarted().get());
+        //entity.setCancelHook(getCancelHook().get());
+        entity.setRunning(isRunning());
+
+        entity.setRetryCounter(getRetryCounter().get());
+        entity.setQueried(getQueried().get());
+
+        if (getMediaInfo() != null) {
+            entity.setMediaInfo(getMediaInfo().toEntity(getDownloadId()));
+        }
+
+        if (getTmpDirectory() != null) {
+            entity.setTmpDirectoryPath(getTmpDirectory().getAbsolutePath());
+        }
+
+        entity.setFinalMediaFilePaths(getFinalMediaFiles().stream()
+            .map(File::getAbsolutePath)
+            .collect(Collectors.toCollection(ArrayList::new)));
+
+        entity.setErrorLog(getErrorLog().snapshotAsList());
+        entity.setDownloadLog(getDownloadLog().snapshotAsList());
+
+        return entity;
+    }
+
+    public static QueueEntry fromEntity(QueueEntryEntity entity, MediaCard mediaCard, List<AbstractDownloader> downloaders) {
+        QueueEntry queueEntry = new QueueEntry(
+            GDownloader.getInstance(),
+            mediaCard,
+            entity.getFilter(),
+            entity.getOriginalUrl(),
+            entity.getUrl(),
+            entity.getDownloadId(),
+            downloaders
+        );
+
+        queueEntry.resetDownloaderBlacklist();
+        for (DownloaderIdEnum downloaderId : entity.getDownloaderBlacklist()) {
+            queueEntry.blackListDownloader(downloaderId);
+        }
+
+        queueEntry.setForcedDownloader(entity.getForcedDownloader());
+        queueEntry.setCurrentDownloader(entity.getCurrentDownloader());
+        queueEntry.setCurrentQueueCategory(entity.getCurrentQueueCategory());
+
+        if (entity.getDownloadStatus() != null && entity.getLastStatusMessage() != null) {
+            queueEntry.updateStatus(entity.getDownloadStatus(), entity.getLastStatusMessage(), false);
+        }
+
+        queueEntry.getDownloadStarted().set(entity.isDownloadStarted());
+        //queueEntry.getCancelHook().set(entity.isCancelHook());
+        queueEntry.getRunning().set(entity.isRunning());
+        queueEntry.getRetryCounter().set(entity.getRetryCounter());
+        queueEntry.getQueried().set(entity.isQueried());
+
+        if (entity.getMediaInfo() != null) {
+            queueEntry.setMediaInfo(MediaInfo.fromEntity(entity.getMediaInfo()));
+        }
+
+        if (entity.getTmpDirectoryPath() != null && !entity.getTmpDirectoryPath().isEmpty()) {
+            queueEntry.setTmpDirectory(new File(entity.getTmpDirectoryPath()));
+        }
+
+        for (String path : entity.getFinalMediaFilePaths()) {
+            queueEntry.getFinalMediaFiles().add(new File(path));
+        }
+
+        queueEntry.getErrorLog().clear();
+        queueEntry.getErrorLog().addAll(entity.getErrorLog());
+
+        queueEntry.getDownloadLog().clear();
+        queueEntry.getDownloadLog().addAll(entity.getDownloadLog());
+
+        return queueEntry;
+    }
 }

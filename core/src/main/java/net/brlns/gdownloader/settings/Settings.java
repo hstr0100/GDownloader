@@ -72,6 +72,9 @@ public class Settings {
     @JsonProperty("BrowserForCookies")
     private BrowserEnum browser = BrowserEnum.UNSET;
 
+    @JsonProperty("RemoveSuccessfulDownloads")
+    private boolean removeSuccessfulDownloads = false;
+
     @JsonProperty("QueryMetadata")
     private boolean queryMetadata = true;
 

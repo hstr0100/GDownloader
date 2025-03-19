@@ -21,6 +21,8 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
@@ -126,4 +128,63 @@ public final class FileUtils {
         }
     }
 
+    public static boolean removeLineIfExists(File file, String searchString) throws IOException {
+        if (file == null || !file.exists() || searchString == null) {
+            return false; // Exit silently
+        }
+
+        if (!file.isFile()) {
+            if (log.isDebugEnabled()) {
+                log.error("Not a regular file: " + file.getAbsolutePath());
+            }
+
+            return false;
+        }
+
+        List<String> lines = new ArrayList<>();
+        boolean lineRemoved = false;
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+            String currentLine;
+            while ((currentLine = reader.readLine()) != null) {
+                if (currentLine.contains(searchString)) {
+                    lineRemoved = true;
+                    continue;
+                }
+
+                lines.add(currentLine);
+            }
+        } catch (IOException e) {
+            throw e;
+        }
+
+        if (!lineRemoved) {
+            return false;
+        }
+
+        File tempFile = new File(file.getAbsolutePath() + ".tmp");
+        try (
+            BufferedWriter writer = new BufferedWriter(new FileWriter(tempFile))) {
+            for (String line : lines) {
+                writer.write(line);
+                writer.newLine();
+            }
+        } catch (IOException e) {
+            if (tempFile.exists()) {
+                tempFile.delete();
+            }
+
+            throw e;
+        }
+
+        if (!file.delete()) {
+            throw new IOException("Could not delete original file: " + file.getAbsolutePath());
+        }
+
+        if (!tempFile.renameTo(file)) {
+            throw new IOException("Could not rename temp file to original filename");
+        }
+
+        return lineRemoved;
+    }
 }

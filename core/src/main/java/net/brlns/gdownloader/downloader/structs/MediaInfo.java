@@ -28,6 +28,8 @@ import java.util.List;
 import java.util.stream.Stream;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import net.brlns.gdownloader.persistence.PersistenceManager;
+import net.brlns.gdownloader.persistence.entity.MediaInfoEntity;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -85,6 +87,9 @@ public class MediaInfo {
     @JsonProperty("fps")
     private int fps;
 
+    @JsonIgnore
+    private String base64EncodedThumbnail = "";
+
     // TODO: implement
     @JsonIgnore
     @Nullable
@@ -122,5 +127,28 @@ public class MediaInfo {
             .forEach(builder::add);
 
         return builder.build();
+    }
+
+    /**
+     * Converts this MediaInfo to a MediaInfoEntity for persistence.
+     */
+    public MediaInfoEntity toEntity(long downloadId) {
+        MediaInfoEntity entity = PersistenceManager.ENTITY_MAPPER
+            .convertValue(this, MediaInfoEntity.class);
+
+        entity.setDownloadId(downloadId);
+        entity.setBase64EncodedThumbnail(base64EncodedThumbnail);
+
+        return entity;
+    }
+
+    /**
+     * Converts a MediaInfoEntity to a MediaInfo.
+     */
+    public static MediaInfo fromEntity(MediaInfoEntity entity) {
+        MediaInfo info = PersistenceManager.ENTITY_MAPPER.convertValue(entity, MediaInfo.class);
+        info.setBase64EncodedThumbnail(entity.getBase64EncodedThumbnail());
+
+        return info;
     }
 }
