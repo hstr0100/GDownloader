@@ -78,7 +78,7 @@ public class GenericFilter extends AbstractUrlFilter {
 
         List<String> arguments = new ArrayList<>();
 
-        File archiveFile = getArchiveFile(downloader, typeEnum);
+        File archiveFile = manager.getArchiveFile(downloader, typeEnum);
 
         switch (downloader.getDownloaderId()) {
             case YT_DLP -> {
@@ -323,28 +323,4 @@ public class GenericFilter extends AbstractUrlFilter {
         return true;
     }
 
-    @Nullable
-    private File getArchiveFile(AbstractDownloader downloader, DownloadTypeEnum downloadType) {
-        List<DownloadTypeEnum> supported = downloader.getArchivableTypes();
-
-        if (supported.contains(downloadType)) {
-            File oldArchive = new File(GDownloader.getWorkDirectory(),
-                downloader.getDownloaderId().getDisplayName()
-                + "_archive.txt");
-
-            File newArchive = new File(GDownloader.getWorkDirectory(),
-                downloader.getDownloaderId().getDisplayName()
-                + "_archive_"
-                + downloadType.name().toLowerCase()
-                + ".txt");
-
-            if (oldArchive.exists()) {
-                oldArchive.renameTo(newArchive);
-            }
-
-            return FileUtils.getOrCreate(newArchive);
-        }
-
-        return null;
-    }
 }

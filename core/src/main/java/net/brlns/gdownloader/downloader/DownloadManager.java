@@ -19,8 +19,10 @@ package net.brlns.gdownloader.downloader;
 import jakarta.annotation.Nullable;
 import jakarta.annotation.PostConstruct;
 import java.io.File;
+import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -44,6 +46,7 @@ import net.brlns.gdownloader.event.IEvent;
 import net.brlns.gdownloader.persistence.PersistenceManager;
 import net.brlns.gdownloader.persistence.entity.CounterTypeEnum;
 import net.brlns.gdownloader.persistence.entity.QueueEntryEntity;
+import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.settings.enums.PlayListOptionEnum;
 import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
 import net.brlns.gdownloader.settings.filters.GenericFilter;
@@ -52,6 +55,7 @@ import net.brlns.gdownloader.settings.filters.YoutubePlaylistFilter;
 import net.brlns.gdownloader.ui.GUIManager;
 import net.brlns.gdownloader.ui.MediaCard;
 import net.brlns.gdownloader.ui.menu.IMenuEntry;
+import net.brlns.gdownloader.util.FileUtils;
 import net.brlns.gdownloader.util.collection.ConcurrentRearrangeableDeque;
 import net.brlns.gdownloader.util.collection.ExpiringSet;
 import net.brlns.gdownloader.util.collection.LinkedIterableBlockingQueue;
@@ -449,9 +453,7 @@ public class DownloadManager implements IEvent {
 
                 initializeAndEnqueueEntry(queueEntry);
 
-                if (persistence.isInitialized()) {
-                    persistence.getQueueEntries().upsert(queueEntry.toEntity());
-                }
+                saveCheckpoint(queueEntry);
 
                 future.complete(true);
                 return future;
@@ -480,9 +482,7 @@ public class DownloadManager implements IEvent {
             dequeueFromAll(queueEntry);
 
             if (reason != CloseReasonEnum.SHUTDOWN) {
-                if (persistence.isInitialized()) {
-                    persistence.getQueueEntries().remove(queueEntry.getDownloadId());
-                }
+                deleteCheckpoint(queueEntry);
             }
         });
 
@@ -527,6 +527,18 @@ public class DownloadManager implements IEvent {
 
         if (main.getConfig().isAutoDownloadStart() && !downloadsRunning.get()) {
             startDownloads(suggestedDownloaderId.get());
+        }
+    }
+
+    private void saveCheckpoint(QueueEntry queueEntry) {
+        if (persistence.isInitialized()) {
+            persistence.getQueueEntries().upsert(queueEntry.toEntity());
+        }
+    }
+
+    private void deleteCheckpoint(QueueEntry queueEntry) {
+        if (persistence.isInitialized()) {
+            persistence.getQueueEntries().remove(queueEntry.getDownloadId());
         }
     }
 
@@ -683,10 +695,8 @@ public class DownloadManager implements IEvent {
         QueueEntry entry;
         while ((entry = queue.poll()) != null) {
             // TODO: more checkpoints
-            if (reason == CloseReasonEnum.SHUTDOWN
-                && persistence.isInitialized()
-                && !entry.getCancelHook().get()) {
-                persistence.getQueueEntries().upsert(entry.toEntity());
+            if (reason == CloseReasonEnum.SHUTDOWN && !entry.getCancelHook().get()) {
+                saveCheckpoint(entry);
             }
 
             main.getGuiManager().removeMediaCard(entry.getMediaCard().getId(), reason);
@@ -774,8 +784,8 @@ public class DownloadManager implements IEvent {
                 submitDownloadTask(entry, true);
             }));
 
-            if (checkpoint && persistence.isInitialized()) {
-                persistence.getQueueEntries().upsert(entry.toEntity());
+            if (checkpoint) {
+                saveCheckpoint(entry);
             }
 
             queue.offer(entry);
@@ -834,11 +844,56 @@ public class DownloadManager implements IEvent {
         queueEntry.resetDownloaderBlacklist();
         queueEntry.resetRetryCounter();// Normaly we want the retry count to stick around, but not in this case.
 
+        removeArchiveEntries(queueEntry);
+
         enqueueLast(queueEntry);
 
         if (fireListeners) {
             fireListeners();
         }
+    }
+
+    private void removeArchiveEntries(QueueEntry queueEntry) {
+        if (!queueEntry.getQueried().get()) {// We won't have the item id without querying it.
+            return;
+        }
+
+        try {
+            for (AbstractDownloader downloader : queueEntry.getDownloaders()) {
+                for (DownloadTypeEnum downloadType : DownloadTypeEnum.values()) {
+                    FileUtils.removeLineContainingIfExists(
+                        getArchiveFile(downloader, downloadType),
+                        queueEntry.getMediaInfo().getId());
+                }
+            }
+        } catch (IOException e) {
+            log.error("Failed to remove archive entry for video: {}", queueEntry.getUrl(), e);
+        }
+    }
+
+    @Nullable
+    public File getArchiveFile(AbstractDownloader downloader, DownloadTypeEnum downloadType) {
+        List<DownloadTypeEnum> supported = downloader.getArchivableTypes();
+
+        if (supported.contains(downloadType)) {
+            File oldArchive = new File(GDownloader.getWorkDirectory(),
+                downloader.getDownloaderId().getDisplayName()
+                + "_archive.txt");
+
+            File newArchive = new File(GDownloader.getWorkDirectory(),
+                downloader.getDownloaderId().getDisplayName()
+                + "_archive_"
+                + downloadType.name().toLowerCase()
+                + ".txt");
+
+            if (oldArchive.exists()) {
+                oldArchive.renameTo(newArchive);
+            }
+
+            return FileUtils.getOrCreate(newArchive);
+        }
+
+        return null;
     }
 
     protected CompletableFuture<Void> stopDownload(QueueEntry entry, Runnable runAfter) {
@@ -856,8 +911,16 @@ public class DownloadManager implements IEvent {
         }).thenRun(() -> {
             if (!entry.getMediaCard().isClosed()) {
                 entry.getCancelHook().set(false);
-                runAfter.run();
+
+                try {
+                    runAfter.run();
+                } catch (Exception e) {
+                    throw new CompletionException(e);
+                }
             }
+        }).exceptionally(e -> {
+            GDownloader.handleException(e);
+            return null;
         });
     }
 

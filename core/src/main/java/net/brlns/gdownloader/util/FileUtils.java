@@ -126,4 +126,59 @@ public final class FileUtils {
         }
     }
 
+    public static boolean removeLineContainingIfExists(File file, String searchString) throws IOException {
+        if (file == null || !file.exists() || searchString == null) {
+            return false; // Exit silently
+        }
+
+        if (!file.isFile()) {
+            if (log.isDebugEnabled()) {
+                log.error("Not a regular file: " + file.getAbsolutePath());
+            }
+
+            return false;
+        }
+
+        File tempFile = new File(file.getAbsolutePath() + ".tmp");
+        boolean lineRemoved = false;
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(file));
+             BufferedWriter writer = new BufferedWriter(new FileWriter(tempFile))) {
+
+            String currentLine;
+            while ((currentLine = reader.readLine()) != null) {
+                if (currentLine.contains(searchString)) {
+                    lineRemoved = true;
+                    continue;
+                }
+
+                writer.write(currentLine);
+                writer.newLine();
+            }
+        } catch (IOException e) {
+            if (tempFile.exists()) {
+                tempFile.delete();
+            }
+
+            throw e;
+        }
+
+        if (!lineRemoved) {
+            if (!tempFile.delete()) {
+                tempFile.deleteOnExit();
+            }
+
+            return false;
+        }
+
+        if (!file.delete()) {
+            throw new IOException("Could not delete original file: " + file.getAbsolutePath());
+        }
+
+        if (!tempFile.renameTo(file)) {
+            throw new IOException("Could not rename temp file to original filename");
+        }
+
+        return lineRemoved;
+    }
 }
