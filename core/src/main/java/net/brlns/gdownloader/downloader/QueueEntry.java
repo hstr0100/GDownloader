@@ -47,7 +47,7 @@ import net.brlns.gdownloader.downloader.enums.DownloadStatusEnum;
 import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.downloader.enums.QueueCategoryEnum;
 import net.brlns.gdownloader.downloader.structs.MediaInfo;
-import net.brlns.gdownloader.persistence.model.QueueEntryModel;
+import net.brlns.gdownloader.persistence.entity.QueueEntryEntity;
 import net.brlns.gdownloader.settings.enums.IContainerEnum;
 import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
 import net.brlns.gdownloader.ui.GUIManager;
@@ -501,95 +501,95 @@ public class QueueEntry {
         });
     }
 
-    public QueueEntryModel toModel() {
-        QueueEntryModel model = new QueueEntryModel();
+    public QueueEntryEntity toEntity() {
+        QueueEntryEntity entity = new QueueEntryEntity();
 
-        model.setOriginalUrl(getOriginalUrl());
-        model.setUrl(getUrl());
-        model.setDownloadId(getDownloadId());
-        model.setFilter(getFilter());
+        entity.setOriginalUrl(getOriginalUrl());
+        entity.setUrl(getUrl());
+        entity.setDownloadId(getDownloadId());
+        entity.setFilter(getFilter());
 
-        model.setDownloaderBlacklist(new ArrayList<>(getDownloaderBlacklist()));
+        entity.getDownloaderBlacklist().addAll(getDownloaderBlacklist());
 
-        model.setForcedDownloader(getForcedDownloader());
+        entity.setForcedDownloader(getForcedDownloader());
 
-        model.setCurrentDownloader(getCurrentDownloader());
-        model.setCurrentQueueCategory(getCurrentQueueCategory());
-        model.setDownloadStatus(getDownloadStatus());
-        model.setLastStatusMessage(getLastStatusMessage());
+        entity.setCurrentDownloader(getCurrentDownloader());
+        entity.setCurrentQueueCategory(getCurrentQueueCategory());
+        entity.setDownloadStatus(getDownloadStatus());
+        entity.setLastStatusMessage(getLastStatusMessage());
 
-        model.setDownloadStarted(getDownloadStarted().get());
-        //model.setCancelHook(getCancelHook().get());
-        model.setRunning(isRunning());
+        entity.setDownloadStarted(getDownloadStarted().get());
+        //entity.setCancelHook(getCancelHook().get());
+        entity.setRunning(isRunning());
 
-        model.setRetryCounter(getRetryCounter().get());
-        model.setQueried(getQueried().get());
+        entity.setRetryCounter(getRetryCounter().get());
+        entity.setQueried(getQueried().get());
 
         if (getMediaInfo() != null) {
-            model.setMediaInfo(getMediaInfo().toModel(getDownloadId()));
+            entity.setMediaInfo(getMediaInfo().toEntity(getDownloadId()));
         }
 
         if (getTmpDirectory() != null) {
-            model.setTmpDirectoryPath(getTmpDirectory().getAbsolutePath());
+            entity.setTmpDirectoryPath(getTmpDirectory().getAbsolutePath());
         }
 
-        model.setFinalMediaFilePaths(getFinalMediaFiles().stream()
+        entity.setFinalMediaFilePaths(getFinalMediaFiles().stream()
             .map(File::getAbsolutePath)
             .collect(Collectors.toCollection(ArrayList::new)));
 
-        model.setErrorLog(getErrorLog().snapshotAsList());
-        model.setDownloadLog(getDownloadLog().snapshotAsList());
+        entity.setErrorLog(getErrorLog().snapshotAsList());
+        entity.setDownloadLog(getDownloadLog().snapshotAsList());
 
-        return model;
+        return entity;
     }
 
-    public static QueueEntry fromModel(QueueEntryModel model, MediaCard mediaCard, List<AbstractDownloader> downloaders) {
+    public static QueueEntry fromEntity(QueueEntryEntity entity, MediaCard mediaCard, List<AbstractDownloader> downloaders) {
         QueueEntry queueEntry = new QueueEntry(
             GDownloader.getInstance(),
             mediaCard,
-            model.getFilter(),
-            model.getOriginalUrl(),
-            model.getUrl(),
-            model.getDownloadId(),
+            entity.getFilter(),
+            entity.getOriginalUrl(),
+            entity.getUrl(),
+            entity.getDownloadId(),
             downloaders
         );
 
         queueEntry.resetDownloaderBlacklist();
-        for (DownloaderIdEnum downloaderId : model.getDownloaderBlacklist()) {
+        for (DownloaderIdEnum downloaderId : entity.getDownloaderBlacklist()) {
             queueEntry.blackListDownloader(downloaderId);
         }
 
-        queueEntry.setForcedDownloader(model.getForcedDownloader());
-        queueEntry.setCurrentDownloader(model.getCurrentDownloader());
-        queueEntry.setCurrentQueueCategory(model.getCurrentQueueCategory());
+        queueEntry.setForcedDownloader(entity.getForcedDownloader());
+        queueEntry.setCurrentDownloader(entity.getCurrentDownloader());
+        queueEntry.setCurrentQueueCategory(entity.getCurrentQueueCategory());
 
-        if (model.getDownloadStatus() != null && model.getLastStatusMessage() != null) {
-            queueEntry.updateStatus(model.getDownloadStatus(), model.getLastStatusMessage(), false);
+        if (entity.getDownloadStatus() != null && entity.getLastStatusMessage() != null) {
+            queueEntry.updateStatus(entity.getDownloadStatus(), entity.getLastStatusMessage(), false);
         }
 
-        queueEntry.getDownloadStarted().set(model.isDownloadStarted());
-        //queueEntry.getCancelHook().set(model.isCancelHook());
-        queueEntry.getRunning().set(model.isRunning());
-        queueEntry.getRetryCounter().set(model.getRetryCounter());
-        queueEntry.getQueried().set(model.isQueried());
+        queueEntry.getDownloadStarted().set(entity.isDownloadStarted());
+        //queueEntry.getCancelHook().set(entity.isCancelHook());
+        queueEntry.getRunning().set(entity.isRunning());
+        queueEntry.getRetryCounter().set(entity.getRetryCounter());
+        queueEntry.getQueried().set(entity.isQueried());
 
-        if (model.getMediaInfo() != null) {
-            queueEntry.setMediaInfo(MediaInfo.fromModel(model.getMediaInfo()));
+        if (entity.getMediaInfo() != null) {
+            queueEntry.setMediaInfo(MediaInfo.fromEntity(entity.getMediaInfo()));
         }
 
-        if (model.getTmpDirectoryPath() != null && !model.getTmpDirectoryPath().isEmpty()) {
-            queueEntry.setTmpDirectory(new File(model.getTmpDirectoryPath()));
+        if (entity.getTmpDirectoryPath() != null && !entity.getTmpDirectoryPath().isEmpty()) {
+            queueEntry.setTmpDirectory(new File(entity.getTmpDirectoryPath()));
         }
 
-        for (String path : model.getFinalMediaFilePaths()) {
+        for (String path : entity.getFinalMediaFilePaths()) {
             queueEntry.getFinalMediaFiles().add(new File(path));
         }
 
         queueEntry.getErrorLog().clear();
-        queueEntry.getErrorLog().addAll(model.getErrorLog());
+        queueEntry.getErrorLog().addAll(entity.getErrorLog());
 
         queueEntry.getDownloadLog().clear();
-        queueEntry.getDownloadLog().addAll(model.getDownloadLog());
+        queueEntry.getDownloadLog().addAll(entity.getDownloadLog());
 
         return queueEntry;
     }

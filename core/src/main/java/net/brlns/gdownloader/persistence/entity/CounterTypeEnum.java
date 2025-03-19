@@ -14,29 +14,14 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package net.brlns.gdownloader.persistence.model;
+package net.brlns.gdownloader.persistence.entity;
 
-import jakarta.persistence.*;
-import java.io.Serializable;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.Getter;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-@Entity
-@Table(name = "counters")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class CounterModel implements Serializable {
-
-    @Id
-    @Column(name = "type")
-    @Enumerated(EnumType.STRING)
-    public CounterTypeEnum type;
-
-    @Column(name = "value")
-    public long value;
+@Getter
+public enum CounterTypeEnum {
+    DOWNLOAD_ID;
 }

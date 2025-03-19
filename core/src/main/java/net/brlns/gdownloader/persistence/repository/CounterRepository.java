@@ -19,8 +19,8 @@ package net.brlns.gdownloader.persistence.repository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import lombok.extern.slf4j.Slf4j;
-import net.brlns.gdownloader.persistence.model.CounterModel;
-import net.brlns.gdownloader.persistence.model.CounterTypeEnum;
+import net.brlns.gdownloader.persistence.entity.CounterEntity;
+import net.brlns.gdownloader.persistence.entity.CounterTypeEnum;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -34,9 +34,9 @@ public class CounterRepository extends AbstractRepository {
 
     public long getCurrentValue(CounterTypeEnum counterType) {
         try (EntityManager em = getEmf().createEntityManager()) {
-            CounterModel counter = em.find(CounterModel.class, counterType);
+            CounterEntity counter = em.find(CounterEntity.class, counterType);
             if (counter == null) {
-                counter = new CounterModel(counterType, 0);
+                counter = new CounterEntity(counterType, 0);
 
                 upsert(counter);
             }
@@ -49,17 +49,17 @@ public class CounterRepository extends AbstractRepository {
         long curr = getCurrentValue(CounterTypeEnum.DOWNLOAD_ID);
 
         if (value > curr) {// Value always go up
-            CounterModel counter = new CounterModel(counterType, value);
+            CounterEntity counter = new CounterEntity(counterType, value);
 
             upsert(counter);
         }
     }
 
-    public CounterModel upsert(CounterModel entity) {
+    public CounterEntity upsert(CounterEntity entity) {
         try (EntityManager em = getEmf().createEntityManager()) {
             em.getTransaction().begin();
 
-            CounterModel managedEntity = em.merge(entity);
+            CounterEntity managedEntity = em.merge(entity);
 
             em.flush();
 

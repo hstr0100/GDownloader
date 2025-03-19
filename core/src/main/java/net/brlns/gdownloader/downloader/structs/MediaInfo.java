@@ -29,7 +29,7 @@ import java.util.stream.Stream;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import net.brlns.gdownloader.persistence.PersistenceManager;
-import net.brlns.gdownloader.persistence.model.MediaInfoModel;
+import net.brlns.gdownloader.persistence.entity.MediaInfoEntity;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -130,24 +130,24 @@ public class MediaInfo {
     }
 
     /**
-     * Converts this MediaInfo to a MediaInfoModel for persistence.
+     * Converts this MediaInfo to a MediaInfoEntity for persistence.
      */
-    public MediaInfoModel toModel(long downloadId) {
-        MediaInfoModel model = PersistenceManager.MODEL_MAPPER
-            .convertValue(this, MediaInfoModel.class);
+    public MediaInfoEntity toEntity(long downloadId) {
+        MediaInfoEntity entity = PersistenceManager.ENTITY_MAPPER
+            .convertValue(this, MediaInfoEntity.class);
 
-        model.setDownloadId(downloadId);
-        model.setBase64EncodedThumbnail(base64EncodedThumbnail);
+        entity.setDownloadId(downloadId);
+        entity.setBase64EncodedThumbnail(base64EncodedThumbnail);
 
-        return model;
+        return entity;
     }
 
     /**
-     * Converts a MediaInfoModel to a MediaInfo.
+     * Converts a MediaInfoEntity to a MediaInfo.
      */
-    public static MediaInfo fromModel(MediaInfoModel model) {
-        MediaInfo info = PersistenceManager.MODEL_MAPPER.convertValue(model, MediaInfo.class);
-        info.setBase64EncodedThumbnail(model.getBase64EncodedThumbnail());
+    public static MediaInfo fromEntity(MediaInfoEntity entity) {
+        MediaInfo info = PersistenceManager.ENTITY_MAPPER.convertValue(entity, MediaInfo.class);
+        info.setBase64EncodedThumbnail(entity.getBase64EncodedThumbnail());
 
         return info;
     }

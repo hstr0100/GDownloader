@@ -19,20 +19,20 @@ package net.brlns.gdownloader.persistence.repository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import lombok.extern.slf4j.Slf4j;
-import net.brlns.gdownloader.persistence.model.MediaInfoModel;
-import net.brlns.gdownloader.persistence.model.QueueEntryModel;
+import net.brlns.gdownloader.persistence.entity.MediaInfoEntity;
+import net.brlns.gdownloader.persistence.entity.QueueEntryEntity;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
 @Slf4j
-public class MediaInfoRepository extends PersistenceRepository<Long, MediaInfoModel> {
+public class MediaInfoRepository extends PersistenceRepository<Long, MediaInfoEntity> {
 
     public MediaInfoRepository(EntityManagerFactory emfIn) {
-        super(emfIn, MediaInfoModel.class);
+        super(emfIn, MediaInfoEntity.class);
     }
 
-    public void addMediaInfo(MediaInfoModel mediaInfo) {
+    public void addMediaInfo(MediaInfoEntity mediaInfo) {
         if (mediaInfo.getDownloadId() <= 0) {
             throw new IllegalArgumentException("downloadId cannot be empty");
         }
@@ -44,9 +44,9 @@ public class MediaInfoRepository extends PersistenceRepository<Long, MediaInfoMo
         try (EntityManager em = getEmf().createEntityManager()) {
             em.getTransaction().begin();
 
-            QueueEntryModel queueEntry = em.find(QueueEntryModel.class, mediaInfo.getDownloadId());
+            QueueEntryEntity queueEntry = em.find(QueueEntryEntity.class, mediaInfo.getDownloadId());
             if (queueEntry != null) {
-                MediaInfoModel existingInfo = em.find(MediaInfoModel.class, mediaInfo.getDownloadId());
+                MediaInfoEntity existingInfo = em.find(MediaInfoEntity.class, mediaInfo.getDownloadId());
                 if (existingInfo == null) {
                     em.persist(mediaInfo);
                 } else {

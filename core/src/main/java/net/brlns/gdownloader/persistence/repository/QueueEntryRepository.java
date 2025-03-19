@@ -17,15 +17,15 @@
 package net.brlns.gdownloader.persistence.repository;
 
 import jakarta.persistence.EntityManagerFactory;
-import net.brlns.gdownloader.persistence.model.QueueEntryModel;
+import net.brlns.gdownloader.persistence.entity.QueueEntryEntity;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-public class QueueEntryRepository extends PersistenceRepository<Long, QueueEntryModel> {
+public class QueueEntryRepository extends PersistenceRepository<Long, QueueEntryEntity> {
 
     public QueueEntryRepository(EntityManagerFactory emfIn) {
-        super(emfIn, QueueEntryModel.class);
+        super(emfIn, QueueEntryEntity.class);
     }
 
 }

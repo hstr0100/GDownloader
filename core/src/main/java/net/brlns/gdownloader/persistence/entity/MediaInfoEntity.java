@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package net.brlns.gdownloader.persistence.model;
+package net.brlns.gdownloader.persistence.entity;
 
 import jakarta.persistence.*;
 import java.io.Serializable;
@@ -30,7 +30,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Entity
 @Table(name = "media_info")
-public class MediaInfoModel implements Serializable {
+public class MediaInfoEntity implements Serializable {
 
     @Id
     @Column(name = "media_info_id")
@@ -83,7 +83,7 @@ public class MediaInfoModel implements Serializable {
 
     @Override
     public String toString() {
-        return "MediaInfoModel{"
+        return "MediaInfoEntity{"
             + "downloadId=" + downloadId
             + ", id='" + id + '\''
             + ", title='" + title + '\''

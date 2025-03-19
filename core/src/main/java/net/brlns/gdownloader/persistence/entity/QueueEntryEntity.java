@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package net.brlns.gdownloader.persistence.model;
+package net.brlns.gdownloader.persistence.entity;
 
 import jakarta.persistence.*;
 import java.io.Serializable;
@@ -34,7 +34,7 @@ import net.brlns.gdownloader.settings.filters.*;
 @AllArgsConstructor
 @Entity
 @Table(name = "queue_entries")
-public class QueueEntryModel implements Serializable {
+public class QueueEntryEntity implements Serializable {
 
     // Chaos ensues if these fields are not public
     @Id
@@ -52,7 +52,7 @@ public class QueueEntryModel implements Serializable {
 
     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER, optional = true)
     @JoinColumn(name = "media_info_id", referencedColumnName = "media_info_id", nullable = true)
-    public MediaInfoModel mediaInfo;// = null;
+    public MediaInfoEntity mediaInfo;// = null;
 
     @Convert(converter = UrlFilterConverter.class)
     @Column(name = "url_filter")

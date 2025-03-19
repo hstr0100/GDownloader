@@ -147,7 +147,7 @@ public class YtDlpDownloader extends AbstractDownloader {
 
                 PersistenceManager persistence = main.getPersistenceManager();
                 if (!queueEntry.getCancelHook().get() && persistence.isInitialized()) {
-                    persistence.getMediaInfos().addMediaInfo(info.toModel(queueEntry.getDownloadId()));
+                    persistence.getMediaInfos().addMediaInfo(info.toEntity(queueEntry.getDownloadId()));
                 }
 
                 return true;

@@ -51,7 +51,7 @@ module net.brlns.gdownloader {
     exports net.brlns.gdownloader.event.impl;
     exports net.brlns.gdownloader.persistence;
     exports net.brlns.gdownloader.persistence.converter;
-    exports net.brlns.gdownloader.persistence.model;
+    exports net.brlns.gdownloader.persistence.entity;
     exports net.brlns.gdownloader.persistence.repository;
     exports net.brlns.gdownloader.settings;
     exports net.brlns.gdownloader.settings.enums;

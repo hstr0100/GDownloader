@@ -47,7 +47,7 @@ import org.eclipse.persistence.config.PersistenceUnitProperties;
 @Slf4j
 public class PersistenceManager {
 
-    public static final ObjectMapper MODEL_MAPPER = JsonMapper.builder()
+    public static final ObjectMapper ENTITY_MAPPER = JsonMapper.builder()
         .annotationIntrospector(new JacksonAnnotationIntrospector() {
             @Override
             public PropertyName findNameForSerialization(Annotated a) {

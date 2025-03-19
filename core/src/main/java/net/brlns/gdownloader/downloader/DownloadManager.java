@@ -42,8 +42,8 @@ import net.brlns.gdownloader.downloader.structs.DownloadResult;
 import net.brlns.gdownloader.event.EventDispatcher;
 import net.brlns.gdownloader.event.IEvent;
 import net.brlns.gdownloader.persistence.PersistenceManager;
-import net.brlns.gdownloader.persistence.model.CounterTypeEnum;
-import net.brlns.gdownloader.persistence.model.QueueEntryModel;
+import net.brlns.gdownloader.persistence.entity.CounterTypeEnum;
+import net.brlns.gdownloader.persistence.entity.QueueEntryEntity;
 import net.brlns.gdownloader.settings.enums.PlayListOptionEnum;
 import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
 import net.brlns.gdownloader.settings.filters.GenericFilter;
@@ -164,11 +164,11 @@ public class DownloadManager implements IEvent {
 
                 main.getGlobalThreadPool().submitWithPriority(() -> {
                     int count = 0;
-                    for (QueueEntryModel model : persistence.getQueueEntries().getAll()) {
-                        String downloadUrl = model.getUrl();
+                    for (QueueEntryEntity entity : persistence.getQueueEntries().getAll()) {
+                        String downloadUrl = entity.getUrl();
 
                         capturedLinks.add(downloadUrl);
-                        capturedLinks.add(model.getOriginalUrl());
+                        capturedLinks.add(entity.getOriginalUrl());
 
                         List<AbstractDownloader> compatibleDownloaders = getCompatibleDownloaders(downloadUrl);
 
@@ -179,7 +179,7 @@ public class DownloadManager implements IEvent {
 
                         MediaCard mediaCard = main.getGuiManager().addMediaCard(downloadUrl);
 
-                        QueueEntry queueEntry = QueueEntry.fromModel(model, mediaCard, compatibleDownloaders);
+                        QueueEntry queueEntry = QueueEntry.fromEntity(entity, mediaCard, compatibleDownloaders);
 
                         if (queueEntry.getCurrentQueueCategory() == QueueCategoryEnum.RUNNING) {
                             queueEntry.updateStatus(DownloadStatusEnum.STOPPED, l10n("gui.download_status.not_started"));
@@ -246,11 +246,11 @@ public class DownloadManager implements IEvent {
             .collect(Collectors.toUnmodifiableList());
     }
 
-    public CompletableFuture<Boolean> captureUrl(@Nullable String inputUrl, @Nullable QueueEntryModel model, boolean force) {
-        return captureUrl(inputUrl, model, force, main.getConfig().getPlaylistDownloadOption());
+    public CompletableFuture<Boolean> captureUrl(@Nullable String inputUrl, boolean force) {
+        return captureUrl(inputUrl, force, main.getConfig().getPlaylistDownloadOption());
     }
 
-    public CompletableFuture<Boolean> captureUrl(@Nullable String inputUrl, @Nullable QueueEntryModel model, boolean force, PlayListOptionEnum playlistOption) {
+    public CompletableFuture<Boolean> captureUrl(@Nullable String inputUrl, boolean force, PlayListOptionEnum playlistOption) {
         CompletableFuture<Boolean> future = new CompletableFuture<>();
 
         List<AbstractDownloader> compatibleDownloaders = getCompatibleDownloaders(inputUrl);
@@ -315,7 +315,7 @@ public class DownloadManager implements IEvent {
                         }
 
                         if (video != null && video.contains("?v=") && !video.contains("list=")) {
-                            return captureUrl(video, model, force);
+                            return captureUrl(video, force);
                         } else {
                             future.complete(false);
                             return future;
@@ -339,7 +339,7 @@ public class DownloadManager implements IEvent {
                                         main.updateConfig();
                                     }
 
-                                    captureUrl(playlist, model, force, PlayListOptionEnum.DOWNLOAD_PLAYLIST)
+                                    captureUrl(playlist, force, PlayListOptionEnum.DOWNLOAD_PLAYLIST)
                                         .whenComplete((Boolean result, Throwable e) -> {
                                             if (e != null) {
                                                 GDownloader.handleException(e);
@@ -356,7 +356,7 @@ public class DownloadManager implements IEvent {
                                         main.updateConfig();
                                     }
 
-                                    captureUrl(inputUrl, model, force, PlayListOptionEnum.DOWNLOAD_SINGLE)
+                                    captureUrl(inputUrl, force, PlayListOptionEnum.DOWNLOAD_SINGLE)
                                         .whenComplete((Boolean result, Throwable e) -> {
                                             if (e != null) {
                                                 GDownloader.handleException(e);
@@ -398,7 +398,7 @@ public class DownloadManager implements IEvent {
                             }
 
                             if (video != null && video.contains("?v=") && !video.contains("list=")) {
-                                return captureUrl(video, model, force);
+                                return captureUrl(video, force);
                             } else {
                                 future.complete(false);
                                 return future;
@@ -425,8 +425,7 @@ public class DownloadManager implements IEvent {
 
                 MediaCard mediaCard = main.getGuiManager().addMediaCard(filteredUrl);
 
-                // If a model exists, restore the previous downloadId so that the correct directory is reattached.
-                long downloadId = model == null ? downloadCounter.incrementAndGet() : model.getDownloadId();
+                long downloadId = downloadCounter.incrementAndGet();
 
                 if (persistence.isInitialized()) {
                     persistence.getCounters().setCurrentValue(CounterTypeEnum.DOWNLOAD_ID, downloadId);
@@ -446,7 +445,7 @@ public class DownloadManager implements IEvent {
                 initializeAndEnqueueEntry(queueEntry);
 
                 if (persistence.isInitialized()) {
-                    persistence.getQueueEntries().upsert(queueEntry.toModel());
+                    persistence.getQueueEntries().upsert(queueEntry.toEntity());
                 }
 
                 future.complete(true);
@@ -682,7 +681,7 @@ public class DownloadManager implements IEvent {
             if (reason == CloseReasonEnum.SHUTDOWN
                 && persistence.isInitialized()
                 && !entry.getCancelHook().get()) {
-                persistence.getQueueEntries().upsert(entry.toModel());
+                persistence.getQueueEntries().upsert(entry.toEntity());
             }
 
             main.getGuiManager().removeMediaCard(entry.getMediaCard().getId(), reason);
