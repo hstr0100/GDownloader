@@ -36,7 +36,7 @@ public class MediaInfoEntity implements Serializable {
     @Column(name = "media_info_id")
     public long downloadId;
 
-    @Column(name = "id", length = 256)
+    @Column(name = "id", length = 2048)// There are some ginormous ids in the wild
     public String id;
 
     @Column(name = "title", length = 2048)
@@ -48,7 +48,7 @@ public class MediaInfoEntity implements Serializable {
     @Column(name = "description", columnDefinition = "LONGVARCHAR")
     public String description;
 
-    @Column(name = "channel_id", length = 256)
+    @Column(name = "channel_id", length = 2048)
     public String channelId;
 
     @Column(name = "channel_url", length = 2048)
