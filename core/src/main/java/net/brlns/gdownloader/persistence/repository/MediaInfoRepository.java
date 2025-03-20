@@ -33,8 +33,8 @@ public class MediaInfoRepository extends PersistenceRepository<Long, MediaInfoEn
     }
 
     public void addMediaInfo(MediaInfoEntity mediaInfo) {
-        if (mediaInfo.getDownloadId() <= 0) {
-            throw new IllegalArgumentException("downloadId cannot be empty");
+        if (mediaInfo.getDownloadId() == null) {
+            throw new IllegalArgumentException("downloadId cannot be null");
         }
 
         if (log.isDebugEnabled()) {

@@ -46,9 +46,16 @@ public class CounterRepository extends AbstractRepository {
     }
 
     public void setCurrentValue(CounterTypeEnum counterType, long value) {
-        long curr = getCurrentValue(CounterTypeEnum.DOWNLOAD_ID);
+        long curr = getCurrentValue(counterType);
 
-        if (value > curr) {// Value always go up
+        boolean overflowed = value < Long.MIN_VALUE / 2 && curr > Long.MAX_VALUE / 2;
+        if (overflowed) {
+            // Somehow, you downloaded so much stuff you actually overflowed a signed long, congrats!
+            log.info("Counter {} overflowed {} < {}, wrapping around...",
+                counterType, value, curr);
+        }
+
+        if (value > curr || overflowed) {
             CounterEntity counter = new CounterEntity(counterType, value);
 
             upsert(counter);

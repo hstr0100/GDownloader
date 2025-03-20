@@ -43,7 +43,6 @@ import org.eclipse.persistence.config.PersistenceUnitProperties;
  * @author Gabriel / hstr0100 / vertx010
  */
 // TODO: persist queue order, maybe switch to a weigthed priority queue
-// TODO: persist checkpoints during program lifecycle and not only during shutdown
 @Slf4j
 public class PersistenceManager {
 
