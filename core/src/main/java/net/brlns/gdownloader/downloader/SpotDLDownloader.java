@@ -1,3 +1,19 @@
+/*
+ * Copyright (C) 2025 hstr0100
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 package net.brlns.gdownloader.downloader;
 
 import jakarta.annotation.Nullable;
@@ -113,7 +129,7 @@ public class SpotDLDownloader extends AbstractDownloader {
 
         genericArguments.addAll(List.of(
             executablePath.get().getAbsolutePath(),
-            "--simple-tui",//As far as I can tell, these change nothing. The way it's displayed now Java cannot read spotDL's progress bar.
+            "--simple-tui",//As far as I can tell, these change nothing. The way it's displayed now, Java cannot read SpotDL's progress bar.
             "--headless"
         ));
 
@@ -433,7 +449,7 @@ public class SpotDLDownloader extends AbstractDownloader {
             return result.toString();
         } catch (Exception e) {
             // Something went wrong, return the original string
-            log.error("Failed to parse name template: {}", input);
+            log.error("Failed to parse naming template: {}", input);
             return input;
         }
     }

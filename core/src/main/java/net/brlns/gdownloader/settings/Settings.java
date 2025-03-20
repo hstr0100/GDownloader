@@ -95,6 +95,10 @@ public class Settings {
     // let's leave it off by default on Windows to avoid any possible issues with that
     private boolean galleryDlEnabled = !GDownloader.isWindows();
 
+    // TODO: UI
+    @JsonProperty("SpotDLEnabled")
+    private boolean spotDLEnabled = !GDownloader.isWindows();
+
     @JsonProperty("DirectHttpEnabled")
     private boolean directHttpEnabled = false;
 
@@ -103,6 +107,10 @@ public class Settings {
 
     @JsonProperty("RespectGalleryDlConfigFile")
     private boolean respectGalleryDlConfigFile = true;
+
+    // TODO: UI
+    @JsonProperty("RespectSpotDLConfigFile")
+    private boolean respectSpotDLConfigFile = true;
 
     @JsonProperty("DownloadsPath")
     private String downloadsPath = "";
