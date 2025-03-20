@@ -1,7 +1,7 @@
 package net.brlns.gdownloader;
 
 import java.util.stream.Stream;
-import net.brlns.gdownloader.downloader.SpotDLDownloader;
+import net.brlns.gdownloader.util.TemplateConverter;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -14,24 +14,24 @@ public class TemplateConverterTest {
 
     @Test
     public void testNullInput() {
-        assertNull(SpotDLDownloader.convertTemplateForSpotDL(null));
+        assertNull(TemplateConverter.convertTemplateForSpotDL(null));
     }
 
     @Test
     public void testEmptyInput() {
-        assertEquals("", SpotDLDownloader.convertTemplateForSpotDL(""));
+        assertEquals("", TemplateConverter.convertTemplateForSpotDL(""));
     }
 
     @Test
     public void testInputWithoutTemplates() {
         String input = "Artist - Song";
-        assertEquals(input, SpotDLDownloader.convertTemplateForSpotDL(input));
+        assertEquals(input, TemplateConverter.convertTemplateForSpotDL(input));
     }
 
     @ParameterizedTest
     @MethodSource("provideBasicTemplates")
     public void testBasicTemplates(String input, String expected) {
-        assertEquals(expected, SpotDLDownloader.convertTemplateForSpotDL(input));
+        assertEquals(expected, TemplateConverter.convertTemplateForSpotDL(input));
     }
 
     private static Stream<Arguments> provideBasicTemplates() {
@@ -63,7 +63,7 @@ public class TemplateConverterTest {
     @ParameterizedTest
     @MethodSource("provideComplexTemplates")
     public void testComplexTemplates(String input, String expected) {
-        assertEquals(expected, SpotDLDownloader.convertTemplateForSpotDL(input));
+        assertEquals(expected, TemplateConverter.convertTemplateForSpotDL(input));
     }
 
     private static Stream<Arguments> provideComplexTemplates() {
@@ -104,7 +104,7 @@ public class TemplateConverterTest {
     @ParameterizedTest
     @MethodSource("provideMultipleTemplatesInOneString")
     public void testMultipleTemplatesInOneString(String input, String expected) {
-        assertEquals(expected, SpotDLDownloader.convertTemplateForSpotDL(input));
+        assertEquals(expected, TemplateConverter.convertTemplateForSpotDL(input));
     }
 
     private static Stream<Arguments> provideMultipleTemplatesInOneString() {
@@ -148,35 +148,35 @@ public class TemplateConverterTest {
     public void testWithMultipleFormattingOptions() {
         String input = "Music/%(artist,uploader|Unknown)s/%(album>%Y|Unknown)s/%(track_number+0)02d - %(title)s.%(ext)s";
         String expected = "Music/{artist}/{album}/{track-number} - {title}.{output-ext}";
-        assertEquals(expected, SpotDLDownloader.convertTemplateForSpotDL(input));
+        assertEquals(expected, TemplateConverter.convertTemplateForSpotDL(input));
     }
 
     @Test
     public void testMixOfTextAndTemplates() {
         String input = "Downloaded on %(upload_date>%Y-%m-%d)s: '%(title)s' by %(artist)s";
         String expected = "Downloaded on {original-date}: '{title}' by {artist}";
-        assertEquals(expected, SpotDLDownloader.convertTemplateForSpotDL(input));
+        assertEquals(expected, TemplateConverter.convertTemplateForSpotDL(input));
     }
 
     @Test
     public void testWithEscapedPercentages() {
         String input = "100%% quality - %(title)s by %(artist)s";
         String expected = "100%% quality - {title} by {artist}";
-        assertEquals(expected, SpotDLDownloader.convertTemplateForSpotDL(input));
+        assertEquals(expected, TemplateConverter.convertTemplateForSpotDL(input));
     }
 
     @Test
     public void testWithUnrecognizedFields() {
         String input = "%(unrecognized_field)s - %(title)s";
         String expected = "{unrecognized_field} - {title}";
-        assertEquals(expected, SpotDLDownloader.convertTemplateForSpotDL(input));
+        assertEquals(expected, TemplateConverter.convertTemplateForSpotDL(input));
     }
 
     @Test
     public void testWithNestedBraces() {
         String input = "%(title&TITLE={:>20})s - %(artist)s";
         String expected = "{title} - {artist}";
-        assertEquals(expected, SpotDLDownloader.convertTemplateForSpotDL(input));
+        assertEquals(expected, TemplateConverter.convertTemplateForSpotDL(input));
     }
 
     @Test
@@ -184,7 +184,7 @@ public class TemplateConverterTest {
         // Fields that exist in yt-dlp but have no direct mapping
         String input = "%(fulltitle)s - %(channel_id)s - %(like_count)s";
         String expected = "{fulltitle} - {channel_id} - {like_count}";
-        assertEquals(expected, SpotDLDownloader.convertTemplateForSpotDL(input));
+        assertEquals(expected, TemplateConverter.convertTemplateForSpotDL(input));
     }
 
     @Test
@@ -192,22 +192,22 @@ public class TemplateConverterTest {
         // Common file naming patterns
         assertEquals(
             "Music/{artist}/{album} ({year})/{track-number} - {title}",
-            SpotDLDownloader.convertTemplateForSpotDL("Music/%(artist)s/%(album)s (%(release_year)s)/%(track_number)02d - %(title)s")
+            TemplateConverter.convertTemplateForSpotDL("Music/%(artist)s/%(album)s (%(release_year)s)/%(track_number)02d - %(title)s")
         );
 
         assertEquals(
             "{artists} - {title} [{track-id}]",
-            SpotDLDownloader.convertTemplateForSpotDL("%(uploader)s - %(title)s [%(id)s]")
+            TemplateConverter.convertTemplateForSpotDL("%(uploader)s - %(title)s [%(id)s]")
         );
 
         assertEquals(
             "{list-name}/[{list-position}] {artist} - {title}",
-            SpotDLDownloader.convertTemplateForSpotDL("%(playlist)s/[%(playlist_index)s] %(artist)s - %(title)s")
+            TemplateConverter.convertTemplateForSpotDL("%(playlist)s/[%(playlist_index)s] %(artist)s - %(title)s")
         );
 
         assertEquals(
             "{artist} - {album} - {track-number} - {title}",
-            SpotDLDownloader.convertTemplateForSpotDL("%(artist)s - %(album)s - %(track_number)s - %(title)s")
+            TemplateConverter.convertTemplateForSpotDL("%(artist)s - %(album)s - %(track_number)s - %(title)s")
         );
     }
 
@@ -215,14 +215,14 @@ public class TemplateConverterTest {
     public void testWithComprehensiveFormattingOptions() {
         String input = "%(artist,uploader>%s,creator>%s|Unknown Artist)#s - %(title&T={:>20}|Unknown Title)s.%(ext)s";
         String expected = "{artist} - {title}.{output-ext}";
-        assertEquals(expected, SpotDLDownloader.convertTemplateForSpotDL(input));
+        assertEquals(expected, TemplateConverter.convertTemplateForSpotDL(input));
     }
 
     @Test
     public void testMalformedTemplates() {
         // Intentionally malformed templates should be left as-is
         String input = "%(broken template - %(title)s";
-        assertEquals(input, SpotDLDownloader.convertTemplateForSpotDL(input));
+        assertEquals(input, TemplateConverter.convertTemplateForSpotDL(input));
     }
 
     @Test
@@ -230,7 +230,7 @@ public class TemplateConverterTest {
         // The empty field case %()s
         String input = "%()s - %(title)s";
         String expected = "{} - {title}";
-        assertEquals(expected, SpotDLDownloader.convertTemplateForSpotDL(input));
+        assertEquals(expected, TemplateConverter.convertTemplateForSpotDL(input));
     }
 
     @Test
@@ -238,6 +238,6 @@ public class TemplateConverterTest {
         // Test with JSON-like structures
         String input = "%(formats.:.{format_id,height})#j";
         String expected = "{formats}";
-        assertEquals(expected, SpotDLDownloader.convertTemplateForSpotDL(input));
+        assertEquals(expected, TemplateConverter.convertTemplateForSpotDL(input));
     }
 }

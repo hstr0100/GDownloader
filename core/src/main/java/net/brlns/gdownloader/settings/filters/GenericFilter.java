@@ -27,13 +27,13 @@ import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.downloader.AbstractDownloader;
 import net.brlns.gdownloader.downloader.DownloadManager;
-import net.brlns.gdownloader.downloader.SpotDLDownloader;
 import net.brlns.gdownloader.settings.QualitySettings;
 import net.brlns.gdownloader.settings.Settings;
 import net.brlns.gdownloader.settings.enums.AudioBitrateEnum;
 import net.brlns.gdownloader.settings.enums.AudioCodecEnum;
 import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.settings.enums.VideoContainerEnum;
+import net.brlns.gdownloader.util.TemplateConverter;
 import net.brlns.gdownloader.util.URLUtils;
 
 import static net.brlns.gdownloader.lang.Language.*;
@@ -373,7 +373,7 @@ public class GenericFilter extends AbstractUrlFilter {
                             arguments.addAll(List.of(
                                 "--output",
                                 savePath.getAbsolutePath() + "/"
-                                + SpotDLDownloader.convertTemplateForSpotDL(audioPatternWithBitrate),
+                                + TemplateConverter.convertTemplateForSpotDL(audioPatternWithBitrate),
                                 "--format",
                                 quality.getAudioContainer().getValue(),
                                 "--bitrate",

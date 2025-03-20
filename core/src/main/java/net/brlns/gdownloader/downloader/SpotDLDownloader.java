@@ -26,8 +26,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -351,106 +349,5 @@ public class SpotDLDownloader extends AbstractDownloader {
     @Override
     public void close() {
 
-    }
-
-    /**
-     * Converts yt-dlp naming templates to spotDL
-     */
-    public static String convertTemplateForSpotDL(String input) {
-        if (input == null || input.isEmpty()) {
-            return input;
-        }
-
-        // Mapping from yt-dlp template variables to spotdl variables
-        Map<String, String> templateMap = new HashMap<>();
-
-        templateMap.put("title", "title");
-        templateMap.put("uploader", "artists");
-        templateMap.put("creator", "artists");
-        templateMap.put("artist", "artist");
-        templateMap.put("album", "album");
-        templateMap.put("channel", "album-artist");
-        templateMap.put("track", "title");
-        templateMap.put("genre", "genre");
-        templateMap.put("duration", "duration");
-        templateMap.put("duration_string", "duration");
-        templateMap.put("release_year", "year");
-        templateMap.put("release_date", "original-date");
-        templateMap.put("upload_date", "original-date");
-        templateMap.put("track_number", "track-number");
-        templateMap.put("n_entries", "tracks-count");
-        templateMap.put("playlist", "list-name");
-        templateMap.put("playlist_index", "list-position");
-        templateMap.put("playlist_title", "list-name");
-        templateMap.put("playlist_count", "list-length");
-        templateMap.put("ext", "output-ext");
-        templateMap.put("disc_number", "disc-number");
-        templateMap.put("id", "track-id");
-        templateMap.put("publisher", "publisher");
-        templateMap.put("isrc", "isrc");
-
-        // Use a regex pattern to match yt-dlp template variables with all their formatting options.
-        // You've earned yourself a royal cookie if you can understand this entire regex.
-        Pattern pattern = Pattern.compile("%\\(([^>,:&|\\)]*)(?:[>,:&|][^\\)]*)?\\)([-#0+ ]*\\d*\\.?\\d*[diouxXheEfFgGcrsBlqDSUj])?");
-
-        try {
-            Matcher matcher = pattern.matcher(input);
-
-            // Check if there are unbalanced parentheses which indicate malformed templates
-            int openCount = 0;
-            int closeCount = 0;
-            for (char c : input.toCharArray()) {
-                if (c == '(') {
-                    openCount++;
-                }
-                if (c == ')') {
-                    closeCount++;
-                }
-            }
-
-            // If unbalanced, return original string
-            if (openCount != closeCount) {
-                return input;
-            }
-
-            StringBuffer result = new StringBuffer();
-
-            // Process each match
-            while (matcher.find()) {
-                String baseVar = matcher.group(1);
-
-                // Check if this is an empty field name
-                if (baseVar.isEmpty()) {
-                    matcher.appendReplacement(result, "{}");
-                    continue;
-                }
-
-                // Handle object traversal and arithmetic
-                String fieldName = baseVar;
-                if (baseVar.contains(".")) {
-                    fieldName = baseVar.split("\\.")[0]; // Get the part before first dot
-                } else if (baseVar.contains("+") || baseVar.contains("-") || baseVar.contains("*")) {
-                    // For arithmetic expressions, extract the variable name
-                    fieldName = baseVar.split("[+\\-*]")[0];
-                }
-
-                // Look up the corresponding spotdl variable
-                String spotdlVar = templateMap.getOrDefault(fieldName, fieldName);
-
-                // For complex formatting that spotdl doesn't support, just map the base variable
-                String replacement = "{" + spotdlVar + "}";
-
-                matcher.appendReplacement(result, Matcher.quoteReplacement(replacement));
-            }
-
-            // Append the remainder of the input string
-            matcher.appendTail(result);
-
-            return result.toString();
-        } catch (Exception e) {
-            // Something went wrong, return the original string
-            log.error("Failed to parse naming template: {}", input);
-            return input;
-        }
     }
 }
