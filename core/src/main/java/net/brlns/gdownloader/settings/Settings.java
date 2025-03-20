@@ -84,6 +84,10 @@ public class Settings {
     @JsonProperty("RecordToDownloadArchive")
     private boolean recordToDownloadArchive = false;
 
+    // TODO: UI
+    @JsonProperty("RemoveFromDownloadArchive")
+    private boolean removeFromDownloadArchive = true;
+
     @JsonProperty("RespectYtDlpConfigFile")
     private boolean respectYtDlpConfigFile = false;
 

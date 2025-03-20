@@ -854,6 +854,10 @@ public class DownloadManager implements IEvent {
     }
 
     private void removeArchiveEntries(QueueEntry queueEntry) {
+        if (!main.getConfig().isRemoveFromDownloadArchive()) {
+            return;
+        }
+
         for (AbstractDownloader downloader : queueEntry.getDownloaders()) {
             downloader.removeArchiveEntry(queueEntry);
         }

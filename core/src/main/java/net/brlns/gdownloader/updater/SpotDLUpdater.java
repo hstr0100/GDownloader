@@ -91,7 +91,7 @@ public class SpotDLUpdater extends AbstractGitUpdater {
 
     @Override
     protected void init() throws Exception {
-        setupConfigFile(GDownloader.getWorkDirectory());
+
     }
 
     @Override
@@ -101,42 +101,38 @@ public class SpotDLUpdater extends AbstractGitUpdater {
 
         outputFile.renameTo(finalFile);
 
-        setupConfigFile(workDir);
+        try {
+            setupConfigFile(workDir);
+        } catch (IOException e) {
+            // Not mission-critical, log and move on.
+            log.error("An error ocurred while setting up spotDL's config file", e);
+        }
 
         return finalFile;
     }
 
     public static void setupConfigFile(File workDir) throws IOException {
+        String userHome = System.getProperty("user.home");
+        Path configFilePath = Paths.get(userHome, ".spotdl", "config.json");
+        Files.createDirectories(configFilePath.getParent());
+
+        if (!Files.exists(configFilePath)) {
+            FileUtils.writeResourceToFile("/spotdl.json", configFilePath.toFile());
+            log.error("spotDL config written to {}", configFilePath);
+        }
+
         if (GDownloader.isWindows()) {
             // Windows: We can't symlink without the proper rights. For some reason probably, or not.
-            // instead let's copy the file to C:\Users\<USER>\.spotdl\config.json
-            String userHome = System.getProperty("user.home");
-            File configDir = new File(userHome, ".spotdl");
-            if (!configDir.exists()) {
-                configDir.mkdirs();
-            }
-
-            File windowsConfigFile = new File(configDir, "config.json");
-            if (!windowsConfigFile.exists()) {
-                FileUtils.writeResourceToFile("/spotdl.json", windowsConfigFile);
-            }
+            // instead let's just copy the file to C:\Users\<USER>\.spotdl\config.json
         } else if (GDownloader.isMac() || GDownloader.isLinux()) {
             // Linux/Mac: Create a symlink from ~/.spotdl/config.json
-            String userHome = System.getProperty("user.home");
-            Path configFilePath = Paths.get(userHome, ".spotdl", "config.json");
             Path symlinkPath = Paths.get(workDir.getAbsolutePath(), "spotdl.json");
 
-            Files.createDirectories(configFilePath.getParent());
-
             if (!Files.exists(symlinkPath)) {
-                if (!Files.exists(configFilePath)) {
-                    FileUtils.writeResourceToFile("/spotdl.json", configFilePath.toFile());
-                }
-
                 Files.createSymbolicLink(symlinkPath, configFilePath);
             }
         } else {
-            log.error("Unsupported operating system for spotDL config management");
+            log.error("Unsupported operating system for spotDL config management.");
         }
     }
 }

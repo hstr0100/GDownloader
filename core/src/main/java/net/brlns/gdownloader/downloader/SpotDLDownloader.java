@@ -50,6 +50,9 @@ import static net.brlns.gdownloader.settings.enums.DownloadTypeEnum.*;
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
+// TODO: test playlists and their naming templates, check --playlist-retain-track-cover
+// TODO: test spotify auth
+// TODO: add --cookie-file support
 @Slf4j
 public class SpotDLDownloader extends AbstractDownloader {
 
@@ -128,7 +131,7 @@ public class SpotDLDownloader extends AbstractDownloader {
         genericArguments.addAll(List.of(
             executablePath.get().getAbsolutePath(),
             "--simple-tui",//As far as I can tell, these change nothing. The way it's displayed now, Java cannot read SpotDL's progress bar.
-            "--headless"
+            "--headless"//, "--log-level", "DEBUG"
         ));
 
         if (main.getConfig().isRespectSpotDLConfigFile()) {
@@ -180,9 +183,12 @@ public class SpotDLDownloader extends AbstractDownloader {
             lastOutput = result.getValue();
 
             if (result.getKey() != 0) {
-                if (lastOutput.contains("Unsupported URL")) {
-                    return new DownloadResult(FLAG_UNSUPPORTED, lastOutput);
-                }
+                // SpotDL will attempt to download anything you feed it, even unsupported links.
+                // Since this behavior is undesirable for our use case (downloads take longer to exit),
+                // we must limit its functionality to Spotify links only.
+                // if (lastOutput.contains("Unsupported URL")) { // No equivalent check in SpotDL
+                //     return new DownloadResult(FLAG_UNSUPPORTED, lastOutput);
+                // }
 
                 return new DownloadResult(FLAG_MAIN_CATEGORY_FAILED, lastOutput);
             } else {

@@ -120,6 +120,7 @@ import static net.brlns.gdownloader.lang.Language.*;
 // TODO Migrate away from AWT event listeners; they start throwing StackOverflow errors all over the place if we attempt to load thousands of items.
 // TODO Confirm dialog before clearing DL queue
 // TODO SpotDL downloader
+// TODO 'Open Directory' for playlists
 /**
  * GDownloader - GUI wrapper for yt-dlp
  *
