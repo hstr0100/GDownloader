@@ -34,7 +34,7 @@ public class MediaInfoEntity implements Serializable {
 
     @Id
     @Column(name = "media_info_id")
-    public long downloadId;
+    public Long downloadId;
 
     @Column(name = "id", length = 2048)// There are some ginormous ids in the wild
     public String id;
