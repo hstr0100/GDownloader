@@ -291,6 +291,10 @@ public final class GDownloader {
                 updaters.add(new GalleryDlUpdater(this));
             }
 
+            if (config.isSpotDLEnabled()) {
+                updaters.add(new SpotDLUpdater(this));
+            }
+
             if (config.isDebugMode()) {
                 for (AbstractGitUpdater updater : updaters) {
                     updater.registerListener((status, progress) -> {

@@ -92,6 +92,23 @@ public class YtDlpDownloader extends AbstractDownloader {
     }
 
     @Override
+    public void removeArchiveEntry(QueueEntry queueEntry) {
+        if (!queueEntry.getQueried().get()) {// We can't have the id we need without querying for it.
+            return;
+        }
+
+        try {
+            for (DownloadTypeEnum downloadType : getArchivableTypes()) {
+                FileUtils.removeLineIfExists(
+                    manager.getArchiveFile(this, downloadType),
+                    queueEntry.getMediaInfo().getId());
+            }
+        } catch (Exception e) {
+            log.error("Failed to remove archive entry for video: {}", queueEntry.getUrl(), e);
+        }
+    }
+
+    @Override
     protected boolean canConsumeUrl(String inputUrl) {
         return isEnabled()
             && !(inputUrl.contains("ytimg")

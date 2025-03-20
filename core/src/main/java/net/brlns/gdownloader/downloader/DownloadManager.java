@@ -154,6 +154,7 @@ public class DownloadManager implements IEvent {
 
         downloaders.add(new YtDlpDownloader(this));
         downloaders.add(new GalleryDlDownloader(this));
+        downloaders.add(new SpotDLDownloader(this));
         downloaders.add(new DirectHttpDownloader(this));
     }
 
@@ -853,20 +854,8 @@ public class DownloadManager implements IEvent {
     }
 
     private void removeArchiveEntries(QueueEntry queueEntry) {
-        if (!queueEntry.getQueried().get()) {// We won't have the item id without querying it.
-            return;
-        }
-
-        try {
-            for (AbstractDownloader downloader : queueEntry.getDownloaders()) {
-                for (DownloadTypeEnum downloadType : DownloadTypeEnum.values()) {
-                    FileUtils.removeLineIfExists(
-                        getArchiveFile(downloader, downloadType),
-                        queueEntry.getMediaInfo().getId());
-                }
-            }
-        } catch (Exception e) {
-            log.error("Failed to remove archive entry for video: {}", queueEntry.getUrl(), e);
+        for (AbstractDownloader downloader : queueEntry.getDownloaders()) {
+            downloader.removeArchiveEntry(queueEntry);
         }
     }
 

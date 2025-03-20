@@ -48,7 +48,7 @@ public class CustomThumbnailPanel extends JPanel {
         return switch (downloadType) {
             case VIDEO ->
                 loadIcon("/assets/video.png", ICON, 78);
-            case AUDIO ->
+            case AUDIO, SPOTIFY ->
                 loadIcon("/assets/music.png", ICON, 78);
             case GALLERY, THUMBNAILS ->
                 loadIcon("/assets/picture.png", ICON, 78);

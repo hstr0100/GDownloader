@@ -63,6 +63,8 @@ public abstract class AbstractDownloader {
 
     public abstract List<DownloadTypeEnum> getArchivableTypes();
 
+    public abstract void removeArchiveEntry(QueueEntry queueEntry);
+
     public abstract DownloaderIdEnum getDownloaderId();
 
     public List<DownloadTypeEnum> getDownloadTypes() {

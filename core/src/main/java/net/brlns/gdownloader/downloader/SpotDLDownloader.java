@@ -1,19 +1,3 @@
-/*
- * Copyright (C) 2024 hstr0100
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
 package net.brlns.gdownloader.downloader;
 
 import jakarta.annotation.Nullable;
@@ -26,7 +10,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -34,15 +19,15 @@ import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.downloader.enums.DownloadStatusEnum;
 import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.downloader.structs.DownloadResult;
+import net.brlns.gdownloader.settings.QualitySettings;
+import net.brlns.gdownloader.settings.enums.AudioContainerEnum;
 import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
 import net.brlns.gdownloader.ui.menu.IMenuEntry;
 import net.brlns.gdownloader.ui.menu.RunnableMenuEntry;
-import net.brlns.gdownloader.util.DirectoryDeduplicator;
 import net.brlns.gdownloader.util.DirectoryUtils;
 import net.brlns.gdownloader.util.FileUtils;
 import net.brlns.gdownloader.util.Pair;
-import net.brlns.gdownloader.util.StringUtils;
 
 import static net.brlns.gdownloader.downloader.enums.DownloadFlagsEnum.*;
 import static net.brlns.gdownloader.lang.Language.*;
@@ -52,7 +37,7 @@ import static net.brlns.gdownloader.settings.enums.DownloadTypeEnum.*;
  * @author Gabriel / hstr0100 / vertx010
  */
 @Slf4j
-public class GalleryDlDownloader extends AbstractDownloader {
+public class SpotDLDownloader extends AbstractDownloader {
 
     @Getter
     @Setter
@@ -62,19 +47,19 @@ public class GalleryDlDownloader extends AbstractDownloader {
     @Setter
     private Optional<File> ffmpegPath = Optional.empty();
 
-    public GalleryDlDownloader(DownloadManager managerIn) {
+    public SpotDLDownloader(DownloadManager managerIn) {
         super(managerIn);
     }
 
     @Override
     public boolean isEnabled() {
         return getExecutablePath().isPresent()
-            && main.getConfig().isGalleryDlEnabled();
+            && main.getConfig().isSpotDLEnabled();
     }
 
     @Override
     public DownloaderIdEnum getDownloaderId() {
-        return DownloaderIdEnum.GALLERY_DL;
+        return DownloaderIdEnum.SPOTDL;
     }
 
     @Override
@@ -84,21 +69,25 @@ public class GalleryDlDownloader extends AbstractDownloader {
 
     @Override
     public List<DownloadTypeEnum> getArchivableTypes() {
-        return Collections.singletonList(GALLERY);
+        return Collections.singletonList(SPOTIFY);
     }
 
     @Override
     public void removeArchiveEntry(QueueEntry queueEntry) {
-        // Disapointingly, gallery-dl uses sqlite for its archive.
-        // Adding a huge sqlite dependency just for this task would be quite wasteful.
+        try {
+            for (DownloadTypeEnum downloadType : getArchivableTypes()) {
+                FileUtils.removeLineIfExists(
+                    manager.getArchiveFile(this, downloadType),
+                    queueEntry.getUrl());
+            }
+        } catch (Exception e) {
+            log.error("Failed to remove archive entry for video: {}", queueEntry.getUrl(), e);
+        }
     }
 
     @Override
     protected boolean canConsumeUrl(String inputUrl) {
-        return isEnabled()
-            && !(inputUrl.contains("ytimg")
-            || inputUrl.contains("ggpht")
-            || inputUrl.endsWith("youtube.com/"));
+        return isEnabled() && inputUrl.contains("spotify.com");
     }
 
     @Override
@@ -111,7 +100,7 @@ public class GalleryDlDownloader extends AbstractDownloader {
     protected DownloadResult tryDownload(QueueEntry entry) throws Exception {
         AbstractUrlFilter filter = entry.getFilter();
 
-        if (!main.getConfig().isGalleryDlEnabled()) {
+        if (!main.getConfig().isSpotDLEnabled()) {
             return new DownloadResult(FLAG_DOWNLOADER_DISABLED);
         }
 
@@ -124,20 +113,19 @@ public class GalleryDlDownloader extends AbstractDownloader {
 
         genericArguments.addAll(List.of(
             executablePath.get().getAbsolutePath(),
-            "--no-colors"
+            "--simple-tui",//As far as I can tell, these change nothing. The way it's displayed now Java cannot read spotDL's progress bar.
+            "--headless"
         ));
 
-        if (!main.getConfig().isRespectGalleryDlConfigFile()) {
-            genericArguments.add("--config-ignore");
+        if (main.getConfig().isRespectSpotDLConfigFile()) {
+            // We can't specify config location for spotDL, our only choice is to copy or symlink it.
+            genericArguments.add("--config");
         }
 
-        if (ffmpegPath.isPresent()) {// TODO: test
+        if (ffmpegPath.isPresent()) {
             genericArguments.addAll(List.of(
-                "-o",
-                "downloader.ytdl.raw-options=['"
-                + "--ffmpeg-location" + "', '"
-                + ffmpegPath.get().getAbsolutePath()
-                + "']"
+                "--ffmpeg",
+                ffmpegPath.get().getAbsolutePath()
             ));
         }
 
@@ -149,8 +137,8 @@ public class GalleryDlDownloader extends AbstractDownloader {
         for (DownloadTypeEnum type : DownloadTypeEnum.values()) {
             boolean supported = getDownloadTypes().contains(type);
 
-            if (!supported || type != GALLERY
-                || !main.getConfig().isGalleryDlEnabled()) {
+            if (!supported || type != SPOTIFY
+                || !main.getConfig().isSpotDLEnabled()) {
                 continue;
             }
 
@@ -193,12 +181,14 @@ public class GalleryDlDownloader extends AbstractDownloader {
 
     @Override
     protected Map<String, IMenuEntry> processMediaFiles(QueueEntry entry) {
-        File finalPath = new File(main.getOrCreateDownloadsDirectory(), "GalleryDL");
+        File finalPath = new File(main.getOrCreateDownloadsDirectory(), "SpotDL");
         if (!finalPath.exists()) {
             finalPath.mkdirs();
         }
 
         File tmpPath = entry.getTmpDirectory();
+
+        QualitySettings quality = entry.getFilter().getQualitySettings();
 
         Map<String, IMenuEntry> rightClickOptions = new TreeMap<>();
 
@@ -206,8 +196,6 @@ public class GalleryDlDownloader extends AbstractDownloader {
             List<Path> paths = Files.walk(tmpPath.toPath())
                 .sorted(Comparator.reverseOrder()) // Process files before directories
                 .toList();
-
-            AtomicReference<File> deepestDirectoryRef = new AtomicReference<>(null);
 
             for (Path path : paths) {
                 if (path.equals(tmpPath.toPath())) {
@@ -220,13 +208,15 @@ public class GalleryDlDownloader extends AbstractDownloader {
                 try {
                     if (Files.isDirectory(targetPath)) {
                         Files.createDirectories(targetPath);
-                        deepestDirectoryRef.set(targetPath.toFile());
+
                         log.info("Created directory: {}", targetPath);
                     } else {
                         Files.createDirectories(targetPath.getParent());
                         targetPath = FileUtils.ensureUniqueFileName(targetPath);
                         Files.move(path, targetPath, StandardCopyOption.REPLACE_EXISTING);
-                        //entry.getFinalMediaFiles().add(targetPath.toFile());
+                        entry.getFinalMediaFiles().add(targetPath.toFile());
+                        updateRightClickOptions(path, quality, rightClickOptions, entry);
+
                         log.info("Moved file: {}", targetPath);
                     }
                 } catch (FileAlreadyExistsException e) {
@@ -235,21 +225,6 @@ public class GalleryDlDownloader extends AbstractDownloader {
                     log.error("Failed to move file: {}", path.getFileName(), e);
                 }
             }
-
-            File deepestDirectory = deepestDirectoryRef.get();
-            if (deepestDirectory != null) {
-                rightClickOptions.put(
-                    l10n("gui.open_downloaded_directory"),
-                    new RunnableMenuEntry(() -> main.open(deepestDirectory)));
-
-                if (main.getConfig().isGalleryDlDeduplication()) {
-                    entry.updateStatus(DownloadStatusEnum.DEDUPLICATING, l10n("gui.deduplication.deduplicating"));
-
-                    DirectoryDeduplicator.deduplicateDirectory(deepestDirectory);
-                }
-            }
-
-            entry.getFinalMediaFiles().add(finalPath);
         } catch (IOException e) {
             log.error("Failed to list files", e);
         }
@@ -257,11 +232,23 @@ public class GalleryDlDownloader extends AbstractDownloader {
         return rightClickOptions;
     }
 
+    private void updateRightClickOptions(Path path, QualitySettings quality, Map<String, IMenuEntry> rightClickOptions, QueueEntry entry) {
+        if (isFileType(path, quality.getAudioContainer().getValue())) {
+            rightClickOptions.putIfAbsent(l10n("gui.play_audio"),
+                new RunnableMenuEntry(() -> entry.play(AudioContainerEnum.class)));
+        }
+    }
+
+    private boolean isFileType(Path path, String extension) {
+        return path.getFileName().toString().toLowerCase().endsWith("." + extension);
+    }
+
     @Nullable
     private Pair<Integer, String> processDownload(QueueEntry entry, List<String> arguments) throws Exception {
         long start = System.currentTimeMillis();
 
         List<String> finalArgs = new ArrayList<>(arguments);
+        finalArgs.add("download");
         finalArgs.add(entry.getUrl());
 
         ProcessBuilder processBuilder = new ProcessBuilder(finalArgs);
@@ -328,12 +315,14 @@ public class GalleryDlDownloader extends AbstractDownloader {
             log.debug("[{}] - {}", entry.getDownloadId(), lastOutput);
         }
 
-        if (lastOutput.startsWith("#") || lastOutput.startsWith(entry.getTmpDirectory().getAbsolutePath())) {
+        if (lastOutput.contains("Replacing with empty") || lastOutput.endsWith("string.")) {
+            return;
+        }
+
+        if (lastOutput.contains("Downloading")) {
             entry.getMediaCard().setPercentage(-1);
 
-            entry.updateStatus(DownloadStatusEnum.DOWNLOADING,
-                StringUtils.getStringAfterLastSeparator(lastOutput
-                    .replace(entry.getTmpDirectory().getAbsolutePath() + File.separator, ""))/*, false*/);
+            entry.updateStatus(DownloadStatusEnum.DOWNLOADING, lastOutput);
         } else {
             if (entry.getDownloadStarted().get()) {
                 entry.updateStatus(DownloadStatusEnum.PROCESSING, lastOutput);
@@ -346,5 +335,106 @@ public class GalleryDlDownloader extends AbstractDownloader {
     @Override
     public void close() {
 
+    }
+
+    /**
+     * Converts yt-dlp naming templates to spotDL
+     */
+    public static String convertTemplateForSpotDL(String input) {
+        if (input == null || input.isEmpty()) {
+            return input;
+        }
+
+        // Mapping from yt-dlp template variables to spotdl variables
+        Map<String, String> templateMap = new HashMap<>();
+
+        templateMap.put("title", "title");
+        templateMap.put("uploader", "artists");
+        templateMap.put("creator", "artists");
+        templateMap.put("artist", "artist");
+        templateMap.put("album", "album");
+        templateMap.put("channel", "album-artist");
+        templateMap.put("track", "title");
+        templateMap.put("genre", "genre");
+        templateMap.put("duration", "duration");
+        templateMap.put("duration_string", "duration");
+        templateMap.put("release_year", "year");
+        templateMap.put("release_date", "original-date");
+        templateMap.put("upload_date", "original-date");
+        templateMap.put("track_number", "track-number");
+        templateMap.put("n_entries", "tracks-count");
+        templateMap.put("playlist", "list-name");
+        templateMap.put("playlist_index", "list-position");
+        templateMap.put("playlist_title", "list-name");
+        templateMap.put("playlist_count", "list-length");
+        templateMap.put("ext", "output-ext");
+        templateMap.put("disc_number", "disc-number");
+        templateMap.put("id", "track-id");
+        templateMap.put("publisher", "publisher");
+        templateMap.put("isrc", "isrc");
+
+        // Use a regex pattern to match yt-dlp template variables with all their formatting options.
+        // You've earned yourself a royal cookie if you can understand this entire regex.
+        Pattern pattern = Pattern.compile("%\\(([^>,:&|\\)]*)(?:[>,:&|][^\\)]*)?\\)([-#0+ ]*\\d*\\.?\\d*[diouxXheEfFgGcrsBlqDSUj])?");
+
+        try {
+            Matcher matcher = pattern.matcher(input);
+
+            // Check if there are unbalanced parentheses which indicate malformed templates
+            int openCount = 0;
+            int closeCount = 0;
+            for (char c : input.toCharArray()) {
+                if (c == '(') {
+                    openCount++;
+                }
+                if (c == ')') {
+                    closeCount++;
+                }
+            }
+
+            // If unbalanced, return original string
+            if (openCount != closeCount) {
+                return input;
+            }
+
+            StringBuffer result = new StringBuffer();
+
+            // Process each match
+            while (matcher.find()) {
+                String baseVar = matcher.group(1);
+
+                // Check if this is an empty field name
+                if (baseVar.isEmpty()) {
+                    matcher.appendReplacement(result, "{}");
+                    continue;
+                }
+
+                // Handle object traversal and arithmetic
+                String fieldName = baseVar;
+                if (baseVar.contains(".")) {
+                    fieldName = baseVar.split("\\.")[0]; // Get the part before first dot
+                } else if (baseVar.contains("+") || baseVar.contains("-") || baseVar.contains("*")) {
+                    // For arithmetic expressions, extract the variable name
+                    fieldName = baseVar.split("[+\\-*]")[0];
+                }
+
+                // Look up the corresponding spotdl variable
+                String spotdlVar = templateMap.getOrDefault(fieldName, fieldName);
+
+                // For complex formatting that spotdl doesn't support, just map the base variable
+                String replacement = "{" + spotdlVar + "}";
+
+                matcher.appendReplacement(result, Matcher.quoteReplacement(replacement));
+            }
+
+            // Append the remainder of the input string
+            matcher.appendTail(result);
+
+            return result.toString();
+        } catch (Exception e) {
+            // Something went wrong, return the original string
+            log.error("Failed to parse name template: {}", input);
+            return input;
+        }
     }
 }

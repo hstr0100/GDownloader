@@ -83,6 +83,12 @@ public abstract class AbstractGitUpdater {
 
     protected abstract String getRepo();
 
+    /**
+     * Suffix of the binary name as provided by GitHub.
+     * Binaries may be named in various formats, such as `yt-dlp`, `yt-dlp.exe`, or `yt-dlp-1.0.exe`.
+     * Currently, comparing the suffix is sufficient to retrieve the required binaries.
+     * In the future, this may need to be replaced with a more robust regex-based solution.
+     */
     @Nullable
     protected abstract String getBinaryName();
 
@@ -100,6 +106,8 @@ public abstract class AbstractGitUpdater {
     public abstract String getName();
 
     protected abstract void setExecutablePath(File executablePath);
+
+    protected abstract void init() throws Exception;
 
     protected void finishUpdate(File executablePath) {
         setExecutablePath(executablePath);
@@ -134,6 +142,8 @@ public abstract class AbstractGitUpdater {
     }
 
     public final void check(boolean force) throws Exception {
+        init();
+
         doUpdateCheck(force);
 
         if (_internalLastStatus != UpdateStatus.DONE && _internalLastStatus != UpdateStatus.FAILED) {

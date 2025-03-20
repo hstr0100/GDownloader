@@ -113,6 +113,11 @@ public class DirectHttpDownloader extends AbstractDownloader {
     }
 
     @Override
+    public void removeArchiveEntry(QueueEntry queueEntry) {
+        // Not implemented
+    }
+
+    @Override
     protected boolean canConsumeUrl(String inputUrl) {
         return isEnabled()
             && !(inputUrl.contains("ytimg")

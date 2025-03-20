@@ -27,6 +27,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.downloader.AbstractDownloader;
 import net.brlns.gdownloader.downloader.DownloadManager;
+import net.brlns.gdownloader.downloader.SpotDLDownloader;
 import net.brlns.gdownloader.settings.QualitySettings;
 import net.brlns.gdownloader.settings.Settings;
 import net.brlns.gdownloader.settings.enums.AudioBitrateEnum;
@@ -256,7 +257,7 @@ public class GenericFilter extends AbstractUrlFilter {
                     case ALL -> {
                         arguments.addAll(List.of(
                             "--retries",
-                            "10"
+                            String.valueOf(config.getMaxDownloadRetries())
                         ));
 
                         if (config.isRandomIntervalBetweenDownloads()) {
@@ -296,6 +297,97 @@ public class GenericFilter extends AbstractUrlFilter {
                             "-D",
                             savePath.getAbsolutePath() + (fileName != null ? File.separator + fileName : "")
                         ));
+                    }
+                    default ->
+                        throw new IllegalArgumentException();
+                }
+            }
+
+            case SPOTDL -> {
+                if (archiveFile != null && config.isRecordToDownloadArchive()) {
+                    arguments.addAll(List.of(
+                        "--archive",
+                        archiveFile.getAbsolutePath()
+                    ));
+                }
+
+                switch (typeEnum) {
+                    case ALL -> {
+                        arguments.addAll(List.of(
+                            "--max-retries",
+                            String.valueOf(config.getMaxDownloadRetries())
+                        ));
+
+                        if (config.isUseSponsorBlock()) {
+                            arguments.addAll(List.of(
+                                "--sponsor-block"
+                            ));
+                        }
+
+                        String proxyUrl = config.getProxySettings().createProxyUrl();
+                        if (proxyUrl != null) {
+                            arguments.addAll(List.of(
+                                "--proxy", proxyUrl
+                            ));
+                        }
+
+//                        TODO: spotDL seems unable to differentiate yt-dlp arguments from its own, single/double quotes don't work here.
+//                        List<String> ytDlpArguments = new ArrayList<>();
+//
+//                        if (config.isRandomIntervalBetweenDownloads()) {
+//                            ytDlpArguments.addAll(List.of(
+//                                "--sleep",
+//                                "5.0-15.0",
+//                                "--sleep-request",
+//                                "2"
+//                            ));
+//                        }
+//
+//                        if (config.isImpersonateBrowser()) {
+//                            ytDlpArguments.addAll(List.of(
+//                                "--user-agent",
+//                                "browser"
+//                            ));
+//                        }
+//
+//                        if (config.isReadCookiesFromBrowser()) {
+//                            ytDlpArguments.addAll(List.of(
+//                                "--cookies-from-browser",
+//                                manager.getMain().getBrowserForCookies().getName()
+//                            ));
+//                        }
+//
+//                        if (!ytDlpArguments.isEmpty()) {
+//                            arguments.addAll(List.of(
+//                                "--yt-dlp-args",
+//                                "\'" + String.join(" ", ytDlpArguments) + "\'"
+//                            ));
+//                        }
+                    }
+                    case SPOTIFY -> {
+                        if (audioBitrate != AudioBitrateEnum.NO_AUDIO) {
+                            String audioPatternWithBitrate = getAudioNamePattern()
+                                .replace("%(audio_bitrate)s", audioBitrate.getValue() + "kbps")
+                                .replace("{bitrate}", audioBitrate.getValue() + "kbps");
+
+                            arguments.addAll(List.of(
+                                "--output",
+                                savePath.getAbsolutePath() + "/"
+                                + SpotDLDownloader.convertTemplateForSpotDL(audioPatternWithBitrate),
+                                "--format",
+                                quality.getAudioContainer().getValue(),
+                                "--bitrate",
+                                Math.clamp(8, 320, audioBitrate.getValue()) + "k"
+                            ));
+
+                            if (!isEmbedThumbnailAndMetadata()) {
+                                // SpotDL does not appear to support disabling metadata embedding.
+                                // This is the best we can do to respect user settings.
+                                arguments.addAll(List.of(
+                                    "--skip-album-art"
+                                ));
+                            }
+                        }
                     }
                     default ->
                         throw new IllegalArgumentException();
