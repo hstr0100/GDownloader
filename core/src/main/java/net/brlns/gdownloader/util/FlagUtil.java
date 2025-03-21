@@ -16,46 +16,46 @@
  */
 package net.brlns.gdownloader.util;
 
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
 public class FlagUtil {
 
-    public static int set(AtomicReference<Integer> reference, int flagPosition) {
+    public static int set(AtomicInteger reference, int flagPosition) {
         validateFlagPosition(flagPosition);
 
         return reference.updateAndGet(currentValue
             -> currentValue | (1 << flagPosition));
     }
 
-    public static int clear(AtomicReference<Integer> reference, int flagPosition) {
+    public static int clear(AtomicInteger reference, int flagPosition) {
         validateFlagPosition(flagPosition);
 
         return reference.updateAndGet(currentValue
             -> currentValue & ~(1 << flagPosition));
     }
 
-    public static int toggle(AtomicReference<Integer> reference, int flagPosition) {
+    public static int toggle(AtomicInteger reference, int flagPosition) {
         validateFlagPosition(flagPosition);
 
         return reference.updateAndGet(currentValue
             -> currentValue ^ (1 << flagPosition));
     }
 
-    public static boolean isSet(AtomicReference<Integer> reference, int flagPosition) {
+    public static boolean isSet(AtomicInteger reference, int flagPosition) {
         validateFlagPosition(flagPosition);
 
         return (reference.get() & (1 << flagPosition)) != 0;
     }
 
-    public static int setFlags(AtomicReference<Integer> reference, int flags) {
+    public static int setFlags(AtomicInteger reference, int flags) {
         return reference.updateAndGet(currentValue
             -> currentValue | flags);
     }
 
-    public static int clearFlags(AtomicReference<Integer> reference, int flags) {
+    public static int clearFlags(AtomicInteger reference, int flags) {
         return reference.updateAndGet(currentValue
             -> currentValue & ~flags);
     }

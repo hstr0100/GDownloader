@@ -1,6 +1,6 @@
 package net.brlns.gdownloader;
 
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicInteger;
 import net.brlns.gdownloader.util.FlagUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -11,11 +11,11 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class FlagUtilTest {
 
-    private AtomicReference<Integer> reference;
+    private AtomicInteger reference;
 
     @BeforeEach
     void setUp() {
-        reference = new AtomicReference<>(0);
+        reference = new AtomicInteger();
     }
 
     // set Tests
@@ -28,7 +28,7 @@ public class FlagUtilTest {
         assertEquals(8, result, "Return value should be 8 (binary: 1000)");
 
         // Check reference value was updated
-        assertEquals(8, reference.get().intValue(), "Reference should be updated to 8");
+        assertEquals(8, reference.get(), "Reference should be updated to 8");
 
         // Verify bit was actually set
         assertTrue((reference.get() & (1 << 3)) != 0, "Bit at position 3 should be set");
@@ -45,7 +45,7 @@ public class FlagUtilTest {
         // Expect: original value with bit 4 set
         int expected = 0b10111010; // 0b10101010 | (1 << 4)
 
-        assertEquals(expected, reference.get().intValue(), "Only bit 4 should be changed");
+        assertEquals(expected, reference.get(), "Only bit 4 should be changed");
     }
 
     @Test
@@ -58,7 +58,7 @@ public class FlagUtilTest {
 
         // Should still just have bit 5 set
         assertEquals(1 << 5, result, "Value should remain unchanged");
-        assertEquals(1 << 5, reference.get().intValue(), "Value should remain unchanged");
+        assertEquals(1 << 5, reference.get(), "Value should remain unchanged");
     }
 
     @ParameterizedTest
@@ -89,7 +89,7 @@ public class FlagUtilTest {
         int result = FlagUtil.clear(reference, 3);
 
         assertEquals(0xFFFFFFF7, result, "Bit 3 should be cleared");
-        assertEquals(0xFFFFFFF7, reference.get().intValue(), "Bit 3 should be cleared");
+        assertEquals(0xFFFFFFF7, reference.get(), "Bit 3 should be cleared");
 
         // Verify bit was actually cleared
         assertFalse((reference.get() & (1 << 3)) != 0, "Bit at position 3 should be cleared");
@@ -105,7 +105,7 @@ public class FlagUtilTest {
 
         // Value should remain unchanged
         assertEquals(0b00101010, result, "Value should remain unchanged");
-        assertEquals(0b00101010, reference.get().intValue(), "Value should remain unchanged");
+        assertEquals(0b00101010, reference.get(), "Value should remain unchanged");
     }
 
     // toggle Tests
@@ -118,7 +118,7 @@ public class FlagUtilTest {
 
         // Bit 6 should now be set
         assertEquals(1 << 6, result, "Bit 6 should be toggled to 1");
-        assertEquals(1 << 6, reference.get().intValue(), "Bit 6 should be toggled to 1");
+        assertEquals(1 << 6, reference.get(), "Bit 6 should be toggled to 1");
     }
 
     @Test
@@ -131,7 +131,7 @@ public class FlagUtilTest {
 
         // Bit 9 should now be clear
         assertEquals(0, result, "Bit 9 should be toggled to 0");
-        assertEquals(0, reference.get().intValue(), "Bit 9 should be toggled to 0");
+        assertEquals(0, reference.get(), "Bit 9 should be toggled to 0");
     }
 
     @Test
@@ -144,7 +144,7 @@ public class FlagUtilTest {
 
         // Only bit 0 should be changed
         assertEquals(0b10101011, result, "Only bit 0 should be toggled");
-        assertEquals(0b10101011, reference.get().intValue(), "Only bit 0 should be toggled");
+        assertEquals(0b10101011, reference.get(), "Only bit 0 should be toggled");
     }
 
     // isSet Tests
@@ -180,7 +180,7 @@ public class FlagUtilTest {
         int result = FlagUtil.setFlags(reference, mask);
 
         assertEquals(mask, result, "Bits 1, 3, and 5 should be set");
-        assertEquals(mask, reference.get().intValue(), "Bits 1, 3, and 5 should be set");
+        assertEquals(mask, reference.get(), "Bits 1, 3, and 5 should be set");
     }
 
     @Test
@@ -196,7 +196,7 @@ public class FlagUtilTest {
         int expected = (1 << 1) | (1 << 2) | (1 << 3) | (1 << 4) | (1 << 5);
 
         assertEquals(expected, result, "Bits 1, 2, 3, 4, and 5 should all be set");
-        assertEquals(expected, reference.get().intValue(), "Bits 1, 2, 3, 4, and 5 should all be set");
+        assertEquals(expected, reference.get(), "Bits 1, 2, 3, 4, and 5 should all be set");
     }
 
     // clearFlags Tests
@@ -213,7 +213,7 @@ public class FlagUtilTest {
         int expected = 0xFFFFFFFF & ~mask;
 
         assertEquals(expected, result, "Bits 2, 4, and 6 should be cleared");
-        assertEquals(expected, reference.get().intValue(), "Bits 2, 4, and 6 should be cleared");
+        assertEquals(expected, reference.get(), "Bits 2, 4, and 6 should be cleared");
     }
 
     @Test
@@ -229,6 +229,6 @@ public class FlagUtilTest {
         int expected = 0b10000000;
 
         assertEquals(expected, result, "Bits 1, 3, and 5 should be cleared");
-        assertEquals(expected, reference.get().intValue(), "Bits 1, 3, and 5 should be cleared");
+        assertEquals(expected, reference.get(), "Bits 1, 3, and 5 should be cleared");
     }
 }

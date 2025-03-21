@@ -26,7 +26,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicInteger;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -58,8 +58,7 @@ public class SpotDLDownloader extends AbstractDownloader {
     private static final byte NOTIFY_COOKIE_JAR = 0x01;
     private static final byte NOTIFY_USER_AUTH = 0x02;
 
-    private final AtomicReference<Integer> notificationFlags
-        = new AtomicReference<>(0);
+    private final AtomicInteger notificationFlags = new AtomicInteger();
 
     @Getter
     @Setter
@@ -297,8 +296,16 @@ public class SpotDLDownloader extends AbstractDownloader {
         String finalUrl = entry.getUrl();
         if (finalUrl.contains("spotify.com/collection/tracks")) {
             finalUrl = "saved";
+        } else if (finalUrl.contains("spotify.com/collection/playlists")) {
+            // This url just redirects to /tracks, but here we can map them internally.
+            finalUrl = "all-user-playlists";
+        } else if (finalUrl.contains("spotify.com/collection/albums")) {
+            finalUrl = "all-user-saved-albums";
+        }
 
-            finalArgs.add("--user-auth");// Accessing the likes playlist requires user authentication
+        if (!finalUrl.contains("http")) {
+            // Accessing user playlists requires authentication
+            finalArgs.add("--user-auth");
         }
 
         finalArgs.add("download");

@@ -116,9 +116,10 @@ public abstract class AbstractDownloader {
                     return cookieJar;
                 }
             } else {
-                cookieJar.createNewFile();
-                log.info("Created empty {} cookies.txt file at: {}",
-                    getDownloaderId().getDisplayName(), cookieJar);
+                if (cookieJar.createNewFile()) {
+                    log.info("Created empty {} cookies.txt file at: {}",
+                        getDownloaderId().getDisplayName(), cookieJar);
+                }
             }
         } catch (IOException e) {
             GDownloader.handleException(e);
