@@ -98,8 +98,11 @@ public class PersistenceManager {
 
             Map<String, String> properties = new HashMap<>();
 
-            properties.put(PersistenceUnitProperties.JDBC_URL, "jdbc:hsqldb:file:" + databaseFile
-                + ";sql.syntax_pgs=true;hsqldb.lob_compressed=true;hsqldb.script_format=3");
+            properties.put(PersistenceUnitProperties.JDBC_URL, "jdbc:hsqldb:"
+                + "file:" + databaseFile + ";"
+                + "sql.syntax_pgs=true;"
+                + "hsqldb.lob_compressed=true;"
+                + "hsqldb.script_format=3");
 
             emf = Persistence.createEntityManagerFactory("hsqldbPU", properties);
 

@@ -16,7 +16,9 @@
  */
 package net.brlns.gdownloader.downloader;
 
+import jakarta.annotation.Nullable;
 import java.io.File;
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -26,6 +28,7 @@ import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.downloader.structs.DownloadResult;
 import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.ui.menu.IMenuEntry;
+import net.brlns.gdownloader.util.FileUtils;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -72,4 +75,55 @@ public abstract class AbstractDownloader {
     }
 
     public abstract void close();
+
+    @Nullable
+    public File getArchiveFile(DownloadTypeEnum downloadType) {
+        List<DownloadTypeEnum> supported = getArchivableTypes();
+
+        if (supported.contains(downloadType)) {
+            File oldArchive = new File(GDownloader.getWorkDirectory(),
+                getDownloaderId().getDisplayName()
+                + "_archive.txt");
+
+            File newArchive = new File(GDownloader.getWorkDirectory(),
+                getDownloaderId().getDisplayName()
+                + "_archive_"
+                + downloadType.name().toLowerCase()
+                + ".txt");
+
+            if (oldArchive.exists()) {
+                oldArchive.renameTo(newArchive);
+            }
+
+            return FileUtils.getOrCreate(newArchive);
+        }
+
+        return null;
+    }
+
+    @Nullable
+    public File getCookieJarFile() {
+        if (!main.getConfig().isReadCookiesFromCookiesTxt()) {
+            return null;
+        }
+
+        File cookieJar = new File(GDownloader.getWorkDirectory(),
+            getDownloaderId().getDisplayName() + "_cookies.txt");
+
+        try {
+            if (cookieJar.exists() && cookieJar.isFile()) {
+                if (cookieJar.length() > 0) {
+                    return cookieJar;
+                }
+            } else {
+                cookieJar.createNewFile();
+                log.info("Created empty {} cookies.txt file at: {}",
+                    getDownloaderId().getDisplayName(), cookieJar);
+            }
+        } catch (IOException e) {
+            GDownloader.handleException(e);
+        }
+
+        return null;
+    }
 }

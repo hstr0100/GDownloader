@@ -69,6 +69,10 @@ public class Settings {
     @JsonProperty("ReadCookiesFromBrowser")
     private boolean readCookiesFromBrowser = false;
 
+    // TODO: UI
+    @JsonProperty("ReadCookiesFromCookiesTxt")
+    private boolean readCookiesFromCookiesTxt = true;
+
     @JsonProperty("BrowserForCookies")
     private BrowserEnum browser = BrowserEnum.UNSET;
 

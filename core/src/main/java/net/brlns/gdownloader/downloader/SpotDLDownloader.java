@@ -26,6 +26,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -41,6 +42,7 @@ import net.brlns.gdownloader.ui.menu.IMenuEntry;
 import net.brlns.gdownloader.ui.menu.RunnableMenuEntry;
 import net.brlns.gdownloader.util.DirectoryUtils;
 import net.brlns.gdownloader.util.FileUtils;
+import net.brlns.gdownloader.util.FlagUtil;
 import net.brlns.gdownloader.util.Pair;
 
 import static net.brlns.gdownloader.downloader.enums.DownloadFlagsEnum.*;
@@ -50,11 +52,14 @@ import static net.brlns.gdownloader.settings.enums.DownloadTypeEnum.*;
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-// TODO: test playlists and their naming templates, check --playlist-retain-track-cover
-// TODO: test spotify auth
-// TODO: add --cookie-file support
 @Slf4j
 public class SpotDLDownloader extends AbstractDownloader {
+
+    private static final byte NOTIFY_COOKIE_JAR = 0x01;
+    private static final byte NOTIFY_USER_AUTH = 0x02;
+
+    private final AtomicReference<Integer> notificationFlags
+        = new AtomicReference<>(0);
 
     @Getter
     @Setter
@@ -94,7 +99,7 @@ public class SpotDLDownloader extends AbstractDownloader {
         try {
             for (DownloadTypeEnum downloadType : getArchivableTypes()) {
                 FileUtils.removeLineIfExists(
-                    manager.getArchiveFile(this, downloadType),
+                    getArchiveFile(downloadType),
                     queueEntry.getUrl());
             }
         } catch (Exception e) {
@@ -111,6 +116,26 @@ public class SpotDLDownloader extends AbstractDownloader {
     protected boolean tryQueryVideo(QueueEntry queueEntry) {
         // TODO
         return false;
+    }
+
+    @Nullable
+    @Override
+    public File getCookieJarFile() {
+        File cookieJar = super.getCookieJarFile();
+
+        // Lets not spam the logs for every download.
+        if (cookieJar == null && !FlagUtil.isSet(notificationFlags, NOTIFY_COOKIE_JAR)) {
+            log.info("""
+                If you have an YouTube Music Premium account, consider setting up a cookies.txt file at:
+                    {}
+                for better quality downloads (256kbps vs 128kbps). Please visit
+                    https://github.com/spotDL/spotify-downloader/blob/master/docs/usage.md#youtube-music-premium
+                for more information""", cookieJar);
+
+            FlagUtil.set(notificationFlags, NOTIFY_COOKIE_JAR);
+        }
+
+        return cookieJar;
     }
 
     @Override
@@ -130,8 +155,8 @@ public class SpotDLDownloader extends AbstractDownloader {
 
         genericArguments.addAll(List.of(
             executablePath.get().getAbsolutePath(),
-            "--simple-tui",//As far as I can tell, these change nothing. The way it's displayed now, Java cannot read SpotDL's progress bar.
-            "--headless"//, "--log-level", "DEBUG"
+            "--simple-tui"//As far as I can tell, these change nothing. The way it's displayed now, Java cannot read SpotDL's progress bar.
+        //, "--log-level", "DEBUG"
         ));
 
         if (main.getConfig().isRespectSpotDLConfigFile()) {
@@ -183,12 +208,12 @@ public class SpotDLDownloader extends AbstractDownloader {
             lastOutput = result.getValue();
 
             if (result.getKey() != 0) {
-                // SpotDL will attempt to download anything you feed it, even unsupported links.
+                // SpotDL will attempt to download anything you feed it, even non-spotify links.
                 // Since this behavior is undesirable for our use case (downloads take longer to exit),
                 // we must limit its functionality to Spotify links only.
-                // if (lastOutput.contains("Unsupported URL")) { // No equivalent check in SpotDL
-                //     return new DownloadResult(FLAG_UNSUPPORTED, lastOutput);
-                // }
+                if (lastOutput.contains("Unsupported URL")) {
+                    return new DownloadResult(FLAG_UNSUPPORTED, lastOutput);
+                }
 
                 return new DownloadResult(FLAG_MAIN_CATEGORY_FAILED, lastOutput);
             } else {
@@ -268,8 +293,16 @@ public class SpotDLDownloader extends AbstractDownloader {
         long start = System.currentTimeMillis();
 
         List<String> finalArgs = new ArrayList<>(arguments);
+
+        String finalUrl = entry.getUrl();
+        if (finalUrl.contains("spotify.com/collection/tracks")) {
+            finalUrl = "saved";
+
+            finalArgs.add("--user-auth");// Accessing the likes playlist requires user authentication
+        }
+
         finalArgs.add("download");
-        finalArgs.add(entry.getUrl());
+        finalArgs.add(finalUrl);
 
         ProcessBuilder processBuilder = new ProcessBuilder(finalArgs);
         processBuilder.redirectErrorStream(true);
@@ -337,6 +370,19 @@ public class SpotDLDownloader extends AbstractDownloader {
 
         if (lastOutput.contains("Replacing with empty") || lastOutput.endsWith("string.")) {
             return;
+        }
+
+        if (lastOutput.contains("Go to the following URL: ")) {
+            if (!FlagUtil.isSet(notificationFlags, NOTIFY_USER_AUTH)) {
+                int httpIndex = lastOutput.indexOf("https://");
+
+                if (httpIndex != -1) {
+                    String url = lastOutput.substring(httpIndex).trim();
+                    main.openUrlInBrowser(url);
+
+                    FlagUtil.set(notificationFlags, NOTIFY_USER_AUTH);
+                }
+            }
         }
 
         if (lastOutput.contains("Downloading")) {

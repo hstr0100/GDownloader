@@ -100,7 +100,7 @@ public class YtDlpDownloader extends AbstractDownloader {
         try {
             for (DownloadTypeEnum downloadType : getArchivableTypes()) {
                 FileUtils.removeLineIfExists(
-                    manager.getArchiveFile(this, downloadType),
+                    getArchiveFile(downloadType),
                     queueEntry.getMediaInfo().getId());
             }
         } catch (Exception e) {
@@ -139,6 +139,14 @@ public class YtDlpDownloader extends AbstractDownloader {
                     "--cookies-from-browser",
                     main.getBrowserForCookies().getName()
                 ));
+            } else {
+                File cookieJar = getCookieJarFile();
+                if (cookieJar != null) {
+                    arguments.addAll(List.of(
+                        "--cookies",
+                        cookieJar.getAbsolutePath()
+                    ));
+                }
             }
 
             List<String> list = GDownloader.readOutput(

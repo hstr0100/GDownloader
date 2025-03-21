@@ -77,7 +77,7 @@ public class GenericFilter extends AbstractUrlFilter {
 
         List<String> arguments = new ArrayList<>();
 
-        File archiveFile = manager.getArchiveFile(downloader, typeEnum);
+        File archiveFile = downloader.getArchiveFile(typeEnum);
 
         switch (downloader.getDownloaderId()) {
             case YT_DLP -> {
@@ -132,6 +132,14 @@ public class GenericFilter extends AbstractUrlFilter {
                                 "--cookies-from-browser",
                                 manager.getMain().getBrowserForCookies().getName()
                             ));
+                        } else {
+                            File cookieJar = downloader.getCookieJarFile();
+                            if (cookieJar != null) {
+                                arguments.addAll(List.of(
+                                    "--cookies",
+                                    cookieJar.getAbsolutePath()
+                                ));
+                            }
                         }
 
                         if (GDownloader.isWindows()) {
@@ -288,6 +296,14 @@ public class GenericFilter extends AbstractUrlFilter {
                                 "--cookies-from-browser",
                                 manager.getMain().getBrowserForCookies().getName()
                             ));
+                        } else {
+                            File cookieJar = downloader.getCookieJarFile();
+                            if (cookieJar != null) {
+                                arguments.addAll(List.of(
+                                    "--cookies",
+                                    cookieJar.getAbsolutePath()
+                                ));
+                            }
                         }
                     }
                     case GALLERY -> {
@@ -331,38 +347,13 @@ public class GenericFilter extends AbstractUrlFilter {
                             ));
                         }
 
-//                        TODO: spotDL seems unable to differentiate yt-dlp arguments from its own, single/double quotes don't work here.
-//                        List<String> ytDlpArguments = new ArrayList<>();
-//
-//                        if (config.isRandomIntervalBetweenDownloads()) {
-//                            ytDlpArguments.addAll(List.of(
-//                                "--sleep",
-//                                "5.0-15.0",
-//                                "--sleep-request",
-//                                "2"
-//                            ));
-//                        }
-//
-//                        if (config.isImpersonateBrowser()) {
-//                            ytDlpArguments.addAll(List.of(
-//                                "--user-agent",
-//                                "browser"
-//                            ));
-//                        }
-//
-//                        if (config.isReadCookiesFromBrowser()) {
-//                            ytDlpArguments.addAll(List.of(
-//                                "--cookies-from-browser",
-//                                manager.getMain().getBrowserForCookies().getName()
-//                            ));
-//                        }
-//
-//                        if (!ytDlpArguments.isEmpty()) {
-//                            arguments.addAll(List.of(
-//                                "--yt-dlp-args",
-//                                "\'" + String.join(" ", ytDlpArguments) + "\'"
-//                            ));
-//                        }
+                        File cookieJar = downloader.getCookieJarFile();
+                        if (cookieJar != null) {
+                            arguments.addAll(List.of(
+                                "--cookie-file",
+                                cookieJar.getAbsolutePath()
+                            ));
+                        }
                     }
                     case SPOTIFY -> {
                         if (audioBitrate != AudioBitrateEnum.NO_AUDIO) {

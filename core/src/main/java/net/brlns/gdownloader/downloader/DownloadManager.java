@@ -45,7 +45,6 @@ import net.brlns.gdownloader.event.IEvent;
 import net.brlns.gdownloader.persistence.PersistenceManager;
 import net.brlns.gdownloader.persistence.entity.CounterTypeEnum;
 import net.brlns.gdownloader.persistence.entity.QueueEntryEntity;
-import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.settings.enums.PlayListOptionEnum;
 import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
 import net.brlns.gdownloader.settings.filters.GenericFilter;
@@ -54,7 +53,6 @@ import net.brlns.gdownloader.settings.filters.YoutubePlaylistFilter;
 import net.brlns.gdownloader.ui.GUIManager;
 import net.brlns.gdownloader.ui.MediaCard;
 import net.brlns.gdownloader.ui.menu.IMenuEntry;
-import net.brlns.gdownloader.util.FileUtils;
 import net.brlns.gdownloader.util.collection.ConcurrentRearrangeableDeque;
 import net.brlns.gdownloader.util.collection.ExpiringSet;
 import net.brlns.gdownloader.util.collection.LinkedIterableBlockingQueue;
@@ -861,31 +859,6 @@ public class DownloadManager implements IEvent {
         for (AbstractDownloader downloader : queueEntry.getDownloaders()) {
             downloader.removeArchiveEntry(queueEntry);
         }
-    }
-
-    @Nullable
-    public File getArchiveFile(AbstractDownloader downloader, DownloadTypeEnum downloadType) {
-        List<DownloadTypeEnum> supported = downloader.getArchivableTypes();
-
-        if (supported.contains(downloadType)) {
-            File oldArchive = new File(GDownloader.getWorkDirectory(),
-                downloader.getDownloaderId().getDisplayName()
-                + "_archive.txt");
-
-            File newArchive = new File(GDownloader.getWorkDirectory(),
-                downloader.getDownloaderId().getDisplayName()
-                + "_archive_"
-                + downloadType.name().toLowerCase()
-                + ".txt");
-
-            if (oldArchive.exists()) {
-                oldArchive.renameTo(newArchive);
-            }
-
-            return FileUtils.getOrCreate(newArchive);
-        }
-
-        return null;
     }
 
     protected CompletableFuture<Void> stopDownload(QueueEntry entry, Runnable runAfter) {

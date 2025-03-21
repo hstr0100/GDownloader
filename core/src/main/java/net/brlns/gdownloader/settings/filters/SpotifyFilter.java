@@ -38,7 +38,7 @@ public class SpotifyFilter extends GenericFilter {
         setFilterName("Spotify");
         setUrlRegex("^(https?:\\/\\/)?(([a-zA-Z0-9-]+)\\.)?spotify\\.com(\\/.*)?$");
         setVideoNamePattern("");
-        setAudioNamePattern("%(album)s/%(artist)s - %(title)s.%(ext)s");// Both yt-dlp and spotDL templates are supported here.
+        setAudioNamePattern("%(artist)s/%(album)s/%(title)s.%(ext)s");// Both yt-dlp and spotDL templates are supported here.
         setEmbedThumbnailAndMetadata(true);
     }
 }
