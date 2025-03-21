@@ -49,6 +49,8 @@ import net.brlns.gdownloader.server.result.StatusResult;
 @Slf4j
 public final class AppServer {
 
+    protected static final int TIMEOUT_MS = 3000;
+
     public static final int PROTOCOL_VERSION = 1;
     public static final int PORT = 49159;
 
@@ -128,7 +130,7 @@ public final class AppServer {
             clientSocket;
             BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
             PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true)) {
-            clientSocket.setSoTimeout(5000);
+            clientSocket.setSoTimeout(TIMEOUT_MS);
 
             String command = in.readLine();
             if (command != null) {
@@ -191,6 +193,8 @@ public final class AppServer {
 
     public void close() {
         try {
+            running.set(false);
+
             if (serverSocket != null && !serverSocket.isClosed()) {
                 serverSocket.close();
             }

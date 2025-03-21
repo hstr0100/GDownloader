@@ -37,8 +37,6 @@ import net.brlns.gdownloader.server.result.StatusResult;
 @Slf4j
 public class AppClient {
 
-    private static final int TIMEOUT_MS = 3000;
-
     private final GDownloader main;
 
     public AppClient(GDownloader mainIn) {
@@ -49,8 +47,8 @@ public class AppClient {
         try (
             Socket socket = new Socket()) {
 
-            socket.connect(new InetSocketAddress(InetAddress.getLoopbackAddress(), AppServer.PORT), TIMEOUT_MS);
-            socket.setSoTimeout(TIMEOUT_MS);
+            socket.connect(new InetSocketAddress(InetAddress.getLoopbackAddress(), AppServer.PORT), AppServer.TIMEOUT_MS);
+            socket.setSoTimeout(AppServer.TIMEOUT_MS);
 
             try (
                 PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
