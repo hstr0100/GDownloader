@@ -14,29 +14,43 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package net.brlns.gdownloader.persistence.entity;
+package net.brlns.gdownloader.server.result;
 
-import jakarta.persistence.*;
-import java.io.Serializable;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import jakarta.annotation.Nullable;
+import lombok.Getter;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-@Entity
-@Table(name = "counters")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class CounterEntity implements Serializable {
+@Getter
+public enum ResultEnum {
+    // Server
+    SUCCESS("success"),
+    FAILED("failed"),
+    UNHANDLED("unhandled"),
+    // Client
+    TIMEOUT("timeout"),
+    NOT_RUNNING("not-running"),
+    IO_ERROR("io-error");
 
-    @Id
-    @Column(name = "type")
-    @Enumerated(EnumType.STRING)
-    private CounterTypeEnum type;
+    private final String id;
 
-    @Column(name = "value")
-    private long value;
+    private ResultEnum(String idIn) {
+        id = idIn;
+    }
+
+    @Nullable
+    public static ResultEnum fromId(@Nullable String id) {
+        if (id == null) {
+            return null;
+        }
+
+        for (ResultEnum result : values()) {
+            if (result.getId().equals(id)) {
+                return result;
+            }
+        }
+
+        return null;
+    }
 }

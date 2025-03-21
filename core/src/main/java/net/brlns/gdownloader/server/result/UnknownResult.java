@@ -14,29 +14,21 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package net.brlns.gdownloader.persistence.entity;
+package net.brlns.gdownloader.server.result;
 
-import jakarta.persistence.*;
-import java.io.Serializable;
-import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.EqualsAndHashCode;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-@Entity
-@Table(name = "counters")
 @Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class CounterEntity implements Serializable {
+@EqualsAndHashCode(callSuper = true)
+public class UnknownResult extends AbstractResult {
 
-    @Id
-    @Column(name = "type")
-    @Enumerated(EnumType.STRING)
-    private CounterTypeEnum type;
+    public static final String ID = "unknown-result";
 
-    @Column(name = "value")
-    private long value;
+    public UnknownResult() {
+        super(ID);
+    }
 }

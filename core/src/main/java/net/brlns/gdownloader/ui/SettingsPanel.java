@@ -266,7 +266,7 @@ public class SettingsPanel {
                             loadIcon("/assets/shutdown.png", ICON, 24),
                             loadIcon("/assets/shutdown.png", ICON_HOVER, 24),
                             "gui.exit.tooltip",
-                            e -> System.exit(0)
+                            e -> main.shutdown()
                         ));
 
                         leftPanel.add(manager.createButton(
