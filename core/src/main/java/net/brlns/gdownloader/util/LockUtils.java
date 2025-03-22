@@ -21,6 +21,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.Locale;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
@@ -42,7 +43,9 @@ public final class LockUtils {
             throw new IOException("Failed to create parent directories for " + newLock);
         }
 
-        oldLock.renameTo(newLock);
+        if (oldLock.exists()) {
+            Files.copy(oldLock.toPath(), newLock.toPath(), StandardCopyOption.REPLACE_EXISTING);
+        }
     }
 
     public static String getLockTag(String releaseTag) {
