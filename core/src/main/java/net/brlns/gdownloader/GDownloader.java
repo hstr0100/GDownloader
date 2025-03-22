@@ -56,6 +56,8 @@ import net.brlns.gdownloader.event.EventDispatcher;
 import net.brlns.gdownloader.event.impl.NativeMouseClickEvent;
 import net.brlns.gdownloader.lang.Language;
 import net.brlns.gdownloader.persistence.PersistenceManager;
+import net.brlns.gdownloader.server.AppClient;
+import net.brlns.gdownloader.server.AppServer;
 import net.brlns.gdownloader.settings.Settings;
 import net.brlns.gdownloader.settings.enums.BrowserEnum;
 import net.brlns.gdownloader.ui.GUIManager;
@@ -116,10 +118,11 @@ import static net.brlns.gdownloader.lang.Language.*;
 // TODO Dynamically reorder downloads based on their status or order in queue -> RUNNING, QUEUED, <others>, FAILED
 // TODO Notifications are appearing below the main window when in fullscreen mode.
 // TODO About page
-// TODO Persist previous downloads after a program restart
 // TODO Migrate away from AWT event listeners; they start throwing StackOverflow errors all over the place if we attempt to load thousands of items.
 // TODO Confirm dialog before clearing DL queue
-// TODO SpotDL downloader
+// TODO 'Open Directory' for playlists
+// TODO Fix: Sometimes not fully scrolling to bottom after opening the program
+// TODO Fix: missing play controls after restart
 /**
  * GDownloader - GUI wrapper for yt-dlp
  *
@@ -185,6 +188,12 @@ public final class GDownloader {
 
     private final AtomicBoolean restartRequested = new AtomicBoolean(false);
 
+    @Getter
+    private AppClient appClient;
+
+    @Getter
+    private AppServer appServer;
+
     public GDownloader() {
         // Initialize the config file
         File workDir = getWorkDirectory();
@@ -247,6 +256,8 @@ public final class GDownloader {
         }
 
         try {
+            setupAppServer();
+
             persistenceManager = new PersistenceManager(this);
             persistenceManager.init();
 
@@ -267,9 +278,7 @@ public final class GDownloader {
                     trayIcon.setImageAutoSize(true);
 
                     trayIcon.addActionListener((ActionEvent e) -> {
-                        if (initialized) {
-                            guiManager.createAndShowGUI();
-                        }
+                        initUi();
                     });
 
                     tray.add(trayIcon);
@@ -289,6 +298,10 @@ public final class GDownloader {
 
             if (config.isGalleryDlEnabled()) {
                 updaters.add(new GalleryDlUpdater(this));
+            }
+
+            if (config.isSpotDLEnabled()) {
+                updaters.add(new SpotDLUpdater(this));
             }
 
             if (config.isDebugMode()) {
@@ -350,7 +363,9 @@ public final class GDownloader {
     }
 
     public void initUi() {
-        guiManager.createAndShowGUI();
+        if (initialized) {
+            guiManager.createAndShowGUI();
+        }
     }
 
     public boolean checkForUpdates() {
@@ -436,7 +451,7 @@ public final class GDownloader {
                 log.error("Failed to initialize yt-dlp, the program cannot continue. Exiting...");
 
                 if (!userInitiated) {
-                    System.exit(0);
+                    shutdown();
                 }
             }
 
@@ -476,10 +491,22 @@ public final class GDownloader {
         popup.add(buildMenuItem(l10n("gui.exit"), (ActionEvent e) -> {
             log.info("Exiting....");
 
-            System.exit(0);
+            shutdown();
         }));
 
         return popup;
+    }
+
+    public void setupAppServer() {
+        appClient = new AppClient(this);
+
+        if (!appClient.tryWakeSingleInstance()) {
+            appServer = new AppServer(this);
+            appServer.init();
+        } else {
+            // An instance is already running, bring it to top and shutdown
+            shutdown();
+        }
     }
 
     /**
@@ -725,7 +752,15 @@ public final class GDownloader {
     public void restart() {
         restartRequested.set(true);
 
-        System.exit(0);
+        shutdown();
+    }
+
+    public void shutdown() {
+        shutdown(0);
+    }
+
+    public void shutdown(int code) {
+        System.exit(code);
     }
 
     public boolean isRestartRequested() {
@@ -1289,6 +1324,12 @@ public final class GDownloader {
                 instance.getPersistenceManager().close();
             } catch (Exception e) {
                 log.error("There was a problem closing the persistence manager", e);
+            }
+
+            try {
+                instance.getAppServer().close();
+            } catch (Exception e) {
+                log.error("There was a problem closing the app server", e);
             }
 
             try {

@@ -23,12 +23,27 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Locale;
 import lombok.extern.slf4j.Slf4j;
+import net.brlns.gdownloader.GDownloader;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
 @Slf4j
 public final class LockUtils {
+
+    public static void renameLockIfExists(String oldLockName, String newLockName) throws IOException {
+        File workDir = GDownloader.getWorkDirectory();
+
+        File oldLock = new File(workDir, oldLockName);
+        File newLock = new File(workDir, newLockName);
+
+        File parentDir = newLock.getParentFile();
+        if (parentDir != null && !parentDir.exists() && !parentDir.mkdirs()) {
+            throw new IOException("Failed to create parent directories for " + newLock);
+        }
+
+        oldLock.renameTo(newLock);
+    }
 
     public static String getLockTag(String releaseTag) {
         String arch = System.getProperty("os.arch").toLowerCase(Locale.ENGLISH);
@@ -71,7 +86,7 @@ public final class LockUtils {
 
     public static boolean diskLockExistsAndIsNewer(Path workDir, String version) {
         try {
-            File lock = new File(workDir.toString(), "ota_lock.txt");
+            File lock = new File(workDir.toString(), "ota.lock");
 
             if (lockExists(lock)) {
                 String diskVersion = readLock(lock).split("_")[0];

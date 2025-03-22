@@ -34,52 +34,52 @@ public class MediaInfoEntity implements Serializable {
 
     @Id
     @Column(name = "media_info_id")
-    public Long downloadId;
+    private Long downloadId;
 
     @Column(name = "id", length = 2048)// There are some ginormous ids in the wild
-    public String id;
+    private String id;
 
     @Column(name = "title", length = 2048)
-    public String title;
+    private String title;
 
     @Column(name = "thumbnail", columnDefinition = "LONGVARCHAR")
-    public String base64EncodedThumbnail;
+    private String base64EncodedThumbnail;
 
     @Column(name = "description", columnDefinition = "LONGVARCHAR")
-    public String description;
+    private String description;
 
     @Column(name = "channel_id", length = 2048)
-    public String channelId;
+    private String channelId;
 
     @Column(name = "channel_url", length = 2048)
-    public String channelUrl;
+    private String channelUrl;
 
     @Column(name = "duration")
-    public long duration;
+    private long duration;
 
     @Column(name = "view_count")
-    public int viewCount;
+    private int viewCount;
 
     @Column(name = "upload_date", length = 48)
-    public String uploadDate;
+    private String uploadDate;
 
     @Column(name = "timestamp")
-    public long timestamp;
+    private long timestamp;
 
     @Column(name = "width")
-    public int width;
+    private int width;
 
     @Column(name = "height")
-    public int height;
+    private int height;
 
     @Column(name = "resolution", length = 48)
-    public String resolution;
+    private String resolution;
 
     @Column(name = "filesize_approx")
-    public long filesizeApprox;
+    private long filesizeApprox;
 
     @Column(name = "fps")
-    public int fps;
+    private int fps;
 
     @Override
     public String toString() {

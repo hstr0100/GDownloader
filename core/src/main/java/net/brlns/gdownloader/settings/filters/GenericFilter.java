@@ -33,6 +33,7 @@ import net.brlns.gdownloader.settings.enums.AudioBitrateEnum;
 import net.brlns.gdownloader.settings.enums.AudioCodecEnum;
 import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.settings.enums.VideoContainerEnum;
+import net.brlns.gdownloader.util.TemplateConverter;
 import net.brlns.gdownloader.util.URLUtils;
 
 import static net.brlns.gdownloader.lang.Language.*;
@@ -76,7 +77,7 @@ public class GenericFilter extends AbstractUrlFilter {
 
         List<String> arguments = new ArrayList<>();
 
-        File archiveFile = manager.getArchiveFile(downloader, typeEnum);
+        File archiveFile = downloader.getArchiveFile(typeEnum);
 
         switch (downloader.getDownloaderId()) {
             case YT_DLP -> {
@@ -131,6 +132,14 @@ public class GenericFilter extends AbstractUrlFilter {
                                 "--cookies-from-browser",
                                 manager.getMain().getBrowserForCookies().getName()
                             ));
+                        } else {
+                            File cookieJar = downloader.getCookieJarFile();
+                            if (cookieJar != null) {
+                                arguments.addAll(List.of(
+                                    "--cookies",
+                                    cookieJar.getAbsolutePath()
+                                ));
+                            }
                         }
 
                         if (GDownloader.isWindows()) {
@@ -148,7 +157,7 @@ public class GenericFilter extends AbstractUrlFilter {
 
                         arguments.addAll(List.of(
                             "-o",
-                            savePath.getAbsolutePath() + "/" + getVideoNamePattern(),
+                            savePath.getAbsolutePath() + File.separator + getVideoNamePattern(),
                             "-f",
                             getQualitySettings().buildQualitySelector(),
                             "--merge-output-format",
@@ -200,7 +209,7 @@ public class GenericFilter extends AbstractUrlFilter {
 
                             arguments.addAll(List.of(
                                 "-o",
-                                savePath.getAbsolutePath() + "/" + audioPatternWithBitrate,
+                                savePath.getAbsolutePath() + File.separator + audioPatternWithBitrate,
                                 "-f",
                                 "bestaudio/worstvideo*+bestaudio/best",
                                 "--extract-audio",
@@ -221,7 +230,7 @@ public class GenericFilter extends AbstractUrlFilter {
                     case THUMBNAILS -> {
                         arguments.addAll(List.of(
                             "-o",
-                            savePath.getAbsolutePath() + "/" + getVideoNamePattern(),
+                            savePath.getAbsolutePath() + File.separator + getVideoNamePattern(),
                             "--write-thumbnail",
                             "--skip-download",
                             "--convert-thumbnails",
@@ -231,7 +240,7 @@ public class GenericFilter extends AbstractUrlFilter {
                     case SUBTITLES -> {
                         arguments.addAll(List.of(
                             "-o",
-                            savePath.getAbsolutePath() + "/" + getVideoNamePattern(),
+                            savePath.getAbsolutePath() + File.separator + getVideoNamePattern(),
                             "--all-subs",
                             "--skip-download",
                             "--sub-format",
@@ -256,7 +265,7 @@ public class GenericFilter extends AbstractUrlFilter {
                     case ALL -> {
                         arguments.addAll(List.of(
                             "--retries",
-                            "10"
+                            String.valueOf(config.getMaxDownloadRetries())
                         ));
 
                         if (config.isRandomIntervalBetweenDownloads()) {
@@ -287,6 +296,14 @@ public class GenericFilter extends AbstractUrlFilter {
                                 "--cookies-from-browser",
                                 manager.getMain().getBrowserForCookies().getName()
                             ));
+                        } else {
+                            File cookieJar = downloader.getCookieJarFile();
+                            if (cookieJar != null) {
+                                arguments.addAll(List.of(
+                                    "--cookies",
+                                    cookieJar.getAbsolutePath()
+                                ));
+                            }
                         }
                     }
                     case GALLERY -> {
@@ -296,6 +313,72 @@ public class GenericFilter extends AbstractUrlFilter {
                             "-D",
                             savePath.getAbsolutePath() + (fileName != null ? File.separator + fileName : "")
                         ));
+                    }
+                    default ->
+                        throw new IllegalArgumentException();
+                }
+            }
+
+            case SPOTDL -> {
+                if (archiveFile != null && config.isRecordToDownloadArchive()) {
+                    arguments.addAll(List.of(
+                        "--archive",
+                        archiveFile.getAbsolutePath()
+                    ));
+                }
+
+                switch (typeEnum) {
+                    case ALL -> {
+                        arguments.addAll(List.of(
+                            "--max-retries",
+                            String.valueOf(config.getMaxDownloadRetries())
+                        ));
+
+                        if (config.isUseSponsorBlock()) {
+                            arguments.addAll(List.of(
+                                "--sponsor-block"
+                            ));
+                        }
+
+                        String proxyUrl = config.getProxySettings().createProxyUrl();
+                        if (proxyUrl != null) {
+                            arguments.addAll(List.of(
+                                "--proxy", proxyUrl
+                            ));
+                        }
+
+                        File cookieJar = downloader.getCookieJarFile();
+                        if (cookieJar != null) {
+                            arguments.addAll(List.of(
+                                "--cookie-file",
+                                cookieJar.getAbsolutePath()
+                            ));
+                        }
+                    }
+                    case SPOTIFY -> {
+                        if (audioBitrate != AudioBitrateEnum.NO_AUDIO) {
+                            String audioPatternWithBitrate = getAudioNamePattern()
+                                .replace("%(audio_bitrate)s", audioBitrate.getValue() + "kbps")
+                                .replace("{bitrate}", audioBitrate.getValue() + "kbps");
+
+                            arguments.addAll(List.of(
+                                "--output",
+                                savePath.getAbsolutePath() + File.separator
+                                + TemplateConverter.convertTemplateForSpotDL(audioPatternWithBitrate),
+                                "--format",
+                                quality.getAudioContainer().getValue(),
+                                "--bitrate",
+                                Math.clamp(8, 320, audioBitrate.getValue()) + "k"
+                            ));
+
+                            if (!isEmbedThumbnailAndMetadata()) {
+                                // SpotDL does not appear to support disabling metadata embedding.
+                                // This is the best we can do to respect user settings.
+                                arguments.addAll(List.of(
+                                    "--skip-album-art"
+                                ));
+                            }
+                        }
                     }
                     default ->
                         throw new IllegalArgumentException();

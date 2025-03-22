@@ -30,6 +30,7 @@ import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.util.ArchiveUtils;
+import net.brlns.gdownloader.util.LockUtils;
 
 import static net.brlns.gdownloader.util.DirectoryUtils.*;
 import static net.brlns.gdownloader.util.LockUtils.*;
@@ -60,6 +61,12 @@ public class UpdaterBootstrap {
         if (version == null) {
             log.error("Ota not available, not running from jpackage");
             return;
+        }
+
+        try {
+            LockUtils.renameLockIfExists("ota_lock.txt", "ota.lock");
+        } catch (Exception e) {
+            log.error("Failed to migrate old lock file, cause: {}, ignoring...", e.getMessage());
         }
 
         Path path = Paths.get(workDir.toString(), "gdownloader_ota.zip");
