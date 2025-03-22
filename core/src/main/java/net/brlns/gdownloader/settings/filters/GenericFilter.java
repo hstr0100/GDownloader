@@ -157,7 +157,7 @@ public class GenericFilter extends AbstractUrlFilter {
 
                         arguments.addAll(List.of(
                             "-o",
-                            savePath.getAbsolutePath() + "/" + getVideoNamePattern(),
+                            savePath.getAbsolutePath() + File.separator + getVideoNamePattern(),
                             "-f",
                             getQualitySettings().buildQualitySelector(),
                             "--merge-output-format",
@@ -209,7 +209,7 @@ public class GenericFilter extends AbstractUrlFilter {
 
                             arguments.addAll(List.of(
                                 "-o",
-                                savePath.getAbsolutePath() + "/" + audioPatternWithBitrate,
+                                savePath.getAbsolutePath() + File.separator + audioPatternWithBitrate,
                                 "-f",
                                 "bestaudio/worstvideo*+bestaudio/best",
                                 "--extract-audio",
@@ -230,7 +230,7 @@ public class GenericFilter extends AbstractUrlFilter {
                     case THUMBNAILS -> {
                         arguments.addAll(List.of(
                             "-o",
-                            savePath.getAbsolutePath() + "/" + getVideoNamePattern(),
+                            savePath.getAbsolutePath() + File.separator + getVideoNamePattern(),
                             "--write-thumbnail",
                             "--skip-download",
                             "--convert-thumbnails",
@@ -240,7 +240,7 @@ public class GenericFilter extends AbstractUrlFilter {
                     case SUBTITLES -> {
                         arguments.addAll(List.of(
                             "-o",
-                            savePath.getAbsolutePath() + "/" + getVideoNamePattern(),
+                            savePath.getAbsolutePath() + File.separator + getVideoNamePattern(),
                             "--all-subs",
                             "--skip-download",
                             "--sub-format",
@@ -363,7 +363,7 @@ public class GenericFilter extends AbstractUrlFilter {
 
                             arguments.addAll(List.of(
                                 "--output",
-                                savePath.getAbsolutePath() + "/"
+                                savePath.getAbsolutePath() + File.separator
                                 + TemplateConverter.convertTemplateForSpotDL(audioPatternWithBitrate),
                                 "--format",
                                 quality.getAudioContainer().getValue(),

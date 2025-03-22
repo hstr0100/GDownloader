@@ -167,7 +167,7 @@ public class SpotDLDownloader extends AbstractDownloader {
         if (ffmpegPath.isPresent()) {
             genericArguments.addAll(List.of(
                 "--ffmpeg",
-                ffmpegPath.get().getAbsolutePath()
+                ffmpegPath.get().getAbsolutePath() + File.separator + "ffmpeg.exe"
             ));
         }
 
