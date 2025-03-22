@@ -576,6 +576,13 @@ public class SettingsPanel {
         );
 
         addCheckBox(panel, gbcPanel,
+            "settings.restore_session_after_restart",
+            settings::isRestoreSessionAfterRestart,
+            settings::setRestoreSessionAfterRestart,
+            false
+        );
+
+        addCheckBox(panel, gbcPanel,
             "settings.start_on_system_startup",
             settings::isAutoStart,
             settings::setAutoStart,

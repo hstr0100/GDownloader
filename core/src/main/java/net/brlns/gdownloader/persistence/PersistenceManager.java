@@ -99,6 +99,14 @@ public class PersistenceManager {
 
             Map<String, String> properties = new HashMap<>();
 
+            if (main.getConfig().isRestoreSessionAfterRestart()) {
+                properties.put(PersistenceUnitProperties.DDL_GENERATION,
+                    PersistenceUnitProperties.CREATE_OR_EXTEND);
+            } else {
+                properties.put(PersistenceUnitProperties.DDL_GENERATION,
+                    PersistenceUnitProperties.DROP_AND_CREATE);
+            }
+
             properties.put(PersistenceUnitProperties.JDBC_URL, "jdbc:hsqldb:"
                 + "file:" + databaseFile + ";"
                 + "sql.syntax_pgs=true;"

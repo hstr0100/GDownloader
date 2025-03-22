@@ -121,6 +121,8 @@ import static net.brlns.gdownloader.lang.Language.*;
 // TODO Migrate away from AWT event listeners; they start throwing StackOverflow errors all over the place if we attempt to load thousands of items.
 // TODO Confirm dialog before clearing DL queue
 // TODO 'Open Directory' for playlists
+// TODO Fix: Sometimes not fully scrolling to bottom after opening the program
+// TODO Fix: missing play controls after restart
 /**
  * GDownloader - GUI wrapper for yt-dlp
  *

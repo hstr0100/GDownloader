@@ -62,6 +62,9 @@ public class Settings {
     @JsonProperty("AutoScrollToBottom")
     private boolean autoScrollToBottom = true;
 
+    @JsonProperty("RestoreSessionAfterRestart")
+    private boolean restoreSessionAfterRestart = true;
+
     @Deprecated
     @JsonProperty("ReadCookies")
     private boolean readCookies = false;
