@@ -27,7 +27,7 @@ public enum DownloaderIdEnum implements ISettingsEnum {
     YT_DLP("yt-dlp"),
     GALLERY_DL("gallery-dl"),
     SPOTDL("spotDL"),
-    DIRECT_HTTP("http");
+    DIRECT_HTTP("Direct-HTTP");
 
     private final String displayName;
 

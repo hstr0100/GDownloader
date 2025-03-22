@@ -17,6 +17,7 @@
 package net.brlns.gdownloader.downloader;
 
 import jakarta.annotation.Nullable;
+import jakarta.annotation.PreDestroy;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -573,6 +574,7 @@ public class DirectHttpDownloader extends AbstractDownloader {
     }
 
     @Override
+    @PreDestroy
     public void close() {
         chunkThreadPool.shutdownNow();
     }

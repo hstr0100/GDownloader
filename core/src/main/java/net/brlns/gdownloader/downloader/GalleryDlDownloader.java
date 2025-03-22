@@ -17,6 +17,7 @@
 package net.brlns.gdownloader.downloader;
 
 import jakarta.annotation.Nullable;
+import jakarta.annotation.PreDestroy;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
@@ -344,6 +345,7 @@ public class GalleryDlDownloader extends AbstractDownloader {
     }
 
     @Override
+    @PreDestroy
     public void close() {
 
     }

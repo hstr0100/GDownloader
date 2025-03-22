@@ -17,6 +17,7 @@
 package net.brlns.gdownloader.downloader;
 
 import jakarta.annotation.Nullable;
+import jakarta.annotation.PreDestroy;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
@@ -74,6 +75,7 @@ public abstract class AbstractDownloader {
         return DownloadTypeEnum.getForDownloaderId(getDownloaderId());
     }
 
+    @PreDestroy
     public abstract void close();
 
     @Nullable

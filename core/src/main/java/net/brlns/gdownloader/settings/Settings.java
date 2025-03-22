@@ -69,7 +69,6 @@ public class Settings {
     @JsonProperty("ReadCookiesFromBrowser")
     private boolean readCookiesFromBrowser = false;
 
-    // TODO: UI
     @JsonProperty("ReadCookiesFromCookiesTxt")
     private boolean readCookiesFromCookiesTxt = true;
 
@@ -88,7 +87,6 @@ public class Settings {
     @JsonProperty("RecordToDownloadArchive")
     private boolean recordToDownloadArchive = false;
 
-    // TODO: UI
     @JsonProperty("RemoveFromDownloadArchive")
     private boolean removeFromDownloadArchive = true;
 
@@ -103,7 +101,6 @@ public class Settings {
     // let's leave it off by default on Windows to avoid any possible issues with that
     private boolean galleryDlEnabled = !GDownloader.isWindows();
 
-    // TODO: UI
     @JsonProperty("SpotDLEnabled")
     private boolean spotDLEnabled = !GDownloader.isWindows();
 
@@ -116,7 +113,6 @@ public class Settings {
     @JsonProperty("RespectGalleryDlConfigFile")
     private boolean respectGalleryDlConfigFile = true;
 
-    // TODO: UI
     @JsonProperty("RespectSpotDLConfigFile")
     private boolean respectSpotDLConfigFile = true;
 
@@ -148,11 +144,9 @@ public class Settings {
     @JsonProperty("ImpersonateBrowser")
     private boolean impersonateBrowser = false;
 
-    //TODO: UI
     @JsonProperty("MaxDownloadRetries")
     private int maxDownloadRetries = 10;
 
-    //TODO: UI
     @JsonProperty("MaxFragmentRetries")
     private int maxFragmentRetries = 10;
 

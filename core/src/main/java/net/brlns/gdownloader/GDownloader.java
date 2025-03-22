@@ -118,10 +118,8 @@ import static net.brlns.gdownloader.lang.Language.*;
 // TODO Dynamically reorder downloads based on their status or order in queue -> RUNNING, QUEUED, <others>, FAILED
 // TODO Notifications are appearing below the main window when in fullscreen mode.
 // TODO About page
-// TODO Persist previous downloads after a program restart
 // TODO Migrate away from AWT event listeners; they start throwing StackOverflow errors all over the place if we attempt to load thousands of items.
 // TODO Confirm dialog before clearing DL queue
-// TODO SpotDL downloader
 // TODO 'Open Directory' for playlists
 /**
  * GDownloader - GUI wrapper for yt-dlp

@@ -17,6 +17,7 @@
 package net.brlns.gdownloader.server;
 
 import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -113,10 +114,10 @@ public final class AppServer {
                     executor.submit(() -> handleClient(clientSocket));
                 } catch (SocketException e) {
                     if (running.get()) {
-                        log.error("Socket error");
+                        log.error("Socket error {}", e.getMessage());
                     }
                 } catch (IOException e) {
-                    log.error("I/O error accepting connection");
+                    log.error("I/O error accepting connection {}", e.getMessage());
                 }
             }
         });
@@ -191,6 +192,7 @@ public final class AppServer {
         return new StatusResult(ResultEnum.SUCCESS);
     }
 
+    @PreDestroy
     public void close() {
         try {
             running.set(false);

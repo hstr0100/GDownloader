@@ -473,6 +473,20 @@ public class SettingsPanel {
         panel.add(checkBox, gbcPanel);
     }
 
+    private void addLabel(JPanel panel, GridBagConstraints gbcPanel, String labelString) {
+        JLabel label = createLabel(labelString, FOREGROUND);
+
+        gbcPanel.gridx = 0;
+        gbcPanel.gridy++;
+        gbcPanel.weightx = 0.6;
+        gbcPanel.gridwidth = 1;
+        gbcPanel.insets = new Insets(20, 5, 10, 5);
+
+        panel.add(label, gbcPanel);
+
+        gbcPanel.insets = new Insets(5, 5, 5, 5);
+    }
+
     private void addSlider(JPanel panel, GridBagConstraints gbcPanel, String labelString,
         int min, int max, Supplier<Integer> getter, Consumer<Integer> setter) {
 
@@ -485,7 +499,7 @@ public class SettingsPanel {
         panel.add(label, gbcPanel);
 
         JSlider slider = new JSlider(min, max, getter.get());
-        slider.setMajorTickSpacing(1);
+        slider.setMajorTickSpacing(max > 20 ? 5 : 1);
         slider.setPaintTicks(true);
         slider.setSnapToTicks(true);
         slider.setPaintLabels(true);
@@ -749,6 +763,13 @@ public class SettingsPanel {
         }
 
         addCheckBox(panel, gbcPanel,
+            "settings.read_cookies_txt",
+            settings::isReadCookiesFromCookiesTxt,
+            settings::setReadCookiesFromCookiesTxt,
+            false
+        );
+
+        addCheckBox(panel, gbcPanel,
             "settings.impersonate_browser",
             settings::isImpersonateBrowser,
             settings::setImpersonateBrowser,
@@ -796,6 +817,43 @@ public class SettingsPanel {
             settings::getMaxSimultaneousDownloads,
             settings::setMaxSimultaneousDownloads
         );
+
+        addCheckBox(panel, gbcPanel,
+            "settings.prefer_system_executables",
+            settings::isPreferSystemExecutables,
+            settings::setPreferSystemExecutables,
+            true
+        );
+
+        addCheckBox(panel, gbcPanel,
+            "settings.random_interval_between_downloads",
+            settings::isRandomIntervalBetweenDownloads,
+            settings::setRandomIntervalBetweenDownloads,
+            false
+        );
+
+        addCheckBox(panel, gbcPanel,
+            "settings.remove_successful_downloads",
+            settings::isRemoveSuccessfulDownloads,
+            settings::setRemoveSuccessfulDownloads,
+            false
+        );
+
+        addCheckBox(panel, gbcPanel,
+            "settings.record_to_download_archive",
+            settings::isRecordToDownloadArchive,
+            settings::setRecordToDownloadArchive,
+            false
+        );
+
+        addCheckBox(panel, gbcPanel,
+            "settings.remove_from_download_archive",
+            settings::isRemoveFromDownloadArchive,
+            settings::setRemoveFromDownloadArchive,
+            false
+        );
+
+        addLabel(panel, gbcPanel, "settings.downloader.yt_dlp");
 
         addComboBox(panel, gbcPanel,
             "settings.playlist_download_option",
@@ -849,38 +907,10 @@ public class SettingsPanel {
         );
 
         addCheckBox(panel, gbcPanel,
-            "settings.random_interval_between_downloads",
-            settings::isRandomIntervalBetweenDownloads,
-            settings::setRandomIntervalBetweenDownloads,
-            false
-        );
-
-        addCheckBox(panel, gbcPanel,
-            "settings.remove_successful_downloads",
-            settings::isRemoveSuccessfulDownloads,
-            settings::setRemoveSuccessfulDownloads,
-            false
-        );
-
-        addCheckBox(panel, gbcPanel,
-            "settings.record_to_download_archive",
-            settings::isRecordToDownloadArchive,
-            settings::setRecordToDownloadArchive,
-            false
-        );
-
-        addCheckBox(panel, gbcPanel,
             "settings.query_metadata",
             settings::isQueryMetadata,
             settings::setQueryMetadata,
             false
-        );
-
-        addCheckBox(panel, gbcPanel,
-            "settings.prefer_system_executables",
-            settings::isPreferSystemExecutables,
-            settings::setPreferSystemExecutables,
-            true
         );
 
         addCheckBox(panel, gbcPanel,
@@ -889,6 +919,8 @@ public class SettingsPanel {
             settings::setRespectYtDlpConfigFile,
             false
         );
+
+        addLabel(panel, gbcPanel, "settings.downloader.gallery_dl");
 
         addCheckBox(panel, gbcPanel,
             "settings.downloader.gallery_dl.enabled",
@@ -911,6 +943,24 @@ public class SettingsPanel {
             false
         );
 
+        addLabel(panel, gbcPanel, "settings.downloader.spotdl");
+
+        addCheckBox(panel, gbcPanel,
+            "settings.downloader.spotdl.enabled",
+            settings::isSpotDLEnabled,
+            settings::setSpotDLEnabled,
+            true
+        );
+
+        addCheckBox(panel, gbcPanel,
+            "settings.downloader.spotdl.respect_config_file",
+            settings::isRespectSpotDLConfigFile,
+            settings::setRespectSpotDLConfigFile,
+            false
+        );
+
+        addLabel(panel, gbcPanel, "settings.downloader.direct_http");
+
         addCheckBox(panel, gbcPanel,
             "settings.downloader.direct_http.enabled",
             settings::isDirectHttpEnabled,
@@ -923,6 +973,22 @@ public class SettingsPanel {
             1, 15,
             settings::getDirectHttpMaxDownloadChunks,
             settings::setDirectHttpMaxDownloadChunks
+        );
+
+        addLabel(panel, gbcPanel, "settings.label.advanced");
+
+        addSlider(panel, gbcPanel,
+            "settings.maximum_download_retries",
+            0, 50,
+            settings::getMaxDownloadRetries,
+            settings::setMaxDownloadRetries
+        );
+
+        addSlider(panel, gbcPanel,
+            "settings.maximum_fragment_retries",
+            0, 50,
+            settings::getMaxFragmentRetries,
+            settings::setMaxFragmentRetries
         );
 
         gbcPanel.gridx = 0;

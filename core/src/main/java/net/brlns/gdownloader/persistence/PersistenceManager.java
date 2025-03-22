@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.introspect.Annotated;
 import com.fasterxml.jackson.databind.introspect.JacksonAnnotationIntrospector;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.Persistence;
 import java.io.File;
@@ -124,6 +125,7 @@ public class PersistenceManager {
         return false;
     }
 
+    @PreDestroy
     public void close() {
         if (emf != null && emf.isOpen()) {
             emf.close();

@@ -18,6 +18,7 @@ package net.brlns.gdownloader.downloader;
 
 import jakarta.annotation.Nullable;
 import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 import java.io.File;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -1113,6 +1114,7 @@ public class DownloadManager implements IEvent {
         }
     }
 
+    @PreDestroy
     public void close() {
         stopDownloads();
 
