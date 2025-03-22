@@ -26,19 +26,20 @@ import lombok.extern.slf4j.Slf4j;
 @Getter
 @Slf4j
 public enum ArchVersionEnum {
-    MAC_X86("yt-dlp_macos_legacy", null, null, null, OS.MAC),
-    MAC_X64("yt-dlp_macos", null, null, null, OS.MAC),
-    WINDOWS_X86("yt-dlp_x86.exe", null, null, null, OS.WINDOWS),
+    MAC_X86("yt-dlp_macos_legacy", null, null, null, null, OS.MAC),
+    MAC_X64("yt-dlp_macos", null, "-darwin", null, null, OS.MAC),
+    WINDOWS_X86("yt-dlp_x86.exe", null, "-win32.exe", null, null, OS.WINDOWS),
     // Neither Apache Compress nor any java library that I know of supports the -mx=9 option used by FFmpeg's 7zs
-    WINDOWS_X64("yt-dlp.exe", "gallery-dl.exe", "-full_build.zip", "windows_portable_x64.zip", OS.WINDOWS),
+    WINDOWS_X64("yt-dlp.exe", "gallery-dl.exe", "-win32.exe", "-full_build.zip", "windows_portable_x64.zip", OS.WINDOWS),
     // TODO: Linux ffmpeg setup
     // TODO: https://aka.ms/vs/17/release/vc_redist.x86.exe
-    LINUX_X64("yt-dlp_linux", "gallery-dl.bin", null, "linux_portable_amd64.zip", OS.LINUX),
-    LINUX_ARM("yt-dlp_linux_armv7l", null, null, null, OS.LINUX),
-    LINUX_ARM64("yt-dlp_linux_aarch64", null, null, null, OS.LINUX);
+    LINUX_X64("yt-dlp_linux", "gallery-dl.bin", "-linux", null, "linux_portable_amd64.zip", OS.LINUX),
+    LINUX_ARM("yt-dlp_linux_armv7l", null, null, null, null, OS.LINUX),
+    LINUX_ARM64("yt-dlp_linux_aarch64", null, null, null, null, OS.LINUX);
 
     private final String ytDlpBinary;
     private final String galleryDlBinary;
+    private final String spotDlBinary;
     private final String ffmpegBinary;
     private final String selfBinary;
 
@@ -47,12 +48,14 @@ public enum ArchVersionEnum {
     private ArchVersionEnum(
         String ytDlpBinaryIn,
         String galleryDlBinaryIn,
+        String spotDlBinaryIn,
         String ffmpegBinaryIn,
         String selfBinaryIn,
         OS osIn) {
 
         ytDlpBinary = ytDlpBinaryIn;
         galleryDlBinary = galleryDlBinaryIn;
+        spotDlBinary = spotDlBinaryIn;
         ffmpegBinary = ffmpegBinaryIn;
         selfBinary = selfBinaryIn;
 

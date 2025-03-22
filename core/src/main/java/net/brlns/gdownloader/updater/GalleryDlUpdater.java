@@ -22,6 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.util.FileUtils;
+import net.brlns.gdownloader.util.LockUtils;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -67,7 +68,7 @@ public class GalleryDlUpdater extends AbstractGitUpdater {
     @Nullable
     @Override
     protected String getLockFileName() {
-        return "gallerydl_lock.txt";
+        return "gallery-dl.lock";
     }
 
     @Override
@@ -78,6 +79,16 @@ public class GalleryDlUpdater extends AbstractGitUpdater {
     @Override
     protected void setExecutablePath(File executablePath) {
         main.getDownloadManager().setExecutablePath(DownloaderIdEnum.GALLERY_DL, executablePath);
+    }
+
+    @Override
+    public String getName() {
+        return "Gallery-DL";
+    }
+
+    @Override
+    protected void init() throws Exception {
+        LockUtils.renameLockIfExists("gallerydl_lock.txt", getLockFileName());
     }
 
     @Override
@@ -92,10 +103,4 @@ public class GalleryDlUpdater extends AbstractGitUpdater {
 
         return outputFile;
     }
-
-    @Override
-    public String getName() {
-        return "Gallery-DL";
-    }
-
 }

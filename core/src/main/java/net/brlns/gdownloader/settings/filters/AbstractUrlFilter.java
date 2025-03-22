@@ -61,6 +61,7 @@ import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
     @JsonSubTypes.Type(value = FacebookFilter.class, name = FacebookFilter.ID),
     @JsonSubTypes.Type(value = ImgurFilter.class, name = ImgurFilter.ID),
     @JsonSubTypes.Type(value = PatreonFilter.class, name = PatreonFilter.ID),
+    @JsonSubTypes.Type(value = SpotifyFilter.class, name = SpotifyFilter.ID),
     @JsonSubTypes.Type(value = RedditFilter.class, name = RedditFilter.ID),
     @JsonSubTypes.Type(value = TwitchFilter.class, name = TwitchFilter.ID),
     @JsonSubTypes.Type(value = VimeoFilter.class, name = VimeoFilter.ID),
@@ -170,6 +171,28 @@ public abstract class AbstractUrlFilter {
     @JsonProperty("ExtraGalleryDlArguments")
     private Map<DownloadTypeEnum, List<String>> extraGalleryDlArguments = new HashMap<>();
 
+    /**
+     * Represents a set of extra arguments for spotDL.
+     * These arguments are categorized based on the type of download (e.g. SPOTIFY).
+     * Arguments in the ALL category apply to all categories that depend on this filter.
+     *
+     * JSON schema:
+     *
+     * <pre>
+     * "ExtraSpotDLArguments" : {
+     *   "ALL": [
+     *     "--proxy",
+     *     "http://example.com:1234"
+     *   ],
+     *   "SPOTIFY": [
+     *     "--example"
+     *   ]
+     * }
+     * </pre>
+     */
+    @JsonProperty("ExtraSpotDLArguments")
+    private Map<DownloadTypeEnum, List<String>> extraSpotDLArguments = new HashMap<>();
+
     @JsonProperty("QualitySettings")
     private QualitySettings qualitySettings = QualitySettings.builder().build();
 
@@ -182,6 +205,11 @@ public abstract class AbstractUrlFilter {
         extraGalleryDlArguments.put(DownloadTypeEnum.ALL, new ArrayList<>());
         for (DownloadTypeEnum downloadType : DownloadTypeEnum.getForDownloaderId(DownloaderIdEnum.GALLERY_DL)) {
             extraGalleryDlArguments.put(downloadType, new ArrayList<>());
+        }
+
+        extraSpotDLArguments.put(DownloadTypeEnum.ALL, new ArrayList<>());
+        for (DownloadTypeEnum downloadType : DownloadTypeEnum.getForDownloaderId(DownloaderIdEnum.SPOTDL)) {
+            extraSpotDLArguments.put(downloadType, new ArrayList<>());
         }
     }
 
@@ -227,6 +255,11 @@ public abstract class AbstractUrlFilter {
             case GALLERY_DL -> {
                 if (extraGalleryDlArguments.containsKey(typeEnum)) {
                     arguments.addAll(extraGalleryDlArguments.get(typeEnum));
+                }
+            }
+            case SPOTDL -> {
+                if (extraSpotDLArguments.containsKey(typeEnum)) {
+                    arguments.addAll(extraSpotDLArguments.get(typeEnum));
                 }
             }
             default -> {

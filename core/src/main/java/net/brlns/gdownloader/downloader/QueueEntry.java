@@ -357,7 +357,10 @@ public class QueueEntry {
                     mediaCard.setProgressBarTextAndColors(status.getDisplayName(), Color.GRAY);
                 }
                 case DOWNLOADING -> {
-                    mediaCard.setPercentage(0);
+                    if (mediaCard.getPercentage() >= 0) {
+                        mediaCard.setPercentage(0);
+                    }
+
                     mediaCard.setProgressBarTextAndColors(status.getDisplayName() + ": " + mediaCard.getPercentage() + "%",
                         new Color(255, 214, 0));
                 }
@@ -452,9 +455,10 @@ public class QueueEntry {
                 downloaderId.getDisplayName(),
                 new RunnableMenuEntry(() -> {
                     setForcedDownloader(downloaderId);
+                    setCurrentDownloader(downloaderId);
                     manager.stopDownload(this, () -> {
                         manager.resetDownload(this);
-                        manager.submitDownloadTask(this, true);
+                        //manager.submitDownloadTask(this, true);
                     });
                 })
             );

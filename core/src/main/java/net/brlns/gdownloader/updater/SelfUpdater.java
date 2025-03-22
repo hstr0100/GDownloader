@@ -22,6 +22,7 @@ import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
+import net.brlns.gdownloader.util.LockUtils;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -67,7 +68,27 @@ public class SelfUpdater extends AbstractGitUpdater {
     @Nullable
     @Override
     protected String getLockFileName() {
-        return "ota_lock.txt";
+        return "ota.lock";
+    }
+
+    @Override
+    public boolean isSupported() {
+        return !GDownloader.isFromJar();
+    }
+
+    @Override
+    protected void setExecutablePath(File executablePath) {
+        // Not used
+    }
+
+    @Override
+    public String getName() {
+        return "GDownloader";
+    }
+
+    @Override
+    protected void init() throws Exception {
+        LockUtils.renameLockIfExists("ota_lock.txt", getLockFileName());
     }
 
     @Override
@@ -86,20 +107,4 @@ public class SelfUpdater extends AbstractGitUpdater {
 
         return outputFile;
     }
-
-    @Override
-    public boolean isSupported() {
-        return !GDownloader.isFromJar();
-    }
-
-    @Override
-    protected void setExecutablePath(File executablePath) {
-        // Not used
-    }
-
-    @Override
-    public String getName() {
-        return "GDownloader";
-    }
-
 }

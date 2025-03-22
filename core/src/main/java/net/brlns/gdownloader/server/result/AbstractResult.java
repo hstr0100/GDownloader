@@ -14,29 +14,31 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package net.brlns.gdownloader.persistence.entity;
+package net.brlns.gdownloader.server.result;
 
-import jakarta.persistence.*;
-import java.io.Serializable;
-import lombok.AllArgsConstructor;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import lombok.Data;
-import lombok.NoArgsConstructor;
+import net.brlns.gdownloader.server.AppServer;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-@Entity
-@Table(name = "counters")
+@JsonTypeInfo(
+    use = JsonTypeInfo.Id.NAME,
+    include = JsonTypeInfo.As.EXISTING_PROPERTY,
+    property = "id",
+    defaultImpl = UnknownResult.class
+)
+@JsonSubTypes({
+    @JsonSubTypes.Type(value = StatusResult.class, name = StatusResult.ID),
+    @JsonSubTypes.Type(value = UnknownResult.class, name = UnknownResult.ID)
+})
 @Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class CounterEntity implements Serializable {
+public abstract class AbstractResult {
 
-    @Id
-    @Column(name = "type")
-    @Enumerated(EnumType.STRING)
-    private CounterTypeEnum type;
+    private final int protocol = AppServer.PROTOCOL_VERSION;
 
-    @Column(name = "value")
-    private long value;
+    private final String id;
+
 }

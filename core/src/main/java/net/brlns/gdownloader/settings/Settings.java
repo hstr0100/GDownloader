@@ -62,12 +62,18 @@ public class Settings {
     @JsonProperty("AutoScrollToBottom")
     private boolean autoScrollToBottom = true;
 
+    @JsonProperty("RestoreSessionAfterRestart")
+    private boolean restoreSessionAfterRestart = true;
+
     @Deprecated
     @JsonProperty("ReadCookies")
     private boolean readCookies = false;
 
     @JsonProperty("ReadCookiesFromBrowser")
     private boolean readCookiesFromBrowser = false;
+
+    @JsonProperty("ReadCookiesFromCookiesTxt")
+    private boolean readCookiesFromCookiesTxt = true;
 
     @JsonProperty("BrowserForCookies")
     private BrowserEnum browser = BrowserEnum.UNSET;
@@ -84,6 +90,9 @@ public class Settings {
     @JsonProperty("RecordToDownloadArchive")
     private boolean recordToDownloadArchive = false;
 
+    @JsonProperty("RemoveFromDownloadArchive")
+    private boolean removeFromDownloadArchive = true;
+
     @JsonProperty("RespectYtDlpConfigFile")
     private boolean respectYtDlpConfigFile = false;
 
@@ -95,6 +104,9 @@ public class Settings {
     // let's leave it off by default on Windows to avoid any possible issues with that
     private boolean galleryDlEnabled = !GDownloader.isWindows();
 
+    @JsonProperty("SpotDLEnabled")
+    private boolean spotDLEnabled = !GDownloader.isWindows();
+
     @JsonProperty("DirectHttpEnabled")
     private boolean directHttpEnabled = false;
 
@@ -103,6 +115,9 @@ public class Settings {
 
     @JsonProperty("RespectGalleryDlConfigFile")
     private boolean respectGalleryDlConfigFile = true;
+
+    @JsonProperty("RespectSpotDLConfigFile")
+    private boolean respectSpotDLConfigFile = true;
 
     @JsonProperty("DownloadsPath")
     private String downloadsPath = "";
@@ -132,11 +147,9 @@ public class Settings {
     @JsonProperty("ImpersonateBrowser")
     private boolean impersonateBrowser = false;
 
-    //TODO: UI
     @JsonProperty("MaxDownloadRetries")
     private int maxDownloadRetries = 10;
 
-    //TODO: UI
     @JsonProperty("MaxFragmentRetries")
     private int maxFragmentRetries = 10;
 

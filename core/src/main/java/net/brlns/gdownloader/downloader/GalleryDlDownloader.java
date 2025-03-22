@@ -17,6 +17,7 @@
 package net.brlns.gdownloader.downloader;
 
 import jakarta.annotation.Nullable;
+import jakarta.annotation.PreDestroy;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
@@ -85,6 +86,12 @@ public class GalleryDlDownloader extends AbstractDownloader {
     @Override
     public List<DownloadTypeEnum> getArchivableTypes() {
         return Collections.singletonList(GALLERY);
+    }
+
+    @Override
+    public void removeArchiveEntry(QueueEntry queueEntry) {
+        // Disapointingly, gallery-dl uses sqlite for its archive.
+        // Adding a huge sqlite dependency just for this task would be quite wasteful.
     }
 
     @Override
@@ -338,6 +345,7 @@ public class GalleryDlDownloader extends AbstractDownloader {
     }
 
     @Override
+    @PreDestroy
     public void close() {
 
     }

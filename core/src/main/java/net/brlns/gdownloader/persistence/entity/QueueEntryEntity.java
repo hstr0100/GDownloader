@@ -36,78 +36,77 @@ import net.brlns.gdownloader.settings.filters.*;
 @Table(name = "queue_entries")
 public class QueueEntryEntity implements Serializable {
 
-    // Chaos ensues if these fields are not public
     @Id
     @Column(name = "queue_entry_id")
-    public long downloadId;// = 1l;
+    private long downloadId;// = 1l;
 
     @Column(name = "url", length = 2048)
-    public String url;// = "https://www.youtube.com/watch?v=NgWkPTKDY_k&list=PLDOjCqYj3ys3TEe8HCR7_cYH7X7dU28_B&index=15";
+    private String url;// = "https://www.youtube.com/watch?v=NgWkPTKDY_k&list=PLDOjCqYj3ys3TEe8HCR7_cYH7X7dU28_B&index=15";
 
     @Column(name = "original_url", length = 2048)
-    public String originalUrl;
+    private String originalUrl;
 
     @Column(name = "last_status_message", length = 2048)
-    public String lastStatusMessage;
+    private String lastStatusMessage;
 
     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER, optional = true)
     @JoinColumn(name = "media_info_id", referencedColumnName = "media_info_id", nullable = true)
-    public MediaInfoEntity mediaInfo;// = null;
+    private MediaInfoEntity mediaInfo;// = null;
 
     @Convert(converter = UrlFilterConverter.class)
     @Column(name = "url_filter")
-    public AbstractUrlFilter filter;
+    private AbstractUrlFilter filter;
 
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "downloader_blacklist", joinColumns = @JoinColumn(name = "download_id"))
     @Enumerated(EnumType.STRING)
-    public ArrayList<DownloaderIdEnum> downloaderBlacklist = new ArrayList<>();
+    private ArrayList<DownloaderIdEnum> downloaderBlacklist = new ArrayList<>();
 
     @Enumerated(EnumType.STRING)
     @Column(name = "forced_downloader")
-    public DownloaderIdEnum forcedDownloader;
+    private DownloaderIdEnum forcedDownloader;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "current_downloader")
-    public DownloaderIdEnum currentDownloader;
+    private DownloaderIdEnum currentDownloader;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "current_queue_category")
-    public QueueCategoryEnum currentQueueCategory;
+    private QueueCategoryEnum currentQueueCategory;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "download_status")
-    public DownloadStatusEnum downloadStatus;
+    private DownloadStatusEnum downloadStatus;
 
     @Column(name = "download_stated")
-    public boolean downloadStarted;
+    private boolean downloadStarted;
 
     @Column(name = "download_running")
-    public boolean running;
+    private boolean running;
 
     @Column(name = "retry_counter")
-    public int retryCounter;
+    private int retryCounter;
 
     @Column(name = "is_queried")
-    public boolean queried;
+    private boolean queried;
 
     @Column(name = "tmp_directory_path", length = 2048)
-    public String tmpDirectoryPath;
+    private String tmpDirectoryPath;
 
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "final_media_files", joinColumns = @JoinColumn(name = "download_id"))
-    public ArrayList<String> finalMediaFilePaths = new ArrayList<>();
+    private ArrayList<String> finalMediaFilePaths = new ArrayList<>();
 
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "error_logs", joinColumns = @JoinColumn(name = "download_id"))
     @Lob
     @Column(name = "error_log")
-    public ArrayList<String> errorLog = new ArrayList<>();
+    private ArrayList<String> errorLog = new ArrayList<>();
 
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "download_logs", joinColumns = @JoinColumn(name = "download_id"))
     @Lob
     @Column(name = "download_log")
     // TODO: check if this is really necessary
-    public ArrayList<String> downloadLog = new ArrayList<>();
+    private ArrayList<String> downloadLog = new ArrayList<>();
 }

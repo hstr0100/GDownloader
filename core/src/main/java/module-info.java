@@ -53,6 +53,8 @@ module net.brlns.gdownloader {
     exports net.brlns.gdownloader.persistence.converter;
     exports net.brlns.gdownloader.persistence.entity;
     exports net.brlns.gdownloader.persistence.repository;
+    exports net.brlns.gdownloader.server;
+    exports net.brlns.gdownloader.server.result;
     exports net.brlns.gdownloader.settings;
     exports net.brlns.gdownloader.settings.enums;
     exports net.brlns.gdownloader.settings.filters;
@@ -70,4 +72,7 @@ module net.brlns.gdownloader {
     uses javax.imageio.spi.ImageWriterSpi;
     uses javax.imageio.spi.ImageReaderSpi;
 
+    opens net.brlns.gdownloader.persistence.converter;
+    opens net.brlns.gdownloader.persistence.entity;
+    opens net.brlns.gdownloader.server.result;
 }

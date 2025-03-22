@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.introspect.Annotated;
 import com.fasterxml.jackson.databind.introspect.JacksonAnnotationIntrospector;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.Persistence;
 import java.io.File;
@@ -98,8 +99,19 @@ public class PersistenceManager {
 
             Map<String, String> properties = new HashMap<>();
 
-            properties.put(PersistenceUnitProperties.JDBC_URL, "jdbc:hsqldb:file:" + databaseFile
-                + ";sql.syntax_pgs=true;hsqldb.lob_compressed=true;hsqldb.script_format=3");
+            if (main.getConfig().isRestoreSessionAfterRestart()) {
+                properties.put(PersistenceUnitProperties.DDL_GENERATION,
+                    PersistenceUnitProperties.CREATE_OR_EXTEND);
+            } else {
+                properties.put(PersistenceUnitProperties.DDL_GENERATION,
+                    PersistenceUnitProperties.DROP_AND_CREATE);
+            }
+
+            properties.put(PersistenceUnitProperties.JDBC_URL, "jdbc:hsqldb:"
+                + "file:" + databaseFile + ";"
+                + "sql.syntax_pgs=true;"
+                + "hsqldb.lob_compressed=true;"
+                + "hsqldb.script_format=3");
 
             emf = Persistence.createEntityManagerFactory("hsqldbPU", properties);
 
@@ -121,6 +133,7 @@ public class PersistenceManager {
         return false;
     }
 
+    @PreDestroy
     public void close() {
         if (emf != null && emf.isOpen()) {
             emf.close();

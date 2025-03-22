@@ -242,7 +242,7 @@ public final class GUIManager {
                 public void windowClosing(WindowEvent e) {
                     if (!main.isSystemTrayInitialized()) {
                         log.info("System tray not available, exiting...");
-                        System.exit(0);
+                        main.shutdown();
                     }
 
                     adjustMessageWindowPosition();

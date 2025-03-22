@@ -22,6 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.util.FileUtils;
+import net.brlns.gdownloader.util.LockUtils;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -67,7 +68,7 @@ public class YtDlpUpdater extends AbstractGitUpdater {
     @Nullable
     @Override
     protected String getLockFileName() {
-        return "ytdlp_lock.txt";
+        return "yt-dlp.lock";
     }
 
     @Override
@@ -81,6 +82,16 @@ public class YtDlpUpdater extends AbstractGitUpdater {
     }
 
     @Override
+    public String getName() {
+        return "YT-DLP";
+    }
+
+    @Override
+    protected void init() throws Exception {
+        LockUtils.renameLockIfExists("ytdlp_lock.txt", getLockFileName());
+    }
+
+    @Override
     protected File doDownload(String url, File workDir) throws Exception {
         File outputFile = super.doDownload(url, workDir);
 
@@ -91,11 +102,6 @@ public class YtDlpUpdater extends AbstractGitUpdater {
         }
 
         return outputFile;
-    }
-
-    @Override
-    public String getName() {
-        return "YT-DLP";
     }
 
 }

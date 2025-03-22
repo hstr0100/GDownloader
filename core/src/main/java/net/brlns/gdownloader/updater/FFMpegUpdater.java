@@ -26,6 +26,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.util.ArchiveUtils;
 import net.brlns.gdownloader.util.DirectoryUtils;
+import net.brlns.gdownloader.util.LockUtils;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -71,7 +72,27 @@ public class FFMpegUpdater extends AbstractGitUpdater {
     @Nullable
     @Override
     protected String getLockFileName() {
-        return "ffmpeg_lock.txt";
+        return "ffmpeg.lock";
+    }
+
+    @Override
+    public boolean isSupported() {
+        return GDownloader.isWindows();
+    }
+
+    @Override
+    protected void setExecutablePath(File executablePath) {
+        main.getDownloadManager().setFfmpegPath(executablePath);
+    }
+
+    @Override
+    public String getName() {
+        return "FFMPEG";
+    }
+
+    @Override
+    protected void init() throws Exception {
+        LockUtils.renameLockIfExists("ffmpeg_lock.txt", getLockFileName());
     }
 
     @Override
@@ -109,21 +130,6 @@ public class FFMpegUpdater extends AbstractGitUpdater {
         }
 
         return outputFile;
-    }
-
-    @Override
-    public boolean isSupported() {
-        return GDownloader.isWindows();
-    }
-
-    @Override
-    protected void setExecutablePath(File executablePath) {
-        main.getDownloadManager().setFfmpegPath(executablePath);
-    }
-
-    @Override
-    public String getName() {
-        return "FFMPEG";
     }
 
 }

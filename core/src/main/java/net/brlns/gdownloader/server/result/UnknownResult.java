@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 hstr0100
+ * Copyright (C) 2025 hstr0100
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,29 +14,21 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package net.brlns.gdownloader.downloader.enums;
+package net.brlns.gdownloader.server.result;
 
-import lombok.Getter;
-import net.brlns.gdownloader.settings.enums.ISettingsEnum;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-@Getter
-public enum DownloaderIdEnum implements ISettingsEnum {
-    YT_DLP("yt-dlp"),
-    GALLERY_DL("gallery-dl"),
-    SPOTDL("spotDL"),
-    DIRECT_HTTP("Direct-HTTP");
+@Data
+@EqualsAndHashCode(callSuper = true)
+public class UnknownResult extends AbstractResult {
 
-    private final String displayName;
+    public static final String ID = "unknown-result";
 
-    private DownloaderIdEnum(String displayNameIn) {
-        displayName = displayNameIn;
-    }
-
-    @Override
-    public String getTranslationKey() {
-        return "";
+    public UnknownResult() {
+        super(ID);
     }
 }
