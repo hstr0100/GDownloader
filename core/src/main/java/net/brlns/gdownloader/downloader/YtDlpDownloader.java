@@ -123,6 +123,12 @@ public class YtDlpDownloader extends AbstractDownloader {
     @Override
     protected boolean tryQueryVideo(QueueEntry queueEntry) {
         try {
+            // TODO: It is unknown whether or not yt-dlp will ever support spotify natively,
+            // for that reason I prefer not to outright disable spotify links in canConsumeUrl()
+            if (queueEntry.getUrl().contains("spotify.com/")) {
+                return false;
+            }
+
             long start = System.currentTimeMillis();
 
             List<String> arguments = new ArrayList<>();

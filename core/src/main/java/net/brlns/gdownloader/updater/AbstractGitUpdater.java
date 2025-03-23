@@ -45,6 +45,7 @@ import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.settings.enums.ISettingsEnum;
 import net.brlns.gdownloader.util.NoFallbackAvailableException;
 import net.brlns.gdownloader.util.Pair;
+import net.brlns.gdownloader.util.URLUtils;
 
 import static net.brlns.gdownloader.util.LockUtils.*;
 
@@ -320,7 +321,7 @@ public abstract class AbstractGitUpdater {
         HttpRequest request = HttpRequest.newBuilder()
             .uri(URI.create(apiUrl))
             .timeout(Duration.ofSeconds(10))
-            .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36")
+            .header("User-Agent", URLUtils.GLOBAL_USER_AGENT)
             .build();
 
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
@@ -359,7 +360,7 @@ public abstract class AbstractGitUpdater {
 
         HttpRequest request = HttpRequest.newBuilder()
             .uri(URI.create(urlIn))
-            .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36")
+            .header("User-Agent", URLUtils.GLOBAL_USER_AGENT)
             .build();
 
         HttpResponse<InputStream> response = client.send(request, BodyHandlers.ofInputStream());

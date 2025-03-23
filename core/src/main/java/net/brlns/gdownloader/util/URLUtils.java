@@ -24,6 +24,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 
@@ -32,6 +34,8 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 public final class URLUtils {
+
+    public static String GLOBAL_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36";
 
     @Nullable
     public static String getVideoId(String youtubeUrl) {
@@ -130,6 +134,27 @@ public final class URLUtils {
         }
 
         return queryParams;
+    }
+
+    @Nullable
+    public static String getSpotifyTrackId(String spotifyUrl) {
+        Pattern pattern = Pattern.compile("https://open\\.spotify\\.com/track/([a-zA-Z0-9]+)");
+        Matcher matcher = pattern.matcher(spotifyUrl);
+
+        if (matcher.find()) {
+            return matcher.group(1);
+        }
+
+        int questionMarkIndex = spotifyUrl.indexOf('?');
+        if (questionMarkIndex > 0) {
+            String urlWithoutParams = spotifyUrl.substring(0, questionMarkIndex);
+            String[] parts = urlWithoutParams.split("/");
+            if (parts.length > 0) {
+                return parts[parts.length - 1];
+            }
+        }
+
+        return null;
     }
 
     private static String buildQueryString(Map<String, String> queryParams) throws UnsupportedEncodingException {
