@@ -136,7 +136,7 @@ public class SpotDLDownloader extends AbstractDownloader {
                 return true;
             }
         } catch (Exception e) {
-            log.error("Failed to query for spotify metadata {}", queueEntry.getUrl(), e.getMessage());
+            log.error("Failed to query for spotify metadata {}: {}", queueEntry.getUrl(), e.getMessage());
 
             if (log.isDebugEnabled()) {
                 log.error("Exception:", e);
