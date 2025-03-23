@@ -42,6 +42,9 @@ public class MediaInfoEntity implements Serializable {
     @Column(name = "title", length = 2048)
     private String title;
 
+    @Column(name = "playlist_title", length = 2048)
+    private String playlistTitle;
+
     @Column(name = "thumbnail", columnDefinition = "LONGVARCHAR")
     private String base64EncodedThumbnail;
 

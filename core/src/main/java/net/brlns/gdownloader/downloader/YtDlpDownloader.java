@@ -130,6 +130,7 @@ public class YtDlpDownloader extends AbstractDownloader {
                 executablePath.get().getAbsolutePath(),
                 "--dump-json",
                 "--flat-playlist",
+                "--playlist-items", "1",
                 //"--extractor-args",// TODO: Sometimes complains about missing PO token, unreproducible. Investigate.
                 //"youtube:player_skip=webpage,configs,js;player_client=android,web",
                 queueEntry.getUrl()

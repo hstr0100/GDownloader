@@ -44,7 +44,7 @@ public class YoutubeFilter extends GenericFilter {
     public YoutubeFilter() {
         setId(ID);
         setFilterName("Youtube Videos");
-        setUrlRegex("^(https?:\\/\\/)?(www\\.)?(youtube\\.com|youtu\\.be)(?!.*(\\/live|\\/playlist|list=)).*$");
+        setUrlRegex("^(https?:\\/\\/)?(www\\.)?(youtube\\.com|youtu\\.be)(?!.*(\\/live|\\/playlist|list=|\\/(@|channel\\/|c\\/|user\\/))).*$");
         setVideoNamePattern("%(title).60s (%(uploader_id)s %(upload_date)s %(resolution)s).%(ext)s");
         setAudioNamePattern("%(title).60s (%(audio_bitrate)s).%(ext)s");
         setEmbedThumbnailAndMetadata(true);

@@ -45,6 +45,9 @@ public class MediaInfo {
     @JsonProperty("title")
     private String title = "";
 
+    @JsonProperty("playlist_title")
+    private String playlistTitle = "";
+
     @JsonProperty("thumbnail")
     private String thumbnail = "";
 

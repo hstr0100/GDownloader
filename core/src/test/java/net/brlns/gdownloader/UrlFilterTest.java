@@ -10,26 +10,91 @@ class UrlFilterTest {
     @Test
     void testYoutube() {
         YoutubeFilter filter = new YoutubeFilter();
-        assertTrue(filter.matches("youtube.com/watch?v=dQw4w9WgXcQ"));
-        assertTrue(filter.matches("https://www.youtube.com/watch?v=D59NyexPnU8"));
-        assertTrue(filter.matches("youtu.be/dQw4w9WgXcQ"));
+        // Regular video URLs
+        assertTrue(filter.matches("https://www.youtube.com/watch?v=LV2-SY36Ss8"));
+        assertTrue(filter.matches("https://youtube.com/watch?v=LV2-SY36Ss8"));
         assertTrue(filter.matches("https://youtu.be/dQw4w9WgXcQ"));
-        assertTrue(filter.matches("http://youtube.com/watch?v=D59NyexPnU8"));
-        assertTrue(filter.matches("http://youtube.com/shorts/dQw4w9WgXcQ"));
-        assertFalse(filter.matches("https://www.youtube.com/live/dQw4w9WgXcQ"));
+        assertTrue(filter.matches("https://www.youtube.com/embed/dQw4w9WgXcQ"));
+        assertTrue(filter.matches("https://www.youtube.com/v/dQw4w9WgXcQ"));
+
+        // Playlist URLs
         assertFalse(filter.matches("https://www.youtube.com/playlist?list=PLFgquLnL59alCl_2TQvOiD5Vgm1hCaGSI"));
-        assertFalse(filter.matches("https://www.youtube.com/watch?v=dQw4w9WgXcQ&list=PLFgquLnL59alCl_2TQvOiD5Vgm1hCaGSI&index=3"));
+        assertFalse(filter.matches("https://www.youtube.com/watch?v=dQw4w9WgXcQ&list=PLFgquLnL59alCl_2TQvOiD5Vgm1hCaGSI"));
+        assertFalse(filter.matches("https://www.youtube.com/watch?v=M494Ty2GlOA&list=PLDOjCqYj3ys3TEe8HCR7_cYH7X7dU28_B&index=21"));
+
+        // Channel URLs
+        assertFalse(filter.matches("https://www.youtube.com/channel/UCY8iijN1AkyDCh1Z9akcqUA"));
+        assertFalse(filter.matches("https://youtube.com/channel/UCY8iijN1AkyDCh1Z9akcqUA"));
+
+        // Custom channel URLs
+        assertFalse(filter.matches("https://www.youtube.com/c/@funkyblackcat"));
+        assertFalse(filter.matches("https://youtube.com/c/@funkyblackcat"));
+
+        // User URLs
+        assertFalse(filter.matches("https://www.youtube.com/user/funkyblackcat"));
+        assertFalse(filter.matches("https://youtube.com/user/funkyblackca"));
+
+        // Handle URLs
+        assertFalse(filter.matches("https://www.youtube.com/@funkyblackcat"));
+        assertFalse(filter.matches("https://youtube.com/@funkyblackcat"));
+
+        // Live URLs (Unsupported)
+        assertFalse(filter.matches("https://www.youtube.com/live/dQw4w9WgXcQ"));
+        assertFalse(filter.matches("https://youtube.com/live/dQw4w9WgXcQ"));
+
+        // Non-YouTube URLs
         assertFalse(filter.matches("https://www.example.com"));
+        assertFalse(filter.matches("https://vimeo.com/12345"));
     }
 
     @Test
     void testYoutubePlaylist() {
         YoutubePlaylistFilter filter = new YoutubePlaylistFilter();
+
+        // Regular video URLs
+        assertFalse(filter.matches("https://www.youtube.com/watch?v=LV2-SY36Ss8"));
+        assertFalse(filter.matches("https://youtube.com/watch?v=LV2-SY36Ss8"));
+        assertFalse(filter.matches("https://youtu.be/dQw4w9WgXcQ"));
+        assertFalse(filter.matches("https://www.youtube.com/embed/dQw4w9WgXcQ"));
+        assertFalse(filter.matches("https://www.youtube.com/v/dQw4w9WgXcQ"));
+        assertFalse(filter.matches("youtu.be/dQw4w9WgXcQ"));
+
+        // Playlist URLs
         assertTrue(filter.matches("https://www.youtube.com/playlist?list=PLFgquLnL59alCl_2TQvOiD5Vgm1hCaGSI"));
         assertTrue(filter.matches("https://www.youtube.com/watch?v=dQw4w9WgXcQ&list=PLFgquLnL59alCl_2TQvOiD5Vgm1hCaGSI"));
-        assertTrue(filter.matches("https://www.youtube.com/watch?v=dQw4w9WgXcQ&list=PLFgquLnL59alCl_2TQvOiD5Vgm1hCaGSI&index=3"));
+        assertTrue(filter.matches("https://www.youtube.com/watch?v=M494Ty2GlOA&list=PLDOjCqYj3ys3TEe8HCR7_cYH7X7dU28_B&index=21"));
+        assertTrue(filter.matches("http://youtube.com/playlist?list=PLFgquLnL59alCl_2TQvOiD5Vgm1hCaGSI"));
+
+        // Channel URLs
+        assertTrue(filter.matches("https://www.youtube.com/channel/UCY8iijN1AkyDCh1Z9akcqUA"));
+        assertTrue(filter.matches("https://youtube.com/channel/UCY8iijN1AkyDCh1Z9akcqUA"));
+        assertTrue(filter.matches("http://www.youtube.com/channel/UCY8iijN1AkyDCh1Z9akcqUA"));
+
+        // Custom channel URLs
+        assertTrue(filter.matches("https://www.youtube.com/c/funkyblackcat"));
+        assertTrue(filter.matches("https://youtube.com/c/funkyblackcat"));
+
+        // User URLs
+        assertTrue(filter.matches("https://www.youtube.com/user/funkyblackcat"));
+        assertTrue(filter.matches("https://youtube.com/user/funkyblackcat"));
+
+        // Handle URLs
+        assertTrue(filter.matches("https://www.youtube.com/@funkyblackcat"));
+        assertTrue(filter.matches("https://youtube.com/@funkyblackcat"));
+        assertTrue(filter.matches("https://www.youtube.com/@funkyblackcat/videos"));
+
+        // Regular video URLs
         assertFalse(filter.matches("https://www.youtube.com/watch?v=dQw4w9WgXcQ"));
         assertFalse(filter.matches("youtu.be/dQw4w9WgXcQ"));
+        assertFalse(filter.matches("https://www.youtube.com/watch?v=dQw4w9WgXcQ&feature=youtu.be"));
+
+        // Live URLs (Unsupported)
+        assertFalse(filter.matches("https://www.youtube.com/live/dQw4w9WgXcQ"));
+        assertFalse(filter.matches("https://youtube.com/live/dQw4w9WgXcQ"));
+
+        // Non-YouTube URLs
+        assertFalse(filter.matches("https://www.example.com"));
+        assertFalse(filter.matches("https://vimeo.com/12345"));
     }
 
     @Test

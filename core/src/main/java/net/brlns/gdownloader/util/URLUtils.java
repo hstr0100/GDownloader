@@ -75,7 +75,7 @@ public final class URLUtils {
                 }
             }
 
-            return null;
+            return youtubeUrl;
         } catch (MalformedURLException | URISyntaxException e) {
             log.debug("Invalid url {} {}", youtubeUrl, e.getLocalizedMessage());
         }

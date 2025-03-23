@@ -224,8 +224,12 @@ public class QueueEntry {
         mediaInfo = mediaInfoIn;
         queried.set(true);
 
-        if (!mediaInfo.getTitle().isEmpty()) {
+        if (mediaInfo.getTitle() != null && !mediaInfo.getTitle().isEmpty()) {
             logOutput("Title: " + mediaInfo.getTitle());
+        }
+
+        if (mediaInfo.getPlaylistTitle() != null && !mediaInfo.getPlaylistTitle().isEmpty()) {
+            logOutput("Playlist Title: " + mediaInfo.getPlaylistTitle());
         }
 
         String base64encoded = mediaInfo.getBase64EncodedThumbnail();
@@ -284,8 +288,15 @@ public class QueueEntry {
     }
 
     private String getTitle() {
-        if (mediaInfo != null && !mediaInfo.getTitle().isEmpty()) {
-            return mediaInfo.getTitle();
+        if (mediaInfo != null) {
+            // Give priority to playlist titles
+            if (mediaInfo.getPlaylistTitle() != null && !mediaInfo.getPlaylistTitle().isEmpty()) {
+                return mediaInfo.getPlaylistTitle();
+            }
+
+            if (mediaInfo.getTitle() != null && !mediaInfo.getTitle().isEmpty()) {
+                return mediaInfo.getTitle();
+            }
         }
 
         return url.replace("https://", "").replace("www.", "");

@@ -42,7 +42,7 @@ import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
 public class Settings {
 
     @JsonProperty("ConfigVersion")
-    private int configVersion = 20;
+    private int configVersion = 32;
 
     @JsonProperty("MonitorClipboardForLinks")
     private boolean monitorClipboardForLinks = true;
