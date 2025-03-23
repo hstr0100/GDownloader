@@ -176,10 +176,7 @@ public class ClipboardManager {
 
                         success = true;
                     } catch (Exception e) {
-                        log.warn("Cannot obtain {} transfer data", flavorType);
-                        if (main.getConfig().isDebugMode()) {
-                            log.error("Exception", e);
-                        }
+                        log.warn("Cannot obtain {} transfer data: {}", flavorType, e.getMessage());
                     }
                 }
             }

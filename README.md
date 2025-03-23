@@ -1,6 +1,6 @@
 # GDownloader
 
-A user-friendly GUI wrapper for [yt-dlp](https://github.com/yt-dlp/yt-dlp) and [gallery-dl](https://github.com/mikf/gallery-dl) written in Java.
+A user-friendly GUI wrapper for [yt-dlp](https://github.com/yt-dlp/yt-dlp), [gallery-dl](https://github.com/mikf/gallery-dl) and [spotDL](https://github.com/spotDL/spotify-downloader) written in Java.
 
 ## Overview
 
@@ -80,6 +80,7 @@ In these directories, you will find the following configuration files:
 - `config.json`: Main GDownloader configuration file in json format.
 - `yt-dlp.conf`: Custom user configuration for the yt-dlp downloader. For instructions see [yt-dlp config](https://github.com/yt-dlp/yt-dlp?tab=readme-ov-file#configuration)
 - `gallery-dl.conf`: Custom user configuration for the gallery-dl downloader. For instructions see [gallery-dl config](https://github.com/mikf/gallery-dl?tab=readme-ov-file#configuration)
+- `spotdl.json`: Custom user configuration for the spotDL downloader. For instructions see [spotDL config](https://github.com/spotDL/spotify-downloader/blob/master/docs/usage.md#default-config)
 
 
 For advanced users, you have the option to manually edit these configuration files to add custom parameters. e.g proxy settings.
@@ -91,6 +92,10 @@ Please be aware that some configuration parameters may conflict with GDownloader
 ### gallery-dl Support
 
 To activate gallery-dl support, navigate to `Settings` > `Download Settings`, scroll down to the bottom and check the option `Enable gallery-dl downloader.` then, restart the program.
+
+### spotDL Support
+
+To activate spotDL support, navigate to `Settings` > `Download Settings`, scroll down to the bottom and check the option `Enable spotDL downloader.` then, restart the program.
 
 ### My Downloads Are Stuck Processing
 
@@ -112,4 +117,5 @@ We welcome any feedback you may have to improve the user experience.
 - FFMpeg builds by [GyanD/codexffmpeg](https://github.com/GyanD/codexffmpeg)
 - yt-dlp builds by [yt-dlp/yt-dlp](https://github.com/yt-dlp/yt-dlp)
 - gallery-dl builds by [mikf/gallery-dl](https://github.com/mikf/gallery-dl)
+- spotDL builds by [spotDL/spotify-downloader](https://github.com/spotDL/spotify-downloader)
 

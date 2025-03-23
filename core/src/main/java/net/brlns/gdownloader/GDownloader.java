@@ -123,6 +123,7 @@ import static net.brlns.gdownloader.lang.Language.*;
 // TODO 'Open Directory' for playlists
 // TODO Fix: Sometimes not fully scrolling to bottom after opening the program
 // TODO Fix: missing play controls after restart
+// TODO Spotify: query metadata and thumbnails
 /**
  * GDownloader - GUI wrapper for yt-dlp
  *
