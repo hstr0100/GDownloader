@@ -112,6 +112,12 @@ public abstract class AbstractUrlFilter {
     @JsonProperty("UrlRegex")
     private String urlRegex = "";
 
+    @JsonProperty("AudioOnly")
+    private boolean audioOnly = false;
+
+    @JsonProperty("VideoOnly")
+    private boolean videoOnly = false;
+
     @JsonProperty("VideoNamePattern")
     private String videoNamePattern = "";
 

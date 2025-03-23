@@ -22,6 +22,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -54,6 +55,7 @@ import static net.brlns.gdownloader.ui.themes.UIColors.*;
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
+// TODO: fix column width
 @Slf4j
 public class SettingsPanel {
 
@@ -156,6 +158,7 @@ public class SettingsPanel {
             frame.setLayout(new BorderLayout());
             //frame.setResizable(false);
             frame.setLocationRelativeTo(null);
+            frame.setMinimumSize(new Dimension(frame.getWidth(), frame.getHeight()));
             frame.setIconImage(main.getGuiManager().getAppIcon());
 
             sidebarPanel = new JPanel();
@@ -413,7 +416,7 @@ public class SettingsPanel {
         });
     }
 
-    private <T extends Enum<T> & ISettingsEnum> void addComboBox(JPanel panel,
+    private <T extends Enum<T> & ISettingsEnum> JComboBox<String> addComboBox(JPanel panel,
         GridBagConstraints gbcPanel, String labelString, Class<T> enumClass,
         Supplier<T> getter, Consumer<T> setter, boolean requiresRestart) {
 
@@ -421,7 +424,7 @@ public class SettingsPanel {
 
         gbcPanel.gridx = 0;
         gbcPanel.gridy++;
-        gbcPanel.weightx = 0.6;
+        gbcPanel.weightx = 0.5;
         gbcPanel.gridwidth = 1;
         panel.add(label, gbcPanel);
 
@@ -439,9 +442,11 @@ public class SettingsPanel {
         customizeComboBox(comboBox);
 
         gbcPanel.gridx = 1;
-        gbcPanel.weightx = 1;
+        gbcPanel.weightx = 0.5;
         gbcPanel.gridwidth = GridBagConstraints.REMAINDER;
         panel.add(comboBox, gbcPanel);
+
+        return comboBox;
     }
 
     private void addCheckBox(JPanel panel, GridBagConstraints gbcPanel, String labelString,
@@ -451,7 +456,7 @@ public class SettingsPanel {
 
         gbcPanel.gridx = 0;
         gbcPanel.gridy++;
-        gbcPanel.weightx = 0.6;
+        gbcPanel.weightx = 0.5;
         gbcPanel.gridwidth = 1;
         panel.add(label, gbcPanel);
 
@@ -468,7 +473,7 @@ public class SettingsPanel {
         customizeComponent(checkBox, BACKGROUND, LIGHT_TEXT);
 
         gbcPanel.gridx = 1;
-        gbcPanel.weightx = 1;
+        gbcPanel.weightx = 0.5;
         gbcPanel.gridwidth = GridBagConstraints.REMAINDER;
         panel.add(checkBox, gbcPanel);
     }
@@ -478,7 +483,7 @@ public class SettingsPanel {
 
         gbcPanel.gridx = 0;
         gbcPanel.gridy++;
-        gbcPanel.weightx = 0.6;
+        gbcPanel.weightx = 0.5;
         gbcPanel.gridwidth = 1;
         gbcPanel.insets = new Insets(20, 5, 10, 5);
 
@@ -494,7 +499,7 @@ public class SettingsPanel {
 
         gbcPanel.gridx = 0;
         gbcPanel.gridy++;
-        gbcPanel.weightx = 0.6;
+        gbcPanel.weightx = 0.5;
         gbcPanel.gridwidth = 1;
         panel.add(label, gbcPanel);
 
@@ -515,7 +520,7 @@ public class SettingsPanel {
         customizeSlider(slider, BACKGROUND, SLIDER_FOREGROUND);
 
         gbcPanel.gridx = 1;
-        gbcPanel.weightx = 1;
+        gbcPanel.weightx = 0.5;
         gbcPanel.gridwidth = GridBagConstraints.REMAINDER;
         panel.add(slider, gbcPanel);
     }
@@ -1051,134 +1056,118 @@ public class SettingsPanel {
 
             gbcItem.gridy = 1;
 
-            addComboBox(itemPanel, gbcItem,
-                "settings.quality_selector",
-                QualitySelectorEnum.class,
-                qualitySettings::getSelector,
-                qualitySettings::setSelector,
-                false
-            );
+            if (!filter.isAudioOnly()) {
+                addComboBox(itemPanel, gbcItem,
+                    "settings.quality_selector",
+                    QualitySelectorEnum.class,
+                    qualitySettings::getSelector,
+                    qualitySettings::setSelector,
+                    false
+                );
 
-            JComboBox<String> minHeightComboBox;
-            JComboBox<String> maxHeightComboBox;
+                JComboBox<String> minHeightComboBox = addComboBox(itemPanel, gbcItem,
+                    "settings.minimum_quality",
+                    ResolutionEnum.class,
+                    qualitySettings::getMinHeight,
+                    qualitySettings::setMinHeight,
+                    false
+                );
 
-            {
-                JLabel label = createLabel("settings.minimum_quality", LIGHT_TEXT);
+                JComboBox<String> maxHeightComboBox = addComboBox(itemPanel, gbcItem,
+                    "settings.maximum_quality",
+                    ResolutionEnum.class,
+                    qualitySettings::getMaxHeight,
+                    qualitySettings::setMaxHeight,
+                    false
+                );
 
-                gbcItem.gridx = 0;
-                gbcItem.weightx = 0.8;
-                gbcItem.gridwidth = 1;
-                gbcItem.gridy++;
-                itemPanel.add(label, gbcItem);
+                {
+                    Arrays.stream(minHeightComboBox.getActionListeners())
+                        .forEach(minHeightComboBox::removeActionListener);
 
-                minHeightComboBox = new JComboBox<>(ISettingsEnum.getDisplayNames(ResolutionEnum.class));
-                minHeightComboBox.setSelectedIndex(qualitySettings.getMinHeight().ordinal());
+                    minHeightComboBox.addActionListener((ActionEvent e) -> {
+                        ResolutionEnum minResolution = ISettingsEnum.getEnumByIndex(ResolutionEnum.class, minHeightComboBox.getSelectedIndex());
+                        ResolutionEnum maxResolution = minResolution.getValidMax(qualitySettings.getMaxHeight());
 
-                customizeComboBox(minHeightComboBox);
+                        qualitySettings.setMinHeight(minResolution);
+                        qualitySettings.setMaxHeight(maxResolution);
 
-                gbcItem.gridx = 1;
-                gbcItem.weightx = 1;
-                gbcItem.gridwidth = GridBagConstraints.REMAINDER;
-                itemPanel.add(minHeightComboBox, gbcItem);
+                        maxHeightComboBox.setSelectedIndex(ISettingsEnum.getEnumIndex(ResolutionEnum.class, maxResolution));
+                    });
+
+                    Arrays.stream(maxHeightComboBox.getActionListeners())
+                        .forEach(maxHeightComboBox::removeActionListener);
+
+                    maxHeightComboBox.addActionListener((ActionEvent e) -> {
+                        ResolutionEnum maxResolution = ISettingsEnum.getEnumByIndex(ResolutionEnum.class, maxHeightComboBox.getSelectedIndex());
+                        ResolutionEnum minResolution = maxResolution.getValidMin(qualitySettings.getMinHeight());
+
+                        qualitySettings.setMinHeight(minResolution);
+                        qualitySettings.setMaxHeight(maxResolution);
+
+                        minHeightComboBox.setSelectedIndex(ISettingsEnum.getEnumIndex(ResolutionEnum.class, minResolution));
+                    });
+                }
+
+                addComboBox(itemPanel, gbcItem,
+                    "settings.video_container",
+                    VideoContainerEnum.class,
+                    qualitySettings::getVideoContainer,
+                    qualitySettings::setVideoContainer,
+                    false
+                );
+
+                addComboBox(itemPanel, gbcItem,
+                    "settings.fps",
+                    FPSEnum.class,
+                    qualitySettings::getFps,
+                    qualitySettings::setFps,
+                    false
+                );
+
+                addComboBox(itemPanel, gbcItem,
+                    "settings.subtitle_container",
+                    SubtitleContainerEnum.class,
+                    qualitySettings::getSubtitleContainer,
+                    qualitySettings::setSubtitleContainer,
+                    false
+                );
+
+                addComboBox(itemPanel, gbcItem,
+                    "settings.thumbnail_container",
+                    ThumbnailContainerEnum.class,
+                    qualitySettings::getThumbnailContainer,
+                    qualitySettings::setThumbnailContainer,
+                    false
+                );
             }
 
-            {
-                JLabel label = createLabel("settings.maximum_quality", LIGHT_TEXT);
+            if (!filter.isVideoOnly()) {
+                addComboBox(itemPanel, gbcItem,
+                    "settings.audio_container",
+                    AudioContainerEnum.class,
+                    qualitySettings::getAudioContainer,
+                    qualitySettings::setAudioContainer,
+                    false
+                );
 
-                gbcItem.gridx = 0;
-                gbcItem.weightx = 0.8;
-                gbcItem.gridwidth = 1;
-                gbcItem.gridy++;
-                itemPanel.add(label, gbcItem);
+                addComboBox(itemPanel, gbcItem,
+                    "settings.audio_bitrate",
+                    AudioBitrateEnum.class,
+                    qualitySettings::getAudioBitrate,
+                    qualitySettings::setAudioBitrate,
+                    false
+                );
 
-                maxHeightComboBox = new JComboBox<>(ISettingsEnum.getDisplayNames(ResolutionEnum.class));
-                maxHeightComboBox.setSelectedIndex(qualitySettings.getMaxHeight().ordinal());
-
-                customizeComboBox(maxHeightComboBox);
-
-                gbcItem.gridx = 1;
-                gbcItem.weightx = 1;
-                gbcItem.gridwidth = GridBagConstraints.REMAINDER;
-                itemPanel.add(maxHeightComboBox, gbcItem);
+                // TODO: spotify is not implemented.
+                addComboBox(itemPanel, gbcItem,
+                    "settings.audio_codec",
+                    AudioCodecEnum.class,
+                    qualitySettings::getAudioCodec,
+                    qualitySettings::setAudioCodec,
+                    false
+                );
             }
-
-            {
-                minHeightComboBox.addActionListener((ActionEvent e) -> {
-                    ResolutionEnum minResolution = ISettingsEnum.getEnumByIndex(ResolutionEnum.class, minHeightComboBox.getSelectedIndex());
-                    ResolutionEnum maxResolution = minResolution.getValidMax(qualitySettings.getMaxHeight());
-
-                    qualitySettings.setMinHeight(minResolution);
-                    qualitySettings.setMaxHeight(maxResolution);
-
-                    maxHeightComboBox.setSelectedIndex(ISettingsEnum.getEnumIndex(ResolutionEnum.class, maxResolution));
-                });
-
-                maxHeightComboBox.addActionListener((ActionEvent e) -> {
-                    ResolutionEnum maxResolution = ISettingsEnum.getEnumByIndex(ResolutionEnum.class, maxHeightComboBox.getSelectedIndex());
-                    ResolutionEnum minResolution = maxResolution.getValidMin(qualitySettings.getMinHeight());
-
-                    qualitySettings.setMinHeight(minResolution);
-                    qualitySettings.setMaxHeight(maxResolution);
-
-                    minHeightComboBox.setSelectedIndex(ISettingsEnum.getEnumIndex(ResolutionEnum.class, minResolution));
-                });
-            }
-
-            addComboBox(itemPanel, gbcItem,
-                "settings.video_container",
-                VideoContainerEnum.class,
-                qualitySettings::getVideoContainer,
-                qualitySettings::setVideoContainer,
-                false
-            );
-
-            addComboBox(itemPanel, gbcItem,
-                "settings.fps",
-                FPSEnum.class,
-                qualitySettings::getFps,
-                qualitySettings::setFps,
-                false
-            );
-
-            addComboBox(itemPanel, gbcItem,
-                "settings.audio_container",
-                AudioContainerEnum.class,
-                qualitySettings::getAudioContainer,
-                qualitySettings::setAudioContainer,
-                false
-            );
-
-            addComboBox(itemPanel, gbcItem,
-                "settings.audio_bitrate",
-                AudioBitrateEnum.class,
-                qualitySettings::getAudioBitrate,
-                qualitySettings::setAudioBitrate,
-                false
-            );
-
-            addComboBox(itemPanel, gbcItem,
-                "settings.subtitle_container",
-                SubtitleContainerEnum.class,
-                qualitySettings::getSubtitleContainer,
-                qualitySettings::setSubtitleContainer,
-                false
-            );
-
-            addComboBox(itemPanel, gbcItem,
-                "settings.thumbnail_container",
-                ThumbnailContainerEnum.class,
-                qualitySettings::getThumbnailContainer,
-                qualitySettings::setThumbnailContainer,
-                false
-            );
-
-            addComboBox(itemPanel, gbcItem,
-                "settings.audio_codec",
-                AudioCodecEnum.class,
-                qualitySettings::getAudioCodec,
-                qualitySettings::setAudioCodec,
-                false
-            );
 
             panel.add(itemPanel);
         }
