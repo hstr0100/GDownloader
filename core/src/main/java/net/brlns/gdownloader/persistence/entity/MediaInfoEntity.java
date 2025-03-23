@@ -58,7 +58,7 @@ public class MediaInfoEntity implements Serializable {
     private long duration;
 
     @Column(name = "view_count")
-    private int viewCount;
+    private long viewCount;
 
     @Column(name = "upload_date", length = 48)
     private String uploadDate;

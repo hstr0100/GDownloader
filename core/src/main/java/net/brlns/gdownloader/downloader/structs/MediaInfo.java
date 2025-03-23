@@ -64,7 +64,7 @@ public class MediaInfo {
     private long duration;
 
     @JsonProperty("view_count")
-    private int viewCount;
+    private long viewCount;
 
     @JsonProperty("upload_date")
     private String uploadDate;
