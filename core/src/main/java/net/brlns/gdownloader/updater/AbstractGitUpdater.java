@@ -130,11 +130,13 @@ public abstract class AbstractGitUpdater {
             }
         }
 
-        File systemFallback = SystemExecutableLocator.locateExecutable(getSystemBinaryName());
-        if (systemFallback != null) {
-            finishUpdate(systemFallback);
-            log.info("Selected platform installation as fallback {}", getRepo());
-            return;
+        if (getSystemBinaryName() != null) {
+            File systemFallback = SystemExecutableLocator.locateExecutable(getSystemBinaryName());
+            if (systemFallback != null) {
+                finishUpdate(systemFallback);
+                log.info("Selected platform installation as fallback {}", getRepo());
+                return;
+            }
         }
 
         notifyStatus(UpdateStatus.FAILED);
