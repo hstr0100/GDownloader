@@ -143,6 +143,9 @@ public final class GDownloader {
 
     public static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
+    public final static PriorityVirtualThreadExecutor GLOBAL_THREAD_POOL
+        = new PriorityVirtualThreadExecutor();
+
     @Getter
     private static GDownloader instance;
 
@@ -179,9 +182,6 @@ public final class GDownloader {
 
     @Getter
     private boolean initialized = false;
-
-    @Getter
-    private final PriorityVirtualThreadExecutor globalThreadPool;
 
     @Getter(AccessLevel.PRIVATE)
     private final ScheduledExecutorService mainTicker;
@@ -236,9 +236,6 @@ public final class GDownloader {
         if (config.isDebugMode()) {
             printDebugInformation();
         }
-
-        globalThreadPool = new PriorityVirtualThreadExecutor();
-        log.info("Started global virtual-thread pool");
 
         mainTicker = Executors.newScheduledThreadPool(1);
 
@@ -394,7 +391,7 @@ public final class GDownloader {
 
         for (AbstractGitUpdater updater : updaters) {
             if (updater.isSupported()) {
-                globalThreadPool.submitWithPriority(() -> {
+                GLOBAL_THREAD_POOL.submitWithPriority(() -> {
                     try {
                         log.error("Starting updater " + updater.getClass().getName());
                         updater.check(userInitiated);
@@ -413,7 +410,7 @@ public final class GDownloader {
             }
         }
 
-        globalThreadPool.submitWithPriority(() -> {
+        GLOBAL_THREAD_POOL.submitWithPriority(() -> {
             try {
                 latch.await();
             } catch (InterruptedException e) {
@@ -957,7 +954,7 @@ public final class GDownloader {
             GUIManager.MessageType.INFO,
             false);
 
-        globalThreadPool.submitWithPriority(() -> {
+        GLOBAL_THREAD_POOL.submitWithPriority(() -> {
             File directory = getDownloadsDirectory();
             if (directory.exists()) {
                 DirectoryDeduplicator.deduplicateDirectory(directory);
@@ -1334,7 +1331,7 @@ public final class GDownloader {
 
             try {
                 instance.getMainTicker().shutdownNow();
-                instance.getGlobalThreadPool().shutdownNow();
+                GLOBAL_THREAD_POOL.shutdownNow();
             } catch (Exception e) {
                 log.error("There was a problem closing thread pools", e);
             }

@@ -50,7 +50,7 @@ public class SpotifyMetadataExtractor extends OEmbedMetadataExtractor {
     @Override
     public Optional<MediaInfo> fetchMetadata(String urlIn) throws Exception {
         if (!urlIn.contains("spotify.com") && !urlIn.contains("spotify.link")) {
-            throw new IllegalArgumentException("Expected a valid spotify url");
+            throw new IllegalArgumentException("Expected a valid Spotify URL");
         }
 
         MediaInfo specialMediaInfo = getMediaInfoIfSpecialUrl(urlIn);

@@ -170,7 +170,7 @@ public class DownloadManager implements IEvent {
                 main.getDownloadManager().getDownloadCounter().set(nextId);
                 log.info("Current download id: {}", nextId);
 
-                main.getGlobalThreadPool().submitWithPriority(() -> {
+                GDownloader.GLOBAL_THREAD_POOL.submitWithPriority(() -> {
                     linkCaptureLock.lock();// Intentionally block url capture during the entire restoring proccess
                     try {
                         int count = 0;
@@ -813,7 +813,7 @@ public class DownloadManager implements IEvent {
     private void submitQueryMetadataTask(QueueEntry queueEntry) {
         currentlyQueryingCount.incrementAndGet();
 
-        main.getGlobalThreadPool().submitWithPriority(() -> {
+        GDownloader.GLOBAL_THREAD_POOL.submitWithPriority(() -> {
             try {
                 if (queueEntry.getCancelHook().get()) {
                     return;
@@ -1097,7 +1097,7 @@ public class DownloadManager implements IEvent {
         if (force) {
             forcefulExecutor.execute(downloadTask);
         } else {
-            main.getGlobalThreadPool().submitWithPriority(downloadTask, 10);
+            GDownloader.GLOBAL_THREAD_POOL.submitWithPriority(downloadTask, 10);
         }
     }
 

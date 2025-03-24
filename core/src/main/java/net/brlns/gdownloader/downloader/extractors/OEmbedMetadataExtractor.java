@@ -97,14 +97,12 @@ public class OEmbedMetadataExtractor implements IMetadataExtractor {
                 return Optional.of(data);
             } else {
                 log.warn("Failed to fetch oEmbed data for URL: {}. Status code: {}", url, response.statusCode());
-
-                return Optional.empty();
             }
         } catch (Exception e) {
             log.error("Error fetching oEmbed data for URL: {}", url, e);
-
-            return Optional.empty();
         }
+
+        return Optional.empty();
     }
 
     @Override

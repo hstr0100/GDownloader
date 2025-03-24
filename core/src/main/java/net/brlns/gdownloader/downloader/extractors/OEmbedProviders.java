@@ -56,33 +56,35 @@ public class OEmbedProviders {
         loadProviders();
     }
 
-    private boolean loadProviders() {
-        try {
-            HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(PROVIDERS_URL))
-                .timeout(Duration.ofSeconds(10))
-                .header("User-Agent", URLUtils.GLOBAL_USER_AGENT)
-                .header("Accept", "application/json")
-                .GET()
-                .build();
+    private void loadProviders() {
+        GDownloader.GLOBAL_THREAD_POOL.submitWithPriority(() -> {
+            try {
+                HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(PROVIDERS_URL))
+                    .timeout(Duration.ofSeconds(10))
+                    .header("User-Agent", URLUtils.GLOBAL_USER_AGENT)
+                    .header("Accept", "application/json")
+                    .GET()
+                    .build();
 
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-            if (response.statusCode() == 200) {
-                providers = GDownloader.OBJECT_MAPPER.readValue(response.body(),
-                    GDownloader.OBJECT_MAPPER.getTypeFactory().constructCollectionType(List.class, OEmbedMetadataExtractor.Provider.class));
+                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+                if (response.statusCode() == 200) {
+                    providers = GDownloader.OBJECT_MAPPER.readValue(response.body(),
+                        GDownloader.OBJECT_MAPPER.getTypeFactory().constructCollectionType(List.class, OEmbedMetadataExtractor.Provider.class));
 
-                saveProvidersToCache(response.body());
+                    saveProvidersToCache(response.body());
 
-                log.info("Loaded {} oEmbed providers", providers.size());
-                return true;
-            } else {
-                log.error("Failed to load oEmbed providers. Status code: {}", response.statusCode());
+                    log.info("Loaded {} oEmbed providers", providers.size());
+                    return;
+                } else {
+                    log.error("Failed to load oEmbed providers. Status code: {}", response.statusCode());
+                }
+            } catch (IOException | InterruptedException e) {
+                log.error("Error loading oEmbed providers", e);
             }
-        } catch (IOException | InterruptedException e) {
-            log.error("Error loading oEmbed providers", e);
-        }
 
-        return loadProvidersFromCache();
+            loadProvidersFromCache();
+        }, 100);
     }
 
     private void saveProvidersToCache(String providersJson) {
@@ -92,9 +94,9 @@ public class OEmbedProviders {
             Files.writeString(filePath, providersJson,
                 StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
 
-            log.debug("Saved providers data to {}", filePath);
+            log.debug("Saved oEmbed providers to {}", filePath);
         } catch (IOException e) {
-            log.error("Failed to save providers data to cache file", e);
+            log.error("Failed to save oEmbed providers to cache file", e);
         }
     }
 
@@ -121,6 +123,6 @@ public class OEmbedProviders {
     }
 
     private Path getProvidersCachePath() {
-        return Path.of(GDownloader.getWorkDirectory().getAbsolutePath(), "providers.json");
+        return Path.of(GDownloader.getWorkDirectory().getAbsolutePath(), "oembed_providers.json");
     }
 }

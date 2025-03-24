@@ -227,7 +227,7 @@ public class ClipboardManager {
     }
 
     private void triggerRevalidation() {
-        main.getGlobalThreadPool().submitWithPriority(() -> {
+        GDownloader.GLOBAL_THREAD_POOL.submitWithPriority(() -> {
             //Wait a bit for data to propagate.
             try {
                 Thread.sleep(200);
@@ -241,7 +241,7 @@ public class ClipboardManager {
     }
 
     private void handleClipboardInput(String data, boolean force) {
-        main.getGlobalThreadPool().submitWithPriority(() -> {
+        GDownloader.GLOBAL_THREAD_POOL.submitWithPriority(() -> {
             List<CompletableFuture<Boolean>> list = new ArrayList<>();
 
             for (String url : extractUrlsFromString(data)) {
