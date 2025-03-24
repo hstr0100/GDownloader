@@ -16,21 +16,11 @@
  */
 package net.brlns.gdownloader.downloader.extractors;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.annotation.Nullable;
-import java.net.URI;
-import java.net.URLEncoder;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.nio.charset.StandardCharsets;
-import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
-import lombok.Data;
+import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
-import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.downloader.structs.MediaInfo;
 import net.brlns.gdownloader.util.URLUtils;
 
@@ -42,7 +32,7 @@ import static net.brlns.gdownloader.lang.Language.l10n;
  * @author Gabriel / hstr0100 / vertx010
  */
 @Slf4j
-public class SpotifyMetadataExtractor {
+public class SpotifyMetadataExtractor extends OEmbedMetadataExtractor {
 
     private static final Map<String, String> SPECIAL_URLS = new HashMap<>(3);
 
@@ -52,46 +42,23 @@ public class SpotifyMetadataExtractor {
         SPECIAL_URLS.put("spotify.com/collection/albums", l10n("spotify.all_user_saved_albums"));
     }
 
-    private static final String OEMBED_API_URL = "https://open.spotify.com/oembed?url=";
+    @Override
+    public boolean canConsume(String urlIn) {
+        return urlIn.matches("^(https?:\\/\\/)?(([a-zA-Z0-9-]+)\\.)?spotify\\.(com|link)(\\/.*)?$");
+    }
 
-    private static final HttpClient client = HttpClient.newBuilder()
-        .followRedirects(HttpClient.Redirect.ALWAYS)
-        .connectTimeout(Duration.ofSeconds(10))
-        .version(HttpClient.Version.HTTP_2)
-        .build();
-
-    @Nullable
-    public static MediaInfo queryMetadata(String spotifyUrl) throws Exception {
-        if (!spotifyUrl.contains("spotify.com/")) {
-            throw new IllegalArgumentException("URL must be a valid Spotify URL");
+    @Override
+    public Optional<MediaInfo> fetchMetadata(String urlIn) throws Exception {
+        if (!urlIn.contains("spotify.com") && !urlIn.contains("spotify.link")) {
+            throw new IllegalArgumentException("Expected a valid spotify url");
         }
 
-        MediaInfo specialMediaInfo = getMediaInfoIfSpecialUrl(spotifyUrl);
+        MediaInfo specialMediaInfo = getMediaInfoIfSpecialUrl(urlIn);
         if (specialMediaInfo != null) {
-            return specialMediaInfo;
+            return Optional.of(specialMediaInfo);
         }
 
-        String encodedUrl = URLEncoder.encode(spotifyUrl, StandardCharsets.UTF_8.toString());
-        String apiUrl = OEMBED_API_URL + encodedUrl;
-
-        HttpRequest request = HttpRequest.newBuilder()
-            .uri(URI.create(apiUrl))
-            .timeout(Duration.ofSeconds(10))
-            .header("User-Agent", URLUtils.GLOBAL_USER_AGENT)
-            .header("Accept", "application/json")
-            .build();
-
-        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-
-        String body = response.body();
-        if (body.isEmpty() || !body.startsWith("{")) {
-            return null;
-        }
-
-        //log.info(body);
-        SpotifyOEmbedDTO dto = GDownloader.OBJECT_MAPPER.readValue(body, SpotifyOEmbedDTO.class);
-
-        return convertToMediaInfo(dto, spotifyUrl);
+        return super.fetchMetadata(urlIn);
     }
 
     @Nullable
@@ -115,39 +82,24 @@ public class SpotifyMetadataExtractor {
         return null;
     }
 
-    private static MediaInfo convertToMediaInfo(SpotifyOEmbedDTO response, String spotifyUrl) {
-        MediaInfo mediaInfo = new MediaInfo();
+    @Override
+    protected MediaInfo convertToMediaInfo(OEmbedDTO response, String urlIn) {
+        MediaInfo mediaInfo = super.convertToMediaInfo(response, urlIn);
 
-        String trackId = URLUtils.getSpotifyTrackId(spotifyUrl);
+        String trackId = URLUtils.getSpotifyTrackId(urlIn);
         if (trackId != null) {
             mediaInfo.setId(trackId);
         }
 
-        if (response.getTitle() != null) {
-            String title = response.getTitle();
-            int dashIndex = title.indexOf(" - ");
-            if (dashIndex != -1) {
-                mediaInfo.setChannelId(title.substring(0, dashIndex).trim());
-            }
-
-            mediaInfo.setTitle(title);
-
-            if (isPlaylist(spotifyUrl)) {
-                mediaInfo.setPlaylistTitle(title);
-            }
+        if (response.getTitle() != null && isPlaylist(urlIn)) {
+            mediaInfo.setPlaylistTitle(response.getTitle());
         }
-
-        mediaInfo.setThumbnail(response.getThumbnailUrl());
-        mediaInfo.setWidth(response.getWidth());
-        mediaInfo.setHeight(response.getHeight());
 
         return mediaInfo;
     }
 
     private static boolean isPlaylist(String spotifyUrl) {
-        return spotifyUrl.contains("spotify.com/album/")
-            || spotifyUrl.contains("spotify.com/artist/")
-            || spotifyUrl.contains("spotify.com/playlist/");
+        return spotifyUrl.matches(".*spotify\\.com/(album|artist|playlist)/.*");
     }
 
     //in: https://open.spotify.com/track/0heJlRkloNhkrBU9ROnM9Y?si=7d802b22d6084c23
@@ -165,31 +117,4 @@ public class SpotifyMetadataExtractor {
     //  "thumbnail_width": 300,
     //  "thumbnail_height": 300
     //}
-    @Data
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    public static class SpotifyOEmbedDTO {
-
-        private String html;
-        private String type;
-        private String version;
-        private String title;
-
-        @JsonProperty("provider_name")
-        private String providerName;
-
-        @JsonProperty("provider_url")
-        private String providerUrl;
-
-        private Integer width;
-        private Integer height;
-
-        @JsonProperty("thumbnail_url")
-        private String thumbnailUrl;
-
-        @JsonProperty("thumbnail_width")
-        private Integer thumbnailWidth;
-
-        @JsonProperty("thumbnail_height")
-        private Integer thumbnailHeight;
-    }
 }

@@ -20,8 +20,8 @@ module net.brlns.gdownloader {
 
     requires transitive java.datatransfer;
     requires transitive java.desktop;
+    requires transitive java.net.http;
     requires java.base;
-    requires java.net.http;
     requires jdk.crypto.ec;
     requires java.logging;
     requires java.management;

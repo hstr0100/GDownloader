@@ -34,7 +34,6 @@ import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.downloader.enums.DownloadStatusEnum;
 import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
-import net.brlns.gdownloader.downloader.extractors.SpotifyMetadataExtractor;
 import net.brlns.gdownloader.downloader.structs.DownloadResult;
 import net.brlns.gdownloader.downloader.structs.MediaInfo;
 import net.brlns.gdownloader.persistence.PersistenceManager;
@@ -112,20 +111,18 @@ public class SpotDLDownloader extends AbstractDownloader {
 
     @Override
     protected boolean canConsumeUrl(String inputUrl) {
-        return isEnabled() && inputUrl.contains("spotify.com");
+        return isEnabled() && (inputUrl.contains("spotify.com") || inputUrl.contains("spotify.link"));
     }
 
     @Override
-    protected boolean tryQueryVideo(QueueEntry queueEntry) {
+    protected boolean tryQueryMetadata(QueueEntry queueEntry) {
         try {
             String url = queueEntry.getUrl();
-            if (!url.contains("spotify.com/")) {
-                return false;
-            }
 
-            MediaInfo mediaInfo = SpotifyMetadataExtractor.queryMetadata(url);
+            Optional<MediaInfo> mediaInfoOptional = manager.getMetadataManager().fetchMetadata(url);
 
-            if (mediaInfo != null) {
+            if (mediaInfoOptional.isPresent()) {
+                MediaInfo mediaInfo = mediaInfoOptional.get();
                 queueEntry.setMediaInfo(mediaInfo);
 
                 PersistenceManager persistence = main.getPersistenceManager();
@@ -136,7 +133,7 @@ public class SpotDLDownloader extends AbstractDownloader {
                 return true;
             }
         } catch (Exception e) {
-            log.error("Failed to query for spotify metadata {}: {}", queueEntry.getUrl(), e.getMessage());
+            log.error("{} failed to query for metadata {}: {}", getDownloaderId(), queueEntry.getUrl(), e.getMessage());
 
             if (log.isDebugEnabled()) {
                 log.error("Exception:", e);

@@ -35,6 +35,8 @@ import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.downloader.enums.DownloadStatusEnum;
 import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.downloader.structs.DownloadResult;
+import net.brlns.gdownloader.downloader.structs.MediaInfo;
+import net.brlns.gdownloader.persistence.PersistenceManager;
 import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
 import net.brlns.gdownloader.ui.menu.IMenuEntry;
@@ -103,8 +105,31 @@ public class GalleryDlDownloader extends AbstractDownloader {
     }
 
     @Override
-    protected boolean tryQueryVideo(QueueEntry queueEntry) {
-        // TODO
+    protected boolean tryQueryMetadata(QueueEntry queueEntry) {
+        try {
+            String url = queueEntry.getUrl();
+
+            Optional<MediaInfo> mediaInfoOptional = manager.getMetadataManager().fetchMetadata(url);
+
+            if (mediaInfoOptional.isPresent()) {
+                MediaInfo mediaInfo = mediaInfoOptional.get();
+                queueEntry.setMediaInfo(mediaInfo);
+
+                PersistenceManager persistence = main.getPersistenceManager();
+                if (!queueEntry.getCancelHook().get() && persistence.isInitialized()) {
+                    persistence.getMediaInfos().addMediaInfo(mediaInfo.toEntity(queueEntry.getDownloadId()));
+                }
+
+                return true;
+            }
+        } catch (Exception e) {
+            log.error("{} failed to query for metadata {}: {}", getDownloaderId(), queueEntry.getUrl(), e.getMessage());
+
+            if (log.isDebugEnabled()) {
+                log.error("Exception:", e);
+            }
+        }
+
         return false;
     }
 

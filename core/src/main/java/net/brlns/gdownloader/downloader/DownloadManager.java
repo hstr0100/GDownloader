@@ -40,6 +40,7 @@ import net.brlns.gdownloader.downloader.enums.CloseReasonEnum;
 import net.brlns.gdownloader.downloader.enums.DownloadStatusEnum;
 import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.downloader.enums.QueueCategoryEnum;
+import net.brlns.gdownloader.downloader.extractors.MetadataManager;
 import net.brlns.gdownloader.downloader.structs.DownloadResult;
 import net.brlns.gdownloader.event.EventDispatcher;
 import net.brlns.gdownloader.event.IEvent;
@@ -78,6 +79,9 @@ public class DownloadManager implements IEvent {
     private final PersistenceManager persistence;
 
     private final ExecutorService processMonitor;
+
+    @Getter
+    private final MetadataManager metadataManager;
 
     private final List<AbstractDownloader> downloaders = new ArrayList<>();
 
@@ -118,6 +122,7 @@ public class DownloadManager implements IEvent {
         main = mainIn;
 
         persistence = main.getPersistenceManager();
+        metadataManager = new MetadataManager();
 
         processMonitor = Executors.newSingleThreadExecutor();
         processMonitor.submit(() -> {
@@ -506,7 +511,7 @@ public class DownloadManager implements IEvent {
             return downloadDeque.contains(queueEntry);
         });
 
-        queryVideo(queueEntry);
+        queryMetadata(queueEntry);
 
         QueueCategoryEnum category = queueEntry.getCurrentQueueCategory();
         if (category != null) {
@@ -642,7 +647,7 @@ public class DownloadManager implements IEvent {
             if (currentlyQueryingCount.get() < 2) {
                 QueueEntry entry = metadataQueryQueue.poll();
 
-                submitQueryVideoTask(entry);
+                submitQueryMetadataTask(entry);
             }
         }
 
@@ -792,7 +797,7 @@ public class DownloadManager implements IEvent {
         }
     }
 
-    private void queryVideo(QueueEntry queueEntry) {
+    private void queryMetadata(QueueEntry queueEntry) {
         if (!main.getConfig().isQueryMetadata() || queueEntry.getQueried().get()) {
             if (queueEntry.getDownloadStatus() == DownloadStatusEnum.QUERYING) {
                 queueEntry.updateStatus(DownloadStatusEnum.QUEUED,
@@ -805,7 +810,7 @@ public class DownloadManager implements IEvent {
         metadataQueryQueue.offer(queueEntry);
     }
 
-    private void submitQueryVideoTask(QueueEntry queueEntry) {
+    private void submitQueryMetadataTask(QueueEntry queueEntry) {
         currentlyQueryingCount.incrementAndGet();
 
         main.getGlobalThreadPool().submitWithPriority(() -> {
@@ -815,7 +820,7 @@ public class DownloadManager implements IEvent {
                 }
 
                 for (AbstractDownloader downloader : queueEntry.getDownloaders()) {
-                    if (downloader.tryQueryVideo(queueEntry)) {
+                    if (downloader.tryQueryMetadata(queueEntry)) {
                         break;
                     }
                 }

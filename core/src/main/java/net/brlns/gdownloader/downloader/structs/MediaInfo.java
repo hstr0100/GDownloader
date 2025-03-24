@@ -93,6 +93,13 @@ public class MediaInfo {
     @JsonIgnore
     private String base64EncodedThumbnail = "";
 
+    @JsonIgnore
+    public boolean isValid() {
+        // Not much usefulness to this if these are missing
+        return title != null && !title.isEmpty()
+            || thumbnail != null && !thumbnail.isEmpty();
+    }
+
     // TODO: implement
     @JsonIgnore
     @Nullable

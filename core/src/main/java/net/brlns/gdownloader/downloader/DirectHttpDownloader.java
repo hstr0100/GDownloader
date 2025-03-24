@@ -127,7 +127,7 @@ public class DirectHttpDownloader extends AbstractDownloader {
     }
 
     @Override
-    protected boolean tryQueryVideo(QueueEntry queueEntry) {
+    protected boolean tryQueryMetadata(QueueEntry queueEntry) {
         // TODO
         return false;
     }

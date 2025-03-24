@@ -49,7 +49,7 @@ public abstract class AbstractDownloader {
 
     protected abstract boolean canConsumeUrl(String inputUrl);
 
-    protected abstract boolean tryQueryVideo(QueueEntry queueEntry);
+    protected abstract boolean tryQueryMetadata(QueueEntry queueEntry);
 
     protected abstract DownloadResult tryDownload(QueueEntry entry) throws Exception;
 
