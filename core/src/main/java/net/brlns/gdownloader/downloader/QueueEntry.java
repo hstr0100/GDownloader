@@ -252,7 +252,7 @@ public class QueueEntry {
 
                 if (base64encoded.isEmpty()) {
                     mediaInfo.setBase64EncodedThumbnail(
-                        ImageUtils.bufferedImageToBase64(downscaledImage, "jpg"));
+                        ImageUtils.bufferedImageToBase64(downscaledImage, "png"));
                 }
 
                 mediaCard.setThumbnailAndDuration(downscaledImage, mediaInfo.getDuration());
@@ -291,7 +291,7 @@ public class QueueEntry {
         if (mediaInfo != null) {
             // Give priority to playlist titles
             if (mediaInfo.getPlaylistTitle() != null && !mediaInfo.getPlaylistTitle().isEmpty()) {
-                return mediaInfo.getPlaylistTitle();
+                return l10n("gui.playlist") + " " + mediaInfo.getPlaylistTitle();
             }
 
             if (mediaInfo.getTitle() != null && !mediaInfo.getTitle().isEmpty()) {
@@ -530,8 +530,6 @@ public class QueueEntry {
 
         entity.setCurrentDownloader(getCurrentDownloader());
         entity.setCurrentQueueCategory(getCurrentQueueCategory());
-        entity.setDownloadStatus(getDownloadStatus());
-        entity.setLastStatusMessage(getLastStatusMessage());
 
         entity.setDownloadStarted(getDownloadStarted().get());
         //entity.setCancelHook(getCancelHook().get());
@@ -551,6 +549,9 @@ public class QueueEntry {
         entity.setFinalMediaFilePaths(getFinalMediaFiles().stream()
             .map(File::getAbsolutePath)
             .collect(Collectors.toCollection(ArrayList::new)));
+
+        entity.setDownloadStatus(getDownloadStatus());
+        entity.setLastStatusMessage(getLastStatusMessage());
 
         entity.setErrorLog(getErrorLog().snapshotAsList());
         entity.setDownloadLog(getDownloadLog().snapshotAsList());
@@ -578,10 +579,6 @@ public class QueueEntry {
         queueEntry.setCurrentDownloader(entity.getCurrentDownloader());
         queueEntry.setCurrentQueueCategory(entity.getCurrentQueueCategory());
 
-        if (entity.getDownloadStatus() != null && entity.getLastStatusMessage() != null) {
-            queueEntry.updateStatus(entity.getDownloadStatus(), entity.getLastStatusMessage(), false);
-        }
-
         queueEntry.getDownloadStarted().set(entity.isDownloadStarted());
         //queueEntry.getCancelHook().set(entity.isCancelHook());
         queueEntry.getRunning().set(entity.isRunning());
@@ -598,6 +595,10 @@ public class QueueEntry {
 
         for (String path : entity.getFinalMediaFilePaths()) {
             queueEntry.getFinalMediaFiles().add(new File(path));
+        }
+
+        if (entity.getDownloadStatus() != null && entity.getLastStatusMessage() != null) {
+            queueEntry.updateStatus(entity.getDownloadStatus(), entity.getLastStatusMessage(), false);
         }
 
         queueEntry.getErrorLog().clear();

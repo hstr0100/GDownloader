@@ -26,11 +26,15 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.downloader.structs.MediaInfo;
 import net.brlns.gdownloader.util.URLUtils;
+
+import static net.brlns.gdownloader.lang.Language.l10n;
 
 /**
  * This class retrieves Spotify metadata by leveraging their oEmbed API
@@ -39,6 +43,14 @@ import net.brlns.gdownloader.util.URLUtils;
  */
 @Slf4j
 public class SpotifyMetadataExtractor {
+
+    private static final Map<String, String> SPECIAL_URLS = new HashMap<>(3);
+
+    static {
+        SPECIAL_URLS.put("spotify.com/collection/tracks", l10n("spotify.liked_songs"));
+        SPECIAL_URLS.put("spotify.com/collection/playlists", l10n("spotify.all_user_saved_playlists"));
+        SPECIAL_URLS.put("spotify.com/collection/albums", l10n("spotify.all_user_saved_albums"));
+    }
 
     private static final String OEMBED_API_URL = "https://open.spotify.com/oembed?url=";
 
@@ -52,6 +64,11 @@ public class SpotifyMetadataExtractor {
     public static MediaInfo queryMetadata(String spotifyUrl) throws Exception {
         if (!spotifyUrl.contains("spotify.com/")) {
             throw new IllegalArgumentException("URL must be a valid Spotify URL");
+        }
+
+        MediaInfo specialMediaInfo = getMediaInfoIfSpecialUrl(spotifyUrl);
+        if (specialMediaInfo != null) {
+            return specialMediaInfo;
         }
 
         String encodedUrl = URLEncoder.encode(spotifyUrl, StandardCharsets.UTF_8.toString());
@@ -79,28 +96,49 @@ public class SpotifyMetadataExtractor {
         return convertToMediaInfo(dto, trackId);
     }
 
+    @Nullable
+    private static MediaInfo getMediaInfoIfSpecialUrl(String urlIn) {
+        String specialUrlName = SPECIAL_URLS.keySet().stream()
+            .filter(urlIn::contains)
+            .findFirst()
+            .map(SPECIAL_URLS::get)
+            .orElse(null);
+
+        if (specialUrlName != null) {
+            MediaInfo mediaInfo = new MediaInfo();
+            mediaInfo.setChannelId("Spotify");
+            mediaInfo.setThumbnail("https://storage.googleapis.com/pr-newsroom-wp/1/2023/05/Spotify_Primary_Logo_RGB_Green.png");
+            mediaInfo.setPlaylistTitle(specialUrlName);
+            mediaInfo.setTitle(specialUrlName);
+
+            return mediaInfo;
+        }
+
+        return null;
+    }
+
     private static MediaInfo convertToMediaInfo(SpotifyOEmbedDTO response, @Nullable String trackId) {
-        MediaInfo data = new MediaInfo();
+        MediaInfo mediaInfo = new MediaInfo();
 
         if (trackId != null) {
-            data.setId(trackId);
+            mediaInfo.setId(trackId);
         }
 
         if (response.getTitle() != null) {
             String title = response.getTitle();
             int dashIndex = title.indexOf(" - ");
             if (dashIndex != -1) {
-                data.setChannelId(title.substring(0, dashIndex).trim());
+                mediaInfo.setChannelId(title.substring(0, dashIndex).trim());
             }
 
-            data.setTitle(title);
+            mediaInfo.setTitle(title);
         }
 
-        data.setThumbnail(response.getThumbnailUrl());
-        data.setWidth(response.getWidth());
-        data.setHeight(response.getHeight());
+        mediaInfo.setThumbnail(response.getThumbnailUrl());
+        mediaInfo.setWidth(response.getWidth());
+        mediaInfo.setHeight(response.getHeight());
 
-        return data;
+        return mediaInfo;
     }
 
     //in: https://open.spotify.com/track/0heJlRkloNhkrBU9ROnM9Y?si=7d802b22d6084c23
