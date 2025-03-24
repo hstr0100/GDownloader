@@ -91,15 +91,13 @@ public class SpotifyMetadataExtractor {
         //log.info(body);
         SpotifyOEmbedDTO dto = GDownloader.OBJECT_MAPPER.readValue(body, SpotifyOEmbedDTO.class);
 
-        String trackId = URLUtils.getSpotifyTrackId(spotifyUrl);
-
-        return convertToMediaInfo(dto, trackId);
+        return convertToMediaInfo(dto, spotifyUrl);
     }
 
     @Nullable
-    private static MediaInfo getMediaInfoIfSpecialUrl(String urlIn) {
+    private static MediaInfo getMediaInfoIfSpecialUrl(String spotifyUrl) {
         String specialUrlName = SPECIAL_URLS.keySet().stream()
-            .filter(urlIn::contains)
+            .filter(spotifyUrl::contains)
             .findFirst()
             .map(SPECIAL_URLS::get)
             .orElse(null);
@@ -117,9 +115,10 @@ public class SpotifyMetadataExtractor {
         return null;
     }
 
-    private static MediaInfo convertToMediaInfo(SpotifyOEmbedDTO response, @Nullable String trackId) {
+    private static MediaInfo convertToMediaInfo(SpotifyOEmbedDTO response, String spotifyUrl) {
         MediaInfo mediaInfo = new MediaInfo();
 
+        String trackId = URLUtils.getSpotifyTrackId(spotifyUrl);
         if (trackId != null) {
             mediaInfo.setId(trackId);
         }
@@ -132,6 +131,10 @@ public class SpotifyMetadataExtractor {
             }
 
             mediaInfo.setTitle(title);
+
+            if (isPlaylist(spotifyUrl)) {
+                mediaInfo.setPlaylistTitle(title);
+            }
         }
 
         mediaInfo.setThumbnail(response.getThumbnailUrl());
@@ -139,6 +142,11 @@ public class SpotifyMetadataExtractor {
         mediaInfo.setHeight(response.getHeight());
 
         return mediaInfo;
+    }
+
+    private static boolean isPlaylist(String spotifyUrl) {
+        return spotifyUrl.contains("spotify.com/album/")
+            || spotifyUrl.contains("spotify.com/playlist/");
     }
 
     //in: https://open.spotify.com/track/0heJlRkloNhkrBU9ROnM9Y?si=7d802b22d6084c23

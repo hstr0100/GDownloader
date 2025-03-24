@@ -526,10 +526,16 @@ public class QueueEntry {
 
         entity.getDownloaderBlacklist().addAll(getDownloaderBlacklist());
 
+        if (getMediaInfo() != null) {
+            entity.setMediaInfo(getMediaInfo().toEntity(getDownloadId()));
+        }
+
         entity.setForcedDownloader(getForcedDownloader());
 
         entity.setCurrentDownloader(getCurrentDownloader());
         entity.setCurrentQueueCategory(getCurrentQueueCategory());
+        entity.setDownloadStatus(getDownloadStatus());
+        entity.setLastStatusMessage(getLastStatusMessage());
 
         entity.setDownloadStarted(getDownloadStarted().get());
         //entity.setCancelHook(getCancelHook().get());
@@ -538,10 +544,6 @@ public class QueueEntry {
         entity.setRetryCounter(getRetryCounter().get());
         entity.setQueried(getQueried().get());
 
-        if (getMediaInfo() != null) {
-            entity.setMediaInfo(getMediaInfo().toEntity(getDownloadId()));
-        }
-
         if (getTmpDirectory() != null) {
             entity.setTmpDirectoryPath(getTmpDirectory().getAbsolutePath());
         }
@@ -549,9 +551,6 @@ public class QueueEntry {
         entity.setFinalMediaFilePaths(getFinalMediaFiles().stream()
             .map(File::getAbsolutePath)
             .collect(Collectors.toCollection(ArrayList::new)));
-
-        entity.setDownloadStatus(getDownloadStatus());
-        entity.setLastStatusMessage(getLastStatusMessage());
 
         entity.setErrorLog(getErrorLog().snapshotAsList());
         entity.setDownloadLog(getDownloadLog().snapshotAsList());
@@ -575,9 +574,17 @@ public class QueueEntry {
             queueEntry.blackListDownloader(downloaderId);
         }
 
+        if (entity.getMediaInfo() != null) {
+            queueEntry.setMediaInfo(MediaInfo.fromEntity(entity.getMediaInfo()));
+        }
+
         queueEntry.setForcedDownloader(entity.getForcedDownloader());
         queueEntry.setCurrentDownloader(entity.getCurrentDownloader());
         queueEntry.setCurrentQueueCategory(entity.getCurrentQueueCategory());
+
+        if (entity.getDownloadStatus() != null && entity.getLastStatusMessage() != null) {
+            queueEntry.updateStatus(entity.getDownloadStatus(), entity.getLastStatusMessage(), false);
+        }
 
         queueEntry.getDownloadStarted().set(entity.isDownloadStarted());
         //queueEntry.getCancelHook().set(entity.isCancelHook());
@@ -585,20 +592,12 @@ public class QueueEntry {
         queueEntry.getRetryCounter().set(entity.getRetryCounter());
         queueEntry.getQueried().set(entity.isQueried());
 
-        if (entity.getMediaInfo() != null) {
-            queueEntry.setMediaInfo(MediaInfo.fromEntity(entity.getMediaInfo()));
-        }
-
         if (entity.getTmpDirectoryPath() != null && !entity.getTmpDirectoryPath().isEmpty()) {
             queueEntry.setTmpDirectory(new File(entity.getTmpDirectoryPath()));
         }
 
         for (String path : entity.getFinalMediaFilePaths()) {
             queueEntry.getFinalMediaFiles().add(new File(path));
-        }
-
-        if (entity.getDownloadStatus() != null && entity.getLastStatusMessage() != null) {
-            queueEntry.updateStatus(entity.getDownloadStatus(), entity.getLastStatusMessage(), false);
         }
 
         queueEntry.getErrorLog().clear();
