@@ -137,21 +137,15 @@ public final class URLUtils {
     }
 
     @Nullable
-    public static String getSpotifyTrackId(String spotifyUrl) {
-        Pattern pattern = Pattern.compile("https://open\\.spotify\\.com/track/([a-zA-Z0-9]+)");
+    public static String getSpotifyTrackId(@NonNull String spotifyUrl) {
+        Pattern pattern = Pattern.compile(
+            "https://open\\.spotify\\.com/(album|playlist|artist|track)/([a-zA-Z0-9]+)(/?|\\?.*)?",
+            Pattern.CASE_INSENSITIVE);
+
         Matcher matcher = pattern.matcher(spotifyUrl);
 
         if (matcher.find()) {
-            return matcher.group(1);
-        }
-
-        int questionMarkIndex = spotifyUrl.indexOf('?');
-        if (questionMarkIndex > 0) {
-            String urlWithoutParams = spotifyUrl.substring(0, questionMarkIndex);
-            String[] parts = urlWithoutParams.split("/");
-            if (parts.length > 0) {
-                return parts[parts.length - 1];
-            }
+            return matcher.group(2);
         }
 
         return null;

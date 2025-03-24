@@ -146,6 +146,7 @@ public class SpotifyMetadataExtractor {
 
     private static boolean isPlaylist(String spotifyUrl) {
         return spotifyUrl.contains("spotify.com/album/")
+            || spotifyUrl.contains("spotify.com/artist/")
             || spotifyUrl.contains("spotify.com/playlist/");
     }
 
