@@ -70,7 +70,8 @@ public class OEmbedProviders {
                 HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
                 if (response.statusCode() == 200) {
                     providers = GDownloader.OBJECT_MAPPER.readValue(response.body(),
-                        GDownloader.OBJECT_MAPPER.getTypeFactory().constructCollectionType(List.class, OEmbedMetadataExtractor.Provider.class));
+                        GDownloader.OBJECT_MAPPER.getTypeFactory().constructCollectionType(
+                            List.class, OEmbedMetadataExtractor.Provider.class));
 
                     saveProvidersToCache(response.body());
 
@@ -111,7 +112,8 @@ public class OEmbedProviders {
         try {
             String fileContent = Files.readString(filePath);
             providers = GDownloader.OBJECT_MAPPER.readValue(fileContent,
-                GDownloader.OBJECT_MAPPER.getTypeFactory().constructCollectionType(List.class, OEmbedMetadataExtractor.Provider.class));
+                GDownloader.OBJECT_MAPPER.getTypeFactory().constructCollectionType(
+                    List.class, OEmbedMetadataExtractor.Provider.class));
             log.info("Loaded {} oEmbed providers from cache", providers.size());
 
             return true;
