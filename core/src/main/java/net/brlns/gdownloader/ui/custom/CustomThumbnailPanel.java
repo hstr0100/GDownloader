@@ -102,10 +102,14 @@ public class CustomThumbnailPanel extends JPanel {
 
         image = imageIn;
 
-        durationText = String.format("%d:%02d:%02d",
-            durationIn / 3600,
-            (durationIn % 3600) / 60,
-            durationIn % 60);
+        if (durationIn == 0) {
+            durationText = null;
+        } else {
+            durationText = String.format("%d:%02d:%02d",
+                durationIn / 3600,
+                (durationIn % 3600) / 60,
+                durationIn % 60);
+        }
 
         revalidate();
         repaint();
