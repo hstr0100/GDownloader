@@ -485,6 +485,11 @@ public class YtDlpDownloader extends AbstractDownloader {
                 log.debug("[{}] - {}", entry.getDownloadId(), lastOutput);
             }
 
+            if (lastOutput.contains("Sleeping") && lastOutput.contains("...")) {
+                entry.updateStatus(DownloadStatusEnum.WAITING, lastOutput);
+                return;
+            }
+
             if (entry.getDownloadStarted().get()) {
                 entry.updateStatus(DownloadStatusEnum.PROCESSING, lastOutput);
             } else {

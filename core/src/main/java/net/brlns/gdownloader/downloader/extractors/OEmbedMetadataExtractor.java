@@ -7,8 +7,6 @@ import java.net.URLEncoder;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
 import java.util.regex.Pattern;
 import lombok.AllArgsConstructor;
@@ -17,6 +15,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
+import net.brlns.gdownloader.downloader.extractors.OEmbedProviders.Endpoint;
+import net.brlns.gdownloader.downloader.extractors.OEmbedProviders.Provider;
 import net.brlns.gdownloader.downloader.structs.MediaInfo;
 import net.brlns.gdownloader.util.URLUtils;
 
@@ -154,34 +154,6 @@ public class OEmbedMetadataExtractor implements IMetadataExtractor {
         }
 
         return mediaInfo;
-    }
-
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    public static class Provider {
-
-        @JsonProperty("provider_name")
-        private String providerName = "";
-        @JsonProperty("provider_url")
-        private String providerUrl = "";
-
-        private List<Endpoint> endpoints = new ArrayList<>();
-    }
-
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    public static class Endpoint {
-
-        private List<String> schemes = new ArrayList<>();
-        private String url = "";
-        private List<String> formats = new ArrayList<>();
-
-        @JsonProperty("discovery")
-        private boolean supportsDiscovery;
     }
 
     @Data

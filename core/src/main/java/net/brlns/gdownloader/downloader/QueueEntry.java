@@ -363,6 +363,10 @@ public class QueueEntry {
                     mediaCard.setPercentage(100);
                     mediaCard.setProgressBarTextAndColors(status.getDisplayName(), Color.ORANGE);
                 }
+                case WAITING -> {
+                    mediaCard.setPercentage(100);
+                    mediaCard.setProgressBarTextAndColors(status.getDisplayName(), new Color(30, 136, 229));
+                }
                 case PREPARING, QUEUED, STOPPED -> {
                     mediaCard.setPercentage(100);
                     mediaCard.setProgressBarTextAndColors(status.getDisplayName(), Color.GRAY);

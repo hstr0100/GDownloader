@@ -368,7 +368,7 @@ public class GenericFilter extends AbstractUrlFilter {
                                 "--format",
                                 quality.getAudioContainer().getValue(),
                                 "--bitrate",
-                                Math.clamp(8, 320, audioBitrate.getValue()) + "k"
+                                Math.clamp(audioBitrate.getValue(), 8, 320) + "k"
                             ));
 
                             if (!isEmbedThumbnailAndMetadata()) {

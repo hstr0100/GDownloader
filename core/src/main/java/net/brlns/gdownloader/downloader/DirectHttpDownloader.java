@@ -77,7 +77,6 @@ public class DirectHttpDownloader extends AbstractDownloader {
     private static final String PREFIX = "[direct-http] ";
 
     private static final int BUFFER_SIZE = 8192;
-    private static final int MAX_CHUNK_RETRIES = 5;
 
     private final ExecutorService chunkThreadPool = Executors.newVirtualThreadPerTaskExecutor();
 
@@ -451,7 +450,9 @@ public class DirectHttpDownloader extends AbstractDownloader {
 
         Supplier<Boolean> alive = () -> isAlive(chunkData.getQueueEntry()) && !chunkData.getAbortHook().get();
 
-        while (attempt < MAX_CHUNK_RETRIES && !success && alive.get()) {
+        int chunkRetries = Math.clamp(main.getConfig().getMaxFragmentRetries(), 1, 50);
+
+        while (attempt < chunkRetries && !success && alive.get()) {
             HttpURLConnection connection = null;
             try {
                 connection = (HttpURLConnection)chunkData.getFileUrl().openConnection(getProxySettings());
@@ -535,9 +536,9 @@ public class DirectHttpDownloader extends AbstractDownloader {
                 attempt++;
                 log.error("Error on attempt {}: {}", attempt, e.getMessage());
 
-                if (attempt == MAX_CHUNK_RETRIES) {
+                if (attempt == chunkRetries) {
                     chunkData.getAbortHook().set(true);
-                    throw new IOException("Failed to download file after " + MAX_CHUNK_RETRIES + " attempts: " + e.getMessage(), e);
+                    throw new IOException("Failed to download file after " + chunkRetries + " attempts: " + e.getMessage(), e);
                 }
             } finally {
                 if (connection != null) {

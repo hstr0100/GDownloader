@@ -26,6 +26,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import lombok.NonNull;
 import net.brlns.gdownloader.GDownloader;
 
 /**
@@ -35,8 +36,8 @@ public class EventDispatcher {
 
     private static final Map<Class<?>, List<Handler>> handlers = new ConcurrentHashMap<>();
 
-    public static <E extends IEvent> LambdaHandler<E> register(Class<E> eventType, Consumer<E> listener) {
-        if (eventType == null || !IEvent.class.isAssignableFrom(eventType)) {
+    public static <E extends IEvent> LambdaHandler<E> register(@NonNull Class<E> eventType, Consumer<E> listener) {
+        if (!IEvent.class.isAssignableFrom(eventType)) {
             throw new IllegalArgumentException("Consumer must handle a type that implements IEvent");
         }
 
@@ -47,9 +48,9 @@ public class EventDispatcher {
         return handler;
     }
 
-    public static <E extends IEvent> void unregister(LambdaHandler<E> handler) {
+    public static <E extends IEvent> void unregister(@NonNull LambdaHandler<E> handler) {
         Class<E> eventType = handler.getEventType();
-        if (eventType == null || !IEvent.class.isAssignableFrom(eventType)) {
+        if (!IEvent.class.isAssignableFrom(eventType)) {
             throw new IllegalArgumentException("Handler must handle a type that implements IEvent");
         }
 
@@ -144,6 +145,7 @@ public class EventDispatcher {
                 }
             }
         };
+
         if (async) {
             CompletableFuture.runAsync(eventRunnable);
         } else {

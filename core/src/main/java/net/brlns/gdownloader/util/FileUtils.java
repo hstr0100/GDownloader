@@ -24,6 +24,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
+import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
 import org.slf4j.helpers.FormattingTuple;
@@ -76,11 +77,7 @@ public final class FileUtils {
         }
     }
 
-    public static Path ensureUniqueFileName(Path path) {
-        if (path == null) {
-            throw new IllegalArgumentException("Input path cannot be null.");
-        }
-
+    public static Path ensureUniqueFileName(@NonNull Path path) {
         Path directory = (path.getParent() != null) ? path.getParent() : Paths.get("");
         String fileName = path.getFileName().toString();
 

@@ -16,6 +16,8 @@
  */
 package net.brlns.gdownloader.downloader.extractors;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.io.*;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -27,7 +29,10 @@ import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import lombok.AllArgsConstructor;
+import lombok.Data;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.util.URLUtils;
@@ -44,7 +49,7 @@ public class OEmbedProviders {
     private final HttpClient httpClient;
 
     @Getter
-    private List<OEmbedMetadataExtractor.Provider> providers = new ArrayList<>();
+    private List<Provider> providers = new ArrayList<>();
 
     public OEmbedProviders() {
         httpClient = HttpClient.newBuilder()
@@ -71,7 +76,7 @@ public class OEmbedProviders {
                 if (response.statusCode() == 200) {
                     providers = GDownloader.OBJECT_MAPPER.readValue(response.body(),
                         GDownloader.OBJECT_MAPPER.getTypeFactory().constructCollectionType(
-                            List.class, OEmbedMetadataExtractor.Provider.class));
+                            List.class, Provider.class));
 
                     saveProvidersToCache(response.body());
 
@@ -113,7 +118,7 @@ public class OEmbedProviders {
             String fileContent = Files.readString(filePath);
             providers = GDownloader.OBJECT_MAPPER.readValue(fileContent,
                 GDownloader.OBJECT_MAPPER.getTypeFactory().constructCollectionType(
-                    List.class, OEmbedMetadataExtractor.Provider.class));
+                    List.class, Provider.class));
             log.info("Loaded {} oEmbed providers from cache", providers.size());
 
             return true;
@@ -126,5 +131,33 @@ public class OEmbedProviders {
 
     private Path getProvidersCachePath() {
         return Path.of(GDownloader.getWorkDirectory().getAbsolutePath(), "oembed_providers.json");
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class Provider {
+
+        @JsonProperty("provider_name")
+        private String providerName = "";
+        @JsonProperty("provider_url")
+        private String providerUrl = "";
+
+        private List<Endpoint> endpoints = new ArrayList<>();
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class Endpoint {
+
+        private List<String> schemes = new ArrayList<>();
+        private String url = "";
+        private List<String> formats = new ArrayList<>();
+
+        @JsonProperty("discovery")
+        private boolean supportsDiscovery;
     }
 }

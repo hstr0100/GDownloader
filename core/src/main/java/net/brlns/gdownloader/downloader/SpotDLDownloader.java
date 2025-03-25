@@ -151,7 +151,7 @@ public class SpotDLDownloader extends AbstractDownloader {
         // Lets not spam the logs for every download.
         if (cookieJar == null && !FlagUtil.isSet(notificationFlags, NOTIFY_COOKIE_JAR)) {
             log.info("""
-                If you have an YouTube Music Premium account, consider setting up a cookies.txt file at:
+                If you have a YouTube Music Premium account, consider setting up a cookies.txt file at:
                     {}
                 for better quality downloads (256kbps vs 128kbps). Please visit
                     https://github.com/spotDL/spotify-downloader/blob/master/docs/usage.md#youtube-music-premium
@@ -205,6 +205,8 @@ public class SpotDLDownloader extends AbstractDownloader {
             boolean supported = getDownloadTypes().contains(type);
 
             if (!supported || type != SPOTIFY
+                // TODO: Verify if it makes sense to respect the audio toggle when the platform is strictly audio-only.
+                //|| !main.getConfig().isDownloadAudio()
                 || !main.getConfig().isSpotDLEnabled()) {
                 continue;
             }

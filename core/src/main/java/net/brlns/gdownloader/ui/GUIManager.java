@@ -567,6 +567,9 @@ public final class GUIManager {
             // Why not add this to the same context menu as "Paste URLs," you ask?
             // Well, it would be quite easy to click it accidentally, which would be quite annoying.
             // Hiding it in the settings button seems like a good compromise to me.
+            //
+            // If the system tray is not initialized, it is still possible to bring
+            // the window back up by launching another instance. No sanity check needed here.
             rightClickMenu.put(l10n("gui.minimize_to_system_tray"),
                 new RunnableMenuEntry(() -> closeAppWindow()));
 

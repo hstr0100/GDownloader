@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import lombok.Getter;
+import lombok.NonNull;
 import lombok.Setter;
 import net.brlns.gdownloader.downloader.structs.MediaInfo;
 
@@ -41,17 +42,13 @@ public final class MetadataManager {
         defaultExtractor = new OEmbedMetadataExtractor();
     }
 
-    public void registerExtractor(IMetadataExtractor extractor) {
-        if (extractor == null) {
-            throw new IllegalArgumentException("Extractor cannot be null");
-        }
-
+    public void registerExtractor(@NonNull IMetadataExtractor extractor) {
         extractors.add(extractor);
     }
 
-    public Optional<MediaInfo> fetchMetadata(String url) throws Exception {
-        if (url == null || url.trim().isEmpty()) {
-            throw new IllegalArgumentException("URL cannot be null or empty");
+    public Optional<MediaInfo> fetchMetadata(@NonNull String url) throws Exception {
+        if (url.trim().isEmpty()) {
+            throw new IllegalArgumentException("URL cannot be empty");
         }
 
         // Find the first extractor that can consume this URL directly
