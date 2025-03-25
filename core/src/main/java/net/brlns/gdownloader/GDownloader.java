@@ -125,7 +125,6 @@ import static net.brlns.gdownloader.lang.Language.*;
 // TODO Fix: missing play controls after restart
 // TODO Move config files, downloaders and their respective data to subfolders
 // TODO ffmpeg transcoding settings
-// TODO reset downloads without reordering the queue internally
 /**
  * GDownloader - GUI wrapper for yt-dlp
  *

@@ -308,7 +308,20 @@ public class DownloadManager implements IEvent {
                         filteredUrl = filterPlaylist(inputUrl);
 
                         if (filteredUrl != null) {
-                            capturedPlaylists.add(filteredUrl);
+                            if (!capturedPlaylists.add(filteredUrl)) {
+                                String video = filterVideo(inputUrl);
+
+                                if (main.getConfig().isDebugMode()) {
+                                    log.debug("Individual video url is {}", video);
+                                }
+
+                                if (video != null && video.contains("?v=") && !video.contains("list=")) {
+                                    return captureUrl(video, force);
+                                } else {
+                                    future.complete(false);
+                                    return future;
+                                }
+                            }
                         }
 
                         break;
@@ -712,7 +725,7 @@ public class DownloadManager implements IEvent {
     }
 
     private void enqueueLast(QueueEntry entry) {
-        dequeueFromAll(entry);
+        dequeueFromAll(entry, QUEUED);
 
         entry.removeRightClick(_restartKey);
         entry.addRightClick(_forceStartKey,
@@ -727,7 +740,7 @@ public class DownloadManager implements IEvent {
     }
 
     private void enqueueFirst(QueueEntry entry) {
-        dequeueFromAll(entry);
+        dequeueFromAll(entry, QUEUED);
 
         entry.removeRightClick(_restartKey);
         entry.addRightClick(_forceStartKey,
@@ -742,9 +755,17 @@ public class DownloadManager implements IEvent {
     }
 
     private void dequeueFromAll(QueueEntry entry) {
+        dequeueFromAll(entry, null);
+    }
+
+    private void dequeueFromAll(QueueEntry entry, @Nullable QueueCategoryEnum except) {
         boolean success = false;
-        for (QueueCategoryEnum cat : QueueCategoryEnum.values()) {
-            if (dequeue(cat, entry, false)) {
+        for (QueueCategoryEnum category : QueueCategoryEnum.values()) {
+            if (category == except) {
+                continue;
+            }
+
+            if (dequeue(category, entry, false)) {
                 success = true;
             }
         }
