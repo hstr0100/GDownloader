@@ -867,6 +867,14 @@ public class SettingsPanel {
 
         addLabel(panel, gbcPanel, "settings.downloader.yt_dlp");
 
+        // https://github.com/yt-dlp/yt-dlp/issues/12746
+        addCheckBox(panel, gbcPanel,
+            "settings.missing_formats_workaround",
+            settings::isMissingFormatsWorkaround,
+            settings::setMissingFormatsWorkaround,
+            false
+        );
+
         addComboBox(panel, gbcPanel,
             "settings.playlist_download_option",
             PlayListOptionEnum.class,

@@ -466,6 +466,11 @@ public class YtDlpDownloader extends AbstractDownloader {
     private void processProgress(QueueEntry entry, String lastOutput) {
         double lastPercentage = entry.getMediaCard().getPercentage();
 
+        if (lastOutput.contains("Sleeping") && lastOutput.contains("...")) {
+            entry.updateStatus(DownloadStatusEnum.WAITING, lastOutput);
+            return;
+        }
+
         if (lastOutput.contains("[download]") && !lastOutput.contains("Destination:")) {
             String[] parts = lastOutput.split("\\s+");
             for (String part : parts) {
@@ -483,11 +488,6 @@ public class YtDlpDownloader extends AbstractDownloader {
         } else {
             if (main.getConfig().isDebugMode()) {
                 log.debug("[{}] - {}", entry.getDownloadId(), lastOutput);
-            }
-
-            if (lastOutput.contains("Sleeping") && lastOutput.contains("...")) {
-                entry.updateStatus(DownloadStatusEnum.WAITING, lastOutput);
-                return;
             }
 
             if (entry.getDownloadStarted().get()) {

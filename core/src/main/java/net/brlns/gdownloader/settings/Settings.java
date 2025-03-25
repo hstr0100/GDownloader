@@ -65,6 +65,9 @@ public class Settings {
     @JsonProperty("RestoreSessionAfterRestart")
     private boolean restoreSessionAfterRestart = true;
 
+    @JsonProperty("MissingFormatsWorkaround")
+    private boolean missingFormatsWorkaround = false;
+
     @Deprecated
     @JsonProperty("ReadCookies")
     private boolean readCookies = false;

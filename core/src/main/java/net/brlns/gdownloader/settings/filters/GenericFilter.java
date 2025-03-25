@@ -127,11 +127,13 @@ public class GenericFilter extends AbstractUrlFilter {
                             ));
                         }
 
+                        boolean cookiesRead = false;
                         if (config.isReadCookiesFromBrowser()) {
                             arguments.addAll(List.of(
                                 "--cookies-from-browser",
                                 manager.getMain().getBrowserForCookies().getName()
                             ));
+                            cookiesRead = true;
                         } else {
                             File cookieJar = downloader.getCookieJarFile();
                             if (cookieJar != null) {
@@ -139,7 +141,15 @@ public class GenericFilter extends AbstractUrlFilter {
                                     "--cookies",
                                     cookieJar.getAbsolutePath()
                                 ));
+                                cookiesRead = true;
                             }
+                        }
+
+                        if (cookiesRead && manager.getMain().getConfig().isMissingFormatsWorkaround()) {
+                            arguments.addAll(List.of(
+                                "--extractor-args",
+                                "youtube:player_client=web_safari"
+                            ));
                         }
 
                         if (GDownloader.isWindows()) {
