@@ -555,12 +555,32 @@ public final class GUIManager {
             buttonPanel.add(clearQueueButton);
         }
 
-        buttonPanel.add(createButton(
-            loadIcon("/assets/settings.png", ICON),
-            loadIcon("/assets/settings.png", ICON_HOVER),
-            "settings.sidebar_title",
-            e -> displaySettingsPanel()
-        ));
+        {
+            JButton settingsButton = createButton(
+                loadIcon("/assets/settings.png", ICON),
+                loadIcon("/assets/settings.png", ICON_HOVER),
+                "settings.sidebar_title",
+                e -> displaySettingsPanel()
+            );
+
+            RightClickMenuEntries rightClickMenu = new RightClickMenuEntries();
+            // Why not add this to the same context menu as "Paste URLs," you ask?
+            // Well, it would be quite easy to click it accidentally, which would be quite annoying.
+            // Hiding it in the settings button seems like a good compromise to me.
+            rightClickMenu.put(l10n("gui.minimize_to_system_tray"),
+                new RunnableMenuEntry(() -> closeAppWindow()));
+
+            settingsButton.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseClicked(MouseEvent e) {
+                    if (SwingUtilities.isRightMouseButton(e)) {
+                        showRightClickMenu(settingsButton, rightClickMenu, e.getX(), e.getY());
+                    }
+                }
+            });
+
+            buttonPanel.add(settingsButton);
+        }
 
         GridBagConstraints gbcButtons = new GridBagConstraints();
         gbcButtons.gridx = 1;
