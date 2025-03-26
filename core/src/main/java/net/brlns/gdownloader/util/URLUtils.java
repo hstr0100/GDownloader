@@ -38,6 +38,18 @@ public final class URLUtils {
     public static String GLOBAL_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36";
 
     @Nullable
+    public static String getHostName(String urlIn) {
+        try {
+            URL url = new URI(urlIn).toURL();
+            return url.getHost();
+        } catch (Exception e) {
+            log.debug("Invalid url {}", urlIn, e.getMessage());
+        }
+
+        return null;
+    }
+
+    @Nullable
     public static String getVideoId(String youtubeUrl) {
         try {
             URL url = new URI(youtubeUrl).toURL();
@@ -50,7 +62,7 @@ public final class URLUtils {
                 }
             }
         } catch (Exception e) {
-            log.debug("Invalid url {}", youtubeUrl, e.getLocalizedMessage());
+            log.debug("Invalid url {}", youtubeUrl, e.getMessage());
         }
 
         return null;
@@ -81,7 +93,7 @@ public final class URLUtils {
 
             return youtubeUrl;
         } catch (MalformedURLException | URISyntaxException e) {
-            log.debug("Invalid url {} {}", youtubeUrl, e.getLocalizedMessage());
+            log.debug("Invalid url {} {}", youtubeUrl, e.getMessage());
         }
 
         return null;

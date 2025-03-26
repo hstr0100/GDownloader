@@ -50,6 +50,15 @@ public class MediaInfo {
     @JsonProperty("playlist_title")
     private String playlistTitle = "";
 
+    @JsonProperty("extractor")
+    private String extractor = "";
+
+    @JsonProperty("extractor_key")
+    private String extractorKey = "";
+
+    @JsonProperty("host_display_name")
+    private String hostDisplayName = "";
+
     @JsonProperty("thumbnail")
     private String thumbnail = "";
 

@@ -141,6 +141,10 @@ public class OEmbedMetadataExtractor implements IMetadataExtractor {
             mediaInfo.setTitle(title);
         }
 
+        if (response.getProviderName() != null) {
+            mediaInfo.setHostDisplayName(response.getProviderName());
+        }
+
         if (response.getThumbnailUrl() != null) {
             mediaInfo.setThumbnail(response.getThumbnailUrl());
         }

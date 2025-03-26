@@ -1069,7 +1069,7 @@ public final class GDownloader {
         if (displayToUser && instance != null) {
             instance.getGuiManager().showMessage(
                 l10n("gui.error_popup_title"),
-                l10n("gui.error_popup", e.getLocalizedMessage()),
+                l10n("gui.error_popup", e.getClass().getSimpleName(), e.getMessage()),
                 4000,
                 MessageType.ERROR,
                 true);

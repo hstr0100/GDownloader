@@ -1105,7 +1105,7 @@ public class DownloadManager implements IEvent {
             } catch (Exception e) {
                 log.error("Failed to download", e);
 
-                entry.updateStatus(DownloadStatusEnum.FAILED, e.getLocalizedMessage());
+                entry.updateStatus(DownloadStatusEnum.FAILED, e.getMessage());
 
                 offerTo(FAILED, entry);
 

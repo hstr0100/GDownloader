@@ -50,6 +50,7 @@ import net.brlns.gdownloader.downloader.structs.MediaInfo;
 import net.brlns.gdownloader.persistence.entity.QueueEntryEntity;
 import net.brlns.gdownloader.settings.enums.IContainerEnum;
 import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
+import net.brlns.gdownloader.settings.filters.GenericFilter;
 import net.brlns.gdownloader.ui.GUIManager;
 import net.brlns.gdownloader.ui.MediaCard;
 import net.brlns.gdownloader.ui.menu.IMenuEntry;
@@ -60,11 +61,13 @@ import net.brlns.gdownloader.ui.menu.SingleActionMenuEntry;
 import net.brlns.gdownloader.util.DirectoryUtils;
 import net.brlns.gdownloader.util.ImageUtils;
 import net.brlns.gdownloader.util.StringUtils;
+import net.brlns.gdownloader.util.URLUtils;
 import net.brlns.gdownloader.util.collection.ConcurrentLinkedHashSet;
 
 import static net.brlns.gdownloader.downloader.enums.DownloadStatusEnum.*;
 import static net.brlns.gdownloader.lang.Language.*;
 import static net.brlns.gdownloader.util.StringUtils.notNullOrEmpty;
+import static net.brlns.gdownloader.util.StringUtils.nullOrEmpty;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -238,6 +241,22 @@ public class QueueEntry {
             logOutput("Playlist Title: " + mediaInfo.getPlaylistTitle());
         }
 
+        if (nullOrEmpty(mediaInfo.getHostDisplayName())) {
+            String displayName = Optional.ofNullable(
+                filter.getClass() == GenericFilter.class
+                ? URLUtils.getHostName(url)
+                : filter.getDisplayName()
+            ).map(host -> notNullOrEmpty(mediaInfo.getExtractorKey())
+                ? host + " [" + mediaInfo.getExtractorKey() + "]"
+                : host
+            ).orElse(notNullOrEmpty(mediaInfo.getExtractorKey())
+                ? mediaInfo.getExtractorKey()
+                : null
+            );
+
+            Optional.ofNullable(displayName).ifPresent(mediaInfo::setHostDisplayName);
+        }
+
         String base64encoded = mediaInfo.getBase64EncodedThumbnail();
 
         Optional<BufferedImage> optional = Optional.ofNullable(
@@ -321,6 +340,14 @@ public class QueueEntry {
         return Optional.empty();
     }
 
+    private String getHostDisplayName() {
+        if (mediaInfo != null && notNullOrEmpty(mediaInfo.getHostDisplayName())) {
+            return mediaInfo.getHostDisplayName();
+        } else {
+            return filter.getDisplayName();
+        }
+    }
+
     public void updateStatus(DownloadStatusEnum status, String text) {
         updateStatus(status, text, true);
     }
@@ -333,7 +360,7 @@ public class QueueEntry {
 
             lastStatusMessage = text;
 
-            String topText = filter.getDisplayName();
+            String topText = getHostDisplayName();
 
             if (status == DownloadStatusEnum.DOWNLOADING) {
                 downloadStarted.set(true);

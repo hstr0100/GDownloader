@@ -45,6 +45,15 @@ public class MediaInfoEntity implements Serializable {
     @Column(name = "playlist_title", length = 2048)
     private String playlistTitle;
 
+    @Column(name = "extractor", length = 256)
+    private String extractor;
+
+    @Column(name = "extractor_key", length = 256)
+    private String extractorKey;
+
+    @Column(name = "host_display_name", length = 2048)
+    private String hostDisplayName;
+
     @Column(name = "thumbnail", columnDefinition = "LONGVARCHAR")
     private String base64EncodedThumbnail;
 
@@ -90,8 +99,10 @@ public class MediaInfoEntity implements Serializable {
             + "downloadId=" + downloadId
             + ", id='" + id + '\''
             + ", title='" + title + '\''
+            + ", playlistTitle='" + playlistTitle + '\''
             + ", channelId='" + channelId + '\''
             + ", channelUrl='" + channelUrl + '\''
+            + ", hostDisplayName='" + hostDisplayName + '\''
             + ", duration=" + duration
             + ", viewCount=" + viewCount
             + ", uploadDate='" + uploadDate + '\''
