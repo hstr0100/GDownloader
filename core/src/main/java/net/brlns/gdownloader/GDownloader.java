@@ -68,6 +68,8 @@ import net.brlns.gdownloader.updater.*;
 import net.brlns.gdownloader.util.*;
 
 import static net.brlns.gdownloader.lang.Language.*;
+import static net.brlns.gdownloader.util.StringUtils.notNullOrEmpty;
+import static net.brlns.gdownloader.util.StringUtils.nullOrEmpty;
 
 // TODO media converter
 // TODO implement CD Ripper
@@ -699,11 +701,11 @@ public final class GDownloader {
         if (jarLocation != null) {
             String javaHome = System.getProperty("java.home");
 
-            if (javaHome == null || javaHome.isEmpty()) {
+            if (nullOrEmpty(javaHome)) {
                 javaHome = System.getenv("JAVA_HOME");
             }
 
-            if (javaHome != null && !javaHome.isEmpty()) {
+            if (notNullOrEmpty(javaHome)) {
                 if (!javaHome.endsWith(File.separator)) {
                     javaHome = javaHome + File.separator;
                 }

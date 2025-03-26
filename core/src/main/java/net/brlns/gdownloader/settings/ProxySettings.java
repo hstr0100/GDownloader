@@ -27,6 +27,8 @@ import java.net.Proxy;
 import lombok.Data;
 import net.brlns.gdownloader.settings.enums.ProxyTypeEnum;
 
+import static net.brlns.gdownloader.util.StringUtils.notNullOrEmpty;
+
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
@@ -60,7 +62,7 @@ public class ProxySettings {
 
         Proxy proxy = new Proxy(proxyType.getType(), new InetSocketAddress(host, port));
 
-        if (isNonEmptyString(username) && isNonEmptyString(password)) {
+        if (notNullOrEmpty(username) && notNullOrEmpty(password)) {
             Authenticator.setDefault(new Authenticator() {
                 @Override
                 protected PasswordAuthentication getPasswordAuthentication() {
@@ -83,7 +85,7 @@ public class ProxySettings {
 
         proxyUrl.append(proxyType.getProtocol()).append("://");
 
-        if (isNonEmptyString(username) && isNonEmptyString(password)) {
+        if (notNullOrEmpty(username) && notNullOrEmpty(password)) {
             proxyUrl.append(username).append(":").append(password).append("@");
         }
 
@@ -95,13 +97,8 @@ public class ProxySettings {
     @JsonIgnore
     public boolean isValid() {
         return proxyType != null && proxyType != ProxyTypeEnum.NO_PROXY
-            && isNonEmptyString(host) && (host.contains(".") || host.contains(":"))//TODO validate host
+            && notNullOrEmpty(host) && (host.contains(".") || host.contains(":"))//TODO validate host
             && port > 0 && port < Short.MAX_VALUE;
-    }
-
-    @JsonIgnore
-    private boolean isNonEmptyString(String value) {
-        return value != null && !value.trim().isEmpty();
     }
 
 }

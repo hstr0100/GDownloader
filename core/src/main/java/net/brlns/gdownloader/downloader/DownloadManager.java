@@ -846,6 +846,8 @@ public class DownloadManager implements IEvent {
                     }
                 }
 
+                queueEntry.markQueried();
+
                 if (queueEntry.getDownloadStatus() == DownloadStatusEnum.QUERYING) {
                     queueEntry.updateStatus(DownloadStatusEnum.QUEUED,
                         l10n("gui.download_status.not_started"));

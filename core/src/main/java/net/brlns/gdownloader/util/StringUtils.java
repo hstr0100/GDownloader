@@ -16,6 +16,7 @@
  */
 package net.brlns.gdownloader.util;
 
+import jakarta.annotation.Nullable;
 import java.io.File;
 import java.text.DecimalFormat;
 import java.time.Duration;
@@ -97,5 +98,13 @@ public final class StringUtils {
 
             return !fileName.isEmpty() ? fileName : filePath;
         }
+    }
+
+    public static boolean nullOrEmpty(@Nullable String input) {
+        return input == null || input.isEmpty();
+    }
+
+    public static boolean notNullOrEmpty(@Nullable String input) {
+        return input != null && !input.trim().isEmpty();
     }
 }

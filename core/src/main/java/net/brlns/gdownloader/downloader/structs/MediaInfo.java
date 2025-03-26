@@ -31,6 +31,8 @@ import lombok.NoArgsConstructor;
 import net.brlns.gdownloader.persistence.PersistenceManager;
 import net.brlns.gdownloader.persistence.entity.MediaInfoEntity;
 
+import static net.brlns.gdownloader.util.StringUtils.notNullOrEmpty;
+
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
@@ -104,7 +106,7 @@ public class MediaInfo {
     @JsonIgnore
     @Nullable
     public LocalDate getUploadDateAsLocalDate() {
-        if (uploadDate != null && !uploadDate.isEmpty()) {
+        if (notNullOrEmpty(uploadDate)) {
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd");
             return LocalDate.parse(uploadDate, formatter);
         }

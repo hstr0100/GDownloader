@@ -37,6 +37,7 @@ import net.brlns.gdownloader.util.TemplateConverter;
 import net.brlns.gdownloader.util.URLUtils;
 
 import static net.brlns.gdownloader.lang.Language.*;
+import static net.brlns.gdownloader.util.StringUtils.notNullOrEmpty;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -55,6 +56,17 @@ public class GenericFilter extends AbstractUrlFilter {
         setVideoNamePattern("%(title).60s (%(resolution)s).%(ext)s");
         setAudioNamePattern(getVideoNamePattern().replace("%(resolution)s", "%(audio_bitrate)s"));
         setEmbedThumbnailAndMetadata(false);
+    }
+
+    @Override
+    public void setFilterName(String name) {
+        // Bizarre intermittent condition triggered by Jackson, unable to reliably reproduce with a fresh config.
+        if (notNullOrEmpty(name) && getClass().getSimpleName().equals("GenericFilter")) {
+            log.error("Tried to set a filter name ({}) to the generic filter {}", name, this);
+            return;
+        }
+
+        super.setFilterName(name);
     }
 
     @JsonIgnore

@@ -64,6 +64,7 @@ import net.brlns.gdownloader.util.collection.ConcurrentLinkedHashSet;
 
 import static net.brlns.gdownloader.downloader.enums.DownloadStatusEnum.*;
 import static net.brlns.gdownloader.lang.Language.*;
+import static net.brlns.gdownloader.util.StringUtils.notNullOrEmpty;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -220,15 +221,20 @@ public class QueueEntry {
         retryCounter.set(0);
     }
 
+    public void markQueried() {
+        queried.set(true);
+    }
+
     public void setMediaInfo(MediaInfo mediaInfoIn) {
         mediaInfo = mediaInfoIn;
-        queried.set(true);
 
-        if (mediaInfo.getTitle() != null && !mediaInfo.getTitle().isEmpty()) {
+        markQueried();
+
+        if (notNullOrEmpty(mediaInfo.getTitle())) {
             logOutput("Title: " + mediaInfo.getTitle());
         }
 
-        if (mediaInfo.getPlaylistTitle() != null && !mediaInfo.getPlaylistTitle().isEmpty()) {
+        if (notNullOrEmpty(mediaInfo.getPlaylistTitle())) {
             logOutput("Playlist Title: " + mediaInfo.getPlaylistTitle());
         }
 
@@ -290,11 +296,11 @@ public class QueueEntry {
     private String getTitle() {
         if (mediaInfo != null) {
             // Give priority to playlist titles
-            if (mediaInfo.getPlaylistTitle() != null && !mediaInfo.getPlaylistTitle().isEmpty()) {
+            if (notNullOrEmpty(mediaInfo.getPlaylistTitle())) {
                 return l10n("gui.playlist") + " " + mediaInfo.getPlaylistTitle();
             }
 
-            if (mediaInfo.getTitle() != null && !mediaInfo.getTitle().isEmpty()) {
+            if (notNullOrEmpty(mediaInfo.getTitle())) {
                 return mediaInfo.getTitle();
             }
         }

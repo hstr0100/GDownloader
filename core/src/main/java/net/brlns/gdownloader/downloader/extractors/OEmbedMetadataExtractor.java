@@ -175,7 +175,7 @@ public class OEmbedMetadataExtractor implements IMetadataExtractor {
         @JsonProperty("provider_url")
         private String providerUrl;
         @JsonProperty("cache_age")
-        private Integer cacheAge;
+        private Long cacheAge;
         @JsonProperty("thumbnail_url")
         private String thumbnailUrl;
         @JsonProperty("thumbnail_width")
