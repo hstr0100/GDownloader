@@ -309,7 +309,7 @@ public class DirectHttpDownloader extends AbstractDownloader {
 
         String mimeType = connection.getContentType();
         log.info("MIME Type: " + mimeType);
-        if (mimeType.contains("text/html") || mimeType.contains("text/plain")) {
+        if (mimeType == null || (mimeType.contains("text/html") || mimeType.contains("text/plain"))) {
             throw new IOException("Unsupported URL: " + fileUrl);
         }
 
