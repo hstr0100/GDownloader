@@ -37,12 +37,6 @@ import net.brlns.gdownloader.server.result.StatusResult;
 @Slf4j
 public class AppClient {
 
-    private final GDownloader main;
-
-    public AppClient(GDownloader mainIn) {
-        main = mainIn;
-    }
-
     public AbstractResult sendCommand(String command) {
         try (
             Socket socket = new Socket()) {

@@ -49,6 +49,7 @@ import javax.swing.UIManager;
 import javax.swing.plaf.FontUIResource;
 import lombok.AccessLevel;
 import lombok.Getter;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.clipboard.ClipboardManager;
 import net.brlns.gdownloader.downloader.DownloadManager;
@@ -191,6 +192,7 @@ public final class GDownloader {
     private final AtomicBoolean restartRequested = new AtomicBoolean(false);
 
     @Getter
+    @Setter
     private AppClient appClient;
 
     @Getter
@@ -497,15 +499,8 @@ public final class GDownloader {
     }
 
     public void setupAppServer() {
-        appClient = new AppClient(this);
-
-        if (!appClient.tryWakeSingleInstance()) {
-            appServer = new AppServer(this);
-            appServer.init();
-        } else {
-            // An instance is already running, bring it to top and shutdown
-            shutdown();
-        }
+        appServer = new AppServer(this);
+        appServer.init();
     }
 
     /**
@@ -1257,6 +1252,16 @@ public final class GDownloader {
             }
         }
 
+        // Initialize AppClient earlier in the boot process to ensure a faster window restore time when another instance is already running.
+        // This requires the base installed GDownloader version to be 1.3.4 or higher.
+        // Older launchers will still need to jump through an extra hoop (e.g., GDownloader A v1.1 → GDownloader B v1.3 → "wake-up" → GDownloader C → "awakens").
+        AppClient appClient = new AppClient();
+
+        if (appClient.tryWakeSingleInstance()) {
+            // An instance is already running; wake it up and shut down.
+            System.exit(0);
+        }
+
         UpdaterBootstrap.tryOta(args, fromOta);
 
         System.setProperty("sun.java2d.uiScale", String.valueOf(uiScale));// Does not accept double
@@ -1293,6 +1298,8 @@ public final class GDownloader {
 
         GDownloader instance = new GDownloader();
         GDownloader.instance = instance;
+
+        instance.setAppClient(appClient);
 
         if (!noGui) {
             instance.initUi();
