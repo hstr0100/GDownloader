@@ -305,9 +305,10 @@ public final class GUIManager {
             queueScrollPane = new JScrollPane(queuePanel);
             queueScrollPane.getVerticalScrollBar().setUI(new CustomScrollBarUI());
             queueScrollPane.getHorizontalScrollBar().setUI(new CustomScrollBarUI());
+            // BLIT_SCROLL_MODE is smooth but astonishingly slow, BACKINGSTORE_SCROLL_MODE is rough but fast.
+            queueScrollPane.getViewport().setScrollMode(JViewport.SIMPLE_SCROLL_MODE);
             queueScrollPane.setBorder(BorderFactory.createEmptyBorder());
             queueScrollPane.setBackground(color(BACKGROUND));
-            //queueScrollPane.getViewport().setBackground(color(BACKGROUND));
             queueScrollPane.getVerticalScrollBar().setUnitIncrement(8);
             queueScrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
             queueScrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
@@ -1482,13 +1483,23 @@ public final class GUIManager {
                         } else if (entry.getUpdateType() == CARD_REMOVE) {
                             CustomMediaCardUI ui = mediaCard.getUi();
                             if (ui != null) {
-                                queuePanel.remove(ui.getCard());
+                                try {
+                                    if (mediaCards.isEmpty()) {
+                                        queuePanel.removeAll();
 
-                                if (mediaCards.isEmpty()) {
-                                    queuePanel.add(getOrCreateEmptyQueuePanel(), BorderLayout.CENTER);
+                                        queuePanel.add(getOrCreateEmptyQueuePanel(), BorderLayout.CENTER);
+                                    } else {
+                                        queuePanel.remove(ui.getCard());
+                                    }
+
+                                    appWindow.removeComponentListener(ui.getMediaNameLabel().getListener());
+                                } catch (StackOverflowError e) {
+                                    // Decades-old AWT issue. We should not have to raise the stack limit for this.
+                                    // AWTEventMulticaster.remove(AWTEventMulticaster.java:153)
+                                    // AWTEventMulticaster.removeInternal(AWTEventMulticaster.java:983)
+                                    // Rinse and repeat ∞
+                                    GDownloader.handleException(e, "StackOverflowError when calling remove() or removeComponentListener().");
                                 }
-
-                                appWindow.removeComponentListener(ui.getMediaNameLabel().getListener());
                             }
                         }
                     }
@@ -1512,6 +1523,13 @@ public final class GUIManager {
 
                 if (main.getConfig().isAutoScrollToBottom() && scrollToBottom) {
                     scrollToBottom(queueScrollPane);
+                }
+
+                int currentMode = queueScrollPane.getViewport().getScrollMode();
+                if (queuePanel.getComponentCount() > 100 && currentMode != JViewport.BACKINGSTORE_SCROLL_MODE) {
+                    queueScrollPane.getViewport().setScrollMode(JViewport.BACKINGSTORE_SCROLL_MODE);
+                } else if (currentMode != JViewport.SIMPLE_SCROLL_MODE) {
+                    queueScrollPane.getViewport().setScrollMode(JViewport.SIMPLE_SCROLL_MODE);
                 }
             }
         });

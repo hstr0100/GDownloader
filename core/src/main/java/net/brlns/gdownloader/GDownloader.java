@@ -49,6 +49,7 @@ import javax.swing.UIManager;
 import javax.swing.plaf.FontUIResource;
 import lombok.AccessLevel;
 import lombok.Getter;
+import lombok.NonNull;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.clipboard.ClipboardManager;
@@ -1063,8 +1064,16 @@ public final class GDownloader {
         handleException(e, true);
     }
 
+    public static final void handleException(Throwable e, String message) {
+        handleException(e, message, true);
+    }
+
     public static final void handleException(Throwable e, boolean displayToUser) {
-        log.error("An exception has been caught", e);
+        handleException(e, "", true);
+    }
+
+    public static final void handleException(Throwable e, @NonNull String message, boolean displayToUser) {
+        log.error(!message.isEmpty() ? message : "An exception has been caught", e);
 
         if (displayToUser && instance != null) {
             instance.getGuiManager().showMessage(
