@@ -63,6 +63,10 @@ run {
     enableAssertions = true
 }
 
+tasks.named('run') {
+    jvmArgs = ['-Xss5M']
+}
+
 extraJavaModuleInfo {
     failOnMissingModuleInfo.set(true)
     deriveAutomaticModuleNamesFromFileNames.set(true)
@@ -146,7 +150,7 @@ jlink {
 
     launcher {
         name = 'GDownloader'
-        jvmArgs = ['-Xmx2G']
+        jvmArgs = ['-Xmx2G', '-Xss5M']
         noConsole = true
     }
 
