@@ -55,6 +55,7 @@ import net.brlns.gdownloader.settings.filters.YoutubePlaylistFilter;
 import net.brlns.gdownloader.ui.GUIManager;
 import net.brlns.gdownloader.ui.MediaCard;
 import net.brlns.gdownloader.ui.menu.IMenuEntry;
+import net.brlns.gdownloader.ui.message.MessageTypeEnum;
 import net.brlns.gdownloader.util.collection.ConcurrentRearrangeableDeque;
 import net.brlns.gdownloader.util.collection.ExpiringSet;
 import net.brlns.gdownloader.util.collection.LinkedIterableBlockingQueue;
@@ -166,6 +167,16 @@ public class DownloadManager implements IEvent {
     public void init() {
         try {
             if (persistence.isInitialized()) {
+                if (main.getConfig().isRestoreSessionAfterRestart()) {
+                    main.getGuiManager().showToastMessage(
+                        l10n("gui.restoring-session.toast"),
+                        3000,
+                        MessageTypeEnum.INFO,
+                        false, true);
+                }
+
+                // Even if persistance is disabled, we still initialize the db so a restart is not
+                // needed and no data is lost if the user toggles persistence back on during runtime.
                 long nextId = persistence.getCounters().getCurrentValue(CounterTypeEnum.DOWNLOAD_ID);
                 main.getDownloadManager().getDownloadCounter().set(nextId);
                 log.info("Current download id: {}", nextId);
