@@ -51,13 +51,13 @@ import net.brlns.gdownloader.persistence.entity.QueueEntryEntity;
 import net.brlns.gdownloader.settings.enums.IContainerEnum;
 import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
 import net.brlns.gdownloader.settings.filters.GenericFilter;
-import net.brlns.gdownloader.ui.GUIManager;
 import net.brlns.gdownloader.ui.MediaCard;
 import net.brlns.gdownloader.ui.menu.IMenuEntry;
 import net.brlns.gdownloader.ui.menu.MultiActionMenuEntry;
 import net.brlns.gdownloader.ui.menu.NestedMenuEntry;
 import net.brlns.gdownloader.ui.menu.RunnableMenuEntry;
 import net.brlns.gdownloader.ui.menu.SingleActionMenuEntry;
+import net.brlns.gdownloader.ui.message.MessageTypeEnum;
 import net.brlns.gdownloader.util.DirectoryUtils;
 import net.brlns.gdownloader.util.ImageUtils;
 import net.brlns.gdownloader.util.StringUtils;
@@ -183,13 +183,12 @@ public class QueueEntry {
 
         finalMediaFiles.clear();
 
-        main.getGuiManager().showMessage(
+        main.getGuiManager().showPopupMessage(
             l10n("gui.delete_files.notification_title"),
             success ? l10n("gui.delete_files.deleted") : l10n("gui.delete_files.no_files"),
             3000,
-            GUIManager.MessageType.INFO,
-            false
-        );
+            MessageTypeEnum.INFO,
+            false, false);
     }
 
     public boolean isRunning() {

@@ -38,7 +38,7 @@ import lombok.Getter;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
-import net.brlns.gdownloader.ui.GUIManager;
+import net.brlns.gdownloader.ui.message.MessageTypeEnum;
 import net.brlns.gdownloader.util.collection.ExpiringSet;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -123,12 +123,12 @@ public class ClipboardManager {
             String displayText = texts.size() == 1 ? texts.get(texts.size() - 1)
                 : l10n("gui.copied_to_clipboard.lines", texts.size());
 
-            main.getGuiManager().showMessage(
+            main.getGuiManager().showPopupMessage(
                 l10n("gui.copied_to_clipboard.notification_title"),
                 displayText,
                 2000,
-                GUIManager.MessageType.INFO,
-                false);
+                MessageTypeEnum.INFO,
+                false, false);
         } finally {
             clipboardLock.unlock();
         }
@@ -136,6 +136,26 @@ public class ClipboardManager {
 
     public boolean tryHandleDnD(@Nullable Transferable transferable) {
         return updateClipboard(transferable, true); // force is true because this is considered manual input.
+    }
+
+    public void pasteURLsFromClipboard() {
+        if (!main.getDownloadManager().isBlocked()) {
+            updateClipboard(null, true);
+
+            if (clipboardContainedURLs()) {
+                main.getGuiManager().showToastMessage(
+                    l10n("gui.add_from_clipboard.toast-empty"),
+                    3000,
+                    MessageTypeEnum.WARNING,
+                    false, true);
+            } else {
+                main.getGuiManager().showToastMessage(
+                    l10n("gui.add_from_clipboard.toast-pasted"),
+                    3000,
+                    MessageTypeEnum.INFO,
+                    false, true);
+            }
+        }
     }
 
     public boolean updateClipboard() {
@@ -281,13 +301,12 @@ public class ClipboardManager {
 
                 if (captured > 0) {
                     if (main.getConfig().isDisplayLinkCaptureNotifications()) {
-                        main.getGuiManager().showMessage(
+                        main.getGuiManager().showPopupMessage(
                             l10n("gui.clipboard_monitor.captured_title"),
                             l10n("gui.clipboard_monitor.captured", captured),
                             1500,
-                            GUIManager.MessageType.INFO,
-                            false
-                        );
+                            MessageTypeEnum.INFO,
+                            false, false);
                     }
 
                     // If notications are off, requesting focus could probably also be an undesired behavior,
@@ -357,9 +376,33 @@ public class ClipboardManager {
         return result;
     }
 
-    public boolean isClipboardEmpty() {
+    /**
+     * This should be called after updateClipboard() when lastClipboardState is populated.
+     */
+    public boolean clipboardContainedURLs() {
         DataFlavor[] flavors = clipboard.getAvailableDataFlavors();
-        return flavors.length == 0;
+        if (flavors.length == 0) {
+            return true;
+        }
+
+        clipboardLock.lock();
+        try {
+            Transferable transferable = clipboard.getContents(null);
+            if (transferable == null) {
+                return true;
+            }
+
+            boolean hasUrl = false;
+            for (String data : lastClipboardState.values()) {
+                if (data.contains("http")) {
+                    hasUrl = true;
+                }
+            }
+
+            return !hasUrl;
+        } finally {
+            clipboardLock.unlock();
+        }
     }
 
     private static boolean isValidURL(String urlString) {

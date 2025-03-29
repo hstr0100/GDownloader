@@ -56,10 +56,13 @@ import net.brlns.gdownloader.ui.custom.*;
 import net.brlns.gdownloader.ui.dnd.WindowDragSourceListener;
 import net.brlns.gdownloader.ui.dnd.WindowDropTargetListener;
 import net.brlns.gdownloader.ui.dnd.WindowTransferHandler;
-import net.brlns.gdownloader.ui.menu.IMenuEntry;
 import net.brlns.gdownloader.ui.menu.RightClickMenu;
 import net.brlns.gdownloader.ui.menu.RightClickMenuEntries;
 import net.brlns.gdownloader.ui.menu.RunnableMenuEntry;
+import net.brlns.gdownloader.ui.message.AbstractMessenger;
+import net.brlns.gdownloader.ui.message.MessageTypeEnum;
+import net.brlns.gdownloader.ui.message.PopupMessenger;
+import net.brlns.gdownloader.ui.message.ToastMessenger;
 import net.brlns.gdownloader.ui.themes.ThemeProvider;
 import net.brlns.gdownloader.ui.themes.UIColors;
 import net.brlns.gdownloader.updater.AbstractGitUpdater;
@@ -82,9 +85,7 @@ public final class GUIManager {
         ToolTipManager.sharedInstance().setEnabled(true);
     }
 
-    private JWindow messageWindow;
-    private JPanel messagePanel;
-
+    @Getter
     private JFrame appWindow;
     private JPanel queuePanel;
 
@@ -99,11 +100,7 @@ public final class GUIManager {
     private final Queue<MediaCardUIUpdateEntry> mediaCardUIUpdateQueue = new ConcurrentLinkedQueue<>();
     private final Map<Integer, MediaCard> mediaCards = new ConcurrentHashMap<>();
 
-    private final Queue<Message> messageQueue = new ConcurrentLinkedQueue<>();
-
     private final AtomicInteger mediaCardId = new AtomicInteger();
-
-    private final AtomicBoolean isShowingMessage = new AtomicBoolean();
 
     private final ConcurrentLinkedHashSet<Integer> selectedMediaCards = new ConcurrentLinkedHashSet<>();
     private final AtomicReference<MediaCard> lastSelectedMediaCard = new AtomicReference<>(null);
@@ -207,10 +204,30 @@ public final class GUIManager {
         runOnEDT(() -> {
             if (appWindow != null) {
                 appWindow.setVisible(false);
-
-                adjustMessageWindowPosition();
             }
         });
+    }
+
+    private AbstractMessenger _popupMessenger;
+
+    public void showPopupMessage(String title, String message, int durationMillis,
+        MessageTypeEnum messageType, boolean playTone, boolean discardDuplicates) {
+        if (_popupMessenger == null) {
+            _popupMessenger = new PopupMessenger(this);
+        }
+
+        _popupMessenger.show(title, message, durationMillis, messageType, playTone, discardDuplicates);
+    }
+
+    private AbstractMessenger _toastMessenger;
+
+    public void showToastMessage(String message, int durationMillis,
+        MessageTypeEnum messageType, boolean playTone, boolean discardDuplicates) {
+        if (_toastMessenger == null) {
+            _toastMessenger = new ToastMessenger(this);
+        }
+
+        _toastMessenger.show("", message, durationMillis, messageType, playTone, discardDuplicates);
     }
 
     private void setUpAppWindow() {
@@ -244,18 +261,6 @@ public final class GUIManager {
                         log.info("System tray not available, exiting...");
                         main.shutdown();
                     }
-
-                    adjustMessageWindowPosition();
-                }
-
-                @Override
-                public void windowIconified(WindowEvent e) {
-                    adjustMessageWindowPosition();
-                }
-
-                @Override
-                public void windowDeiconified(WindowEvent e) {
-                    adjustMessageWindowPosition();
                 }
             });
 
@@ -275,8 +280,6 @@ public final class GUIManager {
             appWindow.addMouseListener(mouseAdapter);
 
             adjustWindowSize();
-
-            adjustMessageWindowPosition();
 
             JPanel mainPanel = new JPanel(new BorderLayout());
             mainPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
@@ -379,6 +382,23 @@ public final class GUIManager {
         topPanel.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0));
         topPanel.setBackground(color(BACKGROUND));
 
+        JPanel leftButtonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        leftButtonPanel.setOpaque(false);
+
+        leftButtonPanel.add(createButton(
+            loadIcon("/assets/add.png", ICON),
+            loadIcon("/assets/add.png", ICON_HOVER),
+            "gui.add_from_clipboard.tooltip",
+            e -> main.getClipboardManager().pasteURLsFromClipboard()
+        ));
+
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.anchor = GridBagConstraints.WEST;
+        gbc.insets = new Insets(0, 10, 0, 0);
+        topPanel.add(leftButtonPanel, gbc);
+
         JPanel statusPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 0));
         statusPanel.setOpaque(false);
 
@@ -398,12 +418,11 @@ public final class GUIManager {
                 + "</html>";
         });
 
-        GridBagConstraints gbcLabel = new GridBagConstraints();
-        gbcLabel.gridx = 0;
-        gbcLabel.gridy = 0;
-        gbcLabel.anchor = GridBagConstraints.WEST;
-        gbcLabel.insets = new Insets(0, 10, 0, 20);
-        topPanel.add(statusPanel, gbcLabel);
+        gbc.gridx = 1;
+        gbc.gridy = 0;
+        gbc.anchor = GridBagConstraints.WEST;
+        gbc.insets = new Insets(0, 10, 0, 20);
+        topPanel.add(statusPanel, gbc);
 
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 0));
         buttonPanel.setOpaque(false);
@@ -586,12 +605,12 @@ public final class GUIManager {
             buttonPanel.add(settingsButton);
         }
 
-        GridBagConstraints gbcButtons = new GridBagConstraints();
-        gbcButtons.gridx = 1;
-        gbcButtons.gridy = 0;
-        gbcButtons.anchor = GridBagConstraints.EAST;
-        gbcButtons.weightx = 1.0;
-        topPanel.add(buttonPanel, gbcButtons);
+        gbc.gridx = 2;
+        gbc.gridy = 0;
+        gbc.anchor = GridBagConstraints.EAST;
+        gbc.weightx = 1.0;
+        gbc.insets = new Insets(0, 0, 0, 0);
+        topPanel.add(buttonPanel, gbc);
 
         return topPanel;
     }
@@ -682,7 +701,7 @@ public final class GUIManager {
         return button;
     }
 
-    protected JButton createButton(ImageIcon icon, ImageIcon hoverIcon,
+    public JButton createButton(ImageIcon icon, ImageIcon hoverIcon,
         String tooltipText, ActionListener actionListener) {
         JButton button = new JButton(icon);
         button.setUI(new BasicButtonUI());
@@ -1006,206 +1025,6 @@ public final class GUIManager {
             dialog.add(panel);
             dialog.setVisible(true);
         });
-    }
-
-    public void showMessage(String title, String message, int durationMillis,
-        MessageType messageType, boolean playTone) {
-        if (main.getConfig().isDebugMode()) {
-            log.info("Popup {}: {} - {}", messageType, title, message);
-        }
-
-        messageQueue.add(new Message(title, message, durationMillis, messageType, playTone));
-
-        if (!isShowingMessage.get()) {
-            displayNextMessage();
-        }
-    }
-
-    private void displayNextMessage() {
-        runOnEDT(() -> {
-            if (messageWindow != null) {
-                messageWindow.setVisible(false);
-                messageWindow.dispose();
-
-                messageWindow = null;
-            }
-
-            if (messageQueue.isEmpty()) {
-                isShowingMessage.set(false);
-                return;
-            }
-
-            isShowingMessage.set(true);
-
-            Message nextMessage = messageQueue.poll();
-
-            messageWindow = new JWindow();
-            messageWindow.setAlwaysOnTop(true);
-
-            messageWindow.setSize(350, 110);
-
-            Color titleColor;
-            Color textColor;
-            switch (nextMessage.getMessageType()) {
-                case ERROR -> {
-                    titleColor = Color.RED;
-                    textColor = Color.GRAY;
-                }
-                case WARNING -> {
-                    titleColor = Color.YELLOW;
-                    textColor = Color.GRAY;
-                }
-                default -> {
-                    titleColor = color(LIGHT_TEXT);
-                    textColor = color(FOREGROUND);
-                }
-            }
-
-            JPanel panel = new JPanel(new BorderLayout());
-            panel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
-            panel.setBackground(color(BACKGROUND));
-
-            JPanel titlePanel = new JPanel(new BorderLayout());
-            titlePanel.setOpaque(false);
-
-            JLabel titleLabel = new JLabel();
-            titleLabel.setText(wrapTextInHtml(45, nextMessage.getTitle()));
-            titleLabel.setForeground(titleColor);
-            titleLabel.setHorizontalAlignment(SwingConstants.LEFT);
-            titlePanel.add(titleLabel, BorderLayout.WEST);
-
-            AtomicBoolean cancelHook = new AtomicBoolean(false);
-
-            titlePanel.add(createButton(
-                loadIcon("/assets/x-mark.png", ICON, 12),
-                loadIcon("/assets/x-mark.png", ICON_CLOSE, 12),
-                "gui.close.tooltip",
-                e -> cancelHook.set(true)
-            ), BorderLayout.EAST);
-
-            panel.add(titlePanel, BorderLayout.NORTH);
-
-            panel.addMouseListener(new MouseAdapter() {
-                @Override
-                public void mousePressed(MouseEvent e) {
-                    cancelHook.set(true);
-                }
-            });
-
-            messagePanel = new JPanel(new BorderLayout());
-            messagePanel.setOpaque(false);
-            messagePanel.setBorder(BorderFactory.createEmptyBorder(10, 0, 20, 0));
-
-            CustomDynamicLabel messageLabel = new CustomDynamicLabel();
-            messageLabel.setFullText(nextMessage.getMessage().split(System.lineSeparator()));
-            messageLabel.setForeground(textColor);
-            messageLabel.setHorizontalAlignment(SwingConstants.CENTER);
-            messagePanel.add(messageLabel, BorderLayout.CENTER);
-
-            panel.add(messagePanel, BorderLayout.CENTER);
-
-            CustomProgressBar messageProgressBar = new CustomProgressBar();
-            messageProgressBar.setValue(nextMessage.getDurationMillis());
-            messageProgressBar.setStringPainted(false);
-            messageProgressBar.setForeground(color(FOREGROUND));
-            messageProgressBar.setBackground(color(BACKGROUND));
-            //messageProgressBar.setBorderPainted(false);
-            messageProgressBar.setPreferredSize(new Dimension(messageWindow.getWidth() - 10, 5));
-
-            Timer timer = new Timer(50, new ActionListener() {
-                int elapsed = 0;
-
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    elapsed += 50;
-
-                    int progress = 100 - (elapsed * 100) / nextMessage.getDurationMillis();
-                    messageProgressBar.setValue(progress);
-
-                    if (elapsed >= nextMessage.getDurationMillis() || cancelHook.get()) {
-                        ((Timer)e.getSource()).stop();
-
-                        displayNextMessage();
-                    }
-                }
-            });
-
-            panel.add(messageProgressBar, BorderLayout.SOUTH);
-
-            messageWindow.add(panel);
-
-            updateMessageWindowSize();
-            adjustMessageWindowPosition();
-
-            messageWindow.setVisible(true);
-
-            timer.start();
-
-            if (nextMessage.isPlayTone() && main.getConfig().isPlaySounds()) {
-                AudioEngine.playNotificationTone();
-            }
-        });
-    }
-
-    private void updateMessageWindowSize() {
-        assert SwingUtilities.isEventDispatchThread();
-
-        int newHeight = calculateMessageWindowHeight();
-        messageWindow.setSize(350, newHeight);
-
-        Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-        Insets screenInsets = Toolkit.getDefaultToolkit().getScreenInsets(messageWindow.getGraphicsConfiguration());
-        int taskbarHeight = screenInsets.bottom;
-
-        int windowX = screenSize.width - messageWindow.getWidth() - 10;
-        int windowY = screenSize.height - messageWindow.getHeight() - taskbarHeight - 10;
-
-        int minHeight = screenSize.height - messageWindow.getHeight() - taskbarHeight - 10;
-        if (windowY < minHeight) {
-            messageWindow.setSize(messageWindow.getWidth(), screenSize.height - minHeight);
-            windowY = minHeight;
-        }
-
-        messageWindow.setLocation(windowX, windowY);
-    }
-
-    private void adjustMessageWindowPosition() {
-        assert SwingUtilities.isEventDispatchThread();
-
-        if (messageWindow != null) {
-            Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-            //Insets screenInsets = Toolkit.getDefaultToolkit().getScreenInsets(messageWindow.getGraphicsConfiguration());
-            //int taskbarHeight = screenInsets.bottom;
-
-            int newX = screenSize.width - messageWindow.getWidth() - 10;
-            int newY = /*screenSize.height - messageWindow.getHeight() - taskbarHeight -*/ 10;
-
-            messageWindow.setLocation(newX, newY);
-
-            // TODO check if the window is actually on top
-            if (appWindow != null && appWindow.isVisible() && (appWindow.getExtendedState() & Frame.ICONIFIED) != 1) {
-                if (messageWindow.getBounds().intersects(appWindow.getBounds())) {
-                    newY = appWindow.getY() - messageWindow.getHeight() - 10;
-
-                    messageWindow.setLocation(newX, newY);
-                }
-            }
-        }
-    }
-
-    private int calculateMessageWindowHeight() {
-        assert SwingUtilities.isEventDispatchThread();
-
-        int totalHeight = 0;
-        if (messagePanel != null) {
-            for (Component comp : messagePanel.getComponents()) {
-                totalHeight += comp.getPreferredSize().height;
-            }
-        } else {
-            totalHeight = 10;
-        }
-
-        return Math.min(totalHeight + 110, 220);
     }
 
     public boolean isFullScreen() {
@@ -1860,17 +1679,11 @@ public final class GUIManager {
 
         private final RightClickMenuEntries rightClickMenu = new RightClickMenuEntries();
 
-        private final IMenuEntry _cachedClipboardRunnable = new RunnableMenuEntry(() -> {
-            main.getClipboardManager().updateClipboard(null, true);
-        });
-
         private RightClickMenuEntries getRightClickMenu() {
-            String clipboardKey = l10n("gui.paste_url_from_clipboard");
-            if (main.getClipboardManager().isClipboardEmpty()) {
-                rightClickMenu.remove(clipboardKey);
-            } else {
-                rightClickMenu.putIfAbsent(clipboardKey, _cachedClipboardRunnable);
-            }
+            rightClickMenu.putIfAbsent(l10n("gui.paste_url_from_clipboard"),
+                new RunnableMenuEntry(() -> {
+                    main.getClipboardManager().pasteURLsFromClipboard();
+                }));
 
             return rightClickMenu;
         }
@@ -1886,23 +1699,6 @@ public final class GUIManager {
                 deselectAllMediaCards();
             }
         }
-    }
-
-    public static enum MessageType {
-        ERROR,
-        WARNING,
-        INFO
-    }
-
-    @Data
-    private static class Message {
-
-        private final String title;
-        private final String message;
-        private final int durationMillis;
-        private final MessageType messageType;
-        private final boolean playTone;
-
     }
 
     @FunctionalInterface

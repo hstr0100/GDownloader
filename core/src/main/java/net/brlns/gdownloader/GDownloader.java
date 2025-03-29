@@ -63,7 +63,7 @@ import net.brlns.gdownloader.server.AppServer;
 import net.brlns.gdownloader.settings.Settings;
 import net.brlns.gdownloader.settings.enums.BrowserEnum;
 import net.brlns.gdownloader.ui.GUIManager;
-import net.brlns.gdownloader.ui.GUIManager.MessageType;
+import net.brlns.gdownloader.ui.message.MessageTypeEnum;
 import net.brlns.gdownloader.ui.themes.ThemeProvider;
 import net.brlns.gdownloader.updater.*;
 import net.brlns.gdownloader.util.*;
@@ -356,13 +356,12 @@ public final class GDownloader {
         DirectoryUtils.deleteRecursively(oldCachePath.toPath());
 
         if (notify) {
-            guiManager.showMessage(
+            guiManager.showPopupMessage(
                 l10n("gui.clear_cache.notification_title"),
                 l10n("gui.clear_cache.cleared"),
                 2000,
-                GUIManager.MessageType.INFO,
-                false
-            );
+                MessageTypeEnum.INFO,
+                false, true);
         }
     }
 
@@ -385,13 +384,12 @@ public final class GDownloader {
             downloadManager.block();
             downloadManager.stopDownloads();
 
-            guiManager.showMessage(
+            guiManager.showPopupMessage(
                 l10n("gui.update.notification_title"),
                 l10n("gui.update.checking"),
                 2000,
-                GUIManager.MessageType.INFO,
-                false
-            );
+                MessageTypeEnum.INFO,
+                false, true);
         }
 
         CountDownLatch latch = new CountDownLatch(updaters.size());
@@ -430,15 +428,14 @@ public final class GDownloader {
                 .anyMatch(AbstractGitUpdater::isUpdated);
 
             if (userInitiated) {
-                guiManager.showMessage(
+                guiManager.showPopupMessage(
                     l10n("gui.update.notification_title"),
                     l10n(updated
                         ? "gui.update.new_updates_installed"
                         : "gui.update.updated"),
                     2000,
-                    GUIManager.MessageType.INFO,
-                    false
-                );
+                    MessageTypeEnum.INFO,
+                    false, false);
             }
 
             for (AbstractGitUpdater updater : updaters) {
@@ -947,12 +944,12 @@ public final class GDownloader {
     }
 
     public void deduplicateDownloadsDirectory() {
-        guiManager.showMessage(
+        guiManager.showPopupMessage(
             l10n("gui.deduplication.notification_title"),
             l10n("gui.deduplication.deduplicating"),
             1500,
-            GUIManager.MessageType.INFO,
-            false);
+            MessageTypeEnum.INFO,
+            false, false);
 
         GLOBAL_THREAD_POOL.submitWithPriority(() -> {
             File directory = getDownloadsDirectory();
@@ -960,12 +957,12 @@ public final class GDownloader {
                 DirectoryDeduplicator.deduplicateDirectory(directory);
             }
 
-            guiManager.showMessage(
+            guiManager.showPopupMessage(
                 l10n("gui.deduplication.notification_title"),
                 l10n("gui.deduplication.deduplicated"),
                 2000,
-                GUIManager.MessageType.INFO,
-                false);
+                MessageTypeEnum.INFO,
+                false, false);
         }, 0);
     }
 
@@ -1076,12 +1073,12 @@ public final class GDownloader {
         log.error(!message.isEmpty() ? message : "An exception has been caught", e);
 
         if (displayToUser && instance != null) {
-            instance.getGuiManager().showMessage(
+            instance.getGuiManager().showPopupMessage(
                 l10n("gui.error_popup_title"),
                 l10n("gui.error_popup", e.getClass().getSimpleName(), e.getMessage()),
                 4000,
-                MessageType.ERROR,
-                true);
+                MessageTypeEnum.ERROR,
+                true, false);
         }
     }
 

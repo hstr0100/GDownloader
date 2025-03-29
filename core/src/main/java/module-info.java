@@ -63,6 +63,7 @@ module net.brlns.gdownloader {
     exports net.brlns.gdownloader.ui.custom;
     exports net.brlns.gdownloader.ui.dnd;
     exports net.brlns.gdownloader.ui.menu;
+    exports net.brlns.gdownloader.ui.message;
     exports net.brlns.gdownloader.ui.themes;
     exports net.brlns.gdownloader.updater;
     exports net.brlns.gdownloader.util;
