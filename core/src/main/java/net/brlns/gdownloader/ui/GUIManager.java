@@ -882,16 +882,19 @@ public final class GUIManager {
             Component firstComponent = panel.getComponent(0);
 
             if (!main.getDownloadManager().isBlocked()) {
-                if (!(firstComponent instanceof JLabel)) {
+                if (!(firstComponent instanceof CustomDynamicLabel)) {
                     panel.removeAll();
 
-                    JLabel label = new JLabel("", SwingConstants.CENTER);
+                    CustomDynamicLabel label = new CustomDynamicLabel();
+                    label.setHorizontalAlignment(SwingConstants.CENTER);
+                    label.setLineWrapping(false);
+                    label.setCenterText(true);
                     label.setForeground(color(FOREGROUND));
                     panel.add(label, BorderLayout.CENTER);
                 }
 
-                JLabel label = (JLabel)panel.getComponent(0);
-                label.setText(main.getConfig().isMonitorClipboardForLinks()
+                CustomDynamicLabel label = (CustomDynamicLabel)panel.getComponent(0);
+                label.setFullText(main.getConfig().isMonitorClipboardForLinks()
                     ? l10n("gui.empty_queue")
                     : l10n("gui.empty_queue.enable_clipboard"));
             } else {
@@ -1619,12 +1622,16 @@ public final class GUIManager {
         });
     }
 
-    public static String wrapTextInHtml(int maxLineLength, String... lines) {
+    public static String wrapTextInHtml(int maxLineLength, boolean centerText, String... lines) {
         if (maxLineLength < 20) {
             throw new IllegalArgumentException("Line length too short: " + maxLineLength);
         }
 
         StringBuilder wrappedText = new StringBuilder();
+
+        if (centerText) {
+            wrappedText.append("<center>");
+        }
 
         for (String text : lines) {
             text = text.replace(System.lineSeparator(), "<br>");
@@ -1671,6 +1678,10 @@ public final class GUIManager {
         String result = wrappedText.toString().trim();
         if (result.endsWith("<br>")) {
             result = result.substring(0, result.length() - 4);
+        }
+
+        if (centerText) {
+            wrappedText.append("</center>");
         }
 
         return "<html>" + result + "</html>";

@@ -21,6 +21,7 @@ import java.awt.Dimension;
 import java.awt.FontMetrics;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
+import java.util.Arrays;
 import javax.swing.JLabel;
 import javax.swing.SwingUtilities;
 import lombok.Getter;
@@ -45,6 +46,9 @@ public class CustomDynamicLabel extends JLabel {
     @Setter
     private boolean lineWrapping = false;
 
+    @Setter
+    private boolean centerText = false;
+
     private String[] fullText;
 
     @SuppressWarnings("this-escape")
@@ -67,9 +71,11 @@ public class CustomDynamicLabel extends JLabel {
     }
 
     public final void setFullText(String... text) {
-        this.fullText = text;
+        fullText = Arrays.stream(text)
+            .flatMap(s -> Arrays.stream(s.split("\n")))
+            .toArray(String[]::new);
 
-        setText(GUIManager.wrapTextInHtml(Integer.MAX_VALUE, fullText));
+        setText(GUIManager.wrapTextInHtml(Integer.MAX_VALUE, centerText, fullText));
         updateTruncatedText();
     }
 
@@ -136,6 +142,6 @@ public class CustomDynamicLabel extends JLabel {
             }
         }
 
-        setText(GUIManager.wrapTextInHtml(Integer.MAX_VALUE, truncatedText));
+        setText(GUIManager.wrapTextInHtml(Integer.MAX_VALUE, centerText, truncatedText));
     }
 }
