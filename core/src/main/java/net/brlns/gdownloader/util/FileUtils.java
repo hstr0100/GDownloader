@@ -184,4 +184,12 @@ public final class FileUtils {
 
         return lineRemoved;
     }
+
+    public static boolean isFileType(Path path, String extension) {
+        return path.getFileName().toString().toLowerCase().endsWith("." + extension);
+    }
+
+    public static boolean isFileType(File file, String extension) {
+        return file.getName().toLowerCase().endsWith("." + extension.toLowerCase());
+    }
 }

@@ -34,6 +34,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.imageio.ImageIO;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -48,7 +49,10 @@ import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.downloader.enums.QueueCategoryEnum;
 import net.brlns.gdownloader.downloader.structs.MediaInfo;
 import net.brlns.gdownloader.persistence.entity.QueueEntryEntity;
+import net.brlns.gdownloader.settings.enums.AudioContainerEnum;
 import net.brlns.gdownloader.settings.enums.IContainerEnum;
+import net.brlns.gdownloader.settings.enums.ThumbnailContainerEnum;
+import net.brlns.gdownloader.settings.enums.VideoContainerEnum;
 import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
 import net.brlns.gdownloader.settings.filters.GenericFilter;
 import net.brlns.gdownloader.ui.MediaCard;
@@ -66,6 +70,7 @@ import net.brlns.gdownloader.util.collection.ConcurrentLinkedHashSet;
 
 import static net.brlns.gdownloader.downloader.enums.DownloadStatusEnum.*;
 import static net.brlns.gdownloader.lang.Language.*;
+import static net.brlns.gdownloader.util.FileUtils.isFileType;
 import static net.brlns.gdownloader.util.StringUtils.notNullOrEmpty;
 import static net.brlns.gdownloader.util.StringUtils.nullOrEmpty;
 
@@ -528,6 +533,48 @@ public class QueueEntry {
         if (!downloadLog.isEmpty()) {
             addRightClick(l10n("gui.copy_download_log"),
                 constructLogMenu(downloadLog));
+        }
+
+        updateMediaRightClickOptions();
+    }
+
+    public void updateMediaRightClickOptions() {
+        Runnable removeAction = () -> Stream.of(
+            "gui.delete_files",
+            "gui.play_video",
+            "gui.play_audio",
+            "gui.view_thumbnail",
+            "gui.open_downloaded_directory"
+        ).forEach(action -> removeRightClick(l10n(action)));
+
+        if (!finalMediaFiles.isEmpty()) {
+            addRightClick(l10n("gui.delete_files"), () -> {
+                deleteMediaFiles();
+
+                removeAction.run();
+            });
+
+            finalMediaFiles.forEach(file -> {
+                if (file.isFile()) {
+                    addMediaAction(file, VideoContainerEnum.class, "gui.play_video");
+                    addMediaAction(file, AudioContainerEnum.class, "gui.play_audio");
+                    addMediaAction(file, ThumbnailContainerEnum.class, "gui.view_thumbnail");
+                } else if (file.isDirectory()) {
+                    addRightClick(l10n("gui.open_downloaded_directory"),
+                        new RunnableMenuEntry(() -> main.open(file)));
+                }
+            });
+        } else {
+            removeAction.run();
+        }
+    }
+
+    private <T extends Enum<T> & IContainerEnum> void addMediaAction(File file, Class<T> enumClass, String actionKey) {
+        for (T container : enumClass.getEnumConstants()) {
+            if (isFileType(file, ((IContainerEnum)container).getValue())) {
+                addRightClick(l10n(actionKey), new RunnableMenuEntry(() -> play(enumClass)));
+                break;
+            }
         }
     }
 

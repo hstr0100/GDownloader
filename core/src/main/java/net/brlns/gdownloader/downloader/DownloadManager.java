@@ -54,7 +54,6 @@ import net.brlns.gdownloader.settings.filters.YoutubeFilter;
 import net.brlns.gdownloader.settings.filters.YoutubePlaylistFilter;
 import net.brlns.gdownloader.ui.GUIManager;
 import net.brlns.gdownloader.ui.MediaCard;
-import net.brlns.gdownloader.ui.menu.IMenuEntry;
 import net.brlns.gdownloader.ui.message.MessageTypeEnum;
 import net.brlns.gdownloader.util.collection.ConcurrentRearrangeableDeque;
 import net.brlns.gdownloader.util.collection.ExpiringSet;
@@ -1062,18 +1061,8 @@ public class DownloadManager implements IEvent {
                             } else if (!entry.getCancelHook().get() && FLAG_SUCCESS.isSet(flags)) {
                                 entry.updateStatus(DownloadStatusEnum.POST_PROCESSING, l10n("gui.download_status.processing_media_files"));
 
-                                Map<String, IMenuEntry> rightClickOptions = downloader.processMediaFiles(entry);
-
-                                entry.addRightClick(l10n("gui.delete_files"), () -> {
-                                    entry.deleteMediaFiles();
-
-                                    entry.removeRightClick(l10n("gui.delete_files"));
-                                    for (String key : rightClickOptions.keySet()) {
-                                        entry.removeRightClick(key);
-                                    }
-                                });
-
-                                entry.addRightClick(rightClickOptions);
+                                downloader.processMediaFiles(entry);
+                                entry.updateMediaRightClickOptions();
 
                                 entry.updateStatus(DownloadStatusEnum.COMPLETE, l10n("gui.download_status.finished"));
                                 entry.cleanDirectories();

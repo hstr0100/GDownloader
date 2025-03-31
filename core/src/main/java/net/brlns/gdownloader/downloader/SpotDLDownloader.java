@@ -38,18 +38,14 @@ import net.brlns.gdownloader.downloader.structs.DownloadResult;
 import net.brlns.gdownloader.downloader.structs.MediaInfo;
 import net.brlns.gdownloader.persistence.PersistenceManager;
 import net.brlns.gdownloader.settings.QualitySettings;
-import net.brlns.gdownloader.settings.enums.AudioContainerEnum;
 import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
-import net.brlns.gdownloader.ui.menu.IMenuEntry;
-import net.brlns.gdownloader.ui.menu.RunnableMenuEntry;
 import net.brlns.gdownloader.util.DirectoryUtils;
 import net.brlns.gdownloader.util.FileUtils;
 import net.brlns.gdownloader.util.FlagUtil;
 import net.brlns.gdownloader.util.Pair;
 
 import static net.brlns.gdownloader.downloader.enums.DownloadFlagsEnum.*;
-import static net.brlns.gdownloader.lang.Language.*;
 import static net.brlns.gdownloader.settings.enums.DownloadTypeEnum.*;
 
 /**
@@ -252,7 +248,7 @@ public class SpotDLDownloader extends AbstractDownloader {
     }
 
     @Override
-    protected Map<String, IMenuEntry> processMediaFiles(QueueEntry entry) {
+    protected void processMediaFiles(QueueEntry entry) {
         File finalPath = new File(main.getOrCreateDownloadsDirectory(), "SpotDL");
         if (!finalPath.exists()) {
             finalPath.mkdirs();
@@ -262,12 +258,12 @@ public class SpotDLDownloader extends AbstractDownloader {
 
         QualitySettings quality = entry.getFilter().getQualitySettings();
 
-        Map<String, IMenuEntry> rightClickOptions = new TreeMap<>();
-
         try {
             List<Path> paths = Files.walk(tmpPath.toPath())
                 .sorted(Comparator.reverseOrder()) // Process files before directories
                 .toList();
+
+            Optional<File> deepestDirectoryRef = Optional.empty();
 
             for (Path path : paths) {
                 if (path.equals(tmpPath.toPath())) {
@@ -280,6 +276,7 @@ public class SpotDLDownloader extends AbstractDownloader {
                 try {
                     if (Files.isDirectory(targetPath)) {
                         Files.createDirectories(targetPath);
+                        deepestDirectoryRef = Optional.of(targetPath.toFile());
 
                         log.info("Created directory: {}", targetPath);
                     } else {
@@ -287,7 +284,6 @@ public class SpotDLDownloader extends AbstractDownloader {
                         targetPath = FileUtils.ensureUniqueFileName(targetPath);
                         Files.move(path, targetPath, StandardCopyOption.REPLACE_EXISTING);
                         entry.getFinalMediaFiles().add(targetPath.toFile());
-                        updateRightClickOptions(path, quality, rightClickOptions, entry);
 
                         log.info("Moved file: {}", targetPath);
                     }
@@ -297,22 +293,13 @@ public class SpotDLDownloader extends AbstractDownloader {
                     log.error("Failed to move file: {}", path.getFileName(), e);
                 }
             }
+
+            if (deepestDirectoryRef.isPresent()) {
+                entry.getFinalMediaFiles().add(deepestDirectoryRef.get());
+            }
         } catch (IOException e) {
             log.error("Failed to list files", e);
         }
-
-        return rightClickOptions;
-    }
-
-    private void updateRightClickOptions(Path path, QualitySettings quality, Map<String, IMenuEntry> rightClickOptions, QueueEntry entry) {
-        if (isFileType(path, quality.getAudioContainer().getValue())) {
-            rightClickOptions.putIfAbsent(l10n("gui.play_audio"),
-                new RunnableMenuEntry(() -> entry.play(AudioContainerEnum.class)));
-        }
-    }
-
-    private boolean isFileType(Path path, String extension) {
-        return path.getFileName().toString().toLowerCase().endsWith("." + extension);
     }
 
     @Nullable

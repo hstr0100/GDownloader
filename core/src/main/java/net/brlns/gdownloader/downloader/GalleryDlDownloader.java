@@ -27,7 +27,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicReference;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -39,8 +38,6 @@ import net.brlns.gdownloader.downloader.structs.MediaInfo;
 import net.brlns.gdownloader.persistence.PersistenceManager;
 import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
-import net.brlns.gdownloader.ui.menu.IMenuEntry;
-import net.brlns.gdownloader.ui.menu.RunnableMenuEntry;
 import net.brlns.gdownloader.util.DirectoryDeduplicator;
 import net.brlns.gdownloader.util.DirectoryUtils;
 import net.brlns.gdownloader.util.FileUtils;
@@ -218,7 +215,7 @@ public class GalleryDlDownloader extends AbstractDownloader {
     }
 
     @Override
-    protected Map<String, IMenuEntry> processMediaFiles(QueueEntry entry) {
+    protected void processMediaFiles(QueueEntry entry) {
         File finalPath = new File(main.getOrCreateDownloadsDirectory(), "GalleryDL");
         if (!finalPath.exists()) {
             finalPath.mkdirs();
@@ -226,14 +223,12 @@ public class GalleryDlDownloader extends AbstractDownloader {
 
         File tmpPath = entry.getTmpDirectory();
 
-        Map<String, IMenuEntry> rightClickOptions = new TreeMap<>();
-
         try {
             List<Path> paths = Files.walk(tmpPath.toPath())
                 .sorted(Comparator.reverseOrder()) // Process files before directories
                 .toList();
 
-            AtomicReference<File> deepestDirectoryRef = new AtomicReference<>(null);
+            Optional<File> deepestDirectoryRef = Optional.empty();
 
             for (Path path : paths) {
                 if (path.equals(tmpPath.toPath())) {
@@ -246,13 +241,15 @@ public class GalleryDlDownloader extends AbstractDownloader {
                 try {
                     if (Files.isDirectory(targetPath)) {
                         Files.createDirectories(targetPath);
-                        deepestDirectoryRef.set(targetPath.toFile());
+                        deepestDirectoryRef = Optional.of(targetPath.toFile());
+
                         log.info("Created directory: {}", targetPath);
                     } else {
                         Files.createDirectories(targetPath.getParent());
                         targetPath = FileUtils.ensureUniqueFileName(targetPath);
                         Files.move(path, targetPath, StandardCopyOption.REPLACE_EXISTING);
-                        //entry.getFinalMediaFiles().add(targetPath.toFile());
+                        entry.getFinalMediaFiles().add(targetPath.toFile());
+
                         log.info("Moved file: {}", targetPath);
                     }
                 } catch (FileAlreadyExistsException e) {
@@ -262,25 +259,21 @@ public class GalleryDlDownloader extends AbstractDownloader {
                 }
             }
 
-            File deepestDirectory = deepestDirectoryRef.get();
-            if (deepestDirectory != null) {
-                rightClickOptions.put(
-                    l10n("gui.open_downloaded_directory"),
-                    new RunnableMenuEntry(() -> main.open(deepestDirectory)));
+            if (deepestDirectoryRef.isPresent()) {
+                entry.getFinalMediaFiles().add(deepestDirectoryRef.get());
 
                 if (main.getConfig().isGalleryDlDeduplication()) {
                     entry.updateStatus(DownloadStatusEnum.DEDUPLICATING, l10n("gui.deduplication.deduplicating"));
 
-                    DirectoryDeduplicator.deduplicateDirectory(deepestDirectory);
+                    DirectoryDeduplicator.deduplicateDirectory(deepestDirectoryRef.get());
+                    entry.getFinalMediaFiles().removeIf(file -> !file.exists());
                 }
+            } else {
+                entry.getFinalMediaFiles().add(finalPath);
             }
-
-            entry.getFinalMediaFiles().add(finalPath);
         } catch (IOException e) {
             log.error("Failed to list files", e);
         }
-
-        return rightClickOptions;
     }
 
     @Nullable

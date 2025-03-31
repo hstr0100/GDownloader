@@ -38,7 +38,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import lombok.Builder;
 import lombok.Data;
@@ -50,8 +49,6 @@ import net.brlns.gdownloader.downloader.enums.DownloadStatusEnum;
 import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.downloader.structs.DownloadResult;
 import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
-import net.brlns.gdownloader.ui.menu.IMenuEntry;
-import net.brlns.gdownloader.ui.menu.RunnableMenuEntry;
 import net.brlns.gdownloader.util.DirectoryUtils;
 import net.brlns.gdownloader.util.FileUtils;
 import net.brlns.gdownloader.util.Pair;
@@ -59,7 +56,6 @@ import net.brlns.gdownloader.util.StringUtils;
 import net.brlns.gdownloader.util.URLUtils;
 
 import static net.brlns.gdownloader.downloader.enums.DownloadFlagsEnum.*;
-import static net.brlns.gdownloader.lang.Language.l10n;
 import static net.brlns.gdownloader.settings.enums.DownloadTypeEnum.DIRECT;
 
 // TODO: Resume chunked
@@ -204,7 +200,7 @@ public class DirectHttpDownloader extends AbstractDownloader {
     }
 
     @Override
-    protected Map<String, IMenuEntry> processMediaFiles(QueueEntry entry) {
+    protected void processMediaFiles(QueueEntry entry) {
         File finalPath = new File(main.getOrCreateDownloadsDirectory(), "HTTP");
         if (!finalPath.exists()) {
             finalPath.mkdirs();
@@ -212,14 +208,12 @@ public class DirectHttpDownloader extends AbstractDownloader {
 
         File tmpPath = entry.getTmpDirectory();
 
-        Map<String, IMenuEntry> rightClickOptions = new TreeMap<>();
-
         try {
             List<Path> paths = Files.walk(tmpPath.toPath())
                 .sorted(Comparator.reverseOrder()) // Process files before directories
                 .toList();
 
-            AtomicReference<File> deepestDirectoryRef = new AtomicReference<>(null);
+            Optional<File> deepestDirectoryRef = Optional.empty();
 
             for (Path path : paths) {
                 if (path.equals(tmpPath.toPath())) {
@@ -232,13 +226,15 @@ public class DirectHttpDownloader extends AbstractDownloader {
                 try {
                     if (Files.isDirectory(targetPath)) {
                         Files.createDirectories(targetPath);
-                        deepestDirectoryRef.set(targetPath.toFile());
+                        deepestDirectoryRef = Optional.of(targetPath.toFile());
+
                         log.info("Created directory: {}", targetPath);
                     } else {
                         Files.createDirectories(targetPath.getParent());
                         targetPath = FileUtils.ensureUniqueFileName(targetPath);
                         Files.move(path, targetPath, StandardCopyOption.REPLACE_EXISTING);
                         entry.getFinalMediaFiles().add(targetPath.toFile());
+
                         log.info("Moved file: {}", targetPath);
                     }
                 } catch (FileAlreadyExistsException e) {
@@ -248,17 +244,14 @@ public class DirectHttpDownloader extends AbstractDownloader {
                 }
             }
 
-            File deepestDirectory = deepestDirectoryRef.get();
-            if (deepestDirectory != null) {
-                rightClickOptions.put(
-                    l10n("gui.open_downloaded_directory"),
-                    new RunnableMenuEntry(() -> main.open(deepestDirectory)));
+            if (deepestDirectoryRef.isPresent()) {
+                entry.getFinalMediaFiles().add(deepestDirectoryRef.get());
+            } else {
+                entry.getFinalMediaFiles().add(finalPath);
             }
         } catch (IOException e) {
             log.error("Failed to list files", e);
         }
-
-        return rightClickOptions;
     }
 
     private boolean isAlive(QueueEntry entry) {

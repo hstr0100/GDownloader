@@ -21,14 +21,12 @@ import jakarta.annotation.PreDestroy;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.downloader.structs.DownloadResult;
 import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
-import net.brlns.gdownloader.ui.menu.IMenuEntry;
 import net.brlns.gdownloader.util.FileUtils;
 
 /**
@@ -53,7 +51,7 @@ public abstract class AbstractDownloader {
 
     protected abstract DownloadResult tryDownload(QueueEntry entry) throws Exception;
 
-    protected abstract Map<String, IMenuEntry> processMediaFiles(QueueEntry entry);
+    protected abstract void processMediaFiles(QueueEntry entry);
 
     public abstract Optional<File> getExecutablePath();
 

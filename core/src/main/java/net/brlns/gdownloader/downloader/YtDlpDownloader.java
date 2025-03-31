@@ -39,21 +39,16 @@ import net.brlns.gdownloader.downloader.structs.MediaInfo;
 import net.brlns.gdownloader.persistence.PersistenceManager;
 import net.brlns.gdownloader.settings.QualitySettings;
 import net.brlns.gdownloader.settings.enums.AudioBitrateEnum;
-import net.brlns.gdownloader.settings.enums.AudioContainerEnum;
 import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
-import net.brlns.gdownloader.settings.enums.ThumbnailContainerEnum;
-import net.brlns.gdownloader.settings.enums.VideoContainerEnum;
 import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
-import net.brlns.gdownloader.ui.menu.IMenuEntry;
-import net.brlns.gdownloader.ui.menu.RunnableMenuEntry;
 import net.brlns.gdownloader.util.DirectoryUtils;
 import net.brlns.gdownloader.util.FileUtils;
 import net.brlns.gdownloader.util.Pair;
-import net.brlns.gdownloader.util.StringUtils;
 
 import static net.brlns.gdownloader.downloader.enums.DownloadFlagsEnum.*;
 import static net.brlns.gdownloader.lang.Language.*;
 import static net.brlns.gdownloader.settings.enums.DownloadTypeEnum.*;
+import static net.brlns.gdownloader.util.FileUtils.isFileType;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -281,6 +276,11 @@ public class YtDlpDownloader extends AbstractDownloader {
                 }
 
                 if (type == VIDEO || type == AUDIO) {
+                    // Non-zero output for a playlist likely means one or more items were unavailable.
+                    if (lastOutput.contains("Finished downloading playlist")) {
+                        return new DownloadResult(FLAG_SUCCESS, lastOutput);
+                    }
+
                     return new DownloadResult(FLAG_MAIN_CATEGORY_FAILED, lastOutput);
                 } else {
                     // These can be treated as low priority downloads since thumbnails
@@ -301,18 +301,18 @@ public class YtDlpDownloader extends AbstractDownloader {
     }
 
     @Override
-    protected Map<String, IMenuEntry> processMediaFiles(QueueEntry entry) {
+    protected void processMediaFiles(QueueEntry entry) {
         File finalPath = main.getOrCreateDownloadsDirectory();
         File tmpPath = entry.getTmpDirectory();
 
         QualitySettings quality = entry.getFilter().getQualitySettings();
 
-        Map<String, IMenuEntry> rightClickOptions = new TreeMap<>();
-
         try {
             List<Path> paths = Files.walk(tmpPath.toPath())
                 .sorted(Comparator.reverseOrder()) // Process files before directories
                 .toList();
+
+            Optional<File> deepestDirectoryRef = Optional.empty();
 
             for (Path path : paths) {
                 if (path.equals(tmpPath.toPath())) {
@@ -325,6 +325,7 @@ public class YtDlpDownloader extends AbstractDownloader {
                 try {
                     if (Files.isDirectory(targetPath)) {
                         Files.createDirectories(targetPath);
+                        deepestDirectoryRef = Optional.of(targetPath.toFile());
 
                         log.info("Created directory: {}", targetPath);
                     } else {
@@ -332,7 +333,6 @@ public class YtDlpDownloader extends AbstractDownloader {
                         targetPath = FileUtils.ensureUniqueFileName(targetPath);
                         Files.move(path, targetPath, StandardCopyOption.REPLACE_EXISTING);
                         entry.getFinalMediaFiles().add(targetPath.toFile());
-                        updateRightClickOptions(path, quality, rightClickOptions, entry);
 
                         log.info("Moved file: {}", targetPath);
                     }
@@ -342,23 +342,12 @@ public class YtDlpDownloader extends AbstractDownloader {
                     log.error("Failed to move file: {}", path.getFileName(), e);
                 }
             }
+
+            if (deepestDirectoryRef.isPresent()) {
+                entry.getFinalMediaFiles().add(deepestDirectoryRef.get());
+            }
         } catch (IOException e) {
             log.error("Failed to list files", e);
-        }
-
-        return rightClickOptions;
-    }
-
-    private void updateRightClickOptions(Path path, QualitySettings quality, Map<String, IMenuEntry> rightClickOptions, QueueEntry entry) {
-        if (isFileType(path, quality.getVideoContainer().getValue())) {
-            rightClickOptions.putIfAbsent(l10n("gui.play_video"),
-                new RunnableMenuEntry(() -> entry.play(VideoContainerEnum.class)));
-        } else if (isFileType(path, quality.getAudioContainer().getValue())) {
-            rightClickOptions.putIfAbsent(l10n("gui.play_audio"),
-                new RunnableMenuEntry(() -> entry.play(AudioContainerEnum.class)));
-        } else if (isFileType(path, quality.getThumbnailContainer().getValue())) {
-            rightClickOptions.putIfAbsent(l10n("gui.view_thumbnail"),
-                new RunnableMenuEntry(() -> entry.play(ThumbnailContainerEnum.class)));
         }
     }
 
@@ -376,10 +365,6 @@ public class YtDlpDownloader extends AbstractDownloader {
         }
 
         return Path.of(finalPath.getAbsolutePath(), l10n("system.unknown_directory_name")).resolve(relativePath);
-    }
-
-    private boolean isFileType(Path path, String extension) {
-        return path.getFileName().toString().toLowerCase().endsWith("." + extension);
     }
 
     @Nullable
@@ -496,6 +481,10 @@ public class YtDlpDownloader extends AbstractDownloader {
 
                 entry.updateStatus(DownloadStatusEnum.DOWNLOADING, lastOutput, false);
             } else {
+                if (lastOutput.contains("Downloading webpage")) {// Reset when looping through a playlist
+                    entry.getDownloadStarted().set(false);
+                }
+
                 if (entry.getDownloadStarted().get()) {
                     entry.updateStatus(DownloadStatusEnum.PROCESSING, lastOutput);
                 } else {
