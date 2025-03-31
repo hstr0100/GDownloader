@@ -540,6 +540,42 @@ public final class GDownloader {
         }
     }
 
+    public void openPlaylist(Collection<File> files) {
+        if (files.isEmpty()) {
+            log.error("No files provided for playlist.");
+            return;
+        }
+
+        try {
+            Desktop desktop = Desktop.getDesktop();
+
+            Path tempPlaylist = Files.createTempFile("playlist_", ".m3u");
+            File m3uFile = tempPlaylist.toFile();
+
+            try (
+                BufferedWriter writer = new BufferedWriter(new FileWriter(m3uFile))) {
+                for (File file : files) {
+                    if (file.exists()) {
+                        writer.write(file.getAbsolutePath());
+                        writer.newLine();
+                    } else {
+                        log.error("File not found, skipping: {}", file);
+                    }
+                }
+            }
+
+            if (m3uFile.exists()) {
+                desktop.open(m3uFile);
+            } else {
+                log.error("File not found: {}", m3uFile);
+            }
+
+            m3uFile.deleteOnExit();
+        } catch (Exception e) {
+            handleException(e);
+        }
+    }
+
     public void openUrlInBrowser(String urlIn) {
         try {
             URL url = new URI(urlIn).toURL();

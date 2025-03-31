@@ -544,7 +544,9 @@ public class QueueEntry {
             "gui.play_video",
             "gui.play_audio",
             "gui.view_thumbnail",
-            "gui.open_downloaded_directory"
+            "gui.open_downloaded_directory",
+            "gui.open_as_audio_playlist",
+            "gui.open_as_video_playlist"
         ).forEach(action -> removeRightClick(l10n(action)));
 
         if (!finalMediaFiles.isEmpty()) {
@@ -554,28 +556,69 @@ public class QueueEntry {
                 removeAction.run();
             });
 
-            finalMediaFiles.forEach(file -> {
+            int audioMediaCount = 0;
+            int videoMediaCount = 0;
+
+            for (File file : finalMediaFiles) {
                 if (file.isFile()) {
-                    addMediaAction(file, VideoContainerEnum.class, "gui.play_video");
-                    addMediaAction(file, AudioContainerEnum.class, "gui.play_audio");
+                    if (addMediaAction(file, VideoContainerEnum.class, "gui.play_video")) {
+                        videoMediaCount++;
+                    }
+
+                    if (addMediaAction(file, AudioContainerEnum.class, "gui.play_audio")) {
+                        audioMediaCount++;
+                    }
+
                     addMediaAction(file, ThumbnailContainerEnum.class, "gui.view_thumbnail");
                 } else if (file.isDirectory()) {
                     addRightClick(l10n("gui.open_downloaded_directory"),
                         new RunnableMenuEntry(() -> main.open(file)));
                 }
-            });
+            }
+
+            if (audioMediaCount >= 2) {
+                removeRightClick(l10n("gui.play_audio"));
+                addRightClick(l10n("gui.open_as_audio_playlist"), () -> {
+                    List<File> playableFiles = finalMediaFiles.stream()
+                        .filter(file -> file.isFile() && isMediaType(file, AudioContainerEnum.class))
+                        .collect(Collectors.toList());
+
+                    main.openPlaylist(playableFiles);
+                });
+            }
+
+            if (videoMediaCount >= 2) {
+                removeRightClick(l10n("gui.play_video"));
+                addRightClick(l10n("gui.open_as_video_playlist"), () -> {
+                    List<File> playableFiles = finalMediaFiles.stream()
+                        .filter(file -> file.isFile() && isMediaType(file, VideoContainerEnum.class))
+                        .collect(Collectors.toList());
+
+                    main.openPlaylist(playableFiles);
+                });
+            }
         } else {
             removeAction.run();
         }
     }
 
-    private <T extends Enum<T> & IContainerEnum> void addMediaAction(File file, Class<T> enumClass, String actionKey) {
+    private <T extends Enum<T> & IContainerEnum> boolean isMediaType(File file, Class<T> enumClass) {
         for (T container : enumClass.getEnumConstants()) {
             if (isFileType(file, ((IContainerEnum)container).getValue())) {
-                addRightClick(l10n(actionKey), new RunnableMenuEntry(() -> play(enumClass)));
-                break;
+                return true;
             }
         }
+
+        return false;
+    }
+
+    private <T extends Enum<T> & IContainerEnum> boolean addMediaAction(File file, Class<T> enumClass, String actionKey) {
+        if (isMediaType(file, enumClass)) {
+            addRightClick(l10n(actionKey), new RunnableMenuEntry(() -> play(enumClass)));
+            return true;
+        }
+
+        return false;
     }
 
     private IMenuEntry constructLogMenu(ConcurrentLinkedHashSet<String> logEntries) {
