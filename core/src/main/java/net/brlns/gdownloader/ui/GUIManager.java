@@ -382,7 +382,7 @@ public final class GUIManager {
         topPanel.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0));
         topPanel.setBackground(color(BACKGROUND));
 
-        JPanel leftButtonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        JPanel leftButtonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         leftButtonPanel.setOpaque(false);
 
         leftButtonPanel.add(createButton(
@@ -1084,13 +1084,28 @@ public final class GUIManager {
                         if (entry.getUpdateType() == CARD_ADD) {
                             JPanel card = new JPanel() {
                                 @Override
+                                protected void paintComponent(Graphics g) {
+                                    Graphics2D g2d = (Graphics2D)g.create();
+
+                                    int arcSize = 10;
+                                    g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                                    g2d.setColor(getBackground());
+                                    g2d.fillRoundRect(5, 5, getWidth() - 10, getHeight() - 10, arcSize, arcSize);
+
+                                    g2d.dispose();
+                                }
+
+                                @Override
                                 public Dimension getMaximumSize() {
                                     int availableWidth = appWindow.getWidth() - getInsets().left - getInsets().right;
                                     return new Dimension(availableWidth, super.getMaximumSize().height);
                                 }
                             };
+
+                            card.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+                            card.setOpaque(false);
                             card.setLayout(new GridBagLayout());
-                            card.setBorder(BorderFactory.createLineBorder(color(BACKGROUND), 5));
                             card.setBackground(color(MEDIA_CARD));
 
                             int fontSize = main.getConfig().getFontSize();
@@ -1140,7 +1155,7 @@ public final class GUIManager {
 
                             CustomDynamicLabel mediaNameLabel = new CustomDynamicLabel();
                             mediaNameLabel.setForeground(color(FOREGROUND));
-                            gbc.insets = new Insets(10, 10, 10, 10);
+                            gbc.insets = new Insets(10, 10, 5, 10);
                             gbc.gridx = 2;
                             gbc.gridy = 0;
                             gbc.gridheight = 1;
@@ -1160,6 +1175,7 @@ public final class GUIManager {
                             //progressBar.setBorderPainted(false);
                             progressBar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 15));
 
+                            gbc.insets = new Insets(10, 10, 10, 10);
                             gbc.gridx = 2;
                             gbc.gridy = 1;
                             gbc.weightx = 1;

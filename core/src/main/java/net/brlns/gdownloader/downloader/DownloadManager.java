@@ -170,7 +170,7 @@ public class DownloadManager implements IEvent {
                 if (main.getConfig().isRestoreSessionAfterRestart()) {
                     main.getGuiManager().showToastMessage(
                         l10n("gui.restoring-session.toast"),
-                        3000,
+                        5000,
                         MessageTypeEnum.INFO,
                         false, true);
                 }

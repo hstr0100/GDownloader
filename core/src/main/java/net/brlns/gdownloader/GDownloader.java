@@ -129,6 +129,7 @@ import static net.brlns.gdownloader.util.StringUtils.nullOrEmpty;
 // TODO Fix: missing play controls after restart
 // TODO Move config files, downloaders and their respective data to subfolders
 // TODO ffmpeg transcoding settings
+// TODO ctrl+z to undo removals
 /**
  * GDownloader - GUI wrapper for yt-dlp
  *

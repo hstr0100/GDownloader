@@ -39,16 +39,6 @@ public class CustomMediaCardUI {
     private final CustomThumbnailPanel thumbnailPanel;
     private final CustomProgressBar progressBar;
 
-    public CustomMediaCardUI(JPanel cardIn, Dimension cardMaximumSizeIn, CustomDynamicLabel mediaNameLabelIn,
-        CustomThumbnailPanel thumbnailPanelIn, CustomProgressBar progressBarIn) {
-
-        card = cardIn;
-        cardMaximumSize = cardMaximumSizeIn;
-        mediaNameLabel = mediaNameLabelIn;
-        thumbnailPanel = thumbnailPanelIn;
-        progressBar = progressBarIn;
-    }
-
     public void updateLabel(String... labelText) {
         assert SwingUtilities.isEventDispatchThread();
         mediaNameLabel.setFullText(labelText);

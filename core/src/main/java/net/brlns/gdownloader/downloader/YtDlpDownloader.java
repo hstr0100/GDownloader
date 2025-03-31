@@ -49,6 +49,7 @@ import net.brlns.gdownloader.ui.menu.RunnableMenuEntry;
 import net.brlns.gdownloader.util.DirectoryUtils;
 import net.brlns.gdownloader.util.FileUtils;
 import net.brlns.gdownloader.util.Pair;
+import net.brlns.gdownloader.util.StringUtils;
 
 import static net.brlns.gdownloader.downloader.enums.DownloadFlagsEnum.*;
 import static net.brlns.gdownloader.lang.Language.*;
@@ -490,10 +491,16 @@ public class YtDlpDownloader extends AbstractDownloader {
                 log.debug("[{}] - {}", entry.getDownloadId(), lastOutput);
             }
 
-            if (entry.getDownloadStarted().get()) {
-                entry.updateStatus(DownloadStatusEnum.PROCESSING, lastOutput);
+            if ((lastOutput.contains("time=") && lastOutput.contains("bitrate=")) || lastOutput.contains(" Opening '")) {
+                entry.getMediaCard().setPercentage(-1);
+
+                entry.updateStatus(DownloadStatusEnum.DOWNLOADING, lastOutput, false);
             } else {
-                entry.updateStatus(DownloadStatusEnum.PREPARING, lastOutput);
+                if (entry.getDownloadStarted().get()) {
+                    entry.updateStatus(DownloadStatusEnum.PROCESSING, lastOutput);
+                } else {
+                    entry.updateStatus(DownloadStatusEnum.PREPARING, lastOutput);
+                }
             }
         }
     }

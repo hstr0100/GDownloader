@@ -505,9 +505,11 @@ public class SettingsPanel {
         panel.add(label, gbcPanel);
 
         JSlider slider = new JSlider(min, max, getter.get());
-        slider.setMajorTickSpacing(max > 20 ? 5 : 1);
+        int tickSpacing = max <= 20 ? 1
+            : Math.min(100, Math.max(5, (int)(5 * Math.pow(2, Math.floor(Math.log10(max / 50))))));
+        slider.setMajorTickSpacing(tickSpacing);
+        slider.setSnapToTicks(tickSpacing == 1);
         slider.setPaintTicks(true);
-        slider.setSnapToTicks(true);
         slider.setPaintLabels(true);
 
         slider.addChangeListener((ChangeEvent e) -> {
@@ -680,6 +682,7 @@ public class SettingsPanel {
         scrollPane.setBackground(color(BACKGROUND));
         scrollPane.getVerticalScrollBar().setUnitIncrement(8);
         scrollPane.setPreferredSize(new Dimension(Integer.MAX_VALUE, 200));
+        scrollPane.getViewport().setScrollMode(JViewport.BACKINGSTORE_SCROLL_MODE);
 
         JPanel panelWrapper = new JPanel(new BorderLayout());
         panelWrapper.setBorder(BorderFactory.createEmptyBorder(2, 2, 2, 2));
@@ -1029,6 +1032,7 @@ public class SettingsPanel {
         scrollPane.setBackground(color(BACKGROUND));
         scrollPane.getVerticalScrollBar().setUnitIncrement(8);
         scrollPane.setPreferredSize(new Dimension(Integer.MAX_VALUE, 200));
+        scrollPane.getViewport().setScrollMode(JViewport.BACKINGSTORE_SCROLL_MODE);
 
         JPanel panelWrapper = new JPanel(new BorderLayout());
         panelWrapper.setBorder(BorderFactory.createEmptyBorder(2, 2, 2, 2));
@@ -1188,6 +1192,7 @@ public class SettingsPanel {
         scrollPane.setBackground(color(BACKGROUND));
         scrollPane.getVerticalScrollBar().setUnitIncrement(8);
         scrollPane.setPreferredSize(new Dimension(Integer.MAX_VALUE, 200));
+        scrollPane.getViewport().setScrollMode(JViewport.BACKINGSTORE_SCROLL_MODE);
 
         JPanel panelWrapper = new JPanel(new BorderLayout());
         panelWrapper.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 2));
