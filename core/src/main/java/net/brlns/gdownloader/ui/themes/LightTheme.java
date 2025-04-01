@@ -31,7 +31,7 @@ public class LightTheme extends AbstractTheme {
 
     @Override
     protected void initColors() {
-        put(ICON, new Color(128, 128, 128));
+        put(ICON, new Color(135, 135, 135));
         put(ICON_ACTIVE, new Color(56, 192, 251));
         put(ICON_INACTIVE, new Color(239, 83, 80));
         put(ICON_HOVER, new Color(80, 80, 80));
@@ -48,9 +48,9 @@ public class LightTheme extends AbstractTheme {
         put(LIGHT_TEXT, new Color(102, 102, 102));
         put(BUTTON_FOREGROUND, Color.DARK_GRAY);
         put(BUTTON_BACKGROUND, Color.WHITE);
-        put(BUTTON_HOVER, new Color(128, 128, 128));
-        put(SCROLL_BAR_FOREGROUND, new Color(128, 128, 128));
-        put(SLIDER_FOREGROUND, new Color(100, 100, 100));
+        put(BUTTON_HOVER, new Color(135, 135, 135));
+        put(SCROLL_BAR_FOREGROUND, new Color(135, 135, 135));
+        put(SLIDER_FOREGROUND, new Color(135, 135, 135));
         put(CHECK_BOX_HOVER, new Color(80, 80, 80));
         put(SIDE_PANEL_SELECTED, new Color(218, 218, 218));
         put(TOOLTIP_BACKGROUND, new Color(230, 230, 230));
@@ -65,6 +65,7 @@ public class LightTheme extends AbstractTheme {
         put(MENU_ITEM_ARMED, Color.LIGHT_GRAY);
         put(MENU_ITEM_PRESSED, Color.GRAY);
         put(QUEUE_ACTIVE_ICON, new Color(29, 233, 182));
+        put(TOAST_BACKGROUND, new Color(230, 230, 230, 230));
         put(TOAST_ERROR, Color.RED);
         put(TOAST_WARNING, new Color(255, 214, 0));
         put(TOAST_INFO, new Color(30, 136, 229));

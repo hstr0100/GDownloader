@@ -18,6 +18,7 @@ package net.brlns.gdownloader.ui.custom;
 
 import jakarta.annotation.Nullable;
 import java.awt.*;
+import java.awt.geom.RoundRectangle2D;
 import java.util.Collections;
 import java.util.Set;
 import java.util.WeakHashMap;
@@ -78,21 +79,29 @@ public class CustomProgressBar extends JPanel {
 
         setPreferredSize(new Dimension(300, 20));
         setDoubleBuffered(true);
+        setOpaque(false);
     }
 
     @Override
     protected void paintComponent(Graphics g) {
-        super.paintComponent(g);
-
-        Graphics2D g2d = (Graphics2D)g;
+        Graphics2D g2d = (Graphics2D)g.create();
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
+        int width = getWidth();
+        int height = getHeight();
+
+        int arcSize = 8;
+        RoundRectangle2D backgroundRect = new RoundRectangle2D.Float(
+            0, 0, width, height, arcSize, arcSize);
+
         g2d.setColor(getBackground());
-        g2d.fillRect(0, 0, getWidth(), getHeight());
+        g2d.fill(backgroundRect);
+
+        g2d.setClip(backgroundRect);
 
         g2d.setColor(getForeground());
 
-        int progressBarWidth = getWidth();
+        int progressBarWidth = width;
         int blockWidth = progressBarWidth / 6; // 1 / 6
 
         if (value == -1) {
@@ -100,22 +109,33 @@ public class CustomProgressBar extends JPanel {
             double normalizedPosition = (Math.sin(phase) + 1) / 2;
             int blockX = (int)(normalizedPosition * (progressBarWidth - blockWidth));
 
-            g2d.fillRect(blockX, 0, blockWidth, getHeight());
+            RoundRectangle2D progressRect = new RoundRectangle2D.Float(
+                blockX, 0, blockWidth, height, arcSize, arcSize);
+            g2d.fill(progressRect);
         } else {
             // Draw normal progress bar when value is not -1
-            int width = (int)(progressBarWidth * (value / 100.0));
-            g2d.fillRect(0, 0, width, getHeight());
+            int progressWidth = (int)(progressBarWidth * (value / 100.0));
+
+            if (progressWidth > 0) {
+                if (progressWidth < width) {
+                    g2d.fillRect(0, 0, progressWidth, height);
+                } else {
+                    g2d.fill(backgroundRect);
+                }
+            }
         }
 
-        if (stringPainted) {
+        if (stringPainted && string != null) {
             String stringToPaint = string.replace("-1.0%", "N/A");
-            g2d.setColor(textColor);
+            g2d.setColor(textColor != null ? textColor : Color.BLACK);
             g2d.setFont(FONT);
             FontMetrics fm = g2d.getFontMetrics();
-            int x = (getWidth() - fm.stringWidth(stringToPaint)) / 2;
-            int y = (getHeight() + fm.getAscent() - fm.getDescent()) / 2;
+            int x = (width - fm.stringWidth(stringToPaint)) / 2;
+            int y = (height + fm.getAscent() - fm.getDescent()) / 2;
             g2d.drawString(stringToPaint, x, y);
         }
+
+        g2d.dispose();
     }
 
     public void setValue(int valueIn) {

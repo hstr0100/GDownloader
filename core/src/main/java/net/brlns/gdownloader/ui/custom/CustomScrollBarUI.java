@@ -65,13 +65,16 @@ public class CustomScrollBarUI extends BasicScrollBarUI {
             return;
         }
 
-        Graphics2D g2 = (Graphics2D)g.create();
-        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        Graphics2D g2d = (Graphics2D)g.create();
+        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-        g2.setColor(thumbColor);
-        g2.fillRect(thumbBounds.x, thumbBounds.y, thumbBounds.width, thumbBounds.height);
+        g2d.setColor(thumbColor);
 
-        g2.dispose();
+        int arcSize = 8;
+        g2d.fillRoundRect(thumbBounds.x, thumbBounds.y, thumbBounds.width, thumbBounds.height,
+            arcSize, arcSize);
+
+        g2d.dispose();
     }
 
     @Override
@@ -91,7 +94,11 @@ public class CustomScrollBarUI extends BasicScrollBarUI {
 
     @Override
     protected Dimension getMinimumThumbSize() {
-        return new Dimension(8, 8);
+        if (scrollbar.getOrientation() == JScrollBar.VERTICAL) {
+            return new Dimension(8, 40);
+        } else {
+            return new Dimension(40, 8);
+        }
     }
 
     @Override

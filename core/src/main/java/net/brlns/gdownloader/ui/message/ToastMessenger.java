@@ -78,7 +78,7 @@ public class ToastMessenger extends AbstractMessenger {
 
                 g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-                g2d.setColor(new Color(0, 0, 0, 200));
+                g2d.setColor(color(TOAST_BACKGROUND));
                 g2d.fillRoundRect(0, 0, getWidth(), getHeight(), ARC_WIDTH, ARC_HEIGHT);
 
                 g2d.dispose();

@@ -1105,10 +1105,9 @@ public final class GUIManager {
                                 }
                             };
 
-                            card.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-
                             card.setOpaque(false);
                             card.setLayout(new GridBagLayout());
+                            card.setBorder(BorderFactory.createLineBorder(color(BACKGROUND), 5));
                             card.setBackground(color(MEDIA_CARD));
 
                             int fontSize = main.getConfig().getFontSize();
@@ -1145,7 +1144,6 @@ public final class GUIManager {
                             thumbnailPanel.setMinimumSize(new Dimension(
                                 CustomMediaCardUI.THUMBNAIL_WIDTH, CustomMediaCardUI.THUMBNAIL_HEIGHT));
                             thumbnailPanel.setBackground(color(MEDIA_CARD_THUMBNAIL));
-                            thumbnailPanel.setLayout(new BorderLayout());
                             thumbnailPanel.setPlaceholderIcon(DownloadTypeEnum.ALL);
 
                             gbc.insets = new Insets(10, 0, 10, 0);
@@ -1355,8 +1353,8 @@ public final class GUIManager {
                         appWindow.setVisible(true);
                     }
 
-                    appWindow.revalidate();
-                    appWindow.repaint();
+                    queuePanel.revalidate();
+                    queuePanel.repaint();
                 }
 
                 if (main.getConfig().isAutoScrollToBottom() && scrollToBottom) {

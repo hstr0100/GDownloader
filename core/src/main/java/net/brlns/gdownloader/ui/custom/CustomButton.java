@@ -19,6 +19,9 @@ package net.brlns.gdownloader.ui.custom;
 import jakarta.annotation.Nullable;
 import java.awt.Color;
 import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
+import java.awt.geom.RoundRectangle2D;
 import javax.swing.JButton;
 import lombok.Getter;
 import lombok.Setter;
@@ -49,17 +52,29 @@ public class CustomButton extends JButton {
 
     @Override
     protected void paintComponent(Graphics g) {
+        Graphics2D g2d = (Graphics2D)g.create();
+
+        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
         if (getModel().isPressed()) {
-            g.setColor(pressedBackgroundColor);
+            g2d.setColor(pressedBackgroundColor);
         } else if (getModel().isRollover()) {
-            g.setColor(hoverBackgroundColor);
+            g2d.setColor(hoverBackgroundColor);
         } else {
-            g.setColor(getBackground());
+            g2d.setColor(getBackground());
         }
 
-        g.fillRect(0, 0, getWidth(), getHeight());
+        int arcSize = 8;
+        RoundRectangle2D backgroundRect = new RoundRectangle2D.Float(
+            0, 0, getWidth(), getHeight(), arcSize, arcSize);
 
-        super.paintComponent(g);
+        g2d.fill(backgroundRect);
+
+        g2d.setClip(backgroundRect);
+
+        super.paintComponent(g2d);
+
+        g2d.dispose();
     }
 
     @Override

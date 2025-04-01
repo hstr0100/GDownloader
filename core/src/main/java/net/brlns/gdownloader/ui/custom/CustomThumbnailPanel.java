@@ -17,6 +17,7 @@
 package net.brlns.gdownloader.ui.custom;
 
 import java.awt.*;
+import java.awt.geom.RoundRectangle2D;
 import java.awt.image.BufferedImage;
 import javax.swing.ImageIcon;
 import javax.swing.JLabel;
@@ -42,6 +43,7 @@ public class CustomThumbnailPanel extends JPanel {
     @SuppressWarnings("this-escape")
     public CustomThumbnailPanel() {
         setLayout(new BorderLayout());
+        setOpaque(false);
     }
 
     private ImageIcon fetchIcon(DownloadTypeEnum downloadType) {
@@ -82,6 +84,7 @@ public class CustomThumbnailPanel extends JPanel {
 
         if (imageLabel == null) {
             imageLabel = new JLabel(iconIn);
+            imageLabel.setOpaque(false);
             add(imageLabel, BorderLayout.CENTER);
         } else {
             imageLabel.setIcon(iconIn);
@@ -117,29 +120,40 @@ public class CustomThumbnailPanel extends JPanel {
 
     @Override
     protected void paintComponent(Graphics g) {
-        super.paintComponent(g);
+        Graphics2D g2d = (Graphics2D)g.create();
 
+        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+        g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+
+        int width = getWidth();
+        int height = getHeight();
+
+        int arcSize = 10;
+        RoundRectangle2D roundedRect = new RoundRectangle2D.Float(
+            0, 0, width, height, arcSize, arcSize);
+
+        g2d.setColor(getBackground());
+        g2d.fill(roundedRect);
+
+        g2d.setClip(roundedRect);
         if (image != null) {
-            Graphics2D g2d = (Graphics2D)g.create();
-
-            g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-            g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
-
             int panelWidth = getWidth();
             int panelHeight = getHeight();
             int imageWidth = image.getWidth();
             int imageHeight = image.getHeight();
 
-            double scaleX = (double)panelWidth / imageWidth;
-            double scaleY = (double)panelHeight / imageHeight;
+            // 2px overflow on each side to account for slight antialiasing artifacts
+            double scaleX = (double)(panelWidth + 4) / imageWidth;
+            double scaleY = (double)(panelHeight + 4) / imageHeight;
 
             double scale = Math.min(scaleX, scaleY);
 
             int scaledWidth = (int)(imageWidth * scale);
             int scaledHeight = (int)(imageHeight * scale);
 
-            int x = (panelWidth - scaledWidth) / 2;
+            // Center the image, shift left by 2px
+            int x = (panelWidth - scaledWidth) / 2 - 2;
             int y = (panelHeight - scaledHeight) / 2;
 
             g2d.drawImage(image, x, y, scaledWidth, scaledHeight, this);
@@ -159,16 +173,26 @@ public class CustomThumbnailPanel extends JPanel {
                 int rectX = x + scaledWidth - textWidth - hPadding * 2;
                 int rectY = y + scaledHeight - textHeight - vPadding * 2;
 
+                arcSize = 8;
+                RoundRectangle2D durationRect = new RoundRectangle2D.Float(
+                    rectX, rectY, textWidth + hPadding * 2, textHeight + vPadding * 2,
+                    arcSize, arcSize);
+
                 g2d.setColor(new Color(0, 0, 0, 190));
-                g2d.fillRect(rectX, rectY, textWidth + hPadding * 2, textHeight + vPadding * 2);
+                g2d.fill(durationRect);
 
                 g2d.setColor(Color.WHITE);
                 int textX = rectX + hPadding;
                 int textY = rectY + vPadding + fm.getAscent();
                 g2d.drawString(durationText, textX, textY);
             }
-
-            g2d.dispose();
+        } else if (placeholderIcon != null) {
+            Component[] components = getComponents();
+            if (components.length > 0 && components[0] instanceof JLabel) {
+                components[0].paint(g2d);
+            }
         }
+
+        g2d.dispose();
     }
 }

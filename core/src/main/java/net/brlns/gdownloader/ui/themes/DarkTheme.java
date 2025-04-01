@@ -65,6 +65,7 @@ public class DarkTheme extends AbstractTheme {
         put(MENU_ITEM_ARMED, Color.GRAY);
         put(MENU_ITEM_PRESSED, Color.LIGHT_GRAY);
         put(QUEUE_ACTIVE_ICON, new Color(29, 233, 182));
+        put(TOAST_BACKGROUND, new Color(0, 0, 0, 200));
         put(TOAST_ERROR, Color.RED);
         put(TOAST_WARNING, new Color(255, 214, 0));
         put(TOAST_INFO, new Color(30, 136, 229));

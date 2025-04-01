@@ -49,8 +49,10 @@ public class CustomSliderUI extends BasicSliderUI {
 
         Rectangle trackBounds = trackRect;
         g2d.setColor(color(SLIDER_TRACK));
-        g2d.fillRect(trackBounds.x, trackBounds.y + (trackBounds.height / 2) - 2,
-            trackBounds.width, 4);
+
+        int arcSize = 3;
+        g2d.fillRoundRect(trackBounds.x, trackBounds.y + (trackBounds.height / 2) - 2,
+            trackBounds.width, 4, arcSize, arcSize);
 
         g2d.dispose();
     }
