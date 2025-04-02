@@ -188,7 +188,11 @@ public class ToastMessenger extends AbstractMessenger {
         messageDialog.setShape(new RoundRectangle2D.Double(0, 0,
             messageDialog.getWidth(), messageDialog.getHeight(), ARC_SIZE, ARC_SIZE));
 
-        messageDialog.setOpacity(0.9f);
+        try {
+            messageDialog.setOpacity(0.9f);
+        } catch (UnsupportedOperationException e) {
+            // Some DE's do not support opacity, ignore.
+        }
 
         messageDialog.setVisible(true);
 
@@ -198,7 +202,7 @@ public class ToastMessenger extends AbstractMessenger {
     private void updateLocation(JFrame appWindow) {
         Point frameLoc = appWindow.getLocation();
         int x = frameLoc.x + (appWindow.getWidth() - messageDialog.getWidth()) / 2;
-        int y = frameLoc.y + appWindow.getHeight() - messageDialog.getHeight() - MARGIN;
+        int y = frameLoc.y + appWindow.getHeight() - messageDialog.getHeight() - 20;
 
         messageDialog.setLocation(x, y);
     }

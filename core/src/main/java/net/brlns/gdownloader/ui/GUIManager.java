@@ -358,7 +358,7 @@ public final class GUIManager {
     private void adjustWindowSize() {
         assert SwingUtilities.isEventDispatchThread();
 
-        appWindow.setSize(670, 370);
+        appWindow.setSize(675, 370);
         appWindow.setMinimumSize(new Dimension(appWindow.getWidth(), 225));
 
         Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
@@ -399,7 +399,7 @@ public final class GUIManager {
         gbc.insets = new Insets(0, 10, 0, 0);
         topPanel.add(leftButtonPanel, gbc);
 
-        JPanel statusPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 0));
+        JPanel statusPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
         statusPanel.setOpaque(false);
 
         addStatusLabel(statusPanel, LIGHT_TEXT, (downloadManager) -> {
@@ -421,7 +421,7 @@ public final class GUIManager {
         gbc.gridx = 1;
         gbc.gridy = 0;
         gbc.anchor = GridBagConstraints.WEST;
-        gbc.insets = new Insets(0, 10, 0, 20);
+        gbc.insets = new Insets(0, 10, 0, 0);
         topPanel.add(statusPanel, gbc);
 
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 0));
