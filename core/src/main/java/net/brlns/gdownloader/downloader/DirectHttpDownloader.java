@@ -250,8 +250,6 @@ public class DirectHttpDownloader extends AbstractDownloader {
 
             if (deepestDir != null) {
                 entry.getFinalMediaFiles().add(deepestDir.toFile());
-            } else {
-                entry.getFinalMediaFiles().add(finalPath);
             }
         } catch (IOException e) {
             log.error("Failed to process media files", e);

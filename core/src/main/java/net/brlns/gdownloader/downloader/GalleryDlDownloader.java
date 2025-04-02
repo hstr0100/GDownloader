@@ -265,8 +265,6 @@ public class GalleryDlDownloader extends AbstractDownloader {
                     DirectoryDeduplicator.deduplicateDirectory(deepestFile);
                     entry.getFinalMediaFiles().removeIf(file -> !file.exists());
                 }
-            } else {
-                entry.getFinalMediaFiles().add(finalPath);
             }
         } catch (IOException e) {
             log.error("Failed to process media files", e);

@@ -23,6 +23,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.file.DirectoryNotEmptyException;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -183,7 +184,7 @@ public class QueueEntry {
 
         for (File file : finalMediaFiles) {
             try {
-                if (Files.deleteIfExists(file.toPath())) {
+                if (file.isFile() && Files.deleteIfExists(file.toPath())) {
                     success = true;
                 }
             } catch (IOException e) {
@@ -191,14 +192,25 @@ public class QueueEntry {
             }
         }
 
+        for (File file : finalMediaFiles) {
+            try {
+                if (file.isDirectory() && Files.deleteIfExists(file.toPath())) {
+                    success = true;
+                }
+            } catch (DirectoryNotEmptyException e) {
+                log.warn("Directory {} is not empty, ignoring...", file);
+            } catch (IOException e) {
+                GDownloader.handleException(e);
+            }
+        }
+
         finalMediaFiles.clear();
 
-        main.getGuiManager().showPopupMessage(
-            l10n("gui.delete_files.notification_title"),
+        main.getGuiManager().showToastMessage(
             success ? l10n("gui.delete_files.deleted") : l10n("gui.delete_files.no_files"),
             3000,
             MessageTypeEnum.INFO,
-            false, false);
+            false, true);
     }
 
     public boolean isRunning() {
@@ -694,11 +706,11 @@ public class QueueEntry {
             List<String> finalText = new ArrayList<>();
 
             for (List<String> entry : entries) {
-                finalText.add(StringUtils.escapeAndBuildCommandLine(entry));
-
-                if (entries.size() > 1) {
-                    finalText.add(System.lineSeparator());
+                if (entry.isEmpty()) {
+                    continue;
                 }
+
+                finalText.add(StringUtils.escapeAndBuildCommandLine(entry));
             }
 
             main.getClipboardManager().copyTextToClipboard(finalText);
