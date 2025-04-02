@@ -472,9 +472,9 @@ public class QueueEntry {
             }
         }
 
-        if (main.getConfig().isDebugMode() && !commandLineArguments.isEmpty()) {
+        if (main.getConfig().isDebugMode()) {
             addRightClick(l10n("gui.copy_command_line"),
-                constructCommandLineMenu(commandLineArguments));
+                constructCommandLineMenu(lastCommandLine));
         }
     }
 
