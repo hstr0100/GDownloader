@@ -272,7 +272,8 @@ public class YtDlpDownloader extends AbstractDownloader {
                 if (type == VIDEO || type == AUDIO) {
                     // Non-zero output for a playlist likely means one or more items were unavailable.
                     if (lastOutput.contains("Finished downloading playlist")) {
-                        return new DownloadResult(FLAG_SUCCESS, lastOutput);
+                        success = true;
+                        continue;
                     }
 
                     return new DownloadResult(FLAG_MAIN_CATEGORY_FAILED, lastOutput);
