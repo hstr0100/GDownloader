@@ -37,8 +37,7 @@ import static net.brlns.gdownloader.ui.themes.UIColors.*;
 @Slf4j
 public class ToastMessenger extends AbstractMessenger {
 
-    private static final int ARC_WIDTH = 20;
-    private static final int ARC_HEIGHT = 20;
+    private static final int ARC_SIZE = 20;
     private static final int MARGIN = 10;
 
     private JDialog messageDialog;
@@ -79,7 +78,7 @@ public class ToastMessenger extends AbstractMessenger {
                 g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
                 g2d.setColor(color(TOAST_BACKGROUND));
-                g2d.fillRoundRect(0, 0, getWidth(), getHeight(), ARC_WIDTH, ARC_HEIGHT);
+                g2d.fillRoundRect(0, 0, getWidth(), getHeight(), ARC_SIZE, ARC_SIZE);
 
                 g2d.dispose();
             }
@@ -187,7 +186,7 @@ public class ToastMessenger extends AbstractMessenger {
         manager.getAppWindow().addComponentListener(componentAdapter);
 
         messageDialog.setShape(new RoundRectangle2D.Double(0, 0,
-            messageDialog.getWidth(), messageDialog.getHeight(), ARC_WIDTH, ARC_HEIGHT));
+            messageDialog.getWidth(), messageDialog.getHeight(), ARC_SIZE, ARC_SIZE));
 
         messageDialog.setOpacity(0.9f);
 

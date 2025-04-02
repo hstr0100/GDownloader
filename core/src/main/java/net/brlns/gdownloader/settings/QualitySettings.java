@@ -85,10 +85,4 @@ public class QualitySettings {
             + selector.getValue() + "[ext=" + videoContainer.getValue() + "]+bestaudio/"
             + selector.getValue() + "+bestaudio/best)";
     }
-
-    // TODO
-    @JsonIgnore
-    public String getTranscodingOptions() {
-        return "res:" + maxHeight.getValue() + ",fps,ext,codec:vp9.2";
-    }
 }

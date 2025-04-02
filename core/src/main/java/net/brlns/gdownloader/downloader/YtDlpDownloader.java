@@ -23,32 +23,34 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
-import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.*;
+import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.downloader.enums.DownloadStatusEnum;
+import net.brlns.gdownloader.downloader.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.downloader.structs.DownloadResult;
 import net.brlns.gdownloader.downloader.structs.MediaInfo;
 import net.brlns.gdownloader.persistence.PersistenceManager;
 import net.brlns.gdownloader.settings.QualitySettings;
 import net.brlns.gdownloader.settings.enums.AudioBitrateEnum;
-import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
 import net.brlns.gdownloader.util.DirectoryUtils;
 import net.brlns.gdownloader.util.FileUtils;
 import net.brlns.gdownloader.util.Pair;
 
 import static net.brlns.gdownloader.downloader.enums.DownloadFlagsEnum.*;
+import static net.brlns.gdownloader.downloader.enums.DownloadTypeEnum.*;
 import static net.brlns.gdownloader.lang.Language.*;
-import static net.brlns.gdownloader.settings.enums.DownloadTypeEnum.*;
 import static net.brlns.gdownloader.util.FileUtils.isFileType;
+import static net.brlns.gdownloader.util.FileUtils.relativize;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -247,20 +249,12 @@ public class YtDlpDownloader extends AbstractDownloader {
                 continue;
             }
 
-            entry.getMediaCard().setPlaceholderIcon(type);
+            entry.setCurrentDownloadType(type);
 
             List<String> arguments = new ArrayList<>(genericArguments);
 
             List<String> downloadArguments = filter.getArguments(this, type, manager, tmpPath, entry.getUrl());
             arguments.addAll(downloadArguments);
-
-            if (main.getConfig().isDebugMode()) {
-                log.debug("ALL {}: Type {} ({}): {}",
-                    genericArguments,
-                    type,
-                    filter.getDisplayName(),
-                    downloadArguments);
-            }
 
             Pair<Integer, String> result = processDownload(entry, arguments);
 
@@ -305,53 +299,57 @@ public class YtDlpDownloader extends AbstractDownloader {
         File finalPath = main.getOrCreateDownloadsDirectory();
         File tmpPath = entry.getTmpDirectory();
 
+        Path deepestDir = null;
+        int maxDepth = -1;
+
         QualitySettings quality = entry.getFilter().getQualitySettings();
 
         try {
             List<Path> paths = Files.walk(tmpPath.toPath())
-                .sorted(Comparator.reverseOrder()) // Process files before directories
-                .toList();
-
-            Optional<File> deepestDirectoryRef = Optional.empty();
+                .filter(path -> !path.equals(tmpPath.toPath()))
+                .collect(Collectors.toList());
 
             for (Path path : paths) {
-                if (path.equals(tmpPath.toPath())) {
-                    continue;
-                }
+                if (Files.isDirectory(path)) {
+                    Path targetPath = relativize(tmpPath, finalPath, path);
 
-                Path relativePath = tmpPath.toPath().relativize(path);
-                Path targetPath = determineTargetPath(path, finalPath, relativePath, quality);
-
-                try {
-                    if (Files.isDirectory(targetPath)) {
+                    try {
                         Files.createDirectories(targetPath);
-                        deepestDirectoryRef = Optional.of(targetPath.toFile());
+                        int depth = targetPath.getNameCount();
+                        if (depth > maxDepth) {
+                            maxDepth = depth;
+                            deepestDir = targetPath;
+                        }
+                    } catch (IOException e) {
+                        log.warn("Failed to create directory: {}", targetPath, e);
+                    }
+                }
+            }
 
-                        log.info("Created directory: {}", targetPath);
-                    } else {
+            for (Path path : paths) {
+                if (!Files.isDirectory(path)) {
+                    Path targetPath = determineTargetPath(tmpPath, finalPath, path, quality);
+
+                    try {
                         Files.createDirectories(targetPath.getParent());
                         targetPath = FileUtils.ensureUniqueFileName(targetPath);
                         Files.move(path, targetPath, StandardCopyOption.REPLACE_EXISTING);
                         entry.getFinalMediaFiles().add(targetPath.toFile());
-
-                        log.info("Moved file: {}", targetPath);
+                    } catch (IOException e) {
+                        log.error("Failed to move file: {}", path, e);
                     }
-                } catch (FileAlreadyExistsException e) {
-                    log.warn("File or directory already exists: {}", targetPath, e);
-                } catch (IOException e) {
-                    log.error("Failed to move file: {}", path.getFileName(), e);
                 }
             }
 
-            if (deepestDirectoryRef.isPresent()) {
-                entry.getFinalMediaFiles().add(deepestDirectoryRef.get());
+            if (deepestDir != null) {
+                entry.getFinalMediaFiles().add(deepestDir.toFile());
             }
         } catch (IOException e) {
-            log.error("Failed to list files", e);
+            log.error("Failed to process media files", e);
         }
     }
 
-    private Path determineTargetPath(Path path, File finalPath, Path relativePath, QualitySettings quality) {
+    private Path determineTargetPath(File tmpPath, File finalPath, Path path, QualitySettings quality) {
         boolean isAudio = isFileType(path, quality.getAudioContainer().getValue());
         boolean isVideo = isFileType(path, quality.getVideoContainer().getValue());
         boolean isSubtitle = isFileType(path, quality.getSubtitleContainer().getValue());
@@ -359,12 +357,11 @@ public class YtDlpDownloader extends AbstractDownloader {
 
         if (isAudio || isVideo
             || (isSubtitle && main.getConfig().isDownloadSubtitles())
-            || (isThumbnail && main.getConfig().isDownloadThumbnails())
-            || Files.isDirectory(path)) {
-            return finalPath.toPath().resolve(relativePath);
+            || (isThumbnail && main.getConfig().isDownloadThumbnails())) {
+            return relativize(tmpPath, finalPath, path);
         }
 
-        return Path.of(finalPath.getAbsolutePath(), l10n("system.unknown_directory_name")).resolve(relativePath);
+        return relativize(tmpPath.toPath(), Paths.get(finalPath.toString(), l10n("system.unknown_directory_name")), path);
     }
 
     @Nullable
@@ -373,6 +370,8 @@ public class YtDlpDownloader extends AbstractDownloader {
 
         List<String> finalArgs = new ArrayList<>(arguments);
         finalArgs.add(entry.getUrl());
+
+        entry.setLastCommandLine(finalArgs, true);
 
         ProcessBuilder processBuilder = new ProcessBuilder(finalArgs);
         processBuilder.redirectErrorStream(true);

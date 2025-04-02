@@ -48,10 +48,10 @@ import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.downloader.AbstractDownloader;
 import net.brlns.gdownloader.downloader.DownloadManager;
 import net.brlns.gdownloader.downloader.enums.CloseReasonEnum;
+import net.brlns.gdownloader.downloader.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.downloader.enums.QueueCategoryEnum;
 import net.brlns.gdownloader.event.EventDispatcher;
-import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.ui.custom.*;
 import net.brlns.gdownloader.ui.dnd.WindowDragSourceListener;
 import net.brlns.gdownloader.ui.dnd.WindowDropTargetListener;
@@ -1057,7 +1057,8 @@ public final class GUIManager {
     }
 
     private void processMediaCardQueue() {
-        if (mediaCardUIUpdateQueue.isEmpty()
+        if (queuePanel == null
+            || mediaCardUIUpdateQueue.isEmpty()
             || currentlyUpdatingMediaCards.get()
             // Give the EDT some room for breathing
             || (System.currentTimeMillis() - lastMediaCardQueueUpdate.get()) < 100) {
@@ -1069,9 +1070,10 @@ public final class GUIManager {
                 log.debug("Items in queue: {}", mediaCardUIUpdateQueue.size());
             }
 
-            boolean scrollToBottom = false;
-
+            currentlyUpdatingMediaCards.set(true);
             queuePanel.setIgnoreRepaint(true);
+
+            boolean scrollToBottom = false;
 
             try {
                 int count = 0;
@@ -1347,14 +1349,12 @@ public final class GUIManager {
                 if (mediaCardUIUpdateQueue.isEmpty()) {
                     queuePanel.setIgnoreRepaint(false);
 
-                    setUpAppWindow();
+                    queuePanel.revalidate();
+                    queuePanel.repaint();
 
                     if (!appWindow.isVisible()) {
                         appWindow.setVisible(true);
                     }
-
-                    queuePanel.revalidate();
-                    queuePanel.repaint();
                 }
 
                 if (main.getConfig().isAutoScrollToBottom() && scrollToBottom) {

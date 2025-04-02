@@ -26,7 +26,6 @@ import java.net.HttpURLConnection;
 import java.net.Proxy;
 import java.net.URI;
 import java.net.URL;
-import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -39,6 +38,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import lombok.Builder;
 import lombok.Data;
 import lombok.Getter;
@@ -46,9 +46,9 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.downloader.enums.DownloadStatusEnum;
+import net.brlns.gdownloader.downloader.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.downloader.structs.DownloadResult;
-import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.util.DirectoryUtils;
 import net.brlns.gdownloader.util.FileUtils;
 import net.brlns.gdownloader.util.Pair;
@@ -56,7 +56,8 @@ import net.brlns.gdownloader.util.StringUtils;
 import net.brlns.gdownloader.util.URLUtils;
 
 import static net.brlns.gdownloader.downloader.enums.DownloadFlagsEnum.*;
-import static net.brlns.gdownloader.settings.enums.DownloadTypeEnum.DIRECT;
+import static net.brlns.gdownloader.downloader.enums.DownloadTypeEnum.DIRECT;
+import static net.brlns.gdownloader.util.FileUtils.relativize;
 
 // TODO: Resume chunked
 // TODO: Add proxy settings to UI as a floating window that validates fields.
@@ -149,7 +150,7 @@ public class DirectHttpDownloader extends AbstractDownloader {
                 continue;
             }
 
-            entry.getMediaCard().setPlaceholderIcon(type);
+            entry.setCurrentDownloadType(type);
 
             try {
                 success = downloadFile(entry, (percent, total, speed, remainingTime, chunkCount) -> {
@@ -207,50 +208,53 @@ public class DirectHttpDownloader extends AbstractDownloader {
         }
 
         File tmpPath = entry.getTmpDirectory();
+        Path deepestDir = null;
+        int maxDepth = -1;
 
         try {
             List<Path> paths = Files.walk(tmpPath.toPath())
-                .sorted(Comparator.reverseOrder()) // Process files before directories
-                .toList();
-
-            Optional<File> deepestDirectoryRef = Optional.empty();
+                .filter(path -> !path.equals(tmpPath.toPath()))
+                .collect(Collectors.toList());
 
             for (Path path : paths) {
-                if (path.equals(tmpPath.toPath())) {
-                    continue;
-                }
+                if (Files.isDirectory(path)) {
+                    Path targetPath = relativize(tmpPath, finalPath, path);
 
-                Path relativePath = tmpPath.toPath().relativize(path);
-                Path targetPath = finalPath.toPath().resolve(relativePath);
-
-                try {
-                    if (Files.isDirectory(targetPath)) {
+                    try {
                         Files.createDirectories(targetPath);
-                        deepestDirectoryRef = Optional.of(targetPath.toFile());
+                        int depth = targetPath.getNameCount();
+                        if (depth > maxDepth) {
+                            maxDepth = depth;
+                            deepestDir = targetPath;
+                        }
+                    } catch (IOException e) {
+                        log.warn("Failed to create directory: {}", targetPath, e);
+                    }
+                }
+            }
 
-                        log.info("Created directory: {}", targetPath);
-                    } else {
+            for (Path path : paths) {
+                if (!Files.isDirectory(path)) {
+                    Path targetPath = relativize(tmpPath, finalPath, path);
+
+                    try {
                         Files.createDirectories(targetPath.getParent());
                         targetPath = FileUtils.ensureUniqueFileName(targetPath);
                         Files.move(path, targetPath, StandardCopyOption.REPLACE_EXISTING);
                         entry.getFinalMediaFiles().add(targetPath.toFile());
-
-                        log.info("Moved file: {}", targetPath);
+                    } catch (IOException e) {
+                        log.error("Failed to move file: {}", path, e);
                     }
-                } catch (FileAlreadyExistsException e) {
-                    log.warn("File or directory already exists: {}", targetPath, e);
-                } catch (IOException e) {
-                    log.error("Failed to move file: {}", path.getFileName(), e);
                 }
             }
 
-            if (deepestDirectoryRef.isPresent()) {
-                entry.getFinalMediaFiles().add(deepestDirectoryRef.get());
+            if (deepestDir != null) {
+                entry.getFinalMediaFiles().add(deepestDir.toFile());
             } else {
                 entry.getFinalMediaFiles().add(finalPath);
             }
         } catch (IOException e) {
-            log.error("Failed to list files", e);
+            log.error("Failed to process media files", e);
         }
     }
 

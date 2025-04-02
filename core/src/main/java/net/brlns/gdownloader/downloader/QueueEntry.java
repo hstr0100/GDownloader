@@ -45,6 +45,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.downloader.enums.CloseReasonEnum;
 import net.brlns.gdownloader.downloader.enums.DownloadStatusEnum;
+import net.brlns.gdownloader.downloader.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.downloader.enums.QueueCategoryEnum;
 import net.brlns.gdownloader.downloader.structs.MediaInfo;
@@ -101,6 +102,8 @@ public class QueueEntry {
     @Setter
     private DownloaderIdEnum currentDownloader;
 
+    private DownloadTypeEnum currentDownloadType;
+
     @Setter
     private QueueCategoryEnum currentQueueCategory;
 
@@ -118,6 +121,8 @@ public class QueueEntry {
     @Setter
     private File tmpDirectory;
     private final List<File> finalMediaFiles = new ArrayList<>();
+
+    private final List<String> lastCommandLine = new CopyOnWriteArrayList<>();
 
     private final ConcurrentLinkedHashSet<String> errorLog = new ConcurrentLinkedHashSet<>();
     private final ConcurrentLinkedHashSet<String> downloadLog = new ConcurrentLinkedHashSet<>();
@@ -230,6 +235,12 @@ public class QueueEntry {
 
     public void markQueried() {
         queried.set(true);
+    }
+
+    public void setCurrentDownloadType(DownloadTypeEnum typeIn) {
+        currentDownloadType = typeIn;
+
+        mediaCard.setPlaceholderIcon(typeIn);
     }
 
     public void setMediaInfo(MediaInfo mediaInfoIn) {
@@ -436,6 +447,37 @@ public class QueueEntry {
         }
     }
 
+    public void setLastCommandLine(List<String> commandLineArguments) {
+        setLastCommandLine(commandLineArguments, false);
+    }
+
+    public void setLastCommandLine(List<String> commandLineArguments, boolean shouldLog) {
+        if (commandLineArguments.isEmpty()) {
+            return;
+        }
+
+        lastCommandLine.clear();
+        lastCommandLine.addAll(commandLineArguments);
+
+        if (shouldLog) {
+            String builtCommandLine = StringUtils.escapeAndBuildCommandLine(lastCommandLine);
+            logOutput("Command line: " + builtCommandLine);
+
+            if (main.getConfig().isDebugMode()) {
+                log.debug("[Dispatch {}]: Type: {} Filter: {} CLI: {}",
+                    downloadId,
+                    currentDownloadType,
+                    filter.getDisplayName(),
+                    builtCommandLine);
+            }
+        }
+
+        if (main.getConfig().isDebugMode() && !commandLineArguments.isEmpty()) {
+            addRightClick(l10n("gui.copy_command_line"),
+                constructCommandLineMenu(commandLineArguments));
+        }
+    }
+
     public void logError(String output) {
         if (output.isEmpty()) {
             return;
@@ -524,6 +566,11 @@ public class QueueEntry {
         clearRightClick();
 
         addRightClick(menu);
+
+        if (main.getConfig().isDebugMode() && !lastCommandLine.isEmpty()) {
+            addRightClick(l10n("gui.copy_command_line"),
+                constructCommandLineMenu(lastCommandLine));
+        }
 
         if (!errorLog.isEmpty()) {
             addRightClick(l10n("gui.copy_error_log"),
@@ -642,6 +689,22 @@ public class QueueEntry {
         });
     }
 
+    private IMenuEntry constructCommandLineMenu(List<String> commandLineArguments) {
+        return new MultiActionMenuEntry<>(() -> commandLineArguments, (entries) -> {
+            List<String> finalText = new ArrayList<>();
+
+            for (List<String> entry : entries) {
+                finalText.add(StringUtils.escapeAndBuildCommandLine(entry));
+
+                if (entries.size() > 1) {
+                    finalText.add(System.lineSeparator());
+                }
+            }
+
+            main.getClipboardManager().copyTextToClipboard(finalText);
+        });
+    }
+
     public QueueEntryEntity toEntity() {
         QueueEntryEntity entity = new QueueEntryEntity();
 
@@ -659,6 +722,7 @@ public class QueueEntry {
         entity.setForcedDownloader(getForcedDownloader());
 
         entity.setCurrentDownloader(getCurrentDownloader());
+        entity.setCurrentDownloadType(getCurrentDownloadType());
         entity.setCurrentQueueCategory(getCurrentQueueCategory());
         entity.setDownloadStatus(getDownloadStatus());
         entity.setLastStatusMessage(getLastStatusMessage());
@@ -677,6 +741,8 @@ public class QueueEntry {
         entity.setFinalMediaFilePaths(getFinalMediaFiles().stream()
             .map(File::getAbsolutePath)
             .collect(Collectors.toCollection(ArrayList::new)));
+
+        entity.setLastCommandLine(new ArrayList<>(getLastCommandLine()));
 
         entity.setErrorLog(getErrorLog().snapshotAsList());
         entity.setDownloadLog(getDownloadLog().snapshotAsList());
@@ -706,6 +772,7 @@ public class QueueEntry {
 
         queueEntry.setForcedDownloader(entity.getForcedDownloader());
         queueEntry.setCurrentDownloader(entity.getCurrentDownloader());
+        queueEntry.setCurrentDownloadType(entity.getCurrentDownloadType());
         queueEntry.setCurrentQueueCategory(entity.getCurrentQueueCategory());
 
         if (entity.getDownloadStatus() != null && entity.getLastStatusMessage() != null) {
@@ -725,6 +792,8 @@ public class QueueEntry {
         for (String path : entity.getFinalMediaFilePaths()) {
             queueEntry.getFinalMediaFiles().add(new File(path));
         }
+
+        queueEntry.setLastCommandLine(entity.getLastCommandLine());
 
         queueEntry.getErrorLog().clear();
         queueEntry.getErrorLog().addAll(entity.getErrorLog());

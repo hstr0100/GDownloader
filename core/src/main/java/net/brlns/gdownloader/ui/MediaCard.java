@@ -28,7 +28,7 @@ import java.util.function.Supplier;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.downloader.enums.CloseReasonEnum;
-import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
+import net.brlns.gdownloader.downloader.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.ui.custom.CustomMediaCardUI;
 import net.brlns.gdownloader.ui.menu.IMenuEntry;
 import net.brlns.gdownloader.util.collection.ConcurrentLinkedHashMap;

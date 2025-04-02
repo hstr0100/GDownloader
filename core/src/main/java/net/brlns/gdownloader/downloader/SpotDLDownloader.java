@@ -22,23 +22,22 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.downloader.enums.DownloadStatusEnum;
+import net.brlns.gdownloader.downloader.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.downloader.structs.DownloadResult;
 import net.brlns.gdownloader.downloader.structs.MediaInfo;
 import net.brlns.gdownloader.persistence.PersistenceManager;
-import net.brlns.gdownloader.settings.QualitySettings;
-import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
 import net.brlns.gdownloader.util.DirectoryUtils;
 import net.brlns.gdownloader.util.FileUtils;
@@ -46,7 +45,8 @@ import net.brlns.gdownloader.util.FlagUtil;
 import net.brlns.gdownloader.util.Pair;
 
 import static net.brlns.gdownloader.downloader.enums.DownloadFlagsEnum.*;
-import static net.brlns.gdownloader.settings.enums.DownloadTypeEnum.*;
+import static net.brlns.gdownloader.downloader.enums.DownloadTypeEnum.*;
+import static net.brlns.gdownloader.util.FileUtils.relativize;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -207,20 +207,12 @@ public class SpotDLDownloader extends AbstractDownloader {
                 continue;
             }
 
-            entry.getMediaCard().setPlaceholderIcon(type);
+            entry.setCurrentDownloadType(type);
 
             List<String> arguments = new ArrayList<>(genericArguments);
 
             List<String> downloadArguments = filter.getArguments(this, type, manager, tmpPath, entry.getUrl());
             arguments.addAll(downloadArguments);
-
-            if (main.getConfig().isDebugMode()) {
-                log.debug("ALL {}: Type {} ({}): {}",
-                    genericArguments,
-                    type,
-                    filter.getDisplayName(),
-                    downloadArguments);
-            }
 
             Pair<Integer, String> result = processDownload(entry, arguments);
 
@@ -255,50 +247,51 @@ public class SpotDLDownloader extends AbstractDownloader {
         }
 
         File tmpPath = entry.getTmpDirectory();
-
-        QualitySettings quality = entry.getFilter().getQualitySettings();
+        Path deepestDir = null;
+        int maxDepth = -1;
 
         try {
             List<Path> paths = Files.walk(tmpPath.toPath())
-                .sorted(Comparator.reverseOrder()) // Process files before directories
-                .toList();
-
-            Optional<File> deepestDirectoryRef = Optional.empty();
+                .filter(path -> !path.equals(tmpPath.toPath()))
+                .collect(Collectors.toList());
 
             for (Path path : paths) {
-                if (path.equals(tmpPath.toPath())) {
-                    continue;
-                }
+                if (Files.isDirectory(path)) {
+                    Path targetPath = relativize(tmpPath, finalPath, path);
 
-                Path relativePath = tmpPath.toPath().relativize(path);
-                Path targetPath = finalPath.toPath().resolve(relativePath);
-
-                try {
-                    if (Files.isDirectory(targetPath)) {
+                    try {
                         Files.createDirectories(targetPath);
-                        deepestDirectoryRef = Optional.of(targetPath.toFile());
+                        int depth = targetPath.getNameCount();
+                        if (depth > maxDepth) {
+                            maxDepth = depth;
+                            deepestDir = targetPath;
+                        }
+                    } catch (IOException e) {
+                        log.warn("Failed to create directory: {}", targetPath, e);
+                    }
+                }
+            }
 
-                        log.info("Created directory: {}", targetPath);
-                    } else {
+            for (Path path : paths) {
+                if (!Files.isDirectory(path)) {
+                    Path targetPath = relativize(tmpPath, finalPath, path);
+
+                    try {
                         Files.createDirectories(targetPath.getParent());
                         targetPath = FileUtils.ensureUniqueFileName(targetPath);
                         Files.move(path, targetPath, StandardCopyOption.REPLACE_EXISTING);
                         entry.getFinalMediaFiles().add(targetPath.toFile());
-
-                        log.info("Moved file: {}", targetPath);
+                    } catch (IOException e) {
+                        log.error("Failed to move file: {}", path, e);
                     }
-                } catch (FileAlreadyExistsException e) {
-                    log.warn("File or directory already exists: {}", targetPath, e);
-                } catch (IOException e) {
-                    log.error("Failed to move file: {}", path.getFileName(), e);
                 }
             }
 
-            if (deepestDirectoryRef.isPresent()) {
-                entry.getFinalMediaFiles().add(deepestDirectoryRef.get());
+            if (deepestDir != null) {
+                entry.getFinalMediaFiles().add(deepestDir.toFile());
             }
         } catch (IOException e) {
-            log.error("Failed to list files", e);
+            log.error("Failed to process media files", e);
         }
     }
 
@@ -326,12 +319,16 @@ public class SpotDLDownloader extends AbstractDownloader {
         finalArgs.add("download");
         finalArgs.add(finalUrl);
 
+        entry.setLastCommandLine(finalArgs, true);
+
         ProcessBuilder processBuilder = new ProcessBuilder(finalArgs);
         processBuilder.redirectErrorStream(true);
         Process process = processBuilder.start();
         entry.setProcess(process);
 
         String lastOutput = "";
+
+        boolean tainted = false;
 
         try (
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
@@ -347,6 +344,10 @@ public class SpotDLDownloader extends AbstractDownloader {
                         lastOutput = line;
 
                         processProgress(entry, lastOutput);
+
+                        if (lastOutput.contains(" download error")) {
+                            tainted = true;
+                        }
                     }
                 } else {
                     try {
@@ -370,6 +371,18 @@ public class SpotDLDownloader extends AbstractDownloader {
                 int exitCode = process.waitFor();
                 if (main.getConfig().isDebugMode()) {
                     log.debug("Download process took {}ms, exit code: {}", stopped, exitCode);
+                }
+
+                if (exitCode == 0 && tainted) {
+                    // Under certain conditions, spotDL erroneously returns 0 even if all downloads have failed.
+                    // e.g:
+                    // AudioProviderError: YT-DLP download error - https://...
+                    // 1/1 complete
+                    //
+                    // This is incorrect.
+                    exitCode = 1;
+
+                    log.warn("spotDL was unable to download some or all items.");
                 }
 
                 return new Pair<>(exitCode, lastOutput);

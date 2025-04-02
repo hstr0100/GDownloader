@@ -71,6 +71,10 @@ public class QueueEntryEntity implements Serializable {
     private DownloaderIdEnum currentDownloader;
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "current_download_type")
+    private DownloadTypeEnum currentDownloadType;
+
+    @Enumerated(EnumType.STRING)
     @Column(name = "current_queue_category")
     private QueueCategoryEnum currentQueueCategory;
 
@@ -98,14 +102,23 @@ public class QueueEntryEntity implements Serializable {
     private ArrayList<String> finalMediaFilePaths = new ArrayList<>();
 
     @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "command_lines", joinColumns = @JoinColumn(name = "download_id"))
+    @Lob
+    @OrderColumn
+    @Column(name = "last_command_line")
+    private ArrayList<String> lastCommandLine = new ArrayList<>();
+
+    @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "error_logs", joinColumns = @JoinColumn(name = "download_id"))
     @Lob
+    @OrderColumn
     @Column(name = "error_log")
     private ArrayList<String> errorLog = new ArrayList<>();
 
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "download_logs", joinColumns = @JoinColumn(name = "download_id"))
     @Lob
+    @OrderColumn
     @Column(name = "download_log")
     // TODO: check if this is really necessary
     private ArrayList<String> downloadLog = new ArrayList<>();

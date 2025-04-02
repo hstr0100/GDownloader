@@ -22,7 +22,7 @@ import java.awt.image.BufferedImage;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 import lombok.Data;
-import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
+import net.brlns.gdownloader.downloader.enums.DownloadTypeEnum;
 
 /**
  * @author Gabriel / hstr0100 / vertx010

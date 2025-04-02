@@ -23,7 +23,7 @@ import javax.swing.ImageIcon;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import net.brlns.gdownloader.GDownloader;
-import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
+import net.brlns.gdownloader.downloader.enums.DownloadTypeEnum;
 
 import static net.brlns.gdownloader.ui.GUIManager.loadIcon;
 import static net.brlns.gdownloader.ui.themes.UIColors.ICON;

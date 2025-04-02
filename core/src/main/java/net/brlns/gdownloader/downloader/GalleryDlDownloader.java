@@ -22,21 +22,21 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.*;
+import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.downloader.enums.DownloadStatusEnum;
+import net.brlns.gdownloader.downloader.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.downloader.structs.DownloadResult;
 import net.brlns.gdownloader.downloader.structs.MediaInfo;
 import net.brlns.gdownloader.persistence.PersistenceManager;
-import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
 import net.brlns.gdownloader.util.DirectoryDeduplicator;
 import net.brlns.gdownloader.util.DirectoryUtils;
@@ -45,8 +45,9 @@ import net.brlns.gdownloader.util.Pair;
 import net.brlns.gdownloader.util.StringUtils;
 
 import static net.brlns.gdownloader.downloader.enums.DownloadFlagsEnum.*;
+import static net.brlns.gdownloader.downloader.enums.DownloadTypeEnum.*;
 import static net.brlns.gdownloader.lang.Language.*;
-import static net.brlns.gdownloader.settings.enums.DownloadTypeEnum.*;
+import static net.brlns.gdownloader.util.FileUtils.relativize;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -177,20 +178,12 @@ public class GalleryDlDownloader extends AbstractDownloader {
                 continue;
             }
 
-            entry.getMediaCard().setPlaceholderIcon(type);
+            entry.setCurrentDownloadType(type);
 
             List<String> arguments = new ArrayList<>(genericArguments);
 
             List<String> downloadArguments = filter.getArguments(this, type, manager, tmpPath, entry.getUrl());
             arguments.addAll(downloadArguments);
-
-            if (main.getConfig().isDebugMode()) {
-                log.debug("ALL {}: Type {} ({}): {}",
-                    genericArguments,
-                    type,
-                    filter.getDisplayName(),
-                    downloadArguments);
-            }
 
             Pair<Integer, String> result = processDownload(entry, arguments);
 
@@ -222,57 +215,61 @@ public class GalleryDlDownloader extends AbstractDownloader {
         }
 
         File tmpPath = entry.getTmpDirectory();
+        Path deepestDir = null;
+        int maxDepth = -1;
 
         try {
             List<Path> paths = Files.walk(tmpPath.toPath())
-                .sorted(Comparator.reverseOrder()) // Process files before directories
-                .toList();
-
-            Optional<File> deepestDirectoryRef = Optional.empty();
+                .filter(path -> !path.equals(tmpPath.toPath()))
+                .collect(Collectors.toList());
 
             for (Path path : paths) {
-                if (path.equals(tmpPath.toPath())) {
-                    continue;
-                }
+                if (Files.isDirectory(path)) {
+                    Path targetPath = relativize(tmpPath, finalPath, path);
 
-                Path relativePath = tmpPath.toPath().relativize(path);
-                Path targetPath = finalPath.toPath().resolve(relativePath);
-
-                try {
-                    if (Files.isDirectory(targetPath)) {
+                    try {
                         Files.createDirectories(targetPath);
-                        deepestDirectoryRef = Optional.of(targetPath.toFile());
+                        int depth = targetPath.getNameCount();
+                        if (depth > maxDepth) {
+                            maxDepth = depth;
+                            deepestDir = targetPath;
+                        }
+                    } catch (IOException e) {
+                        log.warn("Failed to create directory: {}", targetPath, e);
+                    }
+                }
+            }
 
-                        log.info("Created directory: {}", targetPath);
-                    } else {
+            for (Path path : paths) {
+                if (!Files.isDirectory(path)) {
+                    Path targetPath = relativize(tmpPath, finalPath, path);
+
+                    try {
                         Files.createDirectories(targetPath.getParent());
                         targetPath = FileUtils.ensureUniqueFileName(targetPath);
                         Files.move(path, targetPath, StandardCopyOption.REPLACE_EXISTING);
                         entry.getFinalMediaFiles().add(targetPath.toFile());
-
-                        log.info("Moved file: {}", targetPath);
+                    } catch (IOException e) {
+                        log.error("Failed to move file: {}", path, e);
                     }
-                } catch (FileAlreadyExistsException e) {
-                    log.warn("File or directory already exists: {}", targetPath, e);
-                } catch (IOException e) {
-                    log.error("Failed to move file: {}", path.getFileName(), e);
                 }
             }
 
-            if (deepestDirectoryRef.isPresent()) {
-                entry.getFinalMediaFiles().add(deepestDirectoryRef.get());
+            if (deepestDir != null) {
+                File deepestFile = deepestDir.toFile();
+                entry.getFinalMediaFiles().add(deepestFile);
 
                 if (main.getConfig().isGalleryDlDeduplication()) {
                     entry.updateStatus(DownloadStatusEnum.DEDUPLICATING, l10n("gui.deduplication.deduplicating"));
 
-                    DirectoryDeduplicator.deduplicateDirectory(deepestDirectoryRef.get());
+                    DirectoryDeduplicator.deduplicateDirectory(deepestFile);
                     entry.getFinalMediaFiles().removeIf(file -> !file.exists());
                 }
             } else {
                 entry.getFinalMediaFiles().add(finalPath);
             }
         } catch (IOException e) {
-            log.error("Failed to list files", e);
+            log.error("Failed to process media files", e);
         }
     }
 
@@ -282,6 +279,8 @@ public class GalleryDlDownloader extends AbstractDownloader {
 
         List<String> finalArgs = new ArrayList<>(arguments);
         finalArgs.add(entry.getUrl());
+
+        entry.setLastCommandLine(finalArgs, true);
 
         ProcessBuilder processBuilder = new ProcessBuilder(finalArgs);
         processBuilder.redirectErrorStream(true);

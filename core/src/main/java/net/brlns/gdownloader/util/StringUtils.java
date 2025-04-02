@@ -20,6 +20,8 @@ import jakarta.annotation.Nullable;
 import java.io.File;
 import java.text.DecimalFormat;
 import java.time.Duration;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -106,5 +108,86 @@ public final class StringUtils {
 
     public static boolean notNullOrEmpty(@Nullable String input) {
         return input != null && !input.trim().isEmpty();
+    }
+
+    public static String escapeAndBuildCommandLine(List<String> arguments) {
+        if (arguments == null || arguments.isEmpty()) {
+            return "";
+        }
+
+        return arguments.stream()
+            .map(StringUtils::escapeCommandLineArgument)
+            .collect(Collectors.joining(" "));
+    }
+
+    private static String escapeCommandLineArgument(String argument) {
+        if (argument == null || argument.isEmpty()) {
+            return "\"\"";
+        }
+
+        boolean needsQuotes = false;
+        for (int i = 0; i < argument.length(); i++) {
+            char c = argument.charAt(i);
+            if (Character.isWhitespace(c) || isSpecialCommandLineChar(c)) {
+                needsQuotes = true;
+                break;
+            }
+        }
+
+        if (!needsQuotes) {
+            return argument;
+        }
+
+        StringBuilder sb = new StringBuilder(argument.length() + 10);// Some buffer for quotes and escapes
+        sb.append('"');
+
+        for (int i = 0; i < argument.length(); i++) {
+            char c = argument.charAt(i);
+
+            switch (c) {
+                // Backslashes need special handling, because Windows.
+                case '\\' -> {
+                    // Count consecutive backslashes
+                    int backslashCount = 1;
+                    while (i + 1 < argument.length() && argument.charAt(i + 1) == '\\') {
+                        backslashCount++;
+                        i++;
+                    }
+
+                    // If backslashes are followed by a quote or at the end, double them
+                    if (i + 1 == argument.length()) {
+                        // At the end of the string
+                        for (int j = 0; j < backslashCount * 2; j++) {
+                            sb.append('\\');
+                        }
+                    } else if (argument.charAt(i + 1) == '"') {
+                        // Before a quote
+                        for (int j = 0; j < backslashCount * 2; j++) {
+                            sb.append('\\');
+                        }
+                    } else {
+                        // Regular backslashes
+                        for (int j = 0; j < backslashCount; j++) {
+                            sb.append('\\');
+                        }
+                    }
+                }
+                case '"' -> // Escape quotes
+                    sb.append("\\\"");
+                default -> // Add other characters as-is
+                    sb.append(c);
+            }
+        }
+
+        sb.append('"');
+
+        return sb.toString().trim();
+    }
+
+    private static boolean isSpecialCommandLineChar(char c) {
+        return c == '"' || c == '\\' || c == '\'' || c == '&'
+            || c == '|' || c == ';' || c == '<' || c == '>'
+            || c == '(' || c == ')' || c == '$' || c == '`'
+            || c == '!' || c == '*' || c == '/';
     }
 }

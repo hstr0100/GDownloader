@@ -24,10 +24,10 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import net.brlns.gdownloader.downloader.AbstractDownloader;
 import net.brlns.gdownloader.downloader.DownloadManager;
+import net.brlns.gdownloader.downloader.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.settings.Settings;
-import net.brlns.gdownloader.settings.enums.DownloadTypeEnum;
 
-import static net.brlns.gdownloader.settings.enums.DownloadTypeEnum.*;
+import static net.brlns.gdownloader.downloader.enums.DownloadTypeEnum.*;
 
 /**
  * @author Gabriel / hstr0100 / vertx010

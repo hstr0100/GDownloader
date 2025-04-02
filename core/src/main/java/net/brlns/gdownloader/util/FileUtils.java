@@ -192,4 +192,14 @@ public final class FileUtils {
     public static boolean isFileType(File file, String extension) {
         return file.getName().toLowerCase().endsWith("." + extension.toLowerCase());
     }
+
+    public static Path relativize(Path originalDirectory, Path targetDirectory, Path file) {
+        Path relativePath = originalDirectory.relativize(file);
+
+        return targetDirectory.resolve(relativePath);
+    }
+
+    public static Path relativize(File originalDirectory, File targetDirectory, Path file) {
+        return relativize(originalDirectory.toPath(), targetDirectory.toPath(), file);
+    }
 }
