@@ -1303,6 +1303,7 @@ public final class GDownloader {
         AppClient appClient = new AppClient();
 
         if (appClient.tryWakeSingleInstance()) {
+            log.info("Starting...");
             // An instance is already running; wake it up and shut down.
             System.exit(0);
         }
