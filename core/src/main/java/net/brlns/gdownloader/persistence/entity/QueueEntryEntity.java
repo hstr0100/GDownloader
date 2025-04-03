@@ -85,9 +85,6 @@ public class QueueEntryEntity implements Serializable {
     @Column(name = "download_stated")
     private boolean downloadStarted;
 
-    @Column(name = "download_running")
-    private boolean running;
-
     @Column(name = "retry_counter")
     private int retryCounter;
 

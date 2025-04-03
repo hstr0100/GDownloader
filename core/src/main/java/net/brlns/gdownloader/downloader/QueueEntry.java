@@ -740,8 +740,9 @@ public class QueueEntry {
         entity.setLastStatusMessage(getLastStatusMessage());
 
         entity.setDownloadStarted(getDownloadStarted().get());
+        // Runtime properties, do not save.
         //entity.setCancelHook(getCancelHook().get());
-        entity.setRunning(isRunning());
+        //entity.setRunning(isRunning());
 
         entity.setRetryCounter(getRetryCounter().get());
         entity.setQueried(getQueried().get());
@@ -793,7 +794,7 @@ public class QueueEntry {
 
         queueEntry.getDownloadStarted().set(entity.isDownloadStarted());
         //queueEntry.getCancelHook().set(entity.isCancelHook());
-        queueEntry.getRunning().set(entity.isRunning());
+        //queueEntry.getRunning().set(entity.isRunning());
         queueEntry.getRetryCounter().set(entity.getRetryCounter());
         queueEntry.getQueried().set(entity.isQueried());
 
