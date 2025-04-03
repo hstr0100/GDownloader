@@ -21,8 +21,8 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import lombok.extern.slf4j.Slf4j;
+import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.ui.AudioEngine;
-import net.brlns.gdownloader.ui.GUIManager;
 
 import static net.brlns.gdownloader.ui.GUIManager.runOnEDT;
 
@@ -32,31 +32,23 @@ import static net.brlns.gdownloader.ui.GUIManager.runOnEDT;
 @Slf4j
 public abstract class AbstractMessenger {
 
-    protected final GUIManager manager;
-
     private final Queue<Message> messageQueue = new ConcurrentLinkedQueue<>();
     private final AtomicBoolean isShowingMessage = new AtomicBoolean();
 
     private final AtomicReference<Message> currentMessage = new AtomicReference<>();
 
-    public AbstractMessenger(GUIManager managerIn) {
-        manager = managerIn;
-    }
-
-    public void show(String title, String message, int durationMillis,
-        MessageTypeEnum messageType, boolean playTone, boolean discardDuplicates) {
+    public void display(Message message) {
         //if (manager.getMain().getConfig().isDebugMode()) {
         //    log.info("{}: {} - {}", messageType, title, message);
         //}
 
-        Message messagePojo = new Message(title, message, durationMillis, messageType, playTone);
         Message lastMessage = currentMessage.get();
-        if (discardDuplicates && (messageQueue.contains(messagePojo)
-            || lastMessage != null && lastMessage.equals(messagePojo))) {
+        if (message.isDiscardDuplicates() && (messageQueue.contains(message)
+            || lastMessage != null && lastMessage.equals(message))) {
             return;
         }
 
-        messageQueue.add(messagePojo);
+        messageQueue.add(message);
 
         if (!isShowingMessage.get()) {
             displayNextMessage();
@@ -78,16 +70,17 @@ public abstract class AbstractMessenger {
             Message nextMessage = messageQueue.poll();
             currentMessage.set(nextMessage);
 
-            show(nextMessage);
+            internalDisplay(nextMessage);
 
-            if (nextMessage.isPlayTone() && manager.getMain().getConfig().isPlaySounds()) {
+            if (nextMessage.isPlayTone()
+                && GDownloader.getInstance().getConfig().isPlaySounds()) {
                 AudioEngine.playNotificationTone();
             }
         });
     }
 
-    public abstract void close();
+    protected abstract void close();
 
-    public abstract void show(Message message);
+    protected abstract void internalDisplay(Message message);
 
 }

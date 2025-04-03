@@ -19,9 +19,13 @@ package net.brlns.gdownloader.ui.message;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.geom.RoundRectangle2D;
+import java.util.Collections;
+import java.util.Map;
+import java.util.WeakHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.swing.*;
 import lombok.extern.slf4j.Slf4j;
+import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.ui.GUIManager;
 import net.brlns.gdownloader.ui.custom.CustomProgressBar;
 import net.brlns.gdownloader.ui.themes.UIColors;
@@ -40,20 +44,22 @@ public class ToastMessenger extends AbstractMessenger {
     private static final int ARC_SIZE = 20;
     private static final int MARGIN = 10;
 
+    private final JFrame targetWindow;
+
     private JDialog messageDialog;
     private JPanel messagePanel;
     private ComponentAdapter componentAdapter;
 
-    public ToastMessenger(GUIManager managerIn) {
-        super(managerIn);
+    private ToastMessenger(JFrame targetWindowIn) {
+        targetWindow = targetWindowIn;
     }
 
     @Override
-    public void close() {
+    protected void close() {
         assert SwingUtilities.isEventDispatchThread();
 
         if (messageDialog != null) {
-            manager.getAppWindow().removeComponentListener(componentAdapter);
+            targetWindow.removeComponentListener(componentAdapter);
 
             messageDialog.setVisible(false);
             messageDialog.dispose();
@@ -63,10 +69,10 @@ public class ToastMessenger extends AbstractMessenger {
     }
 
     @Override
-    public void show(Message message) {
+    protected void internalDisplay(Message message) {
         assert SwingUtilities.isEventDispatchThread();
 
-        messageDialog = new JDialog(manager.getAppWindow(), Dialog.ModalityType.MODELESS);
+        messageDialog = new JDialog(targetWindow, Dialog.ModalityType.MODELESS);
         messageDialog.setUndecorated(true);
 
         messagePanel = new JPanel(new BorderLayout()) {
@@ -120,7 +126,7 @@ public class ToastMessenger extends AbstractMessenger {
 
         AtomicBoolean cancelHook = new AtomicBoolean(false);
 
-        messagePanel.add(manager.createButton(
+        messagePanel.add(createIconButton(
             loadIcon("/assets/x-mark.png", ICON, 12),
             loadIcon("/assets/x-mark.png", ICON_CLOSE, 12),
             "gui.close.tooltip",
@@ -169,21 +175,21 @@ public class ToastMessenger extends AbstractMessenger {
         messageDialog.setContentPane(messagePanel);
         messageDialog.pack();
 
-        updateLocation(manager.getAppWindow());
+        updateLocation(targetWindow);
 
         componentAdapter = new ComponentAdapter() {
             @Override
             public void componentMoved(ComponentEvent e) {
-                updateLocation(manager.getAppWindow());
+                updateLocation(targetWindow);
             }
 
             @Override
             public void componentResized(ComponentEvent e) {
-                updateLocation(manager.getAppWindow());
+                updateLocation(targetWindow);
             }
         };
 
-        manager.getAppWindow().addComponentListener(componentAdapter);
+        targetWindow.addComponentListener(componentAdapter);
 
         messageDialog.setShape(new RoundRectangle2D.Double(0, 0,
             messageDialog.getWidth(), messageDialog.getHeight(), ARC_SIZE, ARC_SIZE));
@@ -205,5 +211,32 @@ public class ToastMessenger extends AbstractMessenger {
         int y = frameLoc.y + appWindow.getHeight() - messageDialog.getHeight() - 20;
 
         messageDialog.setLocation(x, y);
+    }
+
+    private static final Map<Object, AbstractMessenger> _instances
+        = Collections.synchronizedMap(new WeakHashMap<>());
+
+    public static void show(String message, int durationMillis,
+        MessageTypeEnum messageType, boolean playTone, boolean discardDuplicates) {
+        show(GDownloader.getInstance().getGuiManager().getAppWindow(),
+            message, durationMillis, messageType, playTone, discardDuplicates);
+    }
+
+    public static void show(JFrame parent, String message, int durationMillis,
+        MessageTypeEnum messageType, boolean playTone, boolean discardDuplicates) {
+        AbstractMessenger instance = _instances.get(parent);
+        if (instance == null) {// This operation is quick, should be fine with virtual threads.
+            AbstractMessenger newInstance = new ToastMessenger(parent);
+            instance = _instances.computeIfAbsent(parent, key -> newInstance);
+        }
+
+        instance.display(Message.builder()
+            .title("")
+            .message(message)
+            .durationMillis(durationMillis)
+            .messageType(messageType)
+            .playTone(playTone)
+            .discardDuplicates(discardDuplicates)
+            .build());
     }
 }

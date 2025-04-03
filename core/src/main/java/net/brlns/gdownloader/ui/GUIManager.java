@@ -59,10 +59,6 @@ import net.brlns.gdownloader.ui.dnd.WindowTransferHandler;
 import net.brlns.gdownloader.ui.menu.RightClickMenu;
 import net.brlns.gdownloader.ui.menu.RightClickMenuEntries;
 import net.brlns.gdownloader.ui.menu.RunnableMenuEntry;
-import net.brlns.gdownloader.ui.message.AbstractMessenger;
-import net.brlns.gdownloader.ui.message.MessageTypeEnum;
-import net.brlns.gdownloader.ui.message.PopupMessenger;
-import net.brlns.gdownloader.ui.message.ToastMessenger;
 import net.brlns.gdownloader.ui.themes.ThemeProvider;
 import net.brlns.gdownloader.ui.themes.UIColors;
 import net.brlns.gdownloader.updater.AbstractGitUpdater;
@@ -206,28 +202,6 @@ public final class GUIManager {
                 appWindow.setVisible(false);
             }
         });
-    }
-
-    private AbstractMessenger _popupMessenger;
-
-    public void showPopupMessage(String title, String message, int durationMillis,
-        MessageTypeEnum messageType, boolean playTone, boolean discardDuplicates) {
-        if (_popupMessenger == null) {
-            _popupMessenger = new PopupMessenger(this);
-        }
-
-        _popupMessenger.show(title, message, durationMillis, messageType, playTone, discardDuplicates);
-    }
-
-    private AbstractMessenger _toastMessenger;
-
-    public void showToastMessage(String message, int durationMillis,
-        MessageTypeEnum messageType, boolean playTone, boolean discardDuplicates) {
-        if (_toastMessenger == null) {
-            _toastMessenger = new ToastMessenger(this);
-        }
-
-        _toastMessenger.show("", message, durationMillis, messageType, playTone, discardDuplicates);
     }
 
     private void setUpAppWindow() {
@@ -385,7 +359,7 @@ public final class GUIManager {
         JPanel leftButtonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         leftButtonPanel.setOpaque(false);
 
-        leftButtonPanel.add(createButton(
+        leftButtonPanel.add(createIconButton(
             loadIcon("/assets/add.png", ICON),
             loadIcon("/assets/add.png", ICON_HOVER),
             "gui.add_from_clipboard.tooltip",
@@ -427,7 +401,7 @@ public final class GUIManager {
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 0));
         buttonPanel.setOpaque(false);
 
-        JButton retryButton = createButton(
+        JButton retryButton = createIconButton(
             loadIcon("/assets/redo.png", ICON),
             loadIcon("/assets/redo.png", ICON_HOVER),
             "gui.retry_failed_downloads.tooltip",
@@ -542,7 +516,7 @@ public final class GUIManager {
         }
 
         {
-            JButton clearQueueButton = createButton(
+            JButton clearQueueButton = createIconButton(
                 loadIcon("/assets/erase.png", ICON),
                 loadIcon("/assets/erase.png", ICON_HOVER),
                 "gui.clear_download_queue.tooltip",
@@ -576,7 +550,7 @@ public final class GUIManager {
         }
 
         {
-            JButton settingsButton = createButton(
+            JButton settingsButton = createIconButton(
                 loadIcon("/assets/settings.png", ICON),
                 loadIcon("/assets/settings.png", ICON_HOVER),
                 "settings.sidebar_title",
@@ -635,7 +609,7 @@ public final class GUIManager {
         statusPanel.add(statusLabel);
     }
 
-    private JButton createToggleDownloadsButton(
+    private static JButton createToggleDownloadsButton(
         Function<Boolean, ImageIcon> icon,
         Function<Boolean, ImageIcon> hoverIcon,
         Function<Boolean, String> tooltip,
@@ -655,7 +629,7 @@ public final class GUIManager {
         return button;
     }
 
-    private JButton createToggleButton(
+    private static JButton createToggleButton(
         Function<Boolean, ImageIcon> icon,
         Function<Boolean, ImageIcon> hoverIcon,
         Function<Boolean, String> tooltip,
@@ -701,7 +675,7 @@ public final class GUIManager {
         return button;
     }
 
-    public JButton createButton(ImageIcon icon, ImageIcon hoverIcon,
+    public static JButton createIconButton(ImageIcon icon, ImageIcon hoverIcon,
         String tooltipText, ActionListener actionListener) {
         JButton button = new JButton(icon);
         button.setUI(new BasicButtonUI());
@@ -732,7 +706,7 @@ public final class GUIManager {
         return button;
     }
 
-    private JButton createDialogButton(String text, UIColors backgroundColor,
+    private static JButton createDialogButton(String text, UIColors backgroundColor,
         UIColors textColor, UIColors hoverColor) {
         CustomButton button = new CustomButton(text,
             color(hoverColor),
@@ -1186,7 +1160,7 @@ public final class GUIManager {
                             gbc.fill = GridBagConstraints.BOTH;
                             card.add(progressBar, gbc);
 
-                            JButton closeButton = createButton(
+                            JButton closeButton = createIconButton(
                                 loadIcon("/assets/x-mark.png", ICON, 16),
                                 loadIcon("/assets/x-mark.png", ICON_CLOSE, 16),
                                 "gui.remove_from_queue.tooltip",

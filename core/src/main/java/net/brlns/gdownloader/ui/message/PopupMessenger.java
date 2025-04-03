@@ -21,7 +21,6 @@ import java.awt.event.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.swing.*;
 import lombok.extern.slf4j.Slf4j;
-import net.brlns.gdownloader.ui.GUIManager;
 import net.brlns.gdownloader.ui.custom.CustomDynamicLabel;
 import net.brlns.gdownloader.ui.custom.CustomProgressBar;
 
@@ -38,12 +37,11 @@ public class PopupMessenger extends AbstractMessenger {
     private JWindow messageWindow;
     private JPanel messagePanel;
 
-    public PopupMessenger(GUIManager managerIn) {
-        super(managerIn);
+    private PopupMessenger() {
     }
 
     @Override
-    public void close() {
+    protected void close() {
         assert SwingUtilities.isEventDispatchThread();
 
         if (messageWindow != null) {
@@ -55,7 +53,7 @@ public class PopupMessenger extends AbstractMessenger {
     }
 
     @Override
-    public void show(Message message) {
+    protected void internalDisplay(Message message) {
         assert SwingUtilities.isEventDispatchThread();
 
         messageWindow = new JWindow();
@@ -95,7 +93,7 @@ public class PopupMessenger extends AbstractMessenger {
 
         AtomicBoolean cancelHook = new AtomicBoolean(false);
 
-        titlePanel.add(manager.createButton(
+        titlePanel.add(createIconButton(
             loadIcon("/assets/x-mark.png", ICON, 12),
             loadIcon("/assets/x-mark.png", ICON_CLOSE, 12),
             "gui.close.tooltip",
@@ -211,5 +209,19 @@ public class PopupMessenger extends AbstractMessenger {
         }
 
         return Math.min(totalHeight + 110, 220);
+    }
+
+    private static final AbstractMessenger instance = new PopupMessenger();
+
+    public static void show(String title, String message, int durationMillis,
+        MessageTypeEnum messageType, boolean playTone, boolean discardDuplicates) {
+        instance.display(Message.builder()
+            .title(title)
+            .message(message)
+            .durationMillis(durationMillis)
+            .messageType(messageType)
+            .playTone(playTone)
+            .discardDuplicates(discardDuplicates)
+            .build());
     }
 }

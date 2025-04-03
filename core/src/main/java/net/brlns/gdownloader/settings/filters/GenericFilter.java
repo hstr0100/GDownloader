@@ -37,7 +37,6 @@ import net.brlns.gdownloader.util.TemplateConverter;
 import net.brlns.gdownloader.util.URLUtils;
 
 import static net.brlns.gdownloader.lang.Language.*;
-import static net.brlns.gdownloader.util.StringUtils.notNullOrEmpty;
 
 /**
  * @author Gabriel / hstr0100 / vertx010

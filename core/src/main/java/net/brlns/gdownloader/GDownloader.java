@@ -64,6 +64,7 @@ import net.brlns.gdownloader.settings.Settings;
 import net.brlns.gdownloader.settings.enums.BrowserEnum;
 import net.brlns.gdownloader.ui.GUIManager;
 import net.brlns.gdownloader.ui.message.MessageTypeEnum;
+import net.brlns.gdownloader.ui.message.PopupMessenger;
 import net.brlns.gdownloader.ui.themes.ThemeProvider;
 import net.brlns.gdownloader.updater.*;
 import net.brlns.gdownloader.util.*;
@@ -351,7 +352,7 @@ public final class GDownloader {
         DirectoryUtils.deleteRecursively(oldCachePath.toPath());
 
         if (notify) {
-            guiManager.showPopupMessage(
+            PopupMessenger.show(
                 l10n("gui.clear_cache.notification_title"),
                 l10n("gui.clear_cache.cleared"),
                 2000,
@@ -379,7 +380,7 @@ public final class GDownloader {
             downloadManager.block();
             downloadManager.stopDownloads();
 
-            guiManager.showPopupMessage(
+            PopupMessenger.show(
                 l10n("gui.update.notification_title"),
                 l10n("gui.update.checking"),
                 2000,
@@ -423,7 +424,7 @@ public final class GDownloader {
                 .anyMatch(AbstractGitUpdater::isUpdated);
 
             if (userInitiated) {
-                guiManager.showPopupMessage(
+                PopupMessenger.show(
                     l10n("gui.update.notification_title"),
                     l10n(updated
                         ? "gui.update.new_updates_installed"
@@ -975,7 +976,7 @@ public final class GDownloader {
     }
 
     public void deduplicateDownloadsDirectory() {
-        guiManager.showPopupMessage(
+        PopupMessenger.show(
             l10n("gui.deduplication.notification_title"),
             l10n("gui.deduplication.deduplicating"),
             1500,
@@ -988,7 +989,7 @@ public final class GDownloader {
                 DirectoryDeduplicator.deduplicateDirectory(directory);
             }
 
-            guiManager.showPopupMessage(
+            PopupMessenger.show(
                 l10n("gui.deduplication.notification_title"),
                 l10n("gui.deduplication.deduplicated"),
                 2000,
@@ -1104,7 +1105,7 @@ public final class GDownloader {
         log.error(!message.isEmpty() ? message : "An exception has been caught", e);
 
         if (displayToUser && instance != null) {
-            instance.getGuiManager().showPopupMessage(
+            PopupMessenger.show(
                 l10n("gui.error_popup_title"),
                 l10n("gui.error_popup", e.getClass().getSimpleName(), e.getMessage()),
                 4000,

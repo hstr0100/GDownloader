@@ -55,6 +55,7 @@ import net.brlns.gdownloader.settings.filters.YoutubePlaylistFilter;
 import net.brlns.gdownloader.ui.GUIManager;
 import net.brlns.gdownloader.ui.MediaCard;
 import net.brlns.gdownloader.ui.message.MessageTypeEnum;
+import net.brlns.gdownloader.ui.message.ToastMessenger;
 import net.brlns.gdownloader.util.collection.ConcurrentRearrangeableDeque;
 import net.brlns.gdownloader.util.collection.ExpiringSet;
 import net.brlns.gdownloader.util.collection.LinkedIterableBlockingQueue;
@@ -166,19 +167,19 @@ public class DownloadManager implements IEvent {
     public void init() {
         try {
             if (persistence.isInitialized()) {
-                if (main.getConfig().isRestoreSessionAfterRestart()) {
-                    main.getGuiManager().showToastMessage(
-                        l10n("gui.restoring-session.toast"),
-                        5000,
-                        MessageTypeEnum.INFO,
-                        false, true);
-                }
-
                 // Even if persistance is disabled, we still initialize the db so a restart is not
                 // needed and no data is lost if the user toggles persistence back on during runtime.
                 long nextId = persistence.getCounters().getCurrentValue(CounterTypeEnum.DOWNLOAD_ID);
                 main.getDownloadManager().getDownloadCounter().set(nextId);
                 log.info("Current download id: {}", nextId);
+
+                if (nextId > 0 && main.getConfig().isRestoreSessionAfterRestart()) {
+                    ToastMessenger.show(
+                        l10n("gui.restoring-session.toast"),
+                        5000,
+                        MessageTypeEnum.INFO,
+                        false, true);
+                }
 
                 GDownloader.GLOBAL_THREAD_POOL.submitWithPriority(() -> {
                     linkCaptureLock.lock();// Intentionally block url capture during the entire restoring proccess
@@ -957,13 +958,6 @@ public class DownloadManager implements IEvent {
                     }
                 }
 
-                AbstractUrlFilter filter = entry.getFilter();
-
-                if (filter.areCookiesRequired() && !main.getConfig().isReadCookiesFromBrowser()) {
-                    // TODO: Visual cue
-                    log.warn("Cookies are required for this website {}", entry.getOriginalUrl());
-                }
-
                 entry.getRunning().set(true);
 
                 try {
@@ -976,6 +970,8 @@ public class DownloadManager implements IEvent {
 
                     int maxRetries = main.getConfig().isAutoDownloadRetry() ? main.getConfig().getMaxDownloadRetries() : 1;
                     String lastOutput = "";
+
+                    boolean notifiedCookies = false;
 
                     while (entry.getRetryCounter().get() <= maxRetries) {
                         boolean downloadAttempted = false;
@@ -997,6 +993,20 @@ public class DownloadManager implements IEvent {
                             }
 
                             entry.setCurrentDownloader(downloaderId);
+
+                            AbstractUrlFilter filter = entry.getFilter();
+
+                            if (!notifiedCookies && filter.areCookiesRequired()
+                                && (!main.getConfig().isReadCookiesFromBrowser() && downloader.getCookieJarFile() == null)) {
+                                ToastMessenger.show(
+                                    l10n("gui.cookies_required_for_website", filter.getFilterName()),
+                                    3000,
+                                    MessageTypeEnum.ERROR,
+                                    false, true);
+
+                                log.warn("Cookies are required for this website {}", entry.getOriginalUrl());
+                                notifiedCookies = true;
+                            }
 
                             if (entry.getRetryCounter().get() > 0) {
                                 entry.updateStatus(DownloadStatusEnum.RETRYING, l10n("gui.download_status.retrying",

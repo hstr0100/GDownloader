@@ -64,6 +64,7 @@ import net.brlns.gdownloader.ui.menu.NestedMenuEntry;
 import net.brlns.gdownloader.ui.menu.RunnableMenuEntry;
 import net.brlns.gdownloader.ui.menu.SingleActionMenuEntry;
 import net.brlns.gdownloader.ui.message.MessageTypeEnum;
+import net.brlns.gdownloader.ui.message.ToastMessenger;
 import net.brlns.gdownloader.util.DirectoryUtils;
 import net.brlns.gdownloader.util.ImageUtils;
 import net.brlns.gdownloader.util.StringUtils;
@@ -206,7 +207,7 @@ public class QueueEntry {
 
         finalMediaFiles.clear();
 
-        main.getGuiManager().showToastMessage(
+        ToastMessenger.show(
             success ? l10n("gui.delete_files.deleted") : l10n("gui.delete_files.no_files"),
             3000,
             MessageTypeEnum.INFO,

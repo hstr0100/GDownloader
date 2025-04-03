@@ -16,18 +16,25 @@
  */
 package net.brlns.gdownloader.ui.message;
 
+import lombok.Builder;
 import lombok.Data;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
 @Data
+@Builder
 public class Message {
 
     private final String title;
     private final String message;
     private final int durationMillis;
     private final MessageTypeEnum messageType;
-    private final boolean playTone;
+
+    @Builder.Default
+    private final boolean playTone = false;
+
+    @Builder.Default
+    private final boolean discardDuplicates = false;
 
 }
