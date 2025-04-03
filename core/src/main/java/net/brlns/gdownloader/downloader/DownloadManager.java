@@ -938,11 +938,6 @@ public class DownloadManager implements IEvent {
 
         entry.removeRightClick(_forceStartKey);
 
-        if (force) {
-            downloadsRunning.set(true);
-            fireListeners();
-        }
-
         MediaCard mediaCard = entry.getMediaCard();
         if (mediaCard.isClosed()) {
             return;
@@ -953,8 +948,13 @@ public class DownloadManager implements IEvent {
         Runnable downloadTask = () -> {
             try {
                 if (!downloadsRunning.get()) {
-                    enqueueFirst(entry);
-                    return;
+                    if (force) {
+                        downloadsRunning.set(true);
+                        fireListeners();
+                    } else {
+                        enqueueFirst(entry);
+                        return;
+                    }
                 }
 
                 AbstractUrlFilter filter = entry.getFilter();
