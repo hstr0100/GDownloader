@@ -92,7 +92,8 @@ public class YtDlpDownloader extends AbstractDownloader {
 
     @Override
     public void removeArchiveEntry(QueueEntry queueEntry) {
-        if (!queueEntry.getQueried().get()) {// We can't have the id we need without querying for it.
+        if (!queueEntry.getQueried().get() || queueEntry.getMediaInfo() == null) {
+            // We can't have the id we need without querying for it.
             return;
         }
 

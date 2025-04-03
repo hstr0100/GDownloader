@@ -631,7 +631,7 @@ public class QueueEntry {
                     addMediaAction(file, ThumbnailContainerEnum.class, "gui.view_thumbnail");
                 } else if (file.isDirectory()) {
                     addRightClick(l10n("gui.open_downloaded_directory"),
-                        new RunnableMenuEntry(() -> main.open(file)));
+                        () -> main.open(file));
                 }
             }
 
@@ -673,7 +673,7 @@ public class QueueEntry {
 
     private <T extends Enum<T> & IContainerEnum> boolean addMediaAction(File file, Class<T> enumClass, String actionKey) {
         if (isMediaType(file, enumClass)) {
-            addRightClick(l10n(actionKey), new RunnableMenuEntry(() -> play(enumClass)));
+            addRightClick(l10n(actionKey), () -> play(enumClass));
             return true;
         }
 

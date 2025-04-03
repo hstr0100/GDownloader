@@ -32,6 +32,7 @@ import net.brlns.gdownloader.settings.enums.PlayListOptionEnum;
 import net.brlns.gdownloader.settings.enums.ThemeEnum;
 import net.brlns.gdownloader.settings.enums.WebFilterEnum;
 import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
+import net.brlns.gdownloader.settings.filters.GenericFilter;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -240,6 +241,10 @@ public class Settings {
                 )
                 .forEach(urlFilters::add);
         }
+
+        urlFilters.removeIf(savedFilter
+            -> savedFilter.getId().equals(GenericFilter.ID)
+            && (!savedFilter.getUrlRegex().isEmpty() || !savedFilter.getFilterName().isEmpty()));
 
         for (Map.Entry<WebFilterEnum, QualitySettings> entry : qualitySettings.entrySet()) {
             WebFilterEnum key = entry.getKey();

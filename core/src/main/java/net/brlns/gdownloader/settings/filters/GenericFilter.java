@@ -58,17 +58,6 @@ public class GenericFilter extends AbstractUrlFilter {
         setEmbedThumbnailAndMetadata(false);
     }
 
-    @Override
-    public void setFilterName(String name) {
-        // Bizarre intermittent condition triggered by Jackson, unable to reliably reproduce with a fresh config.
-        if (notNullOrEmpty(name) && getClass() == GenericFilter.class) {
-            log.error("Tried to set a filter name ({}) to the generic filter {}", name, this);
-            return;
-        }
-
-        super.setFilterName(name);
-    }
-
     @JsonIgnore
     @Override
     public String getDisplayName() {
