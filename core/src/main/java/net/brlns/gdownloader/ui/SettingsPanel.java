@@ -1046,22 +1046,54 @@ public class SettingsPanel {
     }
 
     private JPanel createResolutionSettings() {
-        JPanel panel = new JPanel();
-        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-        panel.setBackground(color(BACKGROUND));
+        JPanel mainPanel = new JPanel();
+        mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
+        mainPanel.setBackground(color(BACKGROUND));
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        // TODO: weight the display order?
         for (AbstractUrlFilter filter : settings.getUrlFilters()) {
             QualitySettings qualitySettings = filter.getQualitySettings();
 
+            JPanel card = new JPanel() {
+                @Override
+                protected void paintComponent(Graphics g) {
+                    Graphics2D g2d = (Graphics2D)g.create();
+
+                    int arcSize = 10;
+                    g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                    g2d.setColor(getBackground());
+                    g2d.fillRoundRect(5, 5, getWidth() - 10, getHeight() - 10, arcSize, arcSize);
+
+                    g2d.dispose();
+                }
+            };
+            card.setOpaque(false);
+            card.setLayout(new BorderLayout());
+            card.setBackground(color(MEDIA_CARD));
+            card.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(color(BACKGROUND), 5),
+                BorderFactory.createEmptyBorder(10, 10, 10, 10)
+            ));
+
+            JPanel titlePanel = new JPanel(new BorderLayout());
+            titlePanel.setOpaque(false);
+
+            JLabel titleLabel = new JLabel(filter.getDisplayName());
+            titleLabel.setForeground(color(FOREGROUND));
+            titleLabel.setFont(titleLabel.getFont().deriveFont(Font.BOLD));
+
+            JLabel expandLabel = new JLabel("▼");
+            expandLabel.setForeground(color(FOREGROUND));
+            expandLabel.setFont(expandLabel.getFont().deriveFont(Font.BOLD));
+
+            titlePanel.add(titleLabel, BorderLayout.WEST);
+            titlePanel.add(expandLabel, BorderLayout.EAST);
+            titlePanel.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0));
+
             JPanel itemPanel = new JPanel(new GridBagLayout());
-            TitledBorder border = BorderFactory.createTitledBorder(
-                BorderFactory.createLineBorder(color(LIGHT_TEXT)), filter.getDisplayName());
-
-            border.setTitleColor(color(FOREGROUND));
-            itemPanel.setBorder(border);
-
-            itemPanel.setBackground(color(BACKGROUND));
+            itemPanel.setOpaque(false);
+            itemPanel.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
+            itemPanel.setVisible(false);
 
             GridBagConstraints gbcItem = new GridBagConstraints();
             gbcItem.insets = new Insets(5, 10, 5, 10);
@@ -1184,20 +1216,59 @@ public class SettingsPanel {
                 );
             }
 
-            panel.add(itemPanel);
+            MouseAdapter cardListener = new MouseAdapter() {
+                private boolean isExpanded = false;
+
+                @Override
+                public void mouseClicked(MouseEvent e) {
+                    if (e.getSource() == titlePanel) {
+                        isExpanded = !itemPanel.isVisible();
+                        itemPanel.setVisible(isExpanded);
+                        expandLabel.setText(isExpanded ? "▲" : "▼");
+
+                        if (isExpanded) {
+                            card.setBackground(color(MEDIA_CARD_HOVER));
+                        } else {
+                            card.setBackground(color(MEDIA_CARD));
+                        }
+
+                        card.revalidate();
+                    }
+                }
+
+                @Override
+                public void mouseEntered(MouseEvent e) {
+                    if (!isExpanded) {
+                        card.setBackground(color(MEDIA_CARD_HOVER));
+                    }
+                }
+
+                @Override
+                public void mouseExited(MouseEvent e) {
+                    if (!isExpanded) {
+                        card.setBackground(color(MEDIA_CARD));
+                    }
+                }
+            };
+
+            titlePanel.addMouseListener(cardListener);
+
+            card.add(titlePanel, BorderLayout.NORTH);
+            card.add(itemPanel, BorderLayout.CENTER);
+
+            mainPanel.add(card);
         }
 
-        JScrollPane scrollPane = new JScrollPane(panel);
+        JScrollPane scrollPane = new JScrollPane(mainPanel);
         scrollPane.getVerticalScrollBar().setUI(new CustomScrollBarUI());
         scrollPane.getHorizontalScrollBar().setUI(new CustomScrollBarUI());
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
         scrollPane.setBackground(color(BACKGROUND));
         scrollPane.getVerticalScrollBar().setUnitIncrement(8);
-        scrollPane.setPreferredSize(new Dimension(Integer.MAX_VALUE, 200));
+        scrollPane.setPreferredSize(new Dimension(Integer.MAX_VALUE, 400));
         scrollPane.getViewport().setScrollMode(JViewport.BACKINGSTORE_SCROLL_MODE);
 
         JPanel panelWrapper = new JPanel(new BorderLayout());
-        panelWrapper.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 2));
         panelWrapper.setBackground(color(BACKGROUND));
 
         panelWrapper.add(scrollPane, BorderLayout.CENTER);

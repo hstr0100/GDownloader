@@ -213,7 +213,7 @@ public class ToastMessenger extends AbstractMessenger {
         messageDialog.setLocation(x, y);
     }
 
-    private static final Map<Object, AbstractMessenger> _instances
+    private static final Map<JFrame, AbstractMessenger> _instances
         = Collections.synchronizedMap(new WeakHashMap<>());
 
     public static void show(String message, int durationMillis,
