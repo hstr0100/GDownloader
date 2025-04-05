@@ -159,6 +159,11 @@ public class PopupMessenger extends AbstractMessenger {
         timer.start();
     }
 
+    @Override
+    protected boolean canDisplay() {
+        return true;
+    }
+
     private void updateMessageWindowSize() {
         assert SwingUtilities.isEventDispatchThread();
 

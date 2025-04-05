@@ -59,7 +59,7 @@ public abstract class AbstractMessenger {
         runOnEDT(() -> {
             close();
 
-            if (messageQueue.isEmpty()) {
+            if (messageQueue.isEmpty() || !canDisplay()) {
                 currentMessage.set(null);
                 isShowingMessage.set(false);
                 return;
@@ -82,5 +82,7 @@ public abstract class AbstractMessenger {
     protected abstract void close();
 
     protected abstract void internalDisplay(Message message);
+
+    protected abstract boolean canDisplay();
 
 }

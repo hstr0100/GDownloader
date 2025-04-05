@@ -44,19 +44,55 @@ public class ToastMessenger extends AbstractMessenger {
     private static final int ARC_SIZE = 20;
     private static final int MARGIN = 10;
 
+    private final AtomicBoolean cancelHook = new AtomicBoolean(false);
+    private final AtomicBoolean windowVisible = new AtomicBoolean(true);
+
     private final JFrame targetWindow;
+
+    private final ComponentAdapter componentAdapter;
 
     private JDialog messageDialog;
     private JPanel messagePanel;
-    private ComponentAdapter componentAdapter;
 
     private ToastMessenger(JFrame targetWindowIn) {
         targetWindow = targetWindowIn;
+
+        componentAdapter = new ComponentAdapter() {
+            @Override
+            public void componentShown(ComponentEvent e) {
+                // FINALLY it shows its face. *cracks knuckles*
+                // NOW you can be positively NUKED out of here.
+                windowVisible.set(true);
+                cancelHook.set(true);
+                close();
+            }
+
+            @Override
+            public void componentHidden(ComponentEvent e) {
+                windowVisible.set(false);
+            }
+
+            @Override
+            public void componentMoved(ComponentEvent e) {
+                updateLocation(targetWindow);
+            }
+
+            @Override
+            public void componentResized(ComponentEvent e) {
+                updateLocation(targetWindow);
+            }
+        };
     }
 
     @Override
     protected void close() {
         assert SwingUtilities.isEventDispatchThread();
+
+        if (!targetWindow.isVisible() || !windowVisible.get()) {
+            // If targetWindow isn't visible, this dialog becomes an immortal ghost window. the X button becomes a cruel joke.
+            // You can try to close it all you like, but it has already transcended your feeble UI logic.
+            return;
+        }
 
         if (messageDialog != null) {
             targetWindow.removeComponentListener(componentAdapter);
@@ -65,6 +101,8 @@ public class ToastMessenger extends AbstractMessenger {
             messageDialog.dispose();
 
             messageDialog = null;
+
+            cancelHook.set(false);
         }
     }
 
@@ -73,6 +111,7 @@ public class ToastMessenger extends AbstractMessenger {
         assert SwingUtilities.isEventDispatchThread();
 
         messageDialog = new JDialog(targetWindow, Dialog.ModalityType.MODELESS);
+        messageDialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
         messageDialog.setUndecorated(true);
 
         messagePanel = new JPanel(new BorderLayout()) {
@@ -123,8 +162,6 @@ public class ToastMessenger extends AbstractMessenger {
         contentPanel.add(messageLabel, BorderLayout.CENTER);
 
         messagePanel.add(contentPanel, BorderLayout.CENTER);
-
-        AtomicBoolean cancelHook = new AtomicBoolean(false);
 
         messagePanel.add(createIconButton(
             loadIcon("/assets/x-mark.png", ICON, 12),
@@ -177,18 +214,6 @@ public class ToastMessenger extends AbstractMessenger {
 
         updateLocation(targetWindow);
 
-        componentAdapter = new ComponentAdapter() {
-            @Override
-            public void componentMoved(ComponentEvent e) {
-                updateLocation(targetWindow);
-            }
-
-            @Override
-            public void componentResized(ComponentEvent e) {
-                updateLocation(targetWindow);
-            }
-        };
-
         targetWindow.addComponentListener(componentAdapter);
 
         messageDialog.setShape(new RoundRectangle2D.Double(0, 0,
@@ -203,6 +228,11 @@ public class ToastMessenger extends AbstractMessenger {
         messageDialog.setVisible(true);
 
         timer.start();
+    }
+
+    @Override
+    protected boolean canDisplay() {
+        return windowVisible.get();
     }
 
     private void updateLocation(JFrame appWindow) {

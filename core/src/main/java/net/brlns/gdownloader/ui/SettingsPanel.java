@@ -27,7 +27,6 @@ import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import javax.swing.*;
-import javax.swing.border.TitledBorder;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
