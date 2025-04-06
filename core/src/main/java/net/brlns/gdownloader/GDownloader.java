@@ -266,10 +266,10 @@ public final class GDownloader {
             persistenceManager = new PersistenceManager(this);
             persistenceManager.init();
 
+            ffmpegTranscoder = new FFmpegTranscoder();
+
             clipboardManager = new ClipboardManager(this);
             downloadManager = new DownloadManager(this);
-
-            ffmpegTranscoder = new FFmpegTranscoder();
 
             guiManager = new GUIManager(this);
 

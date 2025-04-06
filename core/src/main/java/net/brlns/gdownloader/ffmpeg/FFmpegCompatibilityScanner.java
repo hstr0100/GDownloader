@@ -16,8 +16,6 @@
  */
 package net.brlns.gdownloader.ffmpeg;
 
-import net.brlns.gdownloader.ffmpeg.structs.EncoderPreset;
-import net.brlns.gdownloader.ffmpeg.structs.EncoderProfile;
 import jakarta.annotation.Nullable;
 import java.io.BufferedReader;
 import java.io.File;
@@ -40,16 +38,12 @@ import net.brlns.gdownloader.ffmpeg.enums.EncoderPresetEnum;
 import net.brlns.gdownloader.ffmpeg.enums.EncoderProfileEnum;
 import net.brlns.gdownloader.ffmpeg.enums.EncoderTypeEnum;
 import net.brlns.gdownloader.ffmpeg.enums.VideoCodecEnum;
+import net.brlns.gdownloader.ffmpeg.structs.EncoderPreset;
+import net.brlns.gdownloader.ffmpeg.structs.EncoderProfile;
 import net.brlns.gdownloader.updater.SystemExecutableLocator;
 import net.brlns.gdownloader.util.StringUtils;
 
 import static net.brlns.gdownloader.ffmpeg.FFmpegCompatibilityScanner.EncoderPresetCommandEnum.*;
-import static net.brlns.gdownloader.ffmpeg.enums.EncoderTypeEnum.AMF;
-import static net.brlns.gdownloader.ffmpeg.enums.EncoderTypeEnum.NVENC;
-import static net.brlns.gdownloader.ffmpeg.enums.EncoderTypeEnum.QSV;
-import static net.brlns.gdownloader.ffmpeg.enums.EncoderTypeEnum.SOFTWARE;
-import static net.brlns.gdownloader.ffmpeg.enums.EncoderTypeEnum.V4L2M2M;
-import static net.brlns.gdownloader.ffmpeg.enums.EncoderTypeEnum.VAAPI;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -63,10 +57,11 @@ public class FFmpegCompatibilityScanner {
 
     private final Set<String> availableEncoders = new HashSet<>();
     private final Map<EncoderEnum, EncoderCapability> encoderCapabilities = new ConcurrentHashMap<>();
-    private final FFmpegTranscoder transcoder;
 
     private final AtomicBoolean capabilitiesScanned = new AtomicBoolean(false);
     private final AtomicBoolean encodersScanned = new AtomicBoolean(false);
+
+    private final FFmpegTranscoder transcoder;
 
     public void scanEncoderCapabilities() {
         if (capabilitiesScanned.get()) {
@@ -117,34 +112,25 @@ public class FFmpegCompatibilityScanner {
 
     private void processEncoderOutput(EncoderEnum encoder, List<String> lines) {
         Map<EncoderPresetCommandEnum, List<String>> commandValues = new EnumMap<>(EncoderPresetCommandEnum.class);
-        commandValues.put(PRESET, new ArrayList<>());
-        commandValues.put(QUALITY, new ArrayList<>());
-        commandValues.put(USAGE, new ArrayList<>());
+        Arrays.stream(EncoderPresetCommandEnum.values())
+            .filter(commandEnum -> commandEnum != NONE)
+            .forEach(commandEnum -> commandValues.put(commandEnum, new ArrayList<>()));
 
         List<String> profileValues = new ArrayList<>();
 
         EncoderPresetCommandEnum currentCommand = null;
         boolean inProfileSection = false;
 
+        mainLoop:
         for (String line : lines) {
             String trimmedLine = line.trim();
 
-            if (trimmedLine.contains(PRESET.getCommandFlag() + " ")) {
-                currentCommand = PRESET;
-                inProfileSection = false;
-                continue;
-            }
-
-            if (trimmedLine.contains(QUALITY.getCommandFlag() + " ")) {
-                currentCommand = QUALITY;
-                inProfileSection = false;
-                continue;
-            }
-
-            if (trimmedLine.contains(USAGE.getCommandFlag() + " ")) {
-                currentCommand = USAGE;
-                inProfileSection = false;
-                continue;
+            for (EncoderPresetCommandEnum commandEnum : EncoderPresetCommandEnum.values()) {
+                if (commandEnum != NONE && trimmedLine.contains(commandEnum.getCommandFlag() + " ")) {
+                    currentCommand = commandEnum;
+                    inProfileSection = false;
+                    continue mainLoop;
+                }
             }
 
             if (trimmedLine.contains("-profile ")) {
@@ -176,29 +162,25 @@ public class FFmpegCompatibilityScanner {
             }
         }
 
-        // Determine which command to use based on priority: preset > quality > usage
-        EncoderPresetCommandEnum presetCommand;
-        List<String> presetValues;
-        if (!commandValues.get(PRESET).isEmpty()) {
-            presetCommand = PRESET;
-            presetValues = commandValues.get(PRESET);
-        } else if (!commandValues.get(QUALITY).isEmpty()) {
-            presetCommand = QUALITY;
-            presetValues = commandValues.get(QUALITY);
-        } else if (!commandValues.get(USAGE).isEmpty()) {
-            presetCommand = USAGE;
-            presetValues = commandValues.get(USAGE);
-        } else {
-            presetCommand = NONE;
-            presetValues = List.of();
+        EncoderPresetCommandEnum presetCommand = NONE;
+        List<String> presetValues = List.of();
+
+        // Determine which preset command to use based on priority: -preset > -quality > -usage
+        for (EncoderPresetCommandEnum commandEnum : EncoderPresetCommandEnum.values()) {
+            if (commandEnum != NONE && !commandValues.get(commandEnum).isEmpty()) {
+                presetCommand = commandEnum;
+                presetValues = commandValues.get(commandEnum);
+                break;
+            }
         }
 
         log.debug("Detected capabilities for {}: command={}, presets={}, profiles={}",
             encoder, presetCommand, presetValues, profileValues);
 
+        String identifiedPresetCommand = presetCommand.getCommandFlag();
         EncoderCapability capability = new EncoderCapability(
             presetValues.stream()
-                .map(value -> new EncoderPreset(EncoderPresetEnum.SYSTEM_MAPPER, presetCommand.getCommandFlag(), value))
+                .map(value -> new EncoderPreset(EncoderPresetEnum.SYSTEM_MAPPER, identifiedPresetCommand, value))
                 .collect(Collectors.toList()),
             profileValues.stream()
                 .map(value -> new EncoderProfile(EncoderProfileEnum.SYSTEM_MAPPER, value))
@@ -207,7 +189,7 @@ public class FFmpegCompatibilityScanner {
         encoderCapabilities.put(encoder, capability);
     }
 
-    public EncoderCapability getEncoderCapability(EncoderEnum encoder) {
+    protected EncoderCapability getEncoderCapability(EncoderEnum encoder) {
         scanEncoderCapabilities();
         return encoderCapabilities.getOrDefault(encoder,
             new EncoderCapability(List.of(), List.of()));
@@ -263,12 +245,11 @@ public class FFmpegCompatibilityScanner {
             process.waitFor();
 
             availableEncoders.addAll(encoders);
+            encodersScanned.set(true);
 
             scanEncoderCapabilities();
         } catch (Exception e) {
             log.warn("Error getting FFmpeg encoders: {}", e.getMessage());
-        } finally {
-            encodersScanned.set(true);
         }
 
         return encoders;
@@ -570,7 +551,8 @@ public class FFmpegCompatibilityScanner {
 
     @Getter
     @AllArgsConstructor
-    public static enum EncoderPresetCommandEnum {
+    protected static enum EncoderPresetCommandEnum {
+        // Ordered by fallback priority
         PRESET("-preset"),
         QUALITY("-quality"),
         USAGE("-usage"),
@@ -582,7 +564,7 @@ public class FFmpegCompatibilityScanner {
     @Data
     @AllArgsConstructor
     @NoArgsConstructor
-    public static class EncoderCapability {
+    protected static class EncoderCapability {
 
         private List<EncoderPreset> presets;
         private List<EncoderProfile> profiles;

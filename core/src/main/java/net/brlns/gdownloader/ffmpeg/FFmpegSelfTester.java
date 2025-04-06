@@ -159,15 +159,12 @@ public class FFmpegSelfTester {
                 if (result != null) {
                     hasEncodersOfType = true;
 
-                    String extraInfo = type == EncoderTypeEnum.AUTO && result.getResolvedTo() != null
-                        ? " -> " + result.getResolvedTo()
-                        : "";
-
+                    // The encode time in milliseconds also includes the system call overhead
                     log.info("  {} ({}): {} {} ({}ms)",
                         encoder,
                         encoder.getFfmpegCodecName(),
                         result.isAvailable() ? "✓" : "✗",
-                        result.getDetails() + extraInfo,
+                        result.getDetails(),
                         result.getTestDurationMs());
                 }
             }

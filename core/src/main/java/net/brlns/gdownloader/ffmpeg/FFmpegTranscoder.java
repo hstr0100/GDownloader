@@ -16,9 +16,6 @@
  */
 package net.brlns.gdownloader.ffmpeg;
 
-import net.brlns.gdownloader.ffmpeg.structs.FFmpegConfig;
-import net.brlns.gdownloader.ffmpeg.structs.EncoderPreset;
-import net.brlns.gdownloader.ffmpeg.structs.EncoderProfile;
 import java.io.File;
 import java.util.*;
 import lombok.Getter;
@@ -30,12 +27,12 @@ import net.brlns.gdownloader.ffmpeg.enums.EncoderEnum;
 import net.brlns.gdownloader.ffmpeg.enums.EncoderTypeEnum;
 import net.brlns.gdownloader.ffmpeg.enums.RateControlModeEnum;
 import net.brlns.gdownloader.ffmpeg.enums.VideoCodecEnum;
+import net.brlns.gdownloader.ffmpeg.structs.EncoderPreset;
+import net.brlns.gdownloader.ffmpeg.structs.EncoderProfile;
+import net.brlns.gdownloader.ffmpeg.structs.FFmpegConfig;
 import net.brlns.gdownloader.updater.SystemExecutableLocator;
 import net.brlns.gdownloader.util.StringUtils;
 
-import static net.brlns.gdownloader.ffmpeg.enums.RateControlModeEnum.CBR;
-import static net.brlns.gdownloader.ffmpeg.enums.RateControlModeEnum.CQP;
-import static net.brlns.gdownloader.ffmpeg.enums.RateControlModeEnum.CRF;
 import static net.brlns.gdownloader.util.FileUtils.getBinaryName;
 
 /**
@@ -179,8 +176,11 @@ public final class FFmpegTranscoder {
             }
 
             EncoderPreset speedPreset = config.getSpeedPreset();
-            if (speedPreset != null && !speedPreset.equals(EncoderPreset.NO_PRESET)
+            if (speedPreset != null
+                && !speedPreset.equals(EncoderPreset.NO_PRESET)
+                && !speedPreset.getFfmpegPresetCommand().isEmpty()
                 && getCompatScanner().isCompatible(actualEncoder, speedPreset)) {
+                // AMF uses -quality, AV1 software uses -usage.
                 command.add(speedPreset.getFfmpegPresetCommand() + ":v");
                 command.add(speedPreset.getFfmpegPresetName());
             }
@@ -235,9 +235,9 @@ public final class FFmpegTranscoder {
                             command.add("1");
                         }
                         case AMF -> {
-                            // AMF uses quality for quality-based encoding.
-                            command.add("-quality");
-                            command.add("quality");
+                            // AMF uses cqp
+                            command.add("-rc");
+                            command.add("cqp");
                             command.add("-qp_i");
                             command.add(String.valueOf(rateControlValue));
                             command.add("-qp_p");
@@ -342,14 +342,21 @@ public final class FFmpegTranscoder {
                     command.add("-b:v");
                     command.add(videoBitrate + "k");
                     // Force constant bitrate with buffer constraints
-                    if (actualEncoder.getEncoderType() == EncoderTypeEnum.NVENC
-                        || actualEncoder.getEncoderType() == EncoderTypeEnum.QSV) {
-                        command.add("-maxrate");
-                        command.add(videoBitrate + "k");
-                        command.add("-minrate");
-                        command.add(videoBitrate + "k");
-                        command.add("-bufsize");
-                        command.add((videoBitrate * 2) + "k");
+                    switch (actualEncoder.getEncoderType()) {
+                        case NVENC, QSV -> {
+                            command.add("-maxrate");
+                            command.add(videoBitrate + "k");
+                            command.add("-minrate");
+                            command.add(videoBitrate + "k");
+                            command.add("-bufsize");
+                            command.add((videoBitrate * 2) + "k");
+                        }
+                        case AMF -> {
+                            command.add("-rc");
+                            command.add("cbr");
+                        }
+                        default -> {
+                        }
                     }
                 }
                 default -> {
@@ -368,6 +375,7 @@ public final class FFmpegTranscoder {
                             command.add("-maxrate");
                             command.add((videoBitrate * 2) + "k");
                         }
+                        // TODO: test AMF -rc qvbr
                         default -> {
                             command.add("-b:v");
                             command.add(videoBitrate + "k");
@@ -397,6 +405,8 @@ public final class FFmpegTranscoder {
                     } else {
                         log.debug("Unable to locate a valid v4l2m2m device");
                     }
+                }
+                default -> {
                 }
             }
         } else {
