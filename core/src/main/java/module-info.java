@@ -50,6 +50,9 @@ module net.brlns.gdownloader {
     exports net.brlns.gdownloader.downloader.structs;
     exports net.brlns.gdownloader.event;
     exports net.brlns.gdownloader.event.impl;
+    exports net.brlns.gdownloader.ffmpeg;
+    exports net.brlns.gdownloader.ffmpeg.enums;
+    exports net.brlns.gdownloader.ffmpeg.structs;
     exports net.brlns.gdownloader.persistence;
     exports net.brlns.gdownloader.persistence.converter;
     exports net.brlns.gdownloader.persistence.entity;

@@ -247,11 +247,6 @@ public class DownloadManager implements IEvent {
             && downloader.getExecutablePath().get().exists());
     }
 
-    public void setFfmpegPath(File path) {
-        downloaders.stream()
-            .forEach(downloader -> downloader.setFfmpegPath(Optional.of(path)));
-    }
-
     public void setExecutablePath(DownloaderIdEnum downloaderId, File path) {
         downloaders.stream()
             .filter(downloader -> downloader.getDownloaderId() == downloaderId)

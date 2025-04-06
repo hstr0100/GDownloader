@@ -59,10 +59,6 @@ public class GalleryDlDownloader extends AbstractDownloader {
     @Setter
     private Optional<File> executablePath = Optional.empty();
 
-    @Getter
-    @Setter
-    private Optional<File> ffmpegPath = Optional.empty();
-
     public GalleryDlDownloader(DownloadManager managerIn) {
         super(managerIn);
     }
@@ -155,6 +151,7 @@ public class GalleryDlDownloader extends AbstractDownloader {
             genericArguments.add("--config-ignore");
         }
 
+        Optional<File> ffmpegPath = main.getFfmpegTranscoder().getFfmpegPath();
         if (ffmpegPath.isPresent()) {// TODO: test
             genericArguments.addAll(List.of(
                 "-o",

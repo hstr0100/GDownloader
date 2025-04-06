@@ -202,4 +202,8 @@ public final class FileUtils {
     public static Path relativize(File originalDirectory, File targetDirectory, Path file) {
         return relativize(originalDirectory.toPath(), targetDirectory.toPath(), file);
     }
+
+    public static String getBinaryName(String name) {
+        return GDownloader.isWindows() ? name + ".exe" : name;
+    }
 }

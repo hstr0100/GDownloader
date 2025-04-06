@@ -14,9 +14,10 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package net.brlns.gdownloader.settings.enums;
+package net.brlns.gdownloader.ffmpeg.enums;
 
 import lombok.Getter;
+import net.brlns.gdownloader.settings.enums.ISettingsEnum;
 
 import static net.brlns.gdownloader.lang.Language.l10n;
 
@@ -24,10 +25,12 @@ import static net.brlns.gdownloader.lang.Language.l10n;
  * @author Gabriel / hstr0100 / vertx010
  */
 @Getter
-public enum AudioCodecEnum implements ISettingsEnum, IContainerEnum {
+public enum AudioCodecEnum implements ISettingsEnum {
     NO_CODEC(""),
     MP3("libmp3lame"),
     AAC("aac"),
+    AC3("ac3"),
+    PCM("pcm_s16le"),
     FLAC("flac"),
     ALAC("alac"),
     OPUS("libopus"),
@@ -37,11 +40,6 @@ public enum AudioCodecEnum implements ISettingsEnum, IContainerEnum {
 
     private AudioCodecEnum(String ffmpegCodecNameIn) {
         ffmpegCodecName = ffmpegCodecNameIn;
-    }
-
-    @Override
-    public String getValue() {
-        return name().toLowerCase();
     }
 
     @Override

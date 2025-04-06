@@ -56,6 +56,8 @@ import net.brlns.gdownloader.clipboard.ClipboardManager;
 import net.brlns.gdownloader.downloader.DownloadManager;
 import net.brlns.gdownloader.event.EventDispatcher;
 import net.brlns.gdownloader.event.impl.NativeMouseClickEvent;
+import net.brlns.gdownloader.ffmpeg.FFmpegSelfTester;
+import net.brlns.gdownloader.ffmpeg.FFmpegTranscoder;
 import net.brlns.gdownloader.lang.Language;
 import net.brlns.gdownloader.persistence.PersistenceManager;
 import net.brlns.gdownloader.server.AppClient;
@@ -183,6 +185,9 @@ public final class GDownloader {
     private GUIManager guiManager;
 
     @Getter
+    private FFmpegTranscoder ffmpegTranscoder;
+
+    @Getter
     private boolean initialized = false;
 
     @Getter(AccessLevel.PRIVATE)
@@ -263,6 +268,8 @@ public final class GDownloader {
 
             clipboardManager = new ClipboardManager(this);
             downloadManager = new DownloadManager(this);
+
+            ffmpegTranscoder = new FFmpegTranscoder();
 
             guiManager = new GUIManager(this);
 
@@ -1256,6 +1263,15 @@ public final class GDownloader {
         boolean disableHWAccel = false;
 
         for (int i = 0; i < args.length; i++) {
+            if (args[i].equalsIgnoreCase("--debug")) {
+                LoggerUtils.setForcedDebugMode();
+            }
+
+            if (args[i].equalsIgnoreCase("--run-ffmpeg-selftest")) {
+                FFmpegSelfTester.runSelfTest();
+                System.exit(0);
+            }
+
             if (args[i].equalsIgnoreCase("--no-gui")) {
                 noGui = true;
             }

@@ -81,10 +81,6 @@ public class DirectHttpDownloader extends AbstractDownloader {
     @Setter
     private Optional<File> executablePath = Optional.empty();
 
-    @Getter
-    @Setter
-    private Optional<File> ffmpegPath = Optional.empty();
-
     public DirectHttpDownloader(DownloadManager managerIn) {
         super(managerIn);
     }

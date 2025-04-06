@@ -14,9 +14,10 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package net.brlns.gdownloader.settings.enums;
+package net.brlns.gdownloader.ffmpeg.enums;
 
 import lombok.Getter;
+import net.brlns.gdownloader.settings.enums.ISettingsEnum;
 
 import static net.brlns.gdownloader.lang.Language.*;
 
@@ -26,6 +27,8 @@ import static net.brlns.gdownloader.lang.Language.*;
 @Getter
 public enum AudioBitrateEnum implements ISettingsEnum {
     NO_AUDIO(0, ""),
+    BITRATE_8(8, "8kbps"),
+    BITRATE_16(16, "16kbps"),
     BITRATE_32(32, "32kbps"),
     BITRATE_64(64, "64kbps"),
     BITRATE_96(96, "96kbps"),

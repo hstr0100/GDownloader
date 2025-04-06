@@ -38,9 +38,9 @@ import net.brlns.gdownloader.downloader.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.downloader.structs.DownloadResult;
 import net.brlns.gdownloader.downloader.structs.MediaInfo;
+import net.brlns.gdownloader.ffmpeg.enums.AudioBitrateEnum;
 import net.brlns.gdownloader.persistence.PersistenceManager;
 import net.brlns.gdownloader.settings.QualitySettings;
-import net.brlns.gdownloader.settings.enums.AudioBitrateEnum;
 import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
 import net.brlns.gdownloader.util.DirectoryUtils;
 import net.brlns.gdownloader.util.FileUtils;
@@ -61,10 +61,6 @@ public class YtDlpDownloader extends AbstractDownloader {
     @Getter
     @Setter
     private Optional<File> executablePath = Optional.empty();
-
-    @Getter
-    @Setter
-    private Optional<File> ffmpegPath = Optional.empty();
 
     public YtDlpDownloader(DownloadManager managerIn) {
         super(managerIn);
@@ -221,6 +217,7 @@ public class YtDlpDownloader extends AbstractDownloader {
             "-i"
         ));
 
+        Optional<File> ffmpegPath = main.getFfmpegTranscoder().getFfmpegPath();
         if (ffmpegPath.isPresent()) {
             genericArguments.addAll(List.of(
                 "--ffmpeg-location",
@@ -330,6 +327,7 @@ public class YtDlpDownloader extends AbstractDownloader {
 
             for (Path path : paths) {
                 if (!Files.isDirectory(path)) {
+
                     Path targetPath = determineTargetPath(tmpPath, finalPath, path, quality);
 
                     try {

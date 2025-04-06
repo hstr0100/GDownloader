@@ -34,6 +34,8 @@ import javax.swing.plaf.basic.BasicButtonUI;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
+import net.brlns.gdownloader.ffmpeg.enums.AudioBitrateEnum;
+import net.brlns.gdownloader.ffmpeg.enums.AudioCodecEnum;
 import net.brlns.gdownloader.settings.QualitySettings;
 import net.brlns.gdownloader.settings.Settings;
 import net.brlns.gdownloader.settings.enums.*;
@@ -1225,11 +1227,8 @@ public class SettingsPanel {
                         itemPanel.setVisible(isExpanded);
                         expandLabel.setText(isExpanded ? "▲" : "▼");
 
-                        if (isExpanded) {
-                            card.setBackground(color(MEDIA_CARD_HOVER));
-                        } else {
-                            card.setBackground(color(MEDIA_CARD));
-                        }
+                        card.setBackground(isExpanded
+                            ? color(MEDIA_CARD_HOVER) : color(MEDIA_CARD));
 
                         card.revalidate();
                     }

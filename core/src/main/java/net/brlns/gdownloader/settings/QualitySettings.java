@@ -24,6 +24,8 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import net.brlns.gdownloader.ffmpeg.enums.AudioBitrateEnum;
+import net.brlns.gdownloader.ffmpeg.enums.AudioCodecEnum;
 import net.brlns.gdownloader.settings.enums.*;
 
 /**
@@ -80,9 +82,14 @@ public class QualitySettings {
     // TODO this needs some work
     @JsonIgnore
     public String buildQualitySelector() {
-        return "(" + selector.getValue() + "[height>=" + minHeight.getValue() + "][height<=" + maxHeight.getValue() + "][ext=" + videoContainer.getValue() + "][fps=" + fps.getValue() + "]+bestaudio/"
+        return "("
+            + selector.getValue() + "[height>=" + minHeight.getValue() + "][height<=" + maxHeight.getValue() + "][ext=" + videoContainer.getValue() + "][fps=" + fps.getValue() + "]+bestaudio/"
+            + selector.getValue() + "[height>=" + minHeight.getValue() + "][height<=" + maxHeight.getValue() + "][fps=" + fps.getValue() + "]+bestaudio/"
             + selector.getValue() + "[height>=" + minHeight.getValue() + "][height<=" + maxHeight.getValue() + "][ext=" + videoContainer.getValue() + "]+bestaudio/"
+            + selector.getValue() + "[height>=" + minHeight.getValue() + "][height<=" + maxHeight.getValue() + "]+bestaudio/"
             + selector.getValue() + "[ext=" + videoContainer.getValue() + "]+bestaudio/"
-            + selector.getValue() + "+bestaudio/best)";
+            + selector.getValue() + "+bestaudio/"
+            + "best"
+            + ")";
     }
 }

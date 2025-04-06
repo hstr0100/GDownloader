@@ -256,12 +256,14 @@ public final class GUIManager {
             adjustWindowSize();
 
             JPanel mainPanel = new JPanel(new BorderLayout());
-            mainPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+            mainPanel.setBorder(BorderFactory.createLineBorder(color(BACKGROUND), 5));
             mainPanel.setBackground(color(BACKGROUND));
+            mainPanel.setOpaque(true);
 
             JPanel headerPanel = new JPanel(new BorderLayout());
             headerPanel.setBackground(color(BACKGROUND));
             headerPanel.add(createToolbar(), BorderLayout.SOUTH);
+            headerPanel.setOpaque(true);
             mainPanel.add(headerPanel, BorderLayout.NORTH);
 
             queuePanel = new JPanel();
@@ -355,6 +357,7 @@ public final class GUIManager {
         JPanel topPanel = new JPanel(new GridBagLayout());
         topPanel.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0));
         topPanel.setBackground(color(BACKGROUND));
+        topPanel.setOpaque(true);
 
         JPanel leftButtonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         leftButtonPanel.setOpaque(false);

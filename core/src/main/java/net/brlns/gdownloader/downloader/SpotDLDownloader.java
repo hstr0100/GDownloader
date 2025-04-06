@@ -63,10 +63,6 @@ public class SpotDLDownloader extends AbstractDownloader {
     @Setter
     private Optional<File> executablePath = Optional.empty();
 
-    @Getter
-    @Setter
-    private Optional<File> ffmpegPath = Optional.empty();
-
     public SpotDLDownloader(DownloadManager managerIn) {
         super(managerIn);
     }
@@ -185,10 +181,11 @@ public class SpotDLDownloader extends AbstractDownloader {
             genericArguments.add("--config");
         }
 
-        if (ffmpegPath.isPresent()) {
+        Optional<String> ffmpegExecutable = main.getFfmpegTranscoder().getFFmpegExecutable();
+        if (ffmpegExecutable.isPresent()) {
             genericArguments.addAll(List.of(
                 "--ffmpeg",
-                ffmpegPath.get().getAbsolutePath() + File.separator + "ffmpeg.exe"
+                ffmpegExecutable.get()
             ));
         }
 

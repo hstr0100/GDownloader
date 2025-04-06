@@ -57,10 +57,6 @@ public abstract class AbstractDownloader {
 
     public abstract void setExecutablePath(Optional<File> file);
 
-    public abstract Optional<File> getFfmpegPath();
-
-    public abstract void setFfmpegPath(Optional<File> file);
-
     public abstract boolean isMainDownloader();
 
     public abstract List<DownloadTypeEnum> getArchivableTypes();

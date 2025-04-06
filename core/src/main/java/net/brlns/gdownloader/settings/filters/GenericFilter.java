@@ -28,10 +28,10 @@ import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.downloader.AbstractDownloader;
 import net.brlns.gdownloader.downloader.DownloadManager;
 import net.brlns.gdownloader.downloader.enums.DownloadTypeEnum;
+import net.brlns.gdownloader.ffmpeg.enums.AudioBitrateEnum;
+import net.brlns.gdownloader.ffmpeg.enums.AudioCodecEnum;
 import net.brlns.gdownloader.settings.QualitySettings;
 import net.brlns.gdownloader.settings.Settings;
-import net.brlns.gdownloader.settings.enums.AudioBitrateEnum;
-import net.brlns.gdownloader.settings.enums.AudioCodecEnum;
 import net.brlns.gdownloader.settings.enums.VideoContainerEnum;
 import net.brlns.gdownloader.util.TemplateConverter;
 import net.brlns.gdownloader.util.URLUtils;
@@ -176,6 +176,7 @@ public class GenericFilter extends AbstractUrlFilter {
 
                         if (isEmbedThumbnailAndMetadata()) {
                             arguments.addAll(List.of(
+                                "--convert-thumbnails", "png",
                                 "--embed-thumbnail",
                                 "--embed-metadata",
                                 "--embed-chapters"
@@ -191,23 +192,25 @@ public class GenericFilter extends AbstractUrlFilter {
                             }
                         }
 
-                        String codec = null;
+                        // If no codec is defined, the default audio codec provided by the source will be passed through.
+                        // Transcode audio (Note: This can be very slow on some machines).
+                        AudioCodecEnum audioCodec = null;
                         if (quality.getAudioCodec() != AudioCodecEnum.NO_CODEC) {
                             // Check if the user has selected a custom audio codec.
-                            codec = quality.getAudioCodec().getFfmpegCodecName();
+                            audioCodec = quality.getAudioCodec();
                         } else if (config.isTranscodeAudioToAAC()) {
                             // If no custom codec is set, check if "Convert audio to a widely supported codec" is enabled.
                             // If enabled, default to "aac".
-                            codec = "aac"; // Opus is not supported by some native video players
+                            audioCodec = AudioCodecEnum.AAC; // Opus is not supported by some native video players
                         }
 
                         // If no codec is defined, the default audio codec provided by the source will be passed through.
-                        if (codec != null) {
+                        if (audioCodec != null) {
                             // Transcode audio (Note: This can be very slow on some machines).
                             arguments.addAll(List.of(
                                 "--postprocessor-args",
                                 // Use the selected codec. Default bitrate is 320 kbps unless otherwise specified.
-                                "ffmpeg:-c:a " + codec + " -b:a "
+                                "ffmpeg:-c:a " + audioCodec.getFfmpegCodecName() + " -b:a "
                                 + (audioBitrate == AudioBitrateEnum.NO_AUDIO ? 320 : audioBitrate.getValue()) + "k"
                             ));
                         }

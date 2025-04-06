@@ -1,0 +1,73 @@
+/*
+ * Copyright (C) 2025 hstr0100
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+package net.brlns.gdownloader.ffmpeg.enums;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+import lombok.Getter;
+import net.brlns.gdownloader.ffmpeg.structs.EncoderPreset;
+
+import static net.brlns.gdownloader.ffmpeg.enums.VideoCodecEnum.*;
+
+/**
+ * @author Gabriel / hstr0100 / vertx010
+ */
+@Getter
+public enum EncoderPresetEnum {
+    // x264/x265 software presets
+    ULTRAFAST("ultrafast", H264, H265),
+    SUPERFAST("superfast", H264, H265),
+    VERYFAST("veryfast", H264, H265),
+    FASTER("faster", H264, H265),
+    FAST("fast", H264, H265),
+    MEDIUM("medium", H264, H265),
+    SLOW("slow", H264, H265),
+    SLOWER("slower", H264, H265),
+    VERYSLOW("veryslow", H264, H265),
+    // AV1/VP9 software presets
+    GOOD("good", AV1, VP9),
+    BEST("best", VP9),
+    REALTIME("realtime", AV1, VP9),
+    ALLINTRA("allintra", AV1),
+    // HW encoders use the system mapper
+    SYSTEM_MAPPER(""),
+    NO_PRESET("");
+
+    private final String presetName;
+    private final VideoCodecEnum[] videoCodecs;
+
+    private EncoderPresetEnum(String presetNameIn, VideoCodecEnum... videoCodecsIn) {
+        presetName = presetNameIn;
+        videoCodecs = videoCodecsIn;
+    }
+
+    public static Optional<EncoderPresetEnum> findByNameAndCodec(String name, VideoCodecEnum codec) {
+        return Arrays.stream(values())
+            .filter(p -> p.getPresetName().equalsIgnoreCase(name)
+            && Arrays.stream(p.getVideoCodecs()).anyMatch(c -> c == codec))
+            .findFirst();
+    }
+
+    public static List<EncoderPreset> getPresetsForCodec(VideoCodecEnum codec) {
+        return Arrays.stream(values())
+            .filter(preset -> Arrays.asList(preset.getVideoCodecs()).contains(codec))
+            .map(preset -> new EncoderPreset(preset, "-preset", preset.getPresetName()))
+            .collect(Collectors.toList());
+    }
+}

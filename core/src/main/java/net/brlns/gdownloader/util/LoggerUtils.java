@@ -39,6 +39,7 @@ public final class LoggerUtils {
     private static final String LOG_PATTERN = "%d{yyyy-MM-dd HH:mm:ss} %-5level %logger{36} - %msg%n";
 
     private static final Level DEFAULT_LOG_LEVEL = Level.INFO;
+    private static boolean DEBUG_MODE_FORCED = false;
 
     @Getter
     private static File logFile;
@@ -70,6 +71,11 @@ public final class LoggerUtils {
         logFile = logFileIn;
     }
 
+    public static void setForcedDebugMode() {
+        DEBUG_MODE_FORCED = true;
+        setDebugLogLevel(true);
+    }
+
     public static void setDebugLogLevel(boolean debug) {
         LoggerContext loggerContext = (LoggerContext)LoggerFactory.getILoggerFactory();
         Logger logger = loggerContext.getLogger("ROOT");
@@ -82,7 +88,7 @@ public final class LoggerUtils {
             jnativeLogger.setLevel(java.util.logging.Level.ALL);
 
             log.info("Log level changed to: {}", logger.getLevel());
-        } else if (!debug && logger.getLevel() != DEFAULT_LOG_LEVEL) {
+        } else if (!debug && logger.getLevel() != DEFAULT_LOG_LEVEL && !DEBUG_MODE_FORCED) {
             logger.setLevel(DEFAULT_LOG_LEVEL);
             jnativeLogger.setLevel(java.util.logging.Level.OFF);
 
