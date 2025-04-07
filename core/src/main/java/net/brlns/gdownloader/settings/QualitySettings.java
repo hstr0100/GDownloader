@@ -84,10 +84,10 @@ public class QualitySettings {
     public String buildQualitySelector() {
         return "("
             + selector.getValue() + "[height>=" + minHeight.getValue() + "][height<=" + maxHeight.getValue() + "][ext=" + videoContainer.getValue() + "][fps=" + fps.getValue() + "]+bestaudio/"
-            + selector.getValue() + "[height>=" + minHeight.getValue() + "][height<=" + maxHeight.getValue() + "][fps=" + fps.getValue() + "]+bestaudio/"
             + selector.getValue() + "[height>=" + minHeight.getValue() + "][height<=" + maxHeight.getValue() + "][ext=" + videoContainer.getValue() + "]+bestaudio/"
-            + selector.getValue() + "[height>=" + minHeight.getValue() + "][height<=" + maxHeight.getValue() + "]+bestaudio/"
             + selector.getValue() + "[ext=" + videoContainer.getValue() + "]+bestaudio/"
+            + selector.getValue() + "[height>=" + minHeight.getValue() + "][height<=" + maxHeight.getValue() + "][fps=" + fps.getValue() + "]+bestaudio/"
+            + selector.getValue() + "[height>=" + minHeight.getValue() + "][height<=" + maxHeight.getValue() + "]+bestaudio/"
             + selector.getValue() + "+bestaudio/"
             + "best"
             + ")";

@@ -42,8 +42,10 @@ import static net.brlns.gdownloader.util.FileUtils.getBinaryName;
 // raw file ->
 // ffprobe (check if conversion needed) ->
 // switch to transcoding progress status ->
-// launch ffmpeg with progress hook ->
+// extract metadata information
+// launch ffmpeg transcoding with progress hook ->
 // replace file in tmp directory ->
+// remerge metadata information (metadata, subtitles, thumbnail, chapters)
 // move final file to destination
 @Slf4j
 public final class FFmpegTranscoder {
@@ -142,6 +144,7 @@ public final class FFmpegTranscoder {
         List<String> command = new ArrayList<>();
         command.add(getFFmpegExecutableOrThrow());
         command.add("-hide_banner");
+        // TODO: System-aware HW decoding, software decoding AV1 is not fun
         command.add("-i");
         command.add(inputFile.getAbsolutePath());
 
