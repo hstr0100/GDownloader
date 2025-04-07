@@ -22,6 +22,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NonNull;
 import net.brlns.gdownloader.ffmpeg.structs.EncoderProfile;
 
 import static net.brlns.gdownloader.ffmpeg.enums.VideoCodecEnum.*;
@@ -41,21 +42,21 @@ public enum EncoderProfileEnum {
     H265_MAIN("main", H265),
     H265_MAIN10("main10", H265),
     H265_MAIN_422_10("main422-10", H265),
-    // HW encoders use the system mapper
+    // SW AV1/VP9 and all HW encoders use the system mapper
     SYSTEM_MAPPER("", null),
     NO_PROFILE("", null);
 
     private final String profileName;
     private final VideoCodecEnum videoCodec;
 
-    public static Optional<EncoderProfileEnum> findByNameAndCodec(String name, VideoCodecEnum codec) {
+    public static Optional<EncoderProfileEnum> findByNameAndCodec(String name, @NonNull VideoCodecEnum codec) {
         return Arrays.stream(values())
             .filter(p -> p.getProfileName().equalsIgnoreCase(name)
             && p.getVideoCodec() == codec)
             .findFirst();
     }
 
-    public static List<EncoderProfile> getProfilesForCodec(VideoCodecEnum codec) {
+    public static List<EncoderProfile> getProfilesForCodec(@NonNull VideoCodecEnum codec) {
         return Arrays.stream(values())
             .filter(profile -> profile.getVideoCodec() == codec)
             .map(profile -> new EncoderProfile(profile, profile.getProfileName()))

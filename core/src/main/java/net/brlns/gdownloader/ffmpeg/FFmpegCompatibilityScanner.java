@@ -70,7 +70,8 @@ public class FFmpegCompatibilityScanner {
 
         try {
             for (EncoderEnum encoder : EncoderEnum.values()) {
-                if (encoder == EncoderEnum.NO_ENCODER || encoder == EncoderEnum.AUTO) {
+                if (encoder == EncoderEnum.NO_ENCODER || encoder == EncoderEnum.AUTO
+                    || encoder.getEncoderType() == EncoderTypeEnum.AUTO) {
                     continue;
                 }
 
@@ -309,18 +310,14 @@ public class FFmpegCompatibilityScanner {
                 command.add("-vf");
                 command.add("format=nv12,hwupload");
             }
-            case QSV -> {
-                command.add("-qsv_device");
-                command.add("auto");
-            }
             case V4L2M2M -> {
                 String device = detectV4l2m2mDevice();
                 if (device != null) {
                     command.add("-device");
                     command.add(device);
-                } else {
-                    log.debug("Unable to locate a valid v4l2m2m device");
                 }
+            }
+            default -> {
             }
         }
 
@@ -342,6 +339,8 @@ public class FFmpegCompatibilityScanner {
             case VAAPI -> {
                 command.add("-qp");
                 command.add("33");
+            }
+            default -> {
             }
         }
 
@@ -376,7 +375,7 @@ public class FFmpegCompatibilityScanner {
                     for (File device : renderDevices) {
                         String devicePath = device.getAbsolutePath();
 
-                        if (testVaapiDevice(encoder, devicePath)) {
+                        if (checkVaapiDeviceSupport(encoder, devicePath)) {
                             if (renderDevices.length == 1) {
                                 // Only one device found, we can skip the benchmark.
                                 return devicePath;
@@ -434,21 +433,17 @@ public class FFmpegCompatibilityScanner {
 
     @Nullable
     public String detectV4l2m2mDevice() {
-        // TODO: auto detect for RPI / arm based SBCs
-        String device = "/dev/video11";
+        // TODO: test auto detect for RPI / arm based SBCs
+        String device = "/dev/video11";// RPI MJPEG/H264 M2M encoder
         if (Files.exists(Paths.get(device))) {
             return device;
         }
 
-        device = "/dev/video0";
-        if (Files.exists(Paths.get(device))) {
-            return device;
-        }
-
+        log.debug("Unable to locate a v4l2m2m device, handing off detection to ffmpeg");
         return null;
     }
 
-    public boolean testVaapiDevice(EncoderEnum encoder, String devicePath) {
+    public boolean checkVaapiDeviceSupport(EncoderEnum encoder, String devicePath) {
         try {
             File vainfoExecutable = SystemExecutableLocator.locateExecutable("vainfo");
 
@@ -470,21 +465,25 @@ public class FFmpegCompatibilityScanner {
                 .start();
 
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-            StringBuilder output = new StringBuilder();
-            String line;
 
+            boolean hasVaapiCodec = false;
+            String vaapiName = encoder.getVideoCodec().getVaapiName();
+
+            String line;
             while ((line = reader.readLine()) != null) {
-                output.append(line).append("\n");
+                if (line.contains("VAEntrypointEncSlice") && line.contains(vaapiName)) {
+                    hasVaapiCodec = true;
+                }
             }
 
             int exitCode = process.waitFor();
 
-            String content = output.toString();
+            boolean result = exitCode == 0 && hasVaapiCodec;
+            log.debug("vaapi entrypoint for encoder {} in {}: {}", encoder, devicePath, result ? "AVAILABLE" : "MISSING");
 
-            return exitCode == 0
-                && content.contains("VAEntrypointEncSlice")
-                && content.contains(encoder.getVideoCodec().getVaapiName());
+            return result;
         } catch (Exception e) {
+            log.debug("vainfo error: {}", e.getMessage());
             return false;
         }
     }

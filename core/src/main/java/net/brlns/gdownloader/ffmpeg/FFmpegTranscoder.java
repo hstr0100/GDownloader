@@ -185,6 +185,8 @@ public final class FFmpegTranscoder {
                 command.add(speedPreset.getFfmpegPresetName());
             }
 
+            EncoderTypeEnum encoderType = actualEncoder.getEncoderType();
+
             // 0 = lossless, 63 = bathroom tiles, roof shingles
             int rateControlValue = Math.clamp(config.getRateControlValue(), 0, 63);
             // 0 = a black void, MAX_VALUE = a melted GPU
@@ -195,28 +197,27 @@ public final class FFmpegTranscoder {
                 // Default to VBR if not specified
                 rateControlMode = RateControlModeEnum.VBR;
             }
+
             switch (rateControlMode) {
                 case CRF -> {
-                    switch (actualEncoder.getEncoderType()) {
+                    switch (encoderType) {
                         case SOFTWARE -> {
-                            if (videoCodec != null) {
-                                switch (videoCodec) {
-                                    case H264, H265 -> {
-                                        command.add("-crf");
-                                        command.add(String.valueOf(rateControlValue));
-                                    }
-                                    case VP9 -> {
-                                        command.add("-crf");
-                                        command.add(String.valueOf(rateControlValue));
-                                        command.add("-b:v");
-                                        command.add("0");
-                                    }
-                                    case AV1 -> {
-                                        command.add("-crf");
-                                        command.add(String.valueOf(rateControlValue));
-                                    }
-                                    default -> {
-                                    }
+                            switch (videoCodec) {
+                                case H264, H265 -> {
+                                    command.add("-crf");
+                                    command.add(String.valueOf(rateControlValue));
+                                }
+                                case VP9 -> {
+                                    command.add("-crf");
+                                    command.add(String.valueOf(rateControlValue));
+                                    command.add("-b:v");
+                                    command.add("0");
+                                }
+                                case AV1 -> {
+                                    command.add("-crf");
+                                    command.add(String.valueOf(rateControlValue));
+                                }
+                                default -> {
                                 }
                             }
                         }
@@ -247,16 +248,19 @@ public final class FFmpegTranscoder {
                         }
                         case VAAPI -> {
                             // VAAPI uses qp parameter differently
-                            if (videoCodec == VideoCodecEnum.H264
-                                || videoCodec == VideoCodecEnum.H265) {
-                                // For H.264/H.265, set quantization parameter for all frames
-                                command.add("-qp");
-                                command.add(String.valueOf(rateControlValue));
-                            } else if (videoCodec == VideoCodecEnum.VP9
-                                || videoCodec == VideoCodecEnum.AV1) {
-                                // For VP9/AV1, use global_quality
-                                command.add("-global_quality");
-                                command.add(String.valueOf(rateControlValue));
+                            switch (videoCodec) {
+                                case H264, H265 -> {
+                                    // For H.264/H.265, set quantization parameter for all frames
+                                    command.add("-qp");
+                                    command.add(String.valueOf(rateControlValue));
+                                }
+                                case VP9, AV1 -> {
+                                    // For VP9/AV1, use global_quality
+                                    command.add("-global_quality");
+                                    command.add(String.valueOf(rateControlValue));
+                                }
+                                default -> {
+                                }
                             }
                         }
                         //case V4L2M2M -> {}
@@ -268,7 +272,7 @@ public final class FFmpegTranscoder {
                     }
                 }
                 case CQP -> {
-                    switch (actualEncoder.getEncoderType()) {
+                    switch (encoderType) {
                         case SOFTWARE -> {
                             switch (videoCodec) {
                                 case H264 -> {
@@ -318,16 +322,19 @@ public final class FFmpegTranscoder {
                         }
                         case VAAPI -> {
                             // VAAPI uses qp parameter differently
-                            if (videoCodec == VideoCodecEnum.H264
-                                || videoCodec == VideoCodecEnum.H265) {
-                                // For H.264/H.265, set quantization parameter for all frames
-                                command.add("-qp");
-                                command.add(String.valueOf(rateControlValue));
-                            } else if (videoCodec == VideoCodecEnum.VP9
-                                || videoCodec == VideoCodecEnum.AV1) {
-                                // For VP9/AV1, use global_quality
-                                command.add("-global_quality");
-                                command.add(String.valueOf(rateControlValue));
+                            switch (videoCodec) {
+                                case H264, H265 -> {
+                                    // For H.264/H.265, set quantization parameter for all frames
+                                    command.add("-qp");
+                                    command.add(String.valueOf(rateControlValue));
+                                }
+                                case VP9, AV1 -> {
+                                    // For VP9/AV1, use global_quality
+                                    command.add("-global_quality");
+                                    command.add(String.valueOf(rateControlValue));
+                                }
+                                default -> {
+                                }
                             }
                         }
                         //case V4L2M2M -> {}
@@ -342,7 +349,7 @@ public final class FFmpegTranscoder {
                     command.add("-b:v");
                     command.add(videoBitrate + "k");
                     // Force constant bitrate with buffer constraints
-                    switch (actualEncoder.getEncoderType()) {
+                    switch (encoderType) {
                         case NVENC, QSV -> {
                             command.add("-maxrate");
                             command.add(videoBitrate + "k");
@@ -361,12 +368,15 @@ public final class FFmpegTranscoder {
                 }
                 default -> {
                     // VBR settings vary by encoder
-                    switch (actualEncoder.getEncoderType()) {
+                    switch (encoderType) {
                         case SOFTWARE -> {
                             if (videoCodec == VideoCodecEnum.H264
                                 || videoCodec == VideoCodecEnum.H265) {
                                 command.add("-crf");
                                 command.add(String.valueOf(rateControlValue));
+                            } else {
+                                command.add("-b:v");
+                                command.add(videoBitrate + "k");
                             }
                         }
                         case NVENC -> {
@@ -385,7 +395,7 @@ public final class FFmpegTranscoder {
             }
 
             // HW encoding parameters
-            switch (actualEncoder.getEncoderType()) {
+            switch (encoderType) {
                 case VAAPI -> {
                     String vaapiDevice = getCompatScanner().detectVaapiDevice(actualEncoder);
                     command.add("-vaapi_device");
@@ -393,19 +403,18 @@ public final class FFmpegTranscoder {
                     command.add("-vf");
                     command.add("format=nv12,hwupload");
                 }
-                case QSV -> {
-                    command.add("-qsv_device");
-                    command.add("auto");
-                }
                 case V4L2M2M -> {
                     String device = getCompatScanner().detectV4l2m2mDevice();
                     if (device != null) {
                         command.add("-device");
                         command.add(device);
-                    } else {
-                        log.debug("Unable to locate a valid v4l2m2m device");
                     }
                 }
+                // Intel QSV is finicky and never works out of the box on Linux,
+                // so if device detection fails, we will simply let it fall back to VAAPI.
+                // The same applies to AMD AMF; additionally, on Linux, only custom FFmpeg builds include the AMF codecs.
+                //
+                // TODO: Need feedback from an Nvidia user that can test NVENC encoding
                 default -> {
                 }
             }

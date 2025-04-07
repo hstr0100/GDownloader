@@ -25,10 +25,10 @@ public enum EncoderTypeEnum {
      * We will attempt to use encoders in this order when available.
      */
     NVENC, // NVIDIA - HW encoder
-    QSV, // Intel Quick Sync - HW encoder
     AMF, // AMD AMF - HW encoder
-    V4L2M2M, // Video4Linux2 memory-to-memory - RPI/Linux only - HW encoder
-    VAAPI, // Video Acceleration API - Linux only - HW encoder
+    QSV, // Intel Quick Sync - HW encoder
+    V4L2M2M, // Video4Linux2 memory-to-memory - Generic - RPI/Linux only - HW encoder
+    VAAPI, // Video Acceleration API - Generic - Linux only - HW encoder
     SOFTWARE, // CPU - SW encoder (fallback when no supported HW acceleration is available)
     AUTO; // Automatic selection
 }

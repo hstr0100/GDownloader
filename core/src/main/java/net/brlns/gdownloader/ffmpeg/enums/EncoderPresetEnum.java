@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.Getter;
+import lombok.NonNull;
 import net.brlns.gdownloader.ffmpeg.structs.EncoderPreset;
 
 import static net.brlns.gdownloader.ffmpeg.enums.VideoCodecEnum.*;
@@ -40,12 +41,7 @@ public enum EncoderPresetEnum {
     SLOW("slow", H264, H265),
     SLOWER("slower", H264, H265),
     VERYSLOW("veryslow", H264, H265),
-    // AV1/VP9 software presets
-    GOOD("good", AV1, VP9),
-    BEST("best", VP9),
-    REALTIME("realtime", AV1, VP9),
-    ALLINTRA("allintra", AV1),
-    // HW encoders use the system mapper
+    // SW AV1/VP9 and all HW encoders use the system mapper
     SYSTEM_MAPPER(""),
     NO_PRESET("");
 
@@ -57,14 +53,14 @@ public enum EncoderPresetEnum {
         videoCodecs = videoCodecsIn;
     }
 
-    public static Optional<EncoderPresetEnum> findByNameAndCodec(String name, VideoCodecEnum codec) {
+    public static Optional<EncoderPresetEnum> findByNameAndCodec(String name, @NonNull VideoCodecEnum codec) {
         return Arrays.stream(values())
             .filter(p -> p.getPresetName().equalsIgnoreCase(name)
             && Arrays.stream(p.getVideoCodecs()).anyMatch(c -> c == codec))
             .findFirst();
     }
 
-    public static List<EncoderPreset> getPresetsForCodec(VideoCodecEnum codec) {
+    public static List<EncoderPreset> getPresetsForCodec(@NonNull VideoCodecEnum codec) {
         return Arrays.stream(values())
             .filter(preset -> Arrays.asList(preset.getVideoCodecs()).contains(codec))
             .map(preset -> new EncoderPreset(preset, "-preset", preset.getPresetName()))
