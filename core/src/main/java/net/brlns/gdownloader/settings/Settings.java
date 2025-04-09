@@ -69,6 +69,9 @@ public class Settings {
     @JsonProperty("MissingFormatsWorkaround")
     private boolean missingFormatsWorkaround = false;
 
+    @JsonProperty("DownloadAllAudioTracks")
+    private boolean downloadAllAudioTracks = true;
+
     @Deprecated
     @JsonProperty("ReadCookies")
     private boolean readCookies = false;

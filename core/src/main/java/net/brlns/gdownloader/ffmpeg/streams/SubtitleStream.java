@@ -14,23 +14,35 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package net.brlns.gdownloader.ffmpeg.enums;
+package net.brlns.gdownloader.ffmpeg.streams;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import jakarta.annotation.Nullable;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-@Getter
-@AllArgsConstructor
-public enum VideoCodecEnum {
-    NO_CODEC("", ""),
-    H264("h264", "H264"),
-    H265("h265", "HEVC"),
-    VP9("vp9", "VP9"),
-    AV1("av1", "AV1");
+@Data
+@ToString(callSuper = true)
+@EqualsAndHashCode(callSuper = true)
+@JsonIgnoreProperties(ignoreUnknown = true)
+public class SubtitleStream extends AbstractStream {
 
-    private final String codecName;
-    private final String vaapiName;
+    public static final String ID = "subtitle";
+
+    @JsonIgnore
+    @Nullable
+    public String getTitle() {
+        String title = getTags().get("handler_name");
+        if (title != null) {
+            return title;
+        }
+
+        return getTags().get("title");
+    }
+
 }

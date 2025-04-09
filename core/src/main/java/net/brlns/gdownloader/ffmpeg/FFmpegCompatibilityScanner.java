@@ -225,20 +225,22 @@ public class FFmpegCompatibilityScanner {
                 .redirectErrorStream(true)
                 .start();
 
-            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-            String line;
-            boolean encoderSection = false;
+            try (
+                BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+                String line;
+                boolean encoderSection = false;
 
-            while ((line = reader.readLine()) != null) {
-                if (line.contains("------")) {
-                    encoderSection = true;
-                    continue;
-                }
+                while ((line = reader.readLine()) != null) {
+                    if (line.contains("------")) {
+                        encoderSection = true;
+                        continue;
+                    }
 
-                if (encoderSection && line.contains("V")) {
-                    String[] parts = line.trim().split(" ");
-                    if (parts.length >= 2) {
-                        encoders.add(parts[1]);
+                    if (encoderSection && line.contains("V")) {
+                        String[] parts = line.trim().split(" ");
+                        if (parts.length >= 2) {
+                            encoders.add(parts[1]);
+                        }
                     }
                 }
             }
@@ -317,8 +319,6 @@ public class FFmpegCompatibilityScanner {
                     command.add(device);
                 }
             }
-            default -> {
-            }
         }
 
         switch (encoderType) {
@@ -339,8 +339,6 @@ public class FFmpegCompatibilityScanner {
             case VAAPI -> {
                 command.add("-qp");
                 command.add("33");
-            }
-            default -> {
             }
         }
 
@@ -464,15 +462,16 @@ public class FFmpegCompatibilityScanner {
                 .redirectErrorStream(true)
                 .start();
 
-            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-
             boolean hasVaapiCodec = false;
             String vaapiName = encoder.getVideoCodec().getVaapiName();
 
-            String line;
-            while ((line = reader.readLine()) != null) {
-                if (line.contains("VAEntrypointEncSlice") && line.contains(vaapiName)) {
-                    hasVaapiCodec = true;
+            try (
+                BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    if (line.contains("VAEntrypointEncSlice") && line.contains(vaapiName)) {
+                        hasVaapiCodec = true;
+                    }
                 }
             }
 
@@ -510,12 +509,14 @@ public class FFmpegCompatibilityScanner {
                 .redirectErrorStream(true)
                 .start();
 
-            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
             StringBuilder output = new StringBuilder();
-            String line;
+            try (
+                BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+                String line;
 
-            while ((line = reader.readLine()) != null) {
-                output.append(line).append("\n");
+                while ((line = reader.readLine()) != null) {
+                    output.append(line).append("\n");
+                }
             }
 
             boolean completed = process.waitFor(verbose ? 10 : 5, TimeUnit.SECONDS);

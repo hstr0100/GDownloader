@@ -32,6 +32,7 @@ import net.brlns.gdownloader.ffmpeg.enums.AudioBitrateEnum;
 import net.brlns.gdownloader.ffmpeg.enums.AudioCodecEnum;
 import net.brlns.gdownloader.settings.QualitySettings;
 import net.brlns.gdownloader.settings.Settings;
+import net.brlns.gdownloader.settings.enums.AudioContainerEnum;
 import net.brlns.gdownloader.settings.enums.VideoContainerEnum;
 import net.brlns.gdownloader.util.TemplateConverter;
 import net.brlns.gdownloader.util.URLUtils;
@@ -165,26 +166,41 @@ public class GenericFilter extends AbstractUrlFilter {
                     case VIDEO -> {
                         VideoContainerEnum videoContainer = quality.getVideoContainer();
 
+                        String qualitySelector = getQualitySettings().buildQualitySelector();
+
+                        if (config.isDownloadAllAudioTracks()) {
+                            qualitySelector = qualitySelector.replace(
+                                "bestaudio", "bestaudio+mergeall");
+                            arguments.add("--audio-multistreams");
+                        }
+
                         arguments.addAll(List.of(
                             "-o",
                             savePath.getAbsolutePath() + File.separator + getVideoNamePattern(),
                             "-f",
-                            getQualitySettings().buildQualitySelector(),
+                            qualitySelector,
                             "--merge-output-format",
                             videoContainer.getValue()
                         ));
 
                         if (isEmbedThumbnailAndMetadata()) {
-                            arguments.addAll(List.of(
-                                "--convert-thumbnails", "png",
-                                "--embed-thumbnail",
-                                "--embed-metadata",
-                                "--embed-chapters"
-                            ));
-
                             switch (quality.getVideoContainer()) {
-                                case MKV, MP4, WEBM ->
+                                // aac, alac: not working
+                                // flv, avi, mov: cannot merge (unsupported codecs)
+                                case WEBM ->// WebM does not support thumbnail embedding
                                     arguments.addAll(List.of(
+                                        "--embed-metadata",
+                                        "--embed-chapters",
+                                        "--embed-subs",
+                                        "--sub-langs",
+                                        "all,-live_chat"
+                                    ));
+                                case MKV, MP4, MOV ->
+                                    arguments.addAll(List.of(
+                                        "--convert-thumbnails", "png",
+                                        "--embed-thumbnail",
+                                        "--embed-metadata",
+                                        "--embed-chapters",
                                         "--embed-subs",
                                         "--sub-langs",
                                         "all,-live_chat"
@@ -220,6 +236,7 @@ public class GenericFilter extends AbstractUrlFilter {
                             String audioPatternWithBitrate = getAudioNamePattern()
                                 .replace("%(audio_bitrate)s", audioBitrate.getValue() + "kbps");
 
+                            AudioContainerEnum audioContainer = quality.getAudioContainer();
                             arguments.addAll(List.of(
                                 "-o",
                                 savePath.getAbsolutePath() + File.separator + audioPatternWithBitrate,
@@ -227,16 +244,19 @@ public class GenericFilter extends AbstractUrlFilter {
                                 "bestaudio/worstvideo*+bestaudio/best",
                                 "--extract-audio",
                                 "--audio-format",
-                                quality.getAudioContainer().getValue(),
+                                audioContainer.getValue(),
                                 "--audio-quality",
                                 audioBitrate.getValue() + "k"
                             ));
 
                             if (isEmbedThumbnailAndMetadata()) {
-                                arguments.addAll(List.of(
-                                    "--embed-thumbnail",
-                                    "--embed-metadata"
-                                ));
+                                if (audioContainer != AudioContainerEnum.WAV
+                                    && audioContainer != AudioContainerEnum.AAC) {
+                                    arguments.addAll(List.of(
+                                        "--embed-thumbnail",
+                                        "--embed-metadata"
+                                    ));
+                                }
                             }
                         }
                     }

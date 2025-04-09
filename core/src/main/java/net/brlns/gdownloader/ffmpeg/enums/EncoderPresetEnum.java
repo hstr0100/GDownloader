@@ -32,23 +32,23 @@ import static net.brlns.gdownloader.ffmpeg.enums.VideoCodecEnum.*;
 @Getter
 public enum EncoderPresetEnum {
     // x264/x265 software presets
-    ULTRAFAST("ultrafast", H264, H265),
-    SUPERFAST("superfast", H264, H265),
-    VERYFAST("veryfast", H264, H265),
-    FASTER("faster", H264, H265),
-    FAST("fast", H264, H265),
-    MEDIUM("medium", H264, H265),
-    SLOW("slow", H264, H265),
-    SLOWER("slower", H264, H265),
-    VERYSLOW("veryslow", H264, H265),
+    ULTRAFAST("ultrafast", List.of(H264, H265)),
+    SUPERFAST("superfast", List.of(H264, H265)),
+    VERYFAST("veryfast", List.of(H264, H265)),
+    FASTER("faster", List.of(H264, H265)),
+    FAST("fast", List.of(H264, H265)),
+    MEDIUM("medium", List.of(H264, H265)),
+    SLOW("slow", List.of(H264, H265)),
+    SLOWER("slower", List.of(H264, H265)),
+    VERYSLOW("veryslow", List.of(H264, H265)),
     // SW AV1/VP9 and all HW encoders use the system mapper
-    SYSTEM_MAPPER(""),
-    NO_PRESET("");
+    SYSTEM_MAPPER("", List.of()),
+    NO_PRESET("", List.of());
 
     private final String presetName;
-    private final VideoCodecEnum[] videoCodecs;
+    private final List<VideoCodecEnum> videoCodecs;
 
-    private EncoderPresetEnum(String presetNameIn, VideoCodecEnum... videoCodecsIn) {
+    private EncoderPresetEnum(String presetNameIn, List<VideoCodecEnum> videoCodecsIn) {
         presetName = presetNameIn;
         videoCodecs = videoCodecsIn;
     }
@@ -56,13 +56,13 @@ public enum EncoderPresetEnum {
     public static Optional<EncoderPresetEnum> findByNameAndCodec(String name, @NonNull VideoCodecEnum codec) {
         return Arrays.stream(values())
             .filter(p -> p.getPresetName().equalsIgnoreCase(name)
-            && Arrays.stream(p.getVideoCodecs()).anyMatch(c -> c == codec))
+            && p.getVideoCodecs().stream().anyMatch(c -> c == codec))
             .findFirst();
     }
 
     public static List<EncoderPreset> getPresetsForCodec(@NonNull VideoCodecEnum codec) {
         return Arrays.stream(values())
-            .filter(preset -> Arrays.asList(preset.getVideoCodecs()).contains(codec))
+            .filter(preset -> preset.getVideoCodecs().contains(codec))
             .map(preset -> new EncoderPreset(preset, "-preset", preset.getPresetName()))
             .collect(Collectors.toList());
     }

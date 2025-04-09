@@ -20,6 +20,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.ffmpeg.enums.*;
+import net.brlns.gdownloader.settings.enums.VideoContainerEnum;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -32,6 +33,8 @@ public class FFmpegConfig {
 
     @Builder.Default
     private EncoderEnum videoEncoder = EncoderEnum.AUTO;
+    @Builder.Default
+    private VideoContainerEnum videoContainer = VideoContainerEnum.MP4;
     @Builder.Default
     private AudioCodecEnum audioCodec = AudioCodecEnum.AAC;
     @Builder.Default

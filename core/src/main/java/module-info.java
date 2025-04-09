@@ -52,6 +52,7 @@ module net.brlns.gdownloader {
     exports net.brlns.gdownloader.event.impl;
     exports net.brlns.gdownloader.ffmpeg;
     exports net.brlns.gdownloader.ffmpeg.enums;
+    exports net.brlns.gdownloader.ffmpeg.streams;
     exports net.brlns.gdownloader.ffmpeg.structs;
     exports net.brlns.gdownloader.persistence;
     exports net.brlns.gdownloader.persistence.converter;
@@ -77,7 +78,9 @@ module net.brlns.gdownloader {
     uses javax.imageio.spi.ImageWriterSpi;
     uses javax.imageio.spi.ImageReaderSpi;
 
+    opens net.brlns.gdownloader.ffmpeg.streams;
     opens net.brlns.gdownloader.persistence.converter;
     opens net.brlns.gdownloader.persistence.entity;
     opens net.brlns.gdownloader.server.result;
+    opens net.brlns.gdownloader.settings.filters;
 }

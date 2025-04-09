@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 hstr0100
+ * Copyright (C) 2025 hstr0100
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,10 +21,8 @@ import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NonNull;
-import net.brlns.gdownloader.settings.enums.ISettingsEnum;
 import net.brlns.gdownloader.settings.enums.VideoContainerEnum;
 
-import static net.brlns.gdownloader.lang.Language.l10n;
 import static net.brlns.gdownloader.settings.enums.VideoContainerEnum.*;
 
 /**
@@ -32,46 +30,59 @@ import static net.brlns.gdownloader.settings.enums.VideoContainerEnum.*;
  */
 @Getter
 @AllArgsConstructor
-public enum AudioCodecEnum implements ISettingsEnum {
-    NO_CODEC("", "", List.of()),
-    MP3("mp3", "libmp3lame", List.of(MP4, MKV, AVI, FLV, MOV)),
-    AAC("aac", "aac", List.of(MP4, MKV, WEBM, AVI, FLV, MOV)),
-    AC3("ac3", "ac3", List.of(MP4, MKV, AVI)),
-    PCM("pcm", "pcm_s16le", List.of(MKV, AVI, MOV)),
-    FLAC("flac", "flac", List.of(MKV, MP4, AVI)),
-    ALAC("alac", "alac", List.of(MP4, MKV, MOV)),
-    OPUS("opus", "libopus", List.of(MKV, WEBM, MP4)),
-    VORBIS("vorbis", "libvorbis", List.of(MKV, WEBM));
+public enum SubtitleCodecEnum {
+    WEBVTT("webvtt", List.of(MKV, WEBM)),
+    MOV_TEXT("mov_text", List.of(MP4, MOV, FLV)),
+    ASS("ass", List.of(MP4, MKV, AVI, MOV)),
+    SUBRIP("subrip", List.of(MKV, AVI)),
+    DVBSUB("dvbsub", List.of()),
+    COPY("copy", List.of());
 
     private final String codecName;
-    private final String ffmpegCodecName;
     private final List<VideoContainerEnum> supportedContainers;
 
     public boolean isSupportedByContainer(VideoContainerEnum container) {
         return supportedContainers.contains(container);
     }
 
-    @Override
-    public String getTranslationKey() {
-        return "";
-    }
-
-    @Override
-    public String getDisplayName() {
-        return this == NO_CODEC ? l10n("enums.audio_codec.no_codec") : name().toLowerCase();
-    }
-
     @Nullable
-    public static AudioCodecEnum getFallbackCodec(@NonNull VideoContainerEnum container) {
+    public static SubtitleCodecEnum getFallbackCodec(@NonNull VideoContainerEnum container) {
         return switch (container) {
             case WEBM ->
-                OPUS;
-            case AVI, FLV ->
-                MP3;
-            case MP4, MOV, MKV ->
-                AAC;
+                WEBVTT;
+            case MKV ->
+                SUBRIP;
+            case AVI ->
+                ASS;
+            case MP4, MOV, FLV ->
+                MOV_TEXT;
             default ->
                 null;
         };
+    }
+
+    @Nullable
+    public static SubtitleCodecEnum getTargetSubtitleCodec(
+        @NonNull VideoContainerEnum container, @NonNull String currentCodec) {
+        SubtitleCodecEnum codec = switch (currentCodec.toLowerCase()) {
+            case "webvtt", "vtt" ->
+                WEBVTT;
+            case "subrip", "srt" ->
+                SUBRIP;
+            case "ass", "ssa" ->
+                ASS;
+            case "dvd_subtitle", "dvb_subtitle" ->
+                DVBSUB;
+            case "hdmv_pgs_subtitle", "pgssub", "dvb_teletext", "eia_608", "microdvd" ->
+                COPY;
+            default ->
+                getFallbackCodec(container);
+        };
+
+        if (codec != null && codec.isSupportedByContainer(container)) {
+            return codec;
+        }
+
+        return getFallbackCodec(container);
     }
 }
