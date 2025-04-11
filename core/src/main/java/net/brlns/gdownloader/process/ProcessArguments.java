@@ -18,7 +18,7 @@ package net.brlns.gdownloader.process;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
+import java.util.Collection;
 import net.brlns.gdownloader.util.StringUtils;
 
 /**
@@ -27,11 +27,21 @@ import net.brlns.gdownloader.util.StringUtils;
 public final class ProcessArguments extends ArrayList<String> {
 
     public ProcessArguments(String... args) {
-        addAll(Arrays.asList(args));
+        addAll(args);
     }
 
     public ProcessArguments(Object... args) {
         add(args);
+    }
+
+    public ProcessArguments addAll(String[] arguments) {
+        addAll(Arrays.asList(arguments));
+        return this;
+    }
+
+    public ProcessArguments addAll(Object[] arguments) {
+        add(Arrays.asList(arguments));
+        return this;
     }
 
     public ProcessArguments add(Object... arguments) {
@@ -40,8 +50,20 @@ public final class ProcessArguments extends ArrayList<String> {
                 add(string);
             } else if (argument instanceof Number) {
                 add(String.valueOf(argument));
+            } else if (argument instanceof Collection<?> objCollection) {
+                for (Object item : objCollection) {
+                    if (!(item instanceof String)) {
+                        throw new IllegalArgumentException("Collection must contain only Strings");
+                    }
+                }
+
+                @SuppressWarnings("unchecked")
+                Collection<String> collection = (Collection<String>)objCollection;
+                addAll(collection);
+            } else if (argument instanceof String[] array) {
+                addAll(array);
             } else {
-                throw new IllegalArgumentException("Argument must be of type String or Number");
+                throw new IllegalArgumentException("Argument must be of type String, Number, Collection<String> or String[]");
             }
         }
 

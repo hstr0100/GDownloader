@@ -35,6 +35,7 @@ import net.brlns.gdownloader.downloader.AbstractDownloader;
 import net.brlns.gdownloader.downloader.DownloadManager;
 import net.brlns.gdownloader.downloader.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
+import net.brlns.gdownloader.process.ProcessArguments;
 import net.brlns.gdownloader.settings.QualitySettings;
 
 /**
@@ -246,10 +247,9 @@ public abstract class AbstractUrlFilter {
     }
 
     @JsonIgnore
-    public List<String> getArguments(AbstractDownloader downloader, DownloadTypeEnum typeEnum, DownloadManager manager, File savePath, String inputUrl) {
-        List<String> arguments = new ArrayList<>();
-
-        arguments.addAll(buildArguments(downloader, typeEnum, manager, savePath, inputUrl));
+    public ProcessArguments getArguments(AbstractDownloader downloader, DownloadTypeEnum typeEnum, DownloadManager manager, File savePath, String inputUrl) {
+        ProcessArguments arguments = new ProcessArguments(
+            buildArguments(downloader, typeEnum, manager, savePath, inputUrl));
 
         // TODO: Map<DonwloaderIdEnum, Map<DownloadTypeEnum, List<String>>> or a struct extending that.
         switch (downloader.getDownloaderId()) {
@@ -277,7 +277,7 @@ public abstract class AbstractUrlFilter {
     }
 
     @JsonIgnore
-    protected abstract List<String> buildArguments(AbstractDownloader downloader, DownloadTypeEnum typeEnum, DownloadManager manager, File savePath, String inputUrl);
+    protected abstract ProcessArguments buildArguments(AbstractDownloader downloader, DownloadTypeEnum typeEnum, DownloadManager manager, File savePath, String inputUrl);
 
     @JsonIgnore
     public abstract boolean areCookiesRequired();

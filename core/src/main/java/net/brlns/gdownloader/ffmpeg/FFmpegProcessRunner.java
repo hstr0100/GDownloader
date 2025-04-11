@@ -22,6 +22,7 @@ import java.io.InputStreamReader;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
+import net.brlns.gdownloader.process.ProcessArguments;
 
 import static net.brlns.gdownloader.ffmpeg.FFmpegProgressCalculator.isProgressOutput;
 
@@ -31,33 +32,31 @@ import static net.brlns.gdownloader.ffmpeg.FFmpegProgressCalculator.isProgressOu
 @Slf4j
 public final class FFmpegProcessRunner {
 
-    public static int runFFmpeg(FFmpegTranscoder transcoder, List<String> arguments) {
+    public static int runFFmpeg(FFmpegTranscoder transcoder, ProcessArguments arguments) {
         return runFFmpeg(transcoder, arguments, new FFmpegProcessOptions());
     }
 
-    public static int runFFmpeg(FFmpegTranscoder transcoder, List<String> arguments, FFmpegProcessOptions options) {
+    public static int runFFmpeg(FFmpegTranscoder transcoder, ProcessArguments arguments, FFmpegProcessOptions options) {
         return runProcess(transcoder, transcoder.getFFmpegExecutable(), arguments, options);
     }
 
-    public static int runFFprobe(FFmpegTranscoder transcoder, List<String> arguments) {
+    public static int runFFprobe(FFmpegTranscoder transcoder, ProcessArguments arguments) {
         return runFFmpeg(transcoder, arguments, new FFmpegProcessOptions());
     }
 
-    public static int runFFprobe(FFmpegTranscoder transcoder, List<String> arguments, FFmpegProcessOptions options) {
+    public static int runFFprobe(FFmpegTranscoder transcoder, ProcessArguments arguments, FFmpegProcessOptions options) {
         return runProcess(transcoder, transcoder.getFFprobeExecutable(), arguments, options);
     }
 
     private static int runProcess(FFmpegTranscoder transcoder, Optional<String> executable,
-        List<String> arguments, FFmpegProcessOptions options) {
+        ProcessArguments arguments, FFmpegProcessOptions options) {
         boolean taskStarted = false;
 
         try {
             String ffmpegBinary = executable.orElseThrow(()
                 -> new IOException("Please install FFmpeg to use the transcoding option"));
 
-            List<String> command = new ArrayList<>();
-            command.add(ffmpegBinary);
-            command.addAll(arguments);
+            ProcessArguments command = new ProcessArguments(ffmpegBinary, arguments);
 
             Process process;
             if (options.isDiscardOutput()) {

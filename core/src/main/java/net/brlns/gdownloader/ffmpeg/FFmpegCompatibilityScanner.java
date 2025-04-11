@@ -100,7 +100,7 @@ public class FFmpegCompatibilityScanner {
 
             FFmpegProcessRunner.runFFmpeg(
                 transcoder,
-                List.of("-h", "encoder=" + encoder.getFfmpegCodecName()),
+                new ProcessArguments("-h", "encoder=" + encoder.getFfmpegCodecName()),
                 FFmpegProcessOptions.builder()
                     .listener((output, hasTaskStarted, progress) -> {
                         lines.add(output);
@@ -225,7 +225,7 @@ public class FFmpegCompatibilityScanner {
 
             FFmpegProcessRunner.runFFmpeg(
                 transcoder,
-                List.of("-hide_banner", "-encoders"),
+                new ProcessArguments("-hide_banner", "-encoders"),
                 FFmpegProcessOptions.builder()
                     .listener((output, hasTaskStarted, progress) -> {
                         lines.add(output);

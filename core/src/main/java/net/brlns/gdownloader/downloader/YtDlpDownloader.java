@@ -43,6 +43,7 @@ import net.brlns.gdownloader.ffmpeg.enums.AudioBitrateEnum;
 import net.brlns.gdownloader.ffmpeg.enums.AudioCodecEnum;
 import net.brlns.gdownloader.ffmpeg.structs.FFmpegConfig;
 import net.brlns.gdownloader.persistence.PersistenceManager;
+import net.brlns.gdownloader.process.ProcessArguments;
 import net.brlns.gdownloader.settings.QualitySettings;
 import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
 import net.brlns.gdownloader.util.DirectoryUtils;
@@ -129,34 +130,31 @@ public class YtDlpDownloader extends AbstractDownloader {
 
             long start = System.currentTimeMillis();
 
-            List<String> arguments = new ArrayList<>();
-            arguments.addAll(List.of(
+            ProcessArguments arguments = new ProcessArguments(
                 executablePath.get().getAbsolutePath(),
                 "--dump-json",
                 "--flat-playlist",
                 "--playlist-items", "1",
                 //"--extractor-args",// TODO: Sometimes complains about missing PO token, unreproducible. Investigate.
                 //"youtube:player_skip=webpage,configs,js;player_client=android,web",
-                queueEntry.getUrl()
-            ));
+                queueEntry.getUrl());
 
             if (main.getConfig().isReadCookiesFromBrowser()) {
-                arguments.addAll(List.of(
+                arguments.add(
                     "--cookies-from-browser",
                     main.getBrowserForCookies().getName()
-                ));
+                );
             } else {
                 File cookieJar = getCookieJarFile();
                 if (cookieJar != null) {
-                    arguments.addAll(List.of(
+                    arguments.add(
                         "--cookies",
                         cookieJar.getAbsolutePath()
-                    ));
+                    );
                 }
             }
 
-            List<String> list = GDownloader.readOutput(
-                arguments.stream().toArray(String[]::new));
+            List<String> list = GDownloader.readOutput(arguments);
 
             if (main.getConfig().isDebugMode()) {
                 long what = System.currentTimeMillis() - start;
@@ -213,19 +211,16 @@ public class YtDlpDownloader extends AbstractDownloader {
         File tmpPath = DirectoryUtils.getOrCreate(finalPath, GDownloader.CACHE_DIRETORY_NAME, String.valueOf(entry.getDownloadId()));
         entry.setTmpDirectory(tmpPath);
 
-        List<String> genericArguments = new ArrayList<>();
-
-        genericArguments.addAll(List.of(
+        ProcessArguments genericArguments = new ProcessArguments(
             executablePath.get().getAbsolutePath(),
-            "-i"
-        ));
+            "-i");
 
         Optional<File> ffmpegPath = main.getFfmpegTranscoder().getFfmpegPath();
         if (ffmpegPath.isPresent()) {
-            genericArguments.addAll(List.of(
+            genericArguments.add(
                 "--ffmpeg-location",
                 ffmpegPath.get().getAbsolutePath()
-            ));
+            );
         }
 
         if (!main.getConfig().isRespectYtDlpConfigFile()) {
@@ -252,10 +247,9 @@ public class YtDlpDownloader extends AbstractDownloader {
 
             entry.setCurrentDownloadType(type);
 
-            List<String> arguments = new ArrayList<>(genericArguments);
-
-            List<String> downloadArguments = filter.getArguments(this, type, manager, tmpPath, entry.getUrl());
-            arguments.addAll(downloadArguments);
+            ProcessArguments arguments = new ProcessArguments(
+                genericArguments,
+                filter.getArguments(this, type, manager, tmpPath, entry.getUrl()));
 
             Pair<Integer, String> result = processDownload(entry, arguments);
 

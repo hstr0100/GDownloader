@@ -19,8 +19,6 @@ package net.brlns.gdownloader.settings.filters;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.extern.slf4j.Slf4j;
@@ -29,6 +27,7 @@ import net.brlns.gdownloader.downloader.AbstractDownloader;
 import net.brlns.gdownloader.downloader.DownloadManager;
 import net.brlns.gdownloader.downloader.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.ffmpeg.enums.AudioBitrateEnum;
+import net.brlns.gdownloader.process.ProcessArguments;
 import net.brlns.gdownloader.settings.QualitySettings;
 import net.brlns.gdownloader.settings.Settings;
 import net.brlns.gdownloader.settings.enums.AudioContainerEnum;
@@ -70,22 +69,22 @@ public class GenericFilter extends AbstractUrlFilter {
 
     @JsonIgnore
     @Override
-    protected List<String> buildArguments(AbstractDownloader downloader, DownloadTypeEnum typeEnum, DownloadManager manager, File savePath, String inputUrl) {
+    protected ProcessArguments buildArguments(AbstractDownloader downloader, DownloadTypeEnum typeEnum, DownloadManager manager, File savePath, String inputUrl) {
         Settings config = manager.getMain().getConfig();
         QualitySettings quality = getQualitySettings();
         AudioBitrateEnum audioBitrate = quality.getAudioBitrate();
 
-        List<String> arguments = new ArrayList<>();
+        ProcessArguments arguments = new ProcessArguments();
 
         File archiveFile = downloader.getArchiveFile(typeEnum);
 
         switch (downloader.getDownloaderId()) {
             case YT_DLP -> {
                 if (archiveFile != null && config.isRecordToDownloadArchive()) {
-                    arguments.addAll(List.of(
+                    arguments.add(
                         "--download-archive",
                         archiveFile.getAbsolutePath()
-                    ));
+                    );
                 }
 
                 switch (typeEnum) {
@@ -98,68 +97,59 @@ public class GenericFilter extends AbstractUrlFilter {
                         }
 
                         if (config.isAutoDownloadRetry()) {
-                            arguments.addAll(List.of(
-                                "--fragment-retries",
-                                String.valueOf(config.getMaxFragmentRetries())
-                            ));
+                            arguments.add(
+                                "--fragment-retries", config.getMaxFragmentRetries()
+                            );
                         }
 
                         if (config.isRandomIntervalBetweenDownloads()) {
-                            arguments.addAll(List.of(
-                                "--max-sleep-interval",
-                                "45",
-                                "--min-sleep-interval",
-                                "25"
-                            ));
+                            arguments.add(
+                                "--max-sleep-interval", 45,
+                                "--min-sleep-interval", 25
+                            );
                         }
 
                         if (config.isImpersonateBrowser()) {
-                            arguments.addAll(List.of(
-                                "--impersonate",
-                                "chrome:windows-10"
-                            ));
+                            arguments.add("--impersonate", "chrome:windows-10");
                         }
 
                         String proxyUrl = config.getProxySettings().createProxyUrl();
                         if (proxyUrl != null) {
-                            arguments.addAll(List.of(
-                                "--proxy", proxyUrl
-                            ));
+                            arguments.add("--proxy", proxyUrl);
                         }
 
                         boolean cookiesRead = false;
                         if (config.isReadCookiesFromBrowser()) {
-                            arguments.addAll(List.of(
+                            arguments.add(
                                 "--cookies-from-browser",
                                 manager.getMain().getBrowserForCookies().getName()
-                            ));
+                            );
                             cookiesRead = true;
                         } else {
                             File cookieJar = downloader.getCookieJarFile();
                             if (cookieJar != null) {
-                                arguments.addAll(List.of(
+                                arguments.add(
                                     "--cookies",
                                     cookieJar.getAbsolutePath()
-                                ));
+                                );
                                 cookiesRead = true;
                             }
                         }
 
                         if (cookiesRead && manager.getMain().getConfig().isMissingFormatsWorkaround()) {
-                            arguments.addAll(List.of(
+                            arguments.add(
                                 "--extractor-args",
                                 "youtube:player_client=web_safari"
-                            ));
+                            );
                         }
 
                         if (GDownloader.isWindows()) {
                             // NTFS shenanigans ahead
                             // TODO: query registry for longpath support status
-                            arguments.addAll(List.of(
+                            arguments.add(
                                 "--windows-filenames",
-                                "--trim-filenames",
-                                String.valueOf(240)// Give some extra room for fragment files
-                            ));
+                                "--trim-filenames", 240// Give some extra room for fragment files
+                            );
                         }
                     }
                     case VIDEO -> {
@@ -177,29 +167,27 @@ public class GenericFilter extends AbstractUrlFilter {
                             arguments.add("--audio-multistreams");
                         }
 
-                        arguments.addAll(List.of(
-                            "-o",
-                            savePath.getAbsolutePath() + File.separator + getVideoNamePattern(),
-                            "-f",
-                            qualitySelector,
+                        arguments.add(
+                            "-o", savePath.getAbsolutePath() + File.separator + getVideoNamePattern(),
+                            "-f", qualitySelector,
                             "--merge-output-format",
                             videoContainer.getValue()
-                        ));
+                        );
 
                         if (isEmbedThumbnailAndMetadata()) {
                             switch (quality.getVideoContainer()) {
                                 // aac, alac: not working
                                 // flv, avi, mov: cannot merge (unsupported codecs)
                                 case WEBM ->// WebM does not support thumbnail embedding
-                                    arguments.addAll(List.of(
+                                    arguments.add(
                                         "--embed-metadata",
                                         "--embed-chapters",
                                         "--embed-subs",
                                         "--sub-langs",
                                         "all,-live_chat"
-                                    ));
+                                    );
                                 case MKV, MP4, MOV ->
-                                    arguments.addAll(List.of(
+                                    arguments.add(
                                         "--convert-thumbnails", "png",
                                         "--embed-thumbnail",
                                         "--embed-metadata",
@@ -207,7 +195,7 @@ public class GenericFilter extends AbstractUrlFilter {
                                         "--embed-subs",
                                         "--sub-langs",
                                         "all,-live_chat"
-                                    ));
+                                    );
                             }
                         }
                         // Transcoding is handled by our built-in ffmpeg transcoder.
@@ -218,50 +206,46 @@ public class GenericFilter extends AbstractUrlFilter {
                                 .replace("%(audio_bitrate)s", audioBitrate.getValue() + "kbps");
 
                             AudioContainerEnum audioContainer = quality.getAudioContainer();
-                            arguments.addAll(List.of(
-                                "-o",
-                                savePath.getAbsolutePath() + File.separator + audioPatternWithBitrate,
-                                "-f",
-                                "bestaudio/worstvideo*+bestaudio/best",
+                            arguments.add(
+                                "-o", savePath.getAbsolutePath() + File.separator + audioPatternWithBitrate,
+                                "-f", "bestaudio/worstvideo*+bestaudio/best",
                                 "--extract-audio",
                                 "--audio-format",
                                 audioContainer.getValue(),
                                 "--audio-quality",
                                 audioBitrate.getValue() + "k"
-                            ));
+                            );
 
                             if (isEmbedThumbnailAndMetadata()) {
                                 if (audioContainer != AudioContainerEnum.WAV
                                     && audioContainer != AudioContainerEnum.AAC) {
-                                    arguments.addAll(List.of(
+                                    arguments.add(
                                         "--embed-thumbnail",
                                         "--embed-metadata"
-                                    ));
+                                    );
                                 }
                             }
                         }
                     }
                     case THUMBNAILS -> {
-                        arguments.addAll(List.of(
-                            "-o",
-                            savePath.getAbsolutePath() + File.separator + getVideoNamePattern(),
+                        arguments.add(
+                            "-o", savePath.getAbsolutePath() + File.separator + getVideoNamePattern(),
                             "--write-thumbnail",
                             "--skip-download",
                             "--convert-thumbnails",
                             quality.getThumbnailContainer().getValue()
-                        ));
+                        );
                     }
                     case SUBTITLES -> {
-                        arguments.addAll(List.of(
-                            "-o",
-                            savePath.getAbsolutePath() + File.separator + getVideoNamePattern(),
+                        arguments.add(
+                            "-o", savePath.getAbsolutePath() + File.separator + getVideoNamePattern(),
                             "--all-subs",
                             "--skip-download",
                             "--sub-format",
                             quality.getSubtitleContainer().getValue(),
                             "--convert-subs",
                             quality.getSubtitleContainer().getValue()
-                        ));
+                        );
                     }
                     default ->
                         throw new IllegalArgumentException();
@@ -269,64 +253,54 @@ public class GenericFilter extends AbstractUrlFilter {
             }
             case GALLERY_DL -> {
                 if (archiveFile != null && config.isRecordToDownloadArchive()) {
-                    arguments.addAll(List.of(
+                    arguments.add(
                         "--download-archive",
                         archiveFile.getAbsolutePath()
-                    ));
+                    );
                 }
 
                 switch (typeEnum) {
                     case ALL -> {
-                        arguments.addAll(List.of(
-                            "--retries",
-                            String.valueOf(config.getMaxDownloadRetries())
-                        ));
+                        arguments.add(
+                            "--retries", config.getMaxDownloadRetries());
 
                         if (config.isRandomIntervalBetweenDownloads()) {
-                            arguments.addAll(List.of(
-                                "--sleep",
-                                "5.0-15.0",
-                                "--sleep-request",
-                                "2"
-                            ));
+                            arguments.add(
+                                "--sleep", "5.0-15.0",
+                                "--sleep-request", 2
+                            );
                         }
 
                         if (config.isImpersonateBrowser()) {
-                            arguments.addAll(List.of(
-                                "--user-agent",
-                                "browser"
-                            ));
+                            arguments.add("--user-agent", "browser");
                         }
 
                         String proxyUrl = config.getProxySettings().createProxyUrl();
                         if (proxyUrl != null) {
-                            arguments.addAll(List.of(
-                                "--proxy", proxyUrl
-                            ));
+                            arguments.add("--proxy", proxyUrl);
                         }
 
                         if (config.isReadCookiesFromBrowser()) {
-                            arguments.addAll(List.of(
+                            arguments.add(
                                 "--cookies-from-browser",
                                 manager.getMain().getBrowserForCookies().getName()
-                            ));
+                            );
                         } else {
                             File cookieJar = downloader.getCookieJarFile();
                             if (cookieJar != null) {
-                                arguments.addAll(List.of(
+                                arguments.add(
                                     "--cookies",
                                     cookieJar.getAbsolutePath()
-                                ));
+                                );
                             }
                         }
                     }
                     case GALLERY -> {
                         String fileName = URLUtils.getDirectoryPath(inputUrl);
 
-                        arguments.addAll(List.of(
-                            "-D",
-                            savePath.getAbsolutePath() + (fileName != null ? File.separator + fileName : "")
-                        ));
+                        arguments.add(
+                            "-D", savePath.getAbsolutePath() + (fileName != null ? File.separator + fileName : "")
+                        );
                     }
                     default ->
                         throw new IllegalArgumentException();
@@ -335,38 +309,32 @@ public class GenericFilter extends AbstractUrlFilter {
 
             case SPOTDL -> {
                 if (archiveFile != null && config.isRecordToDownloadArchive()) {
-                    arguments.addAll(List.of(
+                    arguments.add(
                         "--archive",
                         archiveFile.getAbsolutePath()
-                    ));
+                    );
                 }
 
                 switch (typeEnum) {
                     case ALL -> {
-                        arguments.addAll(List.of(
-                            "--max-retries",
-                            String.valueOf(config.getMaxDownloadRetries())
-                        ));
+                        arguments.add(
+                            "--max-retries", config.getMaxDownloadRetries());
 
                         if (config.isUseSponsorBlock()) {
-                            arguments.addAll(List.of(
-                                "--sponsor-block"
-                            ));
+                            arguments.add("--sponsor-block");
                         }
 
                         String proxyUrl = config.getProxySettings().createProxyUrl();
                         if (proxyUrl != null) {
-                            arguments.addAll(List.of(
-                                "--proxy", proxyUrl
-                            ));
+                            arguments.add("--proxy", proxyUrl);
                         }
 
                         File cookieJar = downloader.getCookieJarFile();
                         if (cookieJar != null) {
-                            arguments.addAll(List.of(
+                            arguments.add(
                                 "--cookie-file",
                                 cookieJar.getAbsolutePath()
-                            ));
+                            );
                         }
                     }
                     case SPOTIFY -> {
@@ -375,7 +343,7 @@ public class GenericFilter extends AbstractUrlFilter {
                                 .replace("%(audio_bitrate)s", audioBitrate.getValue() + "kbps")
                                 .replace("{bitrate}", audioBitrate.getValue() + "kbps");
 
-                            arguments.addAll(List.of(
+                            arguments.add(
                                 "--output",
                                 savePath.getAbsolutePath() + File.separator
                                 + TemplateConverter.convertTemplateForSpotDL(audioPatternWithBitrate),
@@ -383,14 +351,12 @@ public class GenericFilter extends AbstractUrlFilter {
                                 quality.getAudioContainer().getValue(),
                                 "--bitrate",
                                 Math.clamp(audioBitrate.getValue(), 8, 320) + "k"
-                            ));
+                            );
 
                             if (!isEmbedThumbnailAndMetadata()) {
                                 // SpotDL does not appear to support disabling metadata embedding.
                                 // This is the best we can do to respect user settings.
-                                arguments.addAll(List.of(
-                                    "--skip-album-art"
-                                ));
+                                arguments.add("--skip-album-art");
                             }
                         }
                     }

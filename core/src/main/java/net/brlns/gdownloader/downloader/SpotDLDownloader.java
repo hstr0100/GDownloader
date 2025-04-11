@@ -38,6 +38,7 @@ import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.downloader.structs.DownloadResult;
 import net.brlns.gdownloader.downloader.structs.MediaInfo;
 import net.brlns.gdownloader.persistence.PersistenceManager;
+import net.brlns.gdownloader.process.ProcessArguments;
 import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
 import net.brlns.gdownloader.util.DirectoryUtils;
 import net.brlns.gdownloader.util.FileUtils;
@@ -168,13 +169,11 @@ public class SpotDLDownloader extends AbstractDownloader {
         File tmpPath = DirectoryUtils.getOrCreate(finalPath, GDownloader.CACHE_DIRETORY_NAME, String.valueOf(entry.getDownloadId()));
         entry.setTmpDirectory(tmpPath);
 
-        List<String> genericArguments = new ArrayList<>();
-
-        genericArguments.addAll(List.of(
+        ProcessArguments genericArguments = new ProcessArguments(
             executablePath.get().getAbsolutePath(),
             "--simple-tui"//As far as I can tell, these change nothing. The way it's displayed now, Java cannot read SpotDL's progress bar.
         //, "--log-level", "DEBUG"
-        ));
+        );
 
         if (main.getConfig().isRespectSpotDLConfigFile()) {
             // We can't specify config location for spotDL, our only choice is to copy or symlink it.
@@ -183,10 +182,7 @@ public class SpotDLDownloader extends AbstractDownloader {
 
         Optional<String> ffmpegExecutable = main.getFfmpegTranscoder().getFFmpegExecutable();
         if (ffmpegExecutable.isPresent()) {
-            genericArguments.addAll(List.of(
-                "--ffmpeg",
-                ffmpegExecutable.get()
-            ));
+            genericArguments.add("--ffmpeg", ffmpegExecutable.get());
         }
 
         genericArguments.addAll(filter.getArguments(this, ALL, manager, tmpPath, entry.getUrl()));
@@ -206,10 +202,9 @@ public class SpotDLDownloader extends AbstractDownloader {
 
             entry.setCurrentDownloadType(type);
 
-            List<String> arguments = new ArrayList<>(genericArguments);
-
-            List<String> downloadArguments = filter.getArguments(this, type, manager, tmpPath, entry.getUrl());
-            arguments.addAll(downloadArguments);
+            ProcessArguments arguments = new ProcessArguments(
+                genericArguments,
+                filter.getArguments(this, type, manager, tmpPath, entry.getUrl()));
 
             Pair<Integer, String> result = processDownload(entry, arguments);
 

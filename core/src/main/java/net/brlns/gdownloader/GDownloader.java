@@ -1132,6 +1132,10 @@ public final class GDownloader {
     }
 
     public static List<String> readOutput(String... command) throws IOException, InterruptedException {
+        return readOutput(Arrays.asList(command));
+    }
+
+    public static List<String> readOutput(List<String> command) throws IOException, InterruptedException {
         ProcessBuilder processBuilder = new ProcessBuilder(command);
         processBuilder.redirectErrorStream(true);
         Process process = processBuilder.start();
@@ -1147,7 +1151,8 @@ public final class GDownloader {
 
         int exitCode = process.waitFor();
         if (exitCode != 0) {
-            log.warn("Failed command for {}", Arrays.toString(command));
+            log.warn("Failed command for {}",
+                StringUtils.escapeAndBuildCommandLine(command));
         }
 
         return Collections.unmodifiableList(list);
