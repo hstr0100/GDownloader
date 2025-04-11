@@ -28,6 +28,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.Setter;
@@ -39,8 +40,15 @@ import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.downloader.structs.DownloadResult;
 import net.brlns.gdownloader.downloader.structs.MediaInfo;
 import net.brlns.gdownloader.ffmpeg.enums.AudioBitrateEnum;
+import net.brlns.gdownloader.ffmpeg.enums.AudioCodecEnum;
+import net.brlns.gdownloader.ffmpeg.enums.EncoderEnum;
+import net.brlns.gdownloader.ffmpeg.enums.RateControlModeEnum;
+import net.brlns.gdownloader.ffmpeg.structs.EncoderPreset;
+import net.brlns.gdownloader.ffmpeg.structs.EncoderProfile;
+import net.brlns.gdownloader.ffmpeg.structs.FFmpegConfig;
 import net.brlns.gdownloader.persistence.PersistenceManager;
 import net.brlns.gdownloader.settings.QualitySettings;
+import net.brlns.gdownloader.settings.enums.VideoContainerEnum;
 import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
 import net.brlns.gdownloader.util.DirectoryUtils;
 import net.brlns.gdownloader.util.FileUtils;
@@ -282,6 +290,14 @@ public class YtDlpDownloader extends AbstractDownloader {
                     log.error("Failed to download {}: {}", type, lastOutput);
                 }
             } else {
+                if (type == VIDEO) {
+                    DownloadResult transcodeResult = transcodeMediaFiles(entry);
+
+                    if (!FLAG_SUCCESS.isSet(transcodeResult.getFlags())) {
+                        return transcodeResult;
+                    }
+                }
+
                 if (lastOutput.contains("recorded in the archive")) {
                     alreadyDownloaded = true;
                 }
@@ -291,6 +307,105 @@ public class YtDlpDownloader extends AbstractDownloader {
         }
 
         return new DownloadResult(success ? FLAG_SUCCESS : FLAG_UNSUPPORTED, lastOutput);
+    }
+
+    // TODO: i10n, settings, ui
+    @Override
+    protected DownloadResult transcodeMediaFiles(QueueEntry entry) {
+        try {
+            QualitySettings quality = entry.getFilter().getQualitySettings();
+
+            File tmpPath = entry.getTmpDirectory();
+            List<Path> paths = Files.walk(tmpPath.toPath())
+                .filter(path -> !path.equals(tmpPath.toPath()))
+                .filter(path -> !Files.isDirectory(path))
+                .filter(path -> isFileType(path, quality.getVideoContainer().getValue()))
+                .collect(Collectors.toList());
+
+            AtomicReference<String> lastOutput = new AtomicReference<>();
+
+            for (Path path : paths) {
+                // If no codec is defined, the default audio codec provided by the source will be passed through.
+                AudioCodecEnum audioCodec = AudioCodecEnum.NO_CODEC;
+                if (quality.getAudioCodec() != AudioCodecEnum.NO_CODEC) {
+                    // Check if the user has selected a custom audio codec.
+                    audioCodec = quality.getAudioCodec();
+                } else if (main.getConfig().isTranscodeAudioToAAC()) {
+                    // If no custom codec is set, check if "Convert audio to a widely supported codec" is enabled.
+                    // If enabled, default to "aac".
+                    audioCodec = AudioCodecEnum.AAC; // Opus is not supported by some native video players
+                }
+
+                // TODO
+                FFmpegConfig config = FFmpegConfig.builder()
+                    //.videoEncoder(EncoderEnum.H264_AUTO)
+                    .audioCodec(audioCodec)
+                    //.videoContainer(VideoContainerEnum.MP4)
+                    //.speedPreset(EncoderPreset.NO_PRESET)
+                    //.profile(EncoderProfile.NO_PROFILE)
+                    //.rateControlMode(RateControlModeEnum.CRF)
+                    //.rateControlValue(22)
+                    //.videoBitrate(5000)
+                    .audioBitrate(quality.getAudioBitrate())
+                    .build();
+
+                File inputFile = path.toFile();
+                File tmpFile = FileUtils.deriveTempFile(inputFile, config.getVideoContainer().getFileExtension());
+
+                try {
+                    entry.updateStatus(DownloadStatusEnum.TRANSCODING, "Setting up transcode process...");
+
+                    int exitCode = manager.getMain().getFfmpegTranscoder().startTranscode(
+                        config, inputFile, tmpFile, entry.getCancelHook(),
+                        (output, hasTaskStarted, progress) -> {
+                            lastOutput.set(output);
+
+                            if (hasTaskStarted) {
+                                entry.getMediaCard().setPercentage(progress);
+
+                                entry.updateStatus(DownloadStatusEnum.TRANSCODING, output, false);
+                            }
+                        }
+                    );
+
+                    if (entry.getCancelHook().get()) {
+                        return new DownloadResult(FLAG_STOPPED);
+                    }
+
+                    if (exitCode == 0) {
+                        if (!tmpFile.exists()) {
+                            log.error("Transcoding error, output file was missing - exit code: {}", exitCode);
+
+                            return new DownloadResult(FLAG_TRANSCODING_FAILED, lastOutput.get());
+                        }
+
+                        log.info("Transcoding successful - exit code: {}", exitCode);
+                        if (!main.getConfig().isKeepRawVideoFilesAfterTranscode()) {
+                            Files.deleteIfExists(inputFile.toPath());
+                            tmpFile.renameTo(inputFile);
+                        } else {
+                            File finalFile = FileUtils.deriveFile(inputFile, config.getFileSuffix());
+                            tmpFile.renameTo(finalFile);
+                        }
+
+                        return new DownloadResult(FLAG_SUCCESS, "Transcoding successful");
+                    } else if (exitCode > 0) {
+                        log.error("FFmpeg transcoding error - exit code: {}", exitCode);
+                        return new DownloadResult(FLAG_TRANSCODING_FAILED, lastOutput.get());
+                    } else if (exitCode < 0) {
+                        log.info("Transcoding not required - exit code: {}", exitCode);
+                    }
+                } catch (Exception e) {
+                    log.error("Failed to transcode media file {}", path, e);
+                    return new DownloadResult(FLAG_TRANSCODING_FAILED, e.getMessage());
+                }
+            }
+
+            return new DownloadResult(FLAG_SUCCESS, "Transcoding not required");
+        } catch (IOException e) {
+            log.error("Failed to scan media files", e);
+            return new DownloadResult(FLAG_TRANSCODING_FAILED, e.getMessage());
+        }
     }
 
     @Override
@@ -306,6 +421,7 @@ public class YtDlpDownloader extends AbstractDownloader {
         try {
             List<Path> paths = Files.walk(tmpPath.toPath())
                 .filter(path -> !path.equals(tmpPath.toPath()))
+                .filter(path -> !path.toString().contains(FileUtils.TMP_FILE_IDENTIFIER))
                 .collect(Collectors.toList());
 
             for (Path path : paths) {
@@ -373,9 +489,8 @@ public class YtDlpDownloader extends AbstractDownloader {
 
         entry.setLastCommandLine(finalArgs, true);
 
-        ProcessBuilder processBuilder = new ProcessBuilder(finalArgs);
-        processBuilder.redirectErrorStream(true);
-        Process process = processBuilder.start();
+        Process process = main.getProcessMonitor()
+            .startProcess(finalArgs, entry.getCancelHook());
         entry.setProcess(process);
 
         String lastOutput = "";

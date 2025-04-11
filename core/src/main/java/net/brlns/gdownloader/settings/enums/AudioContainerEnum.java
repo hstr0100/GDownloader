@@ -39,6 +39,10 @@ public enum AudioContainerEnum implements ISettingsEnum, IContainerEnum {
         return "";
     }
 
+    public String getFileExtension() {
+        return name().toLowerCase();
+    }
+
     @Override
     public String getDisplayName() {
         return name().toLowerCase();

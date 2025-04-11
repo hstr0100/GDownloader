@@ -25,8 +25,6 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
 
-import static net.brlns.gdownloader.util.StringUtils.notNullOrEmpty;
-
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
@@ -50,70 +48,11 @@ public class VideoStream extends AbstractStream {
     @JsonProperty("pix_fmt")
     private String pixelFormat;
 
-    @JsonProperty("duration")
-    private String duration;
-
-    @JsonProperty("start_time")
-    private String startTime;
-
-    @JsonProperty("time_base")
-    private String timeBase;
-
-    @JsonProperty("duration_ts")
-    private Long durationTs;
-
     @JsonProperty("bit_rate")
     private String bitrate;
 
     @JsonProperty("nb_frames")
     private String numberOfFrames;
-
-    @JsonIgnore
-    public double getDuration() {
-        if (notNullOrEmpty(duration)) {
-            try {
-                return Double.parseDouble(duration);
-            } catch (NumberFormatException e) {
-                // Ignore
-            }
-        }
-
-        return -1;
-    }
-
-    // TODO test
-    @JsonIgnore
-    public Long getDurationTimestanp() {
-        if (notNullOrEmpty(timeBase) && durationTs != null) {
-            try {
-                String[] parts = timeBase.split("/");
-                int numerator = Integer.parseInt(parts[0]);
-                int denominator = Integer.parseInt(parts[1]);
-
-                double seconds = (double)durationTs * numerator / denominator;
-                long milliseconds = Math.round(seconds * 1000);
-
-                return milliseconds;
-            } catch (NumberFormatException e) {
-                // Ignore
-            }
-        }
-
-        return -1l;
-    }
-
-    @JsonIgnore
-    public int getFrameCount() {
-        if (notNullOrEmpty(numberOfFrames)) {
-            try {
-                return Integer.parseInt(numberOfFrames);
-            } catch (NumberFormatException e) {
-                // Ignore
-            }
-        }
-
-        return -1;
-    }
 
     @JsonIgnore
     public boolean isThumbnail() {

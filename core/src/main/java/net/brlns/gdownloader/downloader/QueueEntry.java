@@ -432,7 +432,7 @@ public class QueueEntry {
                     mediaCard.setPercentage(100);
                     mediaCard.setProgressBarTextAndColors(status.getDisplayName(), Color.GRAY);
                 }
-                case DOWNLOADING -> {
+                case DOWNLOADING, TRANSCODING -> {
                     if (mediaCard.getPercentage() >= 0) {
                         mediaCard.setPercentage(0);
                     }
@@ -455,7 +455,7 @@ public class QueueEntry {
                 default ->
                     throw new RuntimeException("Unhandled status: " + status);
             }
-        } else if (status == DownloadStatusEnum.DOWNLOADING) {
+        } else if (status == DownloadStatusEnum.DOWNLOADING || status == DownloadStatusEnum.TRANSCODING) {
             mediaCard.setProgressBarText(status.getDisplayName() + ": " + mediaCard.getPercentage() + "%");
         }
     }

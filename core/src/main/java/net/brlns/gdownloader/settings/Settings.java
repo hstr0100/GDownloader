@@ -69,8 +69,12 @@ public class Settings {
     @JsonProperty("MissingFormatsWorkaround")
     private boolean missingFormatsWorkaround = false;
 
-    @JsonProperty("DownloadAllAudioTracks")
-    private boolean downloadAllAudioTracks = true;
+    @JsonProperty("MergeAllAudioTracks")
+    private boolean mergeAllAudioTracks = false;
+
+    // TODO: ui
+    @JsonProperty("KeepRawVideoFilesAfterTranscode")
+    private boolean keepRawVideoFilesAfterTranscode = false;
 
     @Deprecated
     @JsonProperty("ReadCookies")

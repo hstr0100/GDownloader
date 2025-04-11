@@ -16,9 +16,9 @@
  */
 package net.brlns.gdownloader.ffmpeg.structs;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Builder;
 import lombok.Data;
-import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.ffmpeg.enums.*;
 import net.brlns.gdownloader.settings.enums.VideoContainerEnum;
 
@@ -28,7 +28,6 @@ import net.brlns.gdownloader.settings.enums.VideoContainerEnum;
 // TODO: jackson mappings
 @Data
 @Builder
-@Slf4j
 public class FFmpegConfig {
 
     @Builder.Default
@@ -36,18 +35,42 @@ public class FFmpegConfig {
     @Builder.Default
     private VideoContainerEnum videoContainer = VideoContainerEnum.MP4;
     @Builder.Default
-    private AudioCodecEnum audioCodec = AudioCodecEnum.AAC;
+    private AudioCodecEnum audioCodec = AudioCodecEnum.NO_CODEC;
     @Builder.Default
     private EncoderPreset speedPreset = EncoderPreset.NO_PRESET;
     @Builder.Default
     private EncoderProfile profile = EncoderProfile.NO_PROFILE;
     @Builder.Default
-    private RateControlModeEnum rateControlMode = RateControlModeEnum.CQP;
+    private RateControlModeEnum rateControlMode = RateControlModeEnum.CRF;
     @Builder.Default
     private int rateControlValue = 23;
     @Builder.Default
     private int videoBitrate = 5000;
     @Builder.Default
-    private AudioBitrateEnum audioBitrate = AudioBitrateEnum.BITRATE_128;
+    private AudioBitrateEnum audioBitrate = AudioBitrateEnum.BITRATE_320;
 
+    @JsonIgnore
+    public String getFileSuffix() {
+        StringBuilder builder = new StringBuilder();
+        boolean hasVideoCodec = videoEncoder.getVideoCodec() != VideoCodecEnum.NO_CODEC;
+        boolean hasAudioCodec = audioCodec != AudioCodecEnum.NO_CODEC;
+
+        if (hasVideoCodec) {
+            builder.append(videoEncoder.getVideoCodec().getCodecName());
+        }
+
+        if (hasAudioCodec) {
+            if (!hasVideoCodec) {
+                builder.append(audioCodec.getCodecName());
+            } else {
+                builder.append("_").append(audioCodec.getCodecName());
+            }
+        }
+
+        if (builder.isEmpty()) {
+            return "remux";
+        }
+
+        return builder.toString();
+    }
 }

@@ -197,6 +197,12 @@ public class DirectHttpDownloader extends AbstractDownloader {
     }
 
     @Override
+    protected DownloadResult transcodeMediaFiles(QueueEntry entry) {
+        // TODO
+        return null;
+    }
+
+    @Override
     protected void processMediaFiles(QueueEntry entry) {
         File finalPath = new File(main.getOrCreateDownloadsDirectory(), "HTTP");
         if (!finalPath.exists()) {

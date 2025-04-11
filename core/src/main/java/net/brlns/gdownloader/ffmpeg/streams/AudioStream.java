@@ -22,6 +22,8 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
 
+import static net.brlns.gdownloader.util.StringUtils.notNullOrEmpty;
+
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
@@ -45,4 +47,17 @@ public class AudioStream extends AbstractStream {
     @JsonProperty("bit_rate")
     private String bitrate;
 
+    public int getBitrateKbps() {
+        if (!notNullOrEmpty(bitrate)) {
+            try {
+                long bitRate = Long.parseLong(bitrate);
+
+                return (int)Math.round(bitRate / 1000.0);
+            } catch (NumberFormatException e) {
+                // Ignore
+            }
+        }
+
+        return -1;
+    }
 }

@@ -237,6 +237,12 @@ public class SpotDLDownloader extends AbstractDownloader {
     }
 
     @Override
+    protected DownloadResult transcodeMediaFiles(QueueEntry entry) {
+        // TODO
+        return null;
+    }
+
+    @Override
     protected void processMediaFiles(QueueEntry entry) {
         File finalPath = new File(main.getOrCreateDownloadsDirectory(), "SpotDL");
         if (!finalPath.exists()) {
@@ -318,9 +324,8 @@ public class SpotDLDownloader extends AbstractDownloader {
 
         entry.setLastCommandLine(finalArgs, true);
 
-        ProcessBuilder processBuilder = new ProcessBuilder(finalArgs);
-        processBuilder.redirectErrorStream(true);
-        Process process = processBuilder.start();
+        Process process = main.getProcessMonitor()
+            .startProcess(finalArgs, entry.getCancelHook());
         entry.setProcess(process);
 
         String lastOutput = "";

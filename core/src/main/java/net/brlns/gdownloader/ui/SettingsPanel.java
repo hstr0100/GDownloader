@@ -903,13 +903,14 @@ public class SettingsPanel {
             false
         );
 
-        addCheckBox(panel, gbcPanel,
-            "settings.download_all_audio_tracks",
-            settings::isDownloadAllAudioTracks,
-            settings::setDownloadAllAudioTracks,
-            false
-        );
-
+        // TODO: this will remain hidden until this yt-dlp feature request is addressed:
+        // https://github.com/yt-dlp/yt-dlp/issues/1176
+        // addCheckBox(panel, gbcPanel,
+        //     "settings.merge_all_audio_tracks",
+        //     settings::isMergeAllAudioTracks,
+        //     settings::setMergeAllAudioTracks,
+        //     false
+        // );
         addCheckBox(panel, gbcPanel,
             "settings.download_subtitles",
             settings::isDownloadSubtitles,

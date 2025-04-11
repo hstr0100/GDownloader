@@ -48,12 +48,10 @@ public enum SubtitleCodecEnum {
     @Nullable
     public static SubtitleCodecEnum getFallbackCodec(@NonNull VideoContainerEnum container) {
         return switch (container) {
-            case WEBM ->
+            case WEBM, MKV ->
                 WEBVTT;
-            case MKV ->
-                SUBRIP;
             case AVI ->
-                ASS;
+                SUBRIP;
             case MP4, MOV, FLV ->
                 MOV_TEXT;
             default ->
@@ -71,6 +69,8 @@ public enum SubtitleCodecEnum {
                 SUBRIP;
             case "ass", "ssa" ->
                 ASS;
+            case "mov_text" ->
+                MOV_TEXT;
             case "dvd_subtitle", "dvb_subtitle" ->
                 DVBSUB;
             case "hdmv_pgs_subtitle", "pgssub", "dvb_teletext", "eia_608", "microdvd" ->

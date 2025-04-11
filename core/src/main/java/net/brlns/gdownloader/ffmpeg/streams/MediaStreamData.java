@@ -81,4 +81,15 @@ public class MediaStreamData {
             .map(s -> (UnknownStream)s)
             .collect(Collectors.toList());
     }
+
+    @Override
+    public String toString() {
+        return String.format("Streams: v=%d a=%d t=%d s=%d d=%d u=%d",
+            getVideoStreams().size(),
+            getAudioStreams().size(),
+            getThumbnailStreams().size(),
+            getSubtitleStreams().size(),
+            getDataStreams().size(),
+            getUnknownStreams().size());
+    }
 }

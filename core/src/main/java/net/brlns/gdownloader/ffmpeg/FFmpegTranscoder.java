@@ -17,11 +17,11 @@
 package net.brlns.gdownloader.ffmpeg;
 
 import jakarta.annotation.Nullable;
-import java.io.BufferedReader;
+import jakarta.annotation.PreDestroy;
 import java.io.File;
-import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
 import lombok.Getter;
 import lombok.Setter;
@@ -32,6 +32,7 @@ import net.brlns.gdownloader.ffmpeg.streams.*;
 import net.brlns.gdownloader.ffmpeg.structs.EncoderPreset;
 import net.brlns.gdownloader.ffmpeg.structs.EncoderProfile;
 import net.brlns.gdownloader.ffmpeg.structs.FFmpegConfig;
+import net.brlns.gdownloader.process.ProcessMonitor;
 import net.brlns.gdownloader.settings.enums.VideoContainerEnum;
 import net.brlns.gdownloader.updater.SystemExecutableLocator;
 import net.brlns.gdownloader.util.LoggerUtils;
@@ -44,15 +45,6 @@ import static net.brlns.gdownloader.util.StringUtils.notNullOrEmpty;
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-// TODO transcoding pipeline:
-// raw file ->
-// ffprobe (check if conversion needed) ->
-// switch to transcoding progress status ->
-// extract metadata information
-// launch ffmpeg transcoding with progress hook, -1 if impossible to calculate ->
-// replace file in tmp directory ->
-// remerge metadata information (metadata, subtitles, thumbnail, chapters)
-// move final file to destination
 @Slf4j
 public final class FFmpegTranscoder {
 
@@ -62,9 +54,13 @@ public final class FFmpegTranscoder {
     private boolean queriedForSystemBinary = false;
 
     @Getter
+    private final ProcessMonitor processMonitor;
+
+    @Getter
     private final FFmpegCompatibilityScanner compatScanner;
 
-    public FFmpegTranscoder() {
+    public FFmpegTranscoder(@Nullable ProcessMonitor processMonitorIn) {
+        processMonitor = processMonitorIn == null ? new ProcessMonitor() : processMonitorIn;
         compatScanner = new FFmpegCompatibilityScanner(this);
     }
 
@@ -85,20 +81,9 @@ public final class FFmpegTranscoder {
             .map(path -> path + File.separator + getBinaryName("ffmpeg"));
     }
 
-    // TODO: implement codec detection
     public Optional<String> getFFprobeExecutable() {
         return getFfmpegPath()
             .map(path -> path + File.separator + getBinaryName("ffprobe"));
-    }
-
-    public String getFFmpegExecutableOrThrow() {
-        return getFFmpegExecutable()
-            .orElseThrow(() -> new RuntimeException("Please install FFmpeg to use this command"));
-    }
-
-    public String getFFprobeExecutableOrThrow() {
-        return getFFprobeExecutable()
-            .orElseThrow(() -> new RuntimeException("Please install FFmpeg to use this command"));
     }
 
     protected EncoderEnum resolveEncoder(EncoderEnum encoder) {
@@ -146,26 +131,64 @@ public final class FFmpegTranscoder {
     }
 
     // TODO abstraction
-    public List<String> buildCommand(FFmpegConfig config, File inputFile, File outputFile) {
+    public int startTranscode(FFmpegConfig config, File inputFile,
+        File outputFile, AtomicBoolean cancelHook, FFmpegProgressListener listener) throws Exception {
+        if (config.getVideoEncoder() == EncoderEnum.NO_ENCODER
+            && config.getAudioCodec() == AudioCodecEnum.NO_CODEC) {
+            if (log.isDebugEnabled()) {
+                log.debug("Transcoding not configured, returning -3");
+            }
+
+            return -3;
+        }
+
+        if (!inputFile.exists()) {
+            if (log.isDebugEnabled()) {
+                log.debug("Input file does not exist, returning -4");
+            }
+
+            return -4;
+        }
+
+        if (log.isDebugEnabled()) {
+            log.debug("Input file: {}", inputFile);
+            log.debug("Output file: {}", outputFile);
+        }
+
         List<String> command = new ArrayList<>();
-        command.add(getFFmpegExecutableOrThrow());
         command.add("-hide_banner");
+        command.add("-loglevel");
+        command.add(log.isDebugEnabled() ? "error" : "quiet");
+        command.add("-stats");
         command.add("-y");
         command.add("-i");
         command.add(inputFile.getAbsolutePath());
 
         MediaStreamData streamData = getMediaStreams(inputFile);
-        // TODO: If for some reason stream data is not available, we can still fallback to a very basic transcoding.
         if (streamData == null) {
             throw new RuntimeException("Unable to obtain stream data");
         }
 
-        if (log.isDebugEnabled()) {
-            log.debug("Streams: {}", streamData.getStreams());
-        }
-
         command.add("-map_metadata");
         command.add("0");
+
+        FFmpegProgressCalculator progressCalculator = null;
+        for (AbstractStream stream : streamData.getStreams()) {
+            if (progressCalculator == null) {
+                progressCalculator = FFmpegProgressCalculator.fromStream(stream);
+            }
+
+            if (progressCalculator != null) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Progress Data: {}", progressCalculator);
+                }
+
+                break;
+            }
+        }
+
+        boolean isTranscodeNeeded = false;
+        String logPrefix = "";
 
         int outputVideoIndex = 0;
         for (VideoStream stream : streamData.getVideoStreams()) {
@@ -173,12 +196,19 @@ public final class FFmpegTranscoder {
             command.add("0:" + stream.getIndex());
 
             EncoderEnum actualEncoder = resolveEncoder(config.getVideoEncoder());
+            EncoderTypeEnum encoderType = actualEncoder.getEncoderType();
             VideoCodecEnum videoCodec = actualEncoder.getVideoCodec();
 
             boolean needsTranscoding = !videoCodec.getCodecName().equals(stream.getCodecName());
 
             command.add("-c:v:" + outputVideoIndex);
             if (videoCodec != VideoCodecEnum.NO_CODEC && needsTranscoding) {
+                isTranscodeNeeded = true;
+                if (logPrefix.isEmpty()) {
+                    String name = encoderType == EncoderTypeEnum.SOFTWARE ? "SW" : encoderType.name();
+                    logPrefix = name + ": ";
+                }
+
                 command.add(actualEncoder.getFfmpegCodecName());
 
                 EncoderProfile profile = config.getProfile();
@@ -198,8 +228,6 @@ public final class FFmpegTranscoder {
                     command.add(speedPreset.getFfmpegPresetName());
                 }
 
-                EncoderTypeEnum encoderType = actualEncoder.getEncoderType();
-
                 // 0 = lossless, 63 = bathroom tiles, roof shingles
                 int rateControlValue = Math.clamp(config.getRateControlValue(), 0, 63);
                 // 0 = a black void, MAX_VALUE = a melted GPU
@@ -207,8 +235,8 @@ public final class FFmpegTranscoder {
 
                 RateControlModeEnum rateControlMode = config.getRateControlMode();
                 if (rateControlMode == RateControlModeEnum.DEFAULT) {
-                    // Default to VBR if not specified
-                    rateControlMode = RateControlModeEnum.VBR;
+                    // Default to CRF if not specified
+                    rateControlMode = RateControlModeEnum.CRF;
                 }
 
                 // AV1 quirk, select an appropriate speed/quality ratio based on available CPU horsepower
@@ -219,7 +247,7 @@ public final class FFmpegTranscoder {
                                 int cpuCount = Runtime.getRuntime().availableProcessors();
                                 command.add("-cpu-used");
                                 command.add(cpuCount <= 2 ? "8" : cpuCount <= 4
-                                    ? "7" : cpuCount <= 8 ? "4" : "1");
+                                    ? "7" : cpuCount <= 8 ? "5" : "1");
                             }
                         }
                     }
@@ -415,6 +443,11 @@ public final class FFmpegTranscoder {
 
                 // HW encoding parameters
                 switch (encoderType) {
+                    // Intel QSV is finicky and never works out of the box on Linux,
+                    // so if device detection fails, we will simply let it fall back to VAAPI.
+                    // The same applies to AMD AMF; additionally, on Linux, only custom FFmpeg builds include the AMF codecs.
+                    //
+                    // TODO: Need feedback from an Nvidia user that can test NVENC encoding
                     case VAAPI -> {
                         String vaapiDevice = getCompatScanner().detectVaapiDevice(actualEncoder);
                         command.add("-vaapi_device");
@@ -429,12 +462,7 @@ public final class FFmpegTranscoder {
                             command.add(device);
                         }
                     }
-                    // Intel QSV is finicky and never works out of the box on Linux,
-                    // so if device detection fails, we will simply let it fall back to VAAPI.
-                    // The same applies to AMD AMF; additionally, on Linux, only custom FFmpeg builds include the AMF codecs.
-                    //
-                    // TODO: Need feedback from an Nvidia user that can test NVENC encoding
-                    }
+                }
             } else {
                 command.add("copy");
             }
@@ -484,7 +512,8 @@ public final class FFmpegTranscoder {
         int outputAudioIndex = 0;
         for (AudioStream stream : streamData.getAudioStreams()) {
             AudioCodecEnum audioCodec = config.getAudioCodec();
-            if (!audioCodec.isSupportedByContainer(videoContainer)) {
+            // TODO: rename enum to passthrough
+            if (audioCodec != AudioCodecEnum.NO_CODEC && !audioCodec.isSupportedByContainer(videoContainer)) {
                 log.error("Target container {} does not support audio codec: {} in stream #{}",
                     videoContainer, audioCodec, stream.getIndex());
                 audioCodec = AudioCodecEnum.getFallbackCodec(videoContainer);
@@ -506,9 +535,25 @@ public final class FFmpegTranscoder {
 
             command.add("-c:a:" + outputAudioIndex);
             if (audioCodec != AudioCodecEnum.NO_CODEC && needsTranscoding) {
+                isTranscodeNeeded = true;
+                if (logPrefix.isEmpty()) {
+                    logPrefix = audioCodec.name() + ": ";
+                }
+
                 command.add(audioCodec.getFfmpegCodecName());
                 command.add("-b:a:" + outputAudioIndex);
-                command.add(audioBitrate.getValue() + "k");
+
+                if (audioBitrate != AudioBitrateEnum.NO_AUDIO) {
+                    command.add(audioBitrate.getValue() + "k");
+                } else {
+                    int bitrate = stream.getBitrateKbps();
+                    if (bitrate == -1) {
+                        // Fallback bitrate is 256 kbps unless otherwise specified.
+                        bitrate = 256;
+                    }
+
+                    command.add(bitrate + "k");
+                }
             } else {
                 command.add("copy");
             }
@@ -536,6 +581,13 @@ public final class FFmpegTranscoder {
 
             command.add("-c:s:" + subtitleStreamIndex);
             if (needsTranscoding) {
+                isTranscodeNeeded = true;
+                if (logPrefix.isEmpty()) {
+                    // ¯\_(ツ)_/¯
+                    String name = subtitleCodec == SubtitleCodecEnum.ASS ? "SSA" : subtitleCodec.name();
+                    logPrefix = name + ": ";
+                }
+
                 command.add(subtitleCodec.getCodecName());
             } else {
                 command.add("copy");
@@ -556,12 +608,17 @@ public final class FFmpegTranscoder {
 
         int outputDataIndex = 0;
         for (DataStream stream : streamData.getDataStreams()) {
-            command.add("-map");
-            command.add("0:" + stream.getIndex());
-            command.add("-c:d:" + outputDataIndex);
-            command.add("copy");
+            switch (config.getVideoContainer()) {
+                case MP4 -> {
+                    // TODO: MOV: bin_data transcoding
+                    command.add("-map");
+                    command.add("0:" + stream.getIndex());
+                    command.add("-c:d:" + outputDataIndex);
+                    command.add("copy");
 
-            outputDataIndex++;
+                    outputDataIndex++;
+                }
+            }
         }
 
         for (UnknownStream stream : streamData.getUnknownStreams()) {
@@ -574,26 +631,40 @@ public final class FFmpegTranscoder {
 
         command.add(outputFile.getAbsolutePath());
 
+        if (!isTranscodeNeeded) {
+            if (log.isDebugEnabled()) {
+                log.debug("Transcoding not required, returning -2");
+            }
+
+            return -2;
+        }
+
         if (log.isDebugEnabled()) {
             log.debug("FFmpeg transcode command: {}", StringUtils.escapeAndBuildCommandLine(command));
         }
 
-        return command;
-    }
+        int exitCode = FFmpegProcessRunner.runFFmpeg(
+            this,
+            command,
+            FFmpegProcessOptions.builder()
+                .cancelHook(cancelHook)
+                .calculator(progressCalculator)
+                .logOutput(log.isDebugEnabled())
+                .logPrefix(logPrefix)
+                .lazyReader(true)
+                .listener(listener)
+                .build());
 
-    private String getTargetThumbnailExtension(String currentCodec) {
-        return switch (currentCodec.toLowerCase()) {
-            case "mjpeg", "jpg", "jpeg" ->
-                ".jpg";
-            default ->// WebP is a mistake
-                ".png";
-        };
+        if (exitCode != 0) {
+            Files.deleteIfExists(outputFile.toPath());
+        }
+
+        return exitCode;
     }
 
     @Nullable
     private MediaStreamData getMediaStreams(File inputFile) {
         List<String> command = new ArrayList<>();
-        command.add(getFFprobeExecutableOrThrow());
         command.add("-v");
         command.add("error");
         command.add("-show_entries");
@@ -603,30 +674,29 @@ public final class FFmpegTranscoder {
         command.add(inputFile.getAbsolutePath());
 
         try {
-            Process process = new ProcessBuilder(command)
-                .redirectErrorStream(true)
-                .start();
+            StringBuilder finalOutput = new StringBuilder();
 
-            try (
-                BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-                StringBuilder output = new StringBuilder();
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    output.append(line);
-                }
+            int exitCode = FFmpegProcessRunner.runFFprobe(
+                this, command,
+                FFmpegProcessOptions.builder()
+                    .listener((output, hasTaskStarted, progress) -> {
+                        finalOutput.append(output);
+                    }).build());
 
-                String jsonOutput = output.toString();
-                if (jsonOutput.startsWith("{")) {
-                    MediaStreamData mediaStreamData = GDownloader.OBJECT_MAPPER
-                        .readValue(jsonOutput, MediaStreamData.class);
-
-                    return mediaStreamData;
-                }
-            }
-
-            int exitCode = process.waitFor();
             if (exitCode != 0) {
                 log.error("ffprobe process exited with code {}", exitCode);
+                return null;
+            }
+
+            String jsonOutput = finalOutput.toString();
+            if (jsonOutput.startsWith("{")) {
+                MediaStreamData mediaStreamData = GDownloader.OBJECT_MAPPER
+                    .readValue(jsonOutput, MediaStreamData.class);
+                if (log.isDebugEnabled()) {
+                    log.debug("{}", mediaStreamData);
+                }
+
+                return mediaStreamData;
             }
         } catch (Exception e) {
             log.error("Error running ffprobe: {}", e.getMessage(), e);
@@ -638,7 +708,6 @@ public final class FFmpegTranscoder {
     @Nullable
     private File extractThumbnail(VideoStream stream, File inputFile) {
         List<String> command = new ArrayList<>();
-        command.add(getFFmpegExecutableOrThrow());
         command.add("-hide_banner");
         command.add("-y");
         command.add("-v");
@@ -659,22 +728,9 @@ public final class FFmpegTranscoder {
 
             command.add(tmp.getAbsolutePath());
 
-            // TODO shared process runner
-            Process process = new ProcessBuilder(command)
-                .redirectErrorStream(true)
-                .start();
-
-            try (
-                BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    log.info("P OUT: {}", line);
-                }
-            }
-
-            int exitCode = process.waitFor();
+            int exitCode = FFmpegProcessRunner.runFFmpeg(this, command);
             if (exitCode != 0) {
-                log.error("ffmpeg process exited with code {}", exitCode);
+                log.error("FFmpeg process exited with code: {}", exitCode);
                 return null;
             }
 
@@ -686,5 +742,17 @@ public final class FFmpegTranscoder {
         return null;
     }
 
-    // TODO: progress callback, encoder threads
+    private String getTargetThumbnailExtension(String currentCodec) {
+        return switch (currentCodec.toLowerCase()) {
+            case "mjpeg", "jpg", "jpeg" ->
+                ".jpg";
+            default ->// WebP is usually a mistake
+                ".png";
+        };
+    }
+
+    @PreDestroy
+    public void close() {
+        processMonitor.close();
+    }
 }

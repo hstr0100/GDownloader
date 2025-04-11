@@ -19,7 +19,6 @@ package net.brlns.gdownloader.ffmpeg;
 import jakarta.annotation.Nullable;
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -32,6 +31,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.ffmpeg.enums.EncoderEnum;
 import net.brlns.gdownloader.ffmpeg.enums.EncoderPresetEnum;
@@ -49,7 +49,7 @@ import static net.brlns.gdownloader.ffmpeg.FFmpegCompatibilityScanner.EncoderPre
  * @author Gabriel / hstr0100 / vertx010
  */
 @Slf4j
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class FFmpegCompatibilityScanner {
 
     private final Map<EncoderEnum, Boolean> testedEncoders = new ConcurrentHashMap<>();
@@ -62,6 +62,8 @@ public class FFmpegCompatibilityScanner {
     private final AtomicBoolean encodersScanned = new AtomicBoolean(false);
 
     private final FFmpegTranscoder transcoder;
+
+    private Optional<File> vainfoExecutable;
 
     public void scanEncoderCapabilities() {
         if (capabilitiesScanned.get()) {
@@ -94,19 +96,18 @@ public class FFmpegCompatibilityScanner {
 
     private void scanEncoder(EncoderEnum encoder) {
         try {
-            Process process = new ProcessBuilder(transcoder.getFFmpegExecutableOrThrow(),
-                "-h", "encoder=" + encoder.getFfmpegCodecName())
-                .redirectErrorStream(false)
-                .start();
+            List<String> lines = new ArrayList<>();
 
-            try (
-                BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-                List<String> lines = reader.lines().collect(Collectors.toList());
-                processEncoderOutput(encoder, lines);
-            }
+            FFmpegProcessRunner.runFFmpeg(
+                transcoder,
+                List.of("-h", "encoder=" + encoder.getFfmpegCodecName()),
+                FFmpegProcessOptions.builder()
+                    .listener((output, hasTaskStarted, progress) -> {
+                        lines.add(output);
+                    }).build());
 
-            process.waitFor();
-        } catch (IOException | InterruptedException e) {
+            processEncoderOutput(encoder, lines);
+        } catch (Exception e) {
             log.error("Error scanning encoder {}: {}", encoder.getFfmpegCodecName(), e.getMessage());
         }
     }
@@ -220,32 +221,30 @@ public class FFmpegCompatibilityScanner {
         Set<String> encoders = new HashSet<>();
 
         try {
-            Process process = new ProcessBuilder(transcoder.getFFmpegExecutableOrThrow(),
-                "-hide_banner", "-encoders")
-                .redirectErrorStream(true)
-                .start();
+            List<String> lines = new ArrayList<>();
 
-            try (
-                BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-                String line;
-                boolean encoderSection = false;
+            FFmpegProcessRunner.runFFmpeg(
+                transcoder,
+                List.of("-hide_banner", "-encoders"),
+                FFmpegProcessOptions.builder()
+                    .listener((output, hasTaskStarted, progress) -> {
+                        lines.add(output);
+                    }).build());
 
-                while ((line = reader.readLine()) != null) {
-                    if (line.contains("------")) {
-                        encoderSection = true;
-                        continue;
-                    }
+            boolean encoderSection = false;
+            for (String line : lines) {
+                if (line.contains("------")) {
+                    encoderSection = true;
+                    continue;
+                }
 
-                    if (encoderSection && line.contains("V")) {
-                        String[] parts = line.trim().split(" ");
-                        if (parts.length >= 2) {
-                            encoders.add(parts[1]);
-                        }
+                if (encoderSection && line.contains("V")) {
+                    String[] parts = line.trim().split(" ");
+                    if (parts.length >= 2) {
+                        encoders.add(parts[1]);
                     }
                 }
             }
-
-            process.waitFor();
 
             availableEncoders.addAll(encoders);
             encodersScanned.set(true);
@@ -291,7 +290,6 @@ public class FFmpegCompatibilityScanner {
     public List<String> getTestVideoCommand(EncoderEnum encoder, String vaapiDevice) {
         List<String> command = new ArrayList<>();
 
-        command.add(transcoder.getFFmpegExecutableOrThrow());
         command.add("-hide_banner");
         command.add("-loglevel");
         command.add(log.isDebugEnabled() ? "error" : "panic");
@@ -330,6 +328,11 @@ public class FFmpegCompatibilityScanner {
                 } else {
                     command.add("-b:v");
                     command.add("500k");
+                }
+
+                if (encoder.getVideoCodec() == VideoCodecEnum.AV1) {
+                    command.add("-cpu-used");
+                    command.add("8");
                 }
             }
             case NVENC, QSV, AMF -> {
@@ -406,22 +409,17 @@ public class FFmpegCompatibilityScanner {
         try {
             List<String> command = getTestVideoCommand(encoder, devicePath);
 
+            FFmpegProcessOptions options = FFmpegProcessOptions.builder()
+                .timeoutUnit(TimeUnit.SECONDS)
+                .timeoutValue(5l)
+                .discardOutput(true)
+                .build();
+
             long startTime = System.currentTimeMillis();
-
-            Process process = new ProcessBuilder(command)
-                .redirectError(ProcessBuilder.Redirect.DISCARD)
-                .redirectOutput(ProcessBuilder.Redirect.DISCARD)
-                .start();
-
-            boolean completed = process.waitFor(5, TimeUnit.SECONDS);
+            int exitCode = FFmpegProcessRunner.runFFmpeg(transcoder, command, options);
             long endTime = System.currentTimeMillis();
 
-            if (!completed) {
-                process.destroyForcibly();
-                return -1;
-            }
-
-            return completed && process.exitValue() == 0 ? endTime - startTime : -1;
+            return exitCode == 0 ? endTime - startTime : -1;
         } catch (Exception e) {
             log.debug("Error testing VAAPI encode speed for device {}: {}", devicePath, e.getMessage());
 
@@ -443,24 +441,24 @@ public class FFmpegCompatibilityScanner {
 
     public boolean checkVaapiDeviceSupport(EncoderEnum encoder, String devicePath) {
         try {
-            File vainfoExecutable = SystemExecutableLocator.locateExecutable("vainfo");
-
             if (vainfoExecutable == null) {
+                vainfoExecutable = Optional.ofNullable(SystemExecutableLocator.locateExecutable("vainfo"));
+            }
+
+            if (!vainfoExecutable.isPresent()) {
                 // Without vainfo, let's just assume the device is valid and let FFmpeg test against it.
                 log.warn("vainfo not found, unable to query for supported vaapi profiles");
                 return true;
             }
 
             List<String> command = new ArrayList<>();
-            command.add(vainfoExecutable.getAbsolutePath());
+            command.add(vainfoExecutable.get().getAbsolutePath());
             command.add("--display");
             command.add("drm");
             command.add("--device");
             command.add(devicePath);
 
-            Process process = new ProcessBuilder(command)
-                .redirectErrorStream(true)
-                .start();
+            Process process = transcoder.getProcessMonitor().startProcess(command);
 
             boolean hasVaapiCodec = false;
             String vaapiName = encoder.getVideoCodec().getVaapiName();
@@ -505,35 +503,17 @@ public class FFmpegCompatibilityScanner {
 
             log.debug("Test command: " + StringUtils.escapeAndBuildCommandLine(command));
 
-            Process process = new ProcessBuilder(command)
-                .redirectErrorStream(true)
-                .start();
+            FFmpegProcessOptions options = FFmpegProcessOptions.builder()
+                .timeoutUnit(TimeUnit.SECONDS)
+                .timeoutValue(verbose ? 10l : 5l)
+                .discardOutput(!verbose)
+                .logOutput(!verbose)
+                .build();
 
-            StringBuilder output = new StringBuilder();
-            try (
-                BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-                String line;
-
-                while ((line = reader.readLine()) != null) {
-                    output.append(line).append("\n");
-                }
-            }
-
-            boolean completed = process.waitFor(verbose ? 10 : 5, TimeUnit.SECONDS);
-            int exitCode = completed ? process.exitValue() : -1;
-
-            if (!completed) {
-                process.destroyForcibly();
-                if (verbose) {
-                    log.warn("Encoder test timed out: {}", encoder);
-                }
-
-                return false;
-            }
-
+            int exitCode = FFmpegProcessRunner.runFFmpeg(transcoder, command, options);
             if (exitCode != 0) {
                 if (verbose) {
-                    log.warn("Encoder test failed: {} \n{}", encoder, output.toString());
+                    log.warn("Encoder test failed for: {}", encoder);
                 }
 
                 return false;

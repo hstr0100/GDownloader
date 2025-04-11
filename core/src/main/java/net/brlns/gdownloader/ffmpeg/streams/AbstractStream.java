@@ -58,6 +58,18 @@ public abstract class AbstractStream {
     @JsonProperty("tags")
     private Map<String, String> tags = new HashMap<>();
 
+    @JsonProperty("duration")
+    private String duration;
+
+    @JsonProperty("start_time")
+    private String startTime;
+
+    @JsonProperty("time_base")
+    private String timeBase;
+
+    @JsonProperty("duration_ts")
+    private Long durationTs;
+
     @JsonIgnore
     @Nullable
     public String getLanguage() {

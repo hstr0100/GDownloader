@@ -29,7 +29,6 @@ import net.brlns.gdownloader.downloader.AbstractDownloader;
 import net.brlns.gdownloader.downloader.DownloadManager;
 import net.brlns.gdownloader.downloader.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.ffmpeg.enums.AudioBitrateEnum;
-import net.brlns.gdownloader.ffmpeg.enums.AudioCodecEnum;
 import net.brlns.gdownloader.settings.QualitySettings;
 import net.brlns.gdownloader.settings.Settings;
 import net.brlns.gdownloader.settings.enums.AudioContainerEnum;
@@ -168,7 +167,11 @@ public class GenericFilter extends AbstractUrlFilter {
 
                         String qualitySelector = getQualitySettings().buildQualitySelector();
 
-                        if (config.isDownloadAllAudioTracks()) {
+                        if (config.isMergeAllAudioTracks()) {
+                            // TODO: Update this once the following yt-dlp feature request is addressed:
+                            // https://github.com/yt-dlp/yt-dlp/issues/1176
+                            // Currently, it merges ALL the best audio tracks - including duplicates.
+                            // The desired behavior is to keep only the best track for each language - no duplicates.
                             qualitySelector = qualitySelector.replace(
                                 "bestaudio", "bestaudio+mergeall");
                             arguments.add("--audio-multistreams");
@@ -207,29 +210,7 @@ public class GenericFilter extends AbstractUrlFilter {
                                     ));
                             }
                         }
-
-                        // If no codec is defined, the default audio codec provided by the source will be passed through.
-                        // Transcode audio (Note: This can be very slow on some machines).
-                        AudioCodecEnum audioCodec = null;
-                        if (quality.getAudioCodec() != AudioCodecEnum.NO_CODEC) {
-                            // Check if the user has selected a custom audio codec.
-                            audioCodec = quality.getAudioCodec();
-                        } else if (config.isTranscodeAudioToAAC()) {
-                            // If no custom codec is set, check if "Convert audio to a widely supported codec" is enabled.
-                            // If enabled, default to "aac".
-                            audioCodec = AudioCodecEnum.AAC; // Opus is not supported by some native video players
-                        }
-
-                        // If no codec is defined, the default audio codec provided by the source will be passed through.
-                        if (audioCodec != null) {
-                            // Transcode audio (Note: This can be very slow on some machines).
-                            arguments.addAll(List.of(
-                                "--postprocessor-args",
-                                // Use the selected codec. Default bitrate is 320 kbps unless otherwise specified.
-                                "ffmpeg:-c:a " + audioCodec.getFfmpegCodecName() + " -b:a "
-                                + (audioBitrate == AudioBitrateEnum.NO_AUDIO ? 320 : audioBitrate.getValue()) + "k"
-                            ));
-                        }
+                        // Transcoding is handled by our built-in ffmpeg transcoder.
                     }
                     case AUDIO -> {
                         if (audioBitrate != AudioBitrateEnum.NO_AUDIO) {

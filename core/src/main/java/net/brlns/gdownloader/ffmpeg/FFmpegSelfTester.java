@@ -22,7 +22,6 @@ import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.ffmpeg.enums.EncoderEnum;
 import net.brlns.gdownloader.ffmpeg.enums.EncoderTypeEnum;
-import net.brlns.gdownloader.util.LoggerUtils;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -30,12 +29,12 @@ import net.brlns.gdownloader.util.LoggerUtils;
 @Slf4j
 public class FFmpegSelfTester {
 
-    private static final FFmpegTranscoder TRANSCODER = new FFmpegTranscoder();
+    private static final FFmpegTranscoder TRANSCODER = new FFmpegTranscoder(null);
 
     public static void main(String[] args) {
-        LoggerUtils.setForcedDebugMode();
-
         runSelfTest();
+
+        TRANSCODER.close();
     }
 
     public static void runSelfTest() {

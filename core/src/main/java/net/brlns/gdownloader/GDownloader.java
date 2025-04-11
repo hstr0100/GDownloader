@@ -60,6 +60,7 @@ import net.brlns.gdownloader.ffmpeg.FFmpegSelfTester;
 import net.brlns.gdownloader.ffmpeg.FFmpegTranscoder;
 import net.brlns.gdownloader.lang.Language;
 import net.brlns.gdownloader.persistence.PersistenceManager;
+import net.brlns.gdownloader.process.ProcessMonitor;
 import net.brlns.gdownloader.server.AppClient;
 import net.brlns.gdownloader.server.AppServer;
 import net.brlns.gdownloader.settings.Settings;
@@ -188,6 +189,9 @@ public final class GDownloader {
     private FFmpegTranscoder ffmpegTranscoder;
 
     @Getter
+    private ProcessMonitor processMonitor;
+
+    @Getter
     private boolean initialized = false;
 
     @Getter(AccessLevel.PRIVATE)
@@ -263,13 +267,17 @@ public final class GDownloader {
         try {
             setupAppServer();
 
+            processMonitor = new ProcessMonitor();
+
             persistenceManager = new PersistenceManager(this);
             persistenceManager.init();
 
-            ffmpegTranscoder = new FFmpegTranscoder();
+            ffmpegTranscoder = new FFmpegTranscoder(processMonitor);
 
             clipboardManager = new ClipboardManager(this);
             downloadManager = new DownloadManager(this);
+
+            processMonitor.setShouldStopAll(() -> !downloadManager.isRunning());
 
             guiManager = new GUIManager(this);
 
@@ -1381,6 +1389,18 @@ public final class GDownloader {
                 instance.getDownloadManager().close();
             } catch (Exception e) {
                 log.error("There was a problem closing the download manager", e);
+            }
+
+            try {
+                instance.getFfmpegTranscoder().close();
+            } catch (Exception e) {
+                log.error("There was a problem closing the ffmpeg transcoder", e);
+            }
+
+            try {
+                instance.getProcessMonitor().close();
+            } catch (Exception e) {
+                log.error("There was a problem closing the process monitor", e);
             }
 
             try {

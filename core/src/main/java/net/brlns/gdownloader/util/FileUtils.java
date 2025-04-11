@@ -36,6 +36,8 @@ import org.slf4j.helpers.MessageFormatter;
 @Slf4j
 public final class FileUtils {
 
+    public static final String TMP_FILE_IDENTIFIER = ".gdtmp";
+
     @Nullable
     public static File getOrCreate(File dir, String... path) {
         File file = new File(dir, String.join(File.separator, path));
@@ -205,5 +207,50 @@ public final class FileUtils {
 
     public static String getBinaryName(String name) {
         return GDownloader.isWindows() ? name + ".exe" : name;
+    }
+
+    public static File deriveTempFile(@NonNull File inputFile) {
+        return deriveTempFile(inputFile, null);
+    }
+
+    public static File deriveTempFile(@NonNull File inputFile, @Nullable String extension) {
+        String suffix = TMP_FILE_IDENTIFIER + String.format(".%04x", (int)(Math.random() * 0xFFFF));
+
+        File outputFile = deriveFile(inputFile, suffix, extension);
+        outputFile.deleteOnExit();
+
+        return outputFile;
+    }
+
+    public static File deriveFile(@NonNull File inputFile, String suffix) {
+        return deriveFile(inputFile, suffix, null);
+    }
+
+    public static File deriveFile(@NonNull File inputFileIn, String suffix, @Nullable String extension) {
+        String normalizedPath = inputFileIn.getPath().replace('\\', '/');
+        File inputFile = new File(normalizedPath);
+
+        String parent = inputFile.getParent();
+        if (parent == null) {
+            parent = ".";
+        }
+
+        String baseName = inputFile.getName();
+        int lastDotIndex = baseName.lastIndexOf('.');
+
+        if (lastDotIndex >= 0) {
+            String nameWithoutExt = baseName.substring(0, lastDotIndex);
+            extension = extension != null ? extension
+                : (lastDotIndex < baseName.length() - 1
+                ? baseName.substring(lastDotIndex + 1)
+                : "");
+
+            return new File(parent, nameWithoutExt + suffix
+                + (extension.isEmpty() ? "" : "." + extension));
+        } else {
+            extension = extension != null ? extension : "";
+            return new File(parent, baseName + suffix
+                + (extension.isEmpty() ? "" : "." + extension));
+        }
     }
 }
