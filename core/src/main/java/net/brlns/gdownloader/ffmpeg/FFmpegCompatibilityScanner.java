@@ -40,8 +40,8 @@ import net.brlns.gdownloader.ffmpeg.enums.EncoderTypeEnum;
 import net.brlns.gdownloader.ffmpeg.enums.VideoCodecEnum;
 import net.brlns.gdownloader.ffmpeg.structs.EncoderPreset;
 import net.brlns.gdownloader.ffmpeg.structs.EncoderProfile;
+import net.brlns.gdownloader.process.ProcessArguments;
 import net.brlns.gdownloader.updater.SystemExecutableLocator;
-import net.brlns.gdownloader.util.StringUtils;
 
 import static net.brlns.gdownloader.ffmpeg.FFmpegCompatibilityScanner.EncoderPresetCommandEnum.*;
 
@@ -282,39 +282,32 @@ public class FFmpegCompatibilityScanner {
         });
     }
 
-    public List<String> getTestVideoCommand(EncoderEnum encoder) {
+    public ProcessArguments getTestVideoCommand(EncoderEnum encoder) {
         return getTestVideoCommand(encoder, encoder.getEncoderType() == EncoderTypeEnum.VAAPI
             ? detectVaapiDevice(encoder) : null);
     }
 
-    public List<String> getTestVideoCommand(EncoderEnum encoder, String vaapiDevice) {
-        List<String> command = new ArrayList<>();
-
-        command.add("-hide_banner");
-        command.add("-loglevel");
-        command.add(log.isDebugEnabled() ? "error" : "panic");
-        command.add("-f");
-        command.add("lavfi");
-        command.add("-i");
-        command.add("testsrc=size=640x360:rate=5");
-        command.add("-frames:v");
-        command.add("5");
-        command.add("-c:v");
-        command.add(encoder.getFfmpegCodecName());
+    public ProcessArguments getTestVideoCommand(EncoderEnum encoder, String vaapiDevice) {
+        ProcessArguments args = new ProcessArguments(
+            "-hide_banner",
+            "-loglevel", (log.isDebugEnabled() ? "error" : "panic"),
+            "-f", "lavfi",
+            "-i", "testsrc=size=640x360:rate=5",
+            "-frames:v", "5",
+            "-c:v", encoder.getFfmpegCodecName());
 
         EncoderTypeEnum encoderType = encoder.getEncoderType();
         switch (encoderType) {
             case VAAPI -> {
-                command.add("-vaapi_device");
-                command.add(vaapiDevice);
-                command.add("-vf");
-                command.add("format=nv12,hwupload");
+                args.add(
+                    "-vaapi_device", vaapiDevice,
+                    "-vf", "format=nv12,hwupload"
+                );
             }
             case V4L2M2M -> {
                 String device = detectV4l2m2mDevice();
                 if (device != null) {
-                    command.add("-device");
-                    command.add(device);
+                    args.add("-device", device);
                 }
             }
         }
@@ -323,33 +316,29 @@ public class FFmpegCompatibilityScanner {
             case SOFTWARE -> {
                 if (encoder.getVideoCodec() == VideoCodecEnum.H264
                     || encoder.getVideoCodec() == VideoCodecEnum.H265) {
-                    command.add("-crf");
-                    command.add("33");
+                    args.add("-crf", "33");
                 } else {
-                    command.add("-b:v");
-                    command.add("500k");
+                    args.add("-b:v", "500k");
                 }
 
                 if (encoder.getVideoCodec() == VideoCodecEnum.AV1) {
-                    command.add("-cpu-used");
-                    command.add("8");
+                    args.add("-cpu-used", "8");
                 }
             }
             case NVENC, QSV, AMF -> {
-                command.add("-b:v");
-                command.add("500k");
+                args.add("-b:v", "500k");
             }
             case VAAPI -> {
-                command.add("-qp");
-                command.add("33");
+                args.add("-qp", "33");
             }
         }
 
-        command.add("-f");
-        command.add("null");
-        command.add("-");
+        args.add(
+            "-f", "null",
+            "-"
+        );
 
-        return command;
+        return args;
     }
 
     // TODO: GPU selector
@@ -407,7 +396,7 @@ public class FFmpegCompatibilityScanner {
 
     private long testVaapiEncodeSpeed(EncoderEnum encoder, String devicePath) {
         try {
-            List<String> command = getTestVideoCommand(encoder, devicePath);
+            ProcessArguments args = getTestVideoCommand(encoder, devicePath);
 
             FFmpegProcessOptions options = FFmpegProcessOptions.builder()
                 .timeoutUnit(TimeUnit.SECONDS)
@@ -416,7 +405,7 @@ public class FFmpegCompatibilityScanner {
                 .build();
 
             long startTime = System.currentTimeMillis();
-            int exitCode = FFmpegProcessRunner.runFFmpeg(transcoder, command, options);
+            int exitCode = FFmpegProcessRunner.runFFmpeg(transcoder, args, options);
             long endTime = System.currentTimeMillis();
 
             return exitCode == 0 ? endTime - startTime : -1;
@@ -451,14 +440,12 @@ public class FFmpegCompatibilityScanner {
                 return true;
             }
 
-            List<String> command = new ArrayList<>();
-            command.add(vainfoExecutable.get().getAbsolutePath());
-            command.add("--display");
-            command.add("drm");
-            command.add("--device");
-            command.add(devicePath);
+            ProcessArguments args = new ProcessArguments(
+                vainfoExecutable.get().getAbsolutePath(),
+                "--display", "drm",
+                "--device", devicePath);
 
-            Process process = transcoder.getProcessMonitor().startProcess(command);
+            Process process = transcoder.getProcessMonitor().startProcess(args);
 
             boolean hasVaapiCodec = false;
             String vaapiName = encoder.getVideoCodec().getVaapiName();
@@ -499,9 +486,8 @@ public class FFmpegCompatibilityScanner {
                 return testEncoder(resolved);
             }
 
-            List<String> command = getTestVideoCommand(encoder);
-
-            log.debug("Test command: " + StringUtils.escapeAndBuildCommandLine(command));
+            ProcessArguments args = getTestVideoCommand(encoder);
+            log.debug("Test command: {}", args);
 
             FFmpegProcessOptions options = FFmpegProcessOptions.builder()
                 .timeoutUnit(TimeUnit.SECONDS)
@@ -510,7 +496,7 @@ public class FFmpegCompatibilityScanner {
                 .logOutput(!verbose)
                 .build();
 
-            int exitCode = FFmpegProcessRunner.runFFmpeg(transcoder, command, options);
+            int exitCode = FFmpegProcessRunner.runFFmpeg(transcoder, args, options);
             if (exitCode != 0) {
                 if (verbose) {
                     log.warn("Encoder test failed for: {}", encoder);

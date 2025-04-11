@@ -32,11 +32,10 @@ import net.brlns.gdownloader.ffmpeg.streams.*;
 import net.brlns.gdownloader.ffmpeg.structs.EncoderPreset;
 import net.brlns.gdownloader.ffmpeg.structs.EncoderProfile;
 import net.brlns.gdownloader.ffmpeg.structs.FFmpegConfig;
+import net.brlns.gdownloader.process.ProcessArguments;
 import net.brlns.gdownloader.process.ProcessMonitor;
 import net.brlns.gdownloader.settings.enums.VideoContainerEnum;
 import net.brlns.gdownloader.updater.SystemExecutableLocator;
-import net.brlns.gdownloader.util.LoggerUtils;
-import net.brlns.gdownloader.util.StringUtils;
 
 import static net.brlns.gdownloader.settings.enums.VideoContainerEnum.*;
 import static net.brlns.gdownloader.util.FileUtils.getBinaryName;
@@ -155,22 +154,20 @@ public final class FFmpegTranscoder {
             log.debug("Output file: {}", outputFile);
         }
 
-        List<String> command = new ArrayList<>();
-        command.add("-hide_banner");
-        command.add("-loglevel");
-        command.add(log.isDebugEnabled() ? "error" : "quiet");
-        command.add("-stats");
-        command.add("-y");
-        command.add("-i");
-        command.add(inputFile.getAbsolutePath());
+        ProcessArguments args = new ProcessArguments(
+            "-hide_banner",
+            "-loglevel",
+            (log.isDebugEnabled() ? "error" : "quiet"),
+            "-stats",
+            "-y",
+            "-i", inputFile.getAbsolutePath());
 
         MediaStreamData streamData = getMediaStreams(inputFile);
         if (streamData == null) {
-            throw new RuntimeException("Unable to obtain stream data");
+            throw new RuntimeException("Unable to obtain stream data from " + inputFile);
         }
 
-        command.add("-map_metadata");
-        command.add("0");
+        args.add("-map_metadata", "0");
 
         FFmpegProgressCalculator progressCalculator = null;
         for (AbstractStream stream : streamData.getStreams()) {
@@ -192,8 +189,7 @@ public final class FFmpegTranscoder {
 
         int outputVideoIndex = 0;
         for (VideoStream stream : streamData.getVideoStreams()) {
-            command.add("-map");
-            command.add("0:" + stream.getIndex());
+            args.add("-map", "0:" + stream.getIndex());
 
             EncoderEnum actualEncoder = resolveEncoder(config.getVideoEncoder());
             EncoderTypeEnum encoderType = actualEncoder.getEncoderType();
@@ -201,7 +197,7 @@ public final class FFmpegTranscoder {
 
             boolean needsTranscoding = !videoCodec.getCodecName().equals(stream.getCodecName());
 
-            command.add("-c:v:" + outputVideoIndex);
+            args.add("-c:v:" + outputVideoIndex);
             if (videoCodec != VideoCodecEnum.NO_CODEC && needsTranscoding) {
                 isTranscodeNeeded = true;
                 if (logPrefix.isEmpty()) {
@@ -209,13 +205,14 @@ public final class FFmpegTranscoder {
                     logPrefix = name + ": ";
                 }
 
-                command.add(actualEncoder.getFfmpegCodecName());
+                args.add(actualEncoder.getFfmpegCodecName());
 
                 EncoderProfile profile = config.getProfile();
                 if (profile != null && !profile.equals(EncoderProfile.NO_PROFILE)
                     && getCompatScanner().isCompatible(actualEncoder, profile)) {
-                    command.add("-profile:v:" + outputVideoIndex);
-                    command.add(profile.getFfmpegProfileName());
+                    args.add(
+                        "-profile:v:" + outputVideoIndex,
+                        profile.getFfmpegProfileName());
                 }
 
                 EncoderPreset speedPreset = config.getSpeedPreset();
@@ -224,8 +221,9 @@ public final class FFmpegTranscoder {
                     && !speedPreset.getFfmpegPresetCommand().isEmpty()
                     && getCompatScanner().isCompatible(actualEncoder, speedPreset)) {
                     // AMF uses -quality, AV1 software uses -usage.
-                    command.add(speedPreset.getFfmpegPresetCommand() + ":v:" + outputVideoIndex);
-                    command.add(speedPreset.getFfmpegPresetName());
+                    args.add(
+                        speedPreset.getFfmpegPresetCommand() + ":v:" + outputVideoIndex,
+                        speedPreset.getFfmpegPresetName());
                 }
 
                 // 0 = lossless, 63 = bathroom tiles, roof shingles
@@ -245,9 +243,9 @@ public final class FFmpegTranscoder {
                         switch (videoCodec) {
                             case AV1 -> {
                                 int cpuCount = Runtime.getRuntime().availableProcessors();
-                                command.add("-cpu-used");
-                                command.add(cpuCount <= 2 ? "8" : cpuCount <= 4
-                                    ? "7" : cpuCount <= 8 ? "5" : "1");
+                                String cpuUsed = cpuCount <= 2 ? "8" : cpuCount <= 4
+                                    ? "7" : cpuCount <= 8 ? "5" : "1";
+                                args.add("-cpu-used", cpuUsed);
                             }
                         }
                     }
@@ -259,66 +257,56 @@ public final class FFmpegTranscoder {
                             case SOFTWARE -> {
                                 switch (videoCodec) {
                                     case H264, H265 -> {
-                                        command.add("-crf:v:" + outputVideoIndex);
-                                        command.add(String.valueOf(rateControlValue));
+                                        args.add("-crf:v:" + outputVideoIndex, rateControlValue);
                                     }
                                     case VP9 -> {
-                                        command.add("-crf:v:" + outputVideoIndex);
-                                        command.add(String.valueOf(rateControlValue));
-                                        command.add("-b:v:" + outputVideoIndex);
-                                        command.add("0");
+                                        args.add(
+                                            "-crf:v:" + outputVideoIndex, rateControlValue,
+                                            "-b:v:" + outputVideoIndex, "0");
                                     }
                                     case AV1 -> {
-                                        command.add("-crf:v:" + outputVideoIndex);
-                                        command.add(String.valueOf(rateControlValue));
+                                        args.add("-crf:v:" + outputVideoIndex, rateControlValue);
                                     }
                                 }
                             }
                             case NVENC -> {
                                 // NVENC uses different parameters for rate control, Untested.
-                                command.add("-rc:v:" + outputVideoIndex);
-                                command.add("vbr");
-                                command.add("-cq:v:" + outputVideoIndex);
-                                command.add(String.valueOf(rateControlValue));
+                                args.add(
+                                    "-rc:v:" + outputVideoIndex, "vbr",
+                                    "-cq:v:" + outputVideoIndex, rateControlValue);
                             }
                             case QSV -> {
                                 // QSV uses global_quality for quality-based encoding, Untested
-                                command.add("-global_quality:v:" + outputVideoIndex);
-                                command.add(String.valueOf(rateControlValue));
-                                command.add("-look_ahead:v:" + outputVideoIndex);
-                                command.add("1");
+                                args.add(
+                                    "-global_quality:v:" + outputVideoIndex, rateControlValue,
+                                    "-look_ahead:v:" + outputVideoIndex, "1");
                             }
                             case AMF -> {
                                 // AMF uses cqp
-                                command.add("-rc:v:" + outputVideoIndex);
-                                command.add("cqp");
-                                command.add("-qp_i:v:" + outputVideoIndex);
-                                command.add(String.valueOf(rateControlValue));
-                                command.add("-qp_p:v:" + outputVideoIndex);
-                                command.add(String.valueOf(rateControlValue));
-                                command.add("-qp_b:v:" + outputVideoIndex);
-                                command.add(String.valueOf(rateControlValue));
+                                args.add(
+                                    "-rc:v:" + outputVideoIndex, "cqp",
+                                    "-qp_i:v:" + outputVideoIndex, rateControlValue,
+                                    "-qp_p:v:" + outputVideoIndex, rateControlValue,
+                                    "-qp_b:v:" + outputVideoIndex, rateControlValue);
                             }
                             case VAAPI -> {
                                 // VAAPI uses qp parameter differently
                                 switch (videoCodec) {
                                     case H264, H265 -> {
                                         // For H.264/H.265, set quantization parameter for all frames
-                                        command.add("-qp:v:" + outputVideoIndex);
-                                        command.add(String.valueOf(rateControlValue));
+                                        args.add("-qp:v:" + outputVideoIndex, rateControlValue);
                                     }
                                     case VP9, AV1 -> {
                                         // For VP9/AV1, use global_quality
-                                        command.add("-global_quality:v:" + outputVideoIndex);
-                                        command.add(String.valueOf(rateControlValue));
+                                        args.add(
+                                            "-global_quality:v:" + outputVideoIndex, rateControlValue);
                                     }
                                 }
                             }
                             //case V4L2M2M -> {}
                             default -> {
                                 // Fallback to bitrate-based encoding if unsupported
-                                command.add("-b:v:" + outputVideoIndex);
-                                command.add(videoBitrate + "k");
+                                args.add("-b:v:" + outputVideoIndex, videoBitrate + "k");
                             }
                         }
                     }
@@ -327,89 +315,74 @@ public final class FFmpegTranscoder {
                             case SOFTWARE -> {
                                 switch (videoCodec) {
                                     case H264 -> {
-                                        command.add("-qp:v:" + outputVideoIndex);
-                                        command.add(String.valueOf(rateControlValue));
+                                        args.add("-qp:v:" + outputVideoIndex, rateControlValue);
                                     }
                                     case H265 -> {
-                                        command.add("-x265-params:v:" + outputVideoIndex);
-                                        command.add("qp=" + rateControlValue);
+                                        args.add(
+                                            "-x265-params:v:" + outputVideoIndex, "qp=" + rateControlValue);
                                     }
                                     case VP9 -> {
-                                        command.add("-qmin:v:" + outputVideoIndex);
-                                        command.add(String.valueOf(rateControlValue));
-                                        command.add("-qmax:v:" + outputVideoIndex);
-                                        command.add(String.valueOf(rateControlValue));
+                                        args.add(
+                                            "-qmin:v:" + outputVideoIndex, rateControlValue,
+                                            "-qmax:v:" + outputVideoIndex, rateControlValue);
                                     }
                                     case AV1 -> {
-                                        command.add("-qp:v:" + outputVideoIndex);
-                                        command.add(String.valueOf(rateControlValue));
+                                        args.add("-qp:v:" + outputVideoIndex, rateControlValue);
                                     }
                                     default -> {
                                         // Fall back to CRF for unsupported codecs
-                                        command.add("-crf:v:" + outputVideoIndex);
-                                        command.add(String.valueOf(rateControlValue));
+                                        args.add("-crf:v:" + outputVideoIndex, rateControlValue);
                                     }
                                 }
                             }
                             case NVENC -> {
-                                command.add("-rc:v:" + outputVideoIndex);
-                                command.add("constqp");
-                                command.add("-qp:v:" + outputVideoIndex);
-                                command.add(String.valueOf(rateControlValue));
+                                args.add(
+                                    "-rc:v:" + outputVideoIndex, "constqp",
+                                    "-qp:v:" + outputVideoIndex, rateControlValue);
                             }
                             case QSV -> {
-                                command.add("-q:v:" + outputVideoIndex);
-                                command.add(String.valueOf(rateControlValue));
+                                args.add("-q:v:" + outputVideoIndex, rateControlValue);
                             }
                             case AMF -> {
-                                command.add("-rc:v:" + outputVideoIndex);
-                                command.add("cqp");
-                                command.add("-qp_i:v:" + outputVideoIndex);
-                                command.add(String.valueOf(rateControlValue));
-                                command.add("-qp_p:v:" + outputVideoIndex);
-                                command.add(String.valueOf(rateControlValue));
-                                command.add("-qp_b:v:" + outputVideoIndex);
-                                command.add(String.valueOf(rateControlValue));
+                                args.add(
+                                    "-rc:v:" + outputVideoIndex, "cqp",
+                                    "-qp_i:v:" + outputVideoIndex, rateControlValue,
+                                    "-qp_p:v:" + outputVideoIndex, rateControlValue,
+                                    "-qp_b:v:" + outputVideoIndex, rateControlValue);
                             }
                             case VAAPI -> {
                                 // VAAPI uses qp parameter differently
                                 switch (videoCodec) {
                                     case H264, H265 -> {
                                         // For H.264/H.265, set quantization parameter for all frames
-                                        command.add("-qp:v:" + outputVideoIndex);
-                                        command.add(String.valueOf(rateControlValue));
+                                        args.add("-qp:v:" + outputVideoIndex, rateControlValue);
                                     }
                                     case VP9, AV1 -> {
                                         // For VP9/AV1, use global_quality
-                                        command.add("-global_quality:v:" + outputVideoIndex);
-                                        command.add(String.valueOf(rateControlValue));
+                                        args.add(
+                                            "-global_quality:v:" + outputVideoIndex, rateControlValue);
                                     }
                                 }
                             }
                             //case V4L2M2M -> {}
                             default -> {
                                 // Fallback to bitrate-based encoding if unsupported
-                                command.add("-b:v:" + outputVideoIndex);
-                                command.add(videoBitrate + "k");
+                                args.add("-b:v:" + outputVideoIndex, videoBitrate + "k");
                             }
                         }
                     }
                     case CBR -> {
-                        command.add("-b:v:" + outputVideoIndex);
-                        command.add(videoBitrate + "k");
+                        args.add("-b:v:" + outputVideoIndex, videoBitrate + "k");
                         // Force constant bitrate with buffer constraints
                         switch (encoderType) {
                             case NVENC, QSV -> {
-                                command.add("-maxrate:v:" + outputVideoIndex);
-                                command.add(videoBitrate + "k");
-                                command.add("-minrate:v:" + outputVideoIndex);
-                                command.add(videoBitrate + "k");
-                                command.add("-bufsize:v:" + outputVideoIndex);
-                                command.add((videoBitrate * 2) + "k");
+                                args.add(
+                                    "-maxrate:v:" + outputVideoIndex, videoBitrate + "k",
+                                    "-minrate:v:" + outputVideoIndex, videoBitrate + "k",
+                                    "-bufsize:v:" + outputVideoIndex, (videoBitrate * 2) + "k");
                             }
                             case AMF -> {
-                                command.add("-rc:v:" + outputVideoIndex);
-                                command.add("cbr");
+                                args.add("-rc:v:" + outputVideoIndex, "cbr");
                             }
                         }
                     }
@@ -419,23 +392,19 @@ public final class FFmpegTranscoder {
                             case SOFTWARE -> {
                                 if (videoCodec == VideoCodecEnum.H264
                                     || videoCodec == VideoCodecEnum.H265) {
-                                    command.add("-crf:v:" + outputVideoIndex);
-                                    command.add(String.valueOf(rateControlValue));
+                                    args.add("-crf:v:" + outputVideoIndex, rateControlValue);
                                 } else {
-                                    command.add("-b:v:" + outputVideoIndex);
-                                    command.add(videoBitrate + "k");
+                                    args.add("-b:v:" + outputVideoIndex, videoBitrate + "k");
                                 }
                             }
                             case NVENC -> {
-                                command.add("-b:v:" + outputVideoIndex);
-                                command.add(videoBitrate + "k");
-                                command.add("-maxrate:v:" + outputVideoIndex);
-                                command.add((videoBitrate * 2) + "k");
+                                args.add(
+                                    "-b:v:" + outputVideoIndex, videoBitrate + "k",
+                                    "-maxrate:v:" + outputVideoIndex, (videoBitrate * 2) + "k");
                             }
                             // TODO: test AMF -rc qvbr
                             default -> {
-                                command.add("-b:v:" + outputVideoIndex);
-                                command.add(videoBitrate + "k");
+                                args.add("-b:v:" + outputVideoIndex, videoBitrate + "k");
                             }
                         }
                     }
@@ -450,26 +419,26 @@ public final class FFmpegTranscoder {
                     // TODO: Need feedback from an Nvidia user that can test NVENC encoding
                     case VAAPI -> {
                         String vaapiDevice = getCompatScanner().detectVaapiDevice(actualEncoder);
-                        command.add("-vaapi_device");
-                        command.add(vaapiDevice);
-                        command.add("-filter:v:" + outputVideoIndex);
-                        command.add("format=nv12,hwupload");
+                        args.add(
+                            "-vaapi_device", vaapiDevice,
+                            "-filter:v:" + outputVideoIndex,
+                            "format=nv12,hwupload");
                     }
                     case V4L2M2M -> {
                         String device = getCompatScanner().detectV4l2m2mDevice();
                         if (device != null) {
-                            command.add("-device");
-                            command.add(device);
+                            args.add("-device", device);
                         }
                     }
                 }
             } else {
-                command.add("copy");
+                args.add("copy");
             }
 
             if (notNullOrEmpty(stream.getLanguage())) {
-                command.add("-metadata:s:v:" + outputVideoIndex);
-                command.add("language=" + stream.getLanguage());
+                args.add(
+                    "-metadata:s:v:" + outputVideoIndex,
+                    "language=" + stream.getLanguage());
             }
 
             outputVideoIndex++;
@@ -485,12 +454,10 @@ public final class FFmpegTranscoder {
             switch (config.getVideoContainer()) {
                 case MP4, MOV -> {
                     // For MP4, the thumbnail is just a single frame video stream
-                    command.add("-map");
-                    command.add("0:" + stream.getIndex());
-                    command.add("-c:v:" + outputVideoIndex);
-                    command.add("copy");
-                    command.add("-disposition:v:" + outputVideoIndex);
-                    command.add("attached_pic");
+                    args.add(
+                        "-map", "0:" + stream.getIndex(),
+                        "-c:v:" + outputVideoIndex, "copy",
+                        "-disposition:v:" + outputVideoIndex, "attached_pic");
 
                     outputVideoIndex++;
                 }
@@ -498,12 +465,10 @@ public final class FFmpegTranscoder {
                     // Matroska has a particular quirk in FFmpeg, we cannot simply copy the stream over
                     File thumbnailFile = extractThumbnail(stream, inputFile);
                     if (thumbnailFile != null) {
-                        command.add("-attach");
-                        command.add(thumbnailFile.getAbsolutePath());
-                        command.add("-metadata:s:t");
-                        command.add("mimetype=image/png");
-                        command.add("-metadata:s:t");
-                        command.add("filename=cover.png");
+                        args.add(
+                            "-attach", thumbnailFile.getAbsolutePath(),
+                            "-metadata:s:t", "mimetype=image/png",
+                            "-metadata:s:t", "filename=cover.png");
                     }
                 }
             }
@@ -530,21 +495,20 @@ public final class FFmpegTranscoder {
 
             boolean needsTranscoding = !audioCodec.getCodecName().equals(stream.getCodecName());
 
-            command.add("-map");
-            command.add("0:" + stream.getIndex());
+            args.add("-map", "0:" + stream.getIndex());
 
-            command.add("-c:a:" + outputAudioIndex);
+            args.add("-c:a:" + outputAudioIndex);
             if (audioCodec != AudioCodecEnum.NO_CODEC && needsTranscoding) {
                 isTranscodeNeeded = true;
                 if (logPrefix.isEmpty()) {
                     logPrefix = audioCodec.name() + ": ";
                 }
 
-                command.add(audioCodec.getFfmpegCodecName());
-                command.add("-b:a:" + outputAudioIndex);
+                args.add(audioCodec.getFfmpegCodecName());
+                args.add("-b:a:" + outputAudioIndex);
 
                 if (audioBitrate != AudioBitrateEnum.NO_AUDIO) {
-                    command.add(audioBitrate.getValue() + "k");
+                    args.add(audioBitrate.getValue() + "k");
                 } else {
                     int bitrate = stream.getBitrateKbps();
                     if (bitrate == -1) {
@@ -552,34 +516,34 @@ public final class FFmpegTranscoder {
                         bitrate = 256;
                     }
 
-                    command.add(bitrate + "k");
+                    args.add(bitrate + "k");
                 }
             } else {
-                command.add("copy");
+                args.add("copy");
             }
 
             if (notNullOrEmpty(stream.getLanguage())) {
-                command.add("-metadata:s:a:" + outputAudioIndex);
-                command.add("language=" + stream.getLanguage());
+                args.add(
+                    "-metadata:s:a:" + outputAudioIndex,
+                    "language=" + stream.getLanguage());
             }
 
             outputAudioIndex++;
         }
 
-        int subtitleStreamIndex = 0;
+        int outputSubtitleIndex = 0;
         for (SubtitleStream stream : streamData.getSubtitleStreams()) {
             SubtitleCodecEnum subtitleCodec = SubtitleCodecEnum.getTargetSubtitleCodec(videoContainer, stream.getCodecName());
             if (subtitleCodec == null) {
                 continue;
             }
 
-            command.add("-map");
-            command.add("0:" + stream.getIndex());
+            args.add("-map", "0:" + stream.getIndex());
 
             boolean needsTranscoding = !subtitleCodec.getCodecName().equals(stream.getCodecName())
                 && subtitleCodec != SubtitleCodecEnum.COPY;
 
-            command.add("-c:s:" + subtitleStreamIndex);
+            args.add("-c:s:" + outputSubtitleIndex);
             if (needsTranscoding) {
                 isTranscodeNeeded = true;
                 if (logPrefix.isEmpty()) {
@@ -588,22 +552,24 @@ public final class FFmpegTranscoder {
                     logPrefix = name + ": ";
                 }
 
-                command.add(subtitleCodec.getCodecName());
+                args.add(subtitleCodec.getCodecName());
             } else {
-                command.add("copy");
+                args.add("copy");
             }
 
             if (notNullOrEmpty(stream.getLanguage())) {
-                command.add("-metadata:s:s:" + subtitleStreamIndex);
-                command.add("language=" + stream.getLanguage());
+                args.add(
+                    "-metadata:s:s:" + outputSubtitleIndex,
+                    "language=" + stream.getLanguage());
             }
 
             if (notNullOrEmpty(stream.getTitle())) {
-                command.add("-metadata:s:s:" + subtitleStreamIndex);
-                command.add("title=" + stream.getTitle());
+                args.add(
+                    "-metadata:s:s:" + outputSubtitleIndex,
+                    "title=" + stream.getTitle());
             }
 
-            subtitleStreamIndex++;
+            outputSubtitleIndex++;
         }
 
         int outputDataIndex = 0;
@@ -611,10 +577,11 @@ public final class FFmpegTranscoder {
             switch (config.getVideoContainer()) {
                 case MP4 -> {
                     // TODO: MOV: bin_data transcoding
-                    command.add("-map");
-                    command.add("0:" + stream.getIndex());
-                    command.add("-c:d:" + outputDataIndex);
-                    command.add("copy");
+                    args.add(
+                        "-map", "0:" + stream.getIndex(),
+                        "-c:d:" + outputDataIndex,
+                        "copy"
+                    );
 
                     outputDataIndex++;
                 }
@@ -626,10 +593,8 @@ public final class FFmpegTranscoder {
                 stream.getCodecType(), stream.getCodecName(), stream.getIndex());
         }
 
-        command.add("-update");
-        command.add("1");
-
-        command.add(outputFile.getAbsolutePath());
+        args.add("-update", "1");
+        args.add(outputFile.getAbsolutePath());
 
         if (!isTranscodeNeeded) {
             if (log.isDebugEnabled()) {
@@ -639,13 +604,10 @@ public final class FFmpegTranscoder {
             return -2;
         }
 
-        if (log.isDebugEnabled()) {
-            log.debug("FFmpeg transcode command: {}", StringUtils.escapeAndBuildCommandLine(command));
-        }
+        log.info("FFmpeg transcode command: {}", args);
 
         int exitCode = FFmpegProcessRunner.runFFmpeg(
-            this,
-            command,
+            this, args,
             FFmpegProcessOptions.builder()
                 .cancelHook(cancelHook)
                 .calculator(progressCalculator)
@@ -664,20 +626,17 @@ public final class FFmpegTranscoder {
 
     @Nullable
     private MediaStreamData getMediaStreams(File inputFile) {
-        List<String> command = new ArrayList<>();
-        command.add("-v");
-        command.add("error");
-        command.add("-show_entries");
-        command.add("stream");
-        command.add("-of");
-        command.add("json");
-        command.add(inputFile.getAbsolutePath());
+        ProcessArguments args = new ProcessArguments(
+            "-v", "error",
+            "-show_entries", "stream",
+            "-of", "json",
+            inputFile.getAbsolutePath());
 
         try {
             StringBuilder finalOutput = new StringBuilder();
 
             int exitCode = FFmpegProcessRunner.runFFprobe(
-                this, command,
+                this, args,
                 FFmpegProcessOptions.builder()
                     .listener((output, hasTaskStarted, progress) -> {
                         finalOutput.append(output);
@@ -707,28 +666,23 @@ public final class FFmpegTranscoder {
 
     @Nullable
     private File extractThumbnail(VideoStream stream, File inputFile) {
-        List<String> command = new ArrayList<>();
-        command.add("-hide_banner");
-        command.add("-y");
-        command.add("-v");
-        command.add("error");
-        command.add("-i");
-        command.add(inputFile.getAbsolutePath());
-        command.add("-map");
-        command.add("0:" + stream.getIndex());
-        command.add("-vframes");
-        command.add("1");
-        command.add("-update");
-        command.add("1");
+        ProcessArguments args = new ProcessArguments(
+            "-hide_banner",
+            "-y",
+            "-v", "error",
+            "-i", inputFile.getAbsolutePath(),
+            "-map", "0:" + stream.getIndex(),
+            "-vframes", "1",
+            "-update", "1");
 
         try {
             String ext = getTargetThumbnailExtension(stream.getCodecName());
             File tmp = File.createTempFile("gdownloader", "ffmpeg_thumb" + ext);
             tmp.deleteOnExit();
 
-            command.add(tmp.getAbsolutePath());
+            args.add(tmp.getAbsolutePath());
 
-            int exitCode = FFmpegProcessRunner.runFFmpeg(this, command);
+            int exitCode = FFmpegProcessRunner.runFFmpeg(this, args);
             if (exitCode != 0) {
                 log.error("FFmpeg process exited with code: {}", exitCode);
                 return null;

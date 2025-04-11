@@ -41,14 +41,9 @@ import net.brlns.gdownloader.downloader.structs.DownloadResult;
 import net.brlns.gdownloader.downloader.structs.MediaInfo;
 import net.brlns.gdownloader.ffmpeg.enums.AudioBitrateEnum;
 import net.brlns.gdownloader.ffmpeg.enums.AudioCodecEnum;
-import net.brlns.gdownloader.ffmpeg.enums.EncoderEnum;
-import net.brlns.gdownloader.ffmpeg.enums.RateControlModeEnum;
-import net.brlns.gdownloader.ffmpeg.structs.EncoderPreset;
-import net.brlns.gdownloader.ffmpeg.structs.EncoderProfile;
 import net.brlns.gdownloader.ffmpeg.structs.FFmpegConfig;
 import net.brlns.gdownloader.persistence.PersistenceManager;
 import net.brlns.gdownloader.settings.QualitySettings;
-import net.brlns.gdownloader.settings.enums.VideoContainerEnum;
 import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
 import net.brlns.gdownloader.util.DirectoryUtils;
 import net.brlns.gdownloader.util.FileUtils;
@@ -358,7 +353,7 @@ public class YtDlpDownloader extends AbstractDownloader {
                 File tmpFile = FileUtils.deriveTempFile(inputFile, config.getVideoContainer().getFileExtension());
 
                 try {
-                    entry.updateStatus(DownloadStatusEnum.TRANSCODING, "Setting up transcode process...");
+                    entry.updateStatus(DownloadStatusEnum.TRANSCODING, "Starting transcoder...");
 
                     int exitCode = manager.getMain().getFfmpegTranscoder().startTranscode(
                         config, inputFile, tmpFile, entry.getCancelHook(),
