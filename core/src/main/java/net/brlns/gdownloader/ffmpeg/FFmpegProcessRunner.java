@@ -36,7 +36,8 @@ public final class FFmpegProcessRunner {
         return runFFmpeg(transcoder, arguments, new FFmpegProcessOptions());
     }
 
-    public static int runFFmpeg(FFmpegTranscoder transcoder, ProcessArguments arguments, FFmpegProcessOptions options) {
+    public static int runFFmpeg(FFmpegTranscoder transcoder,
+        ProcessArguments arguments, FFmpegProcessOptions options) {
         return runProcess(transcoder, transcoder.getFFmpegExecutable(), arguments, options);
     }
 
@@ -44,7 +45,8 @@ public final class FFmpegProcessRunner {
         return runFFmpeg(transcoder, arguments, new FFmpegProcessOptions());
     }
 
-    public static int runFFprobe(FFmpegTranscoder transcoder, ProcessArguments arguments, FFmpegProcessOptions options) {
+    public static int runFFprobe(FFmpegTranscoder transcoder,
+        ProcessArguments arguments, FFmpegProcessOptions options) {
         return runProcess(transcoder, transcoder.getFFprobeExecutable(), arguments, options);
     }
 

@@ -32,7 +32,8 @@ public enum ResolutionEnum implements ISettingsEnum {
     RES_480(480, "480p"),
     RES_720(720, "720p"),
     RES_1080(1080, "1080p"),
-    RES_2160(2160, "4K");
+    RES_2160(2160, "4K"),
+    RES_4320(4320, "8K");
 
     private final int value;
     private final String displayName;

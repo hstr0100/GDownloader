@@ -38,6 +38,7 @@ import net.brlns.gdownloader.process.ProcessMonitor;
 import net.brlns.gdownloader.settings.enums.VideoContainerEnum;
 import net.brlns.gdownloader.updater.SystemExecutableLocator;
 import net.brlns.gdownloader.util.FileUtils;
+import net.brlns.gdownloader.util.NoFallbackAvailableException;
 
 import static net.brlns.gdownloader.settings.enums.VideoContainerEnum.*;
 import static net.brlns.gdownloader.util.FileUtils.getBinaryName;
@@ -199,17 +200,16 @@ public final class FFmpegTranscoder {
 
         int outputVideoIndex = 0;
         for (VideoStream stream : streamData.getVideoStreams()) {
-            args.add("-map", "0:" + stream.getIndex());
-
             EncoderEnum actualEncoder = resolveEncoder(config.getVideoEncoder());
             VideoCodecEnum videoCodec = actualEncoder.getVideoCodec();
 
-            if (!videoCodec.isSupportedByContainer(videoContainer)) {
+            if (videoCodec != VideoCodecEnum.NO_CODEC && !videoCodec.isSupportedByContainer(videoContainer)) {
                 log.error("Target container {} does not support video codec: {} in stream #{}",
                     videoContainer, videoCodec, stream.getIndex());
                 videoCodec = VideoCodecEnum.getFallbackCodec(videoContainer);
                 if (videoCodec == null) {
-                    throw new IllegalArgumentException("Impossible to transcode to container " + videoContainer);
+                    throw new NoFallbackAvailableException(
+                        "Impossible to transcode video to container " + videoContainer);
                 }
 
                 actualEncoder = resolveEncoder(videoCodec);
@@ -220,6 +220,7 @@ public final class FFmpegTranscoder {
 
             boolean needsTranscoding = !videoCodec.getCodecName().equals(stream.getCodecName());
 
+            args.add("-map", "0:" + stream.getIndex());
             args.add("-c:v:" + outputVideoIndex);
             if (videoCodec != VideoCodecEnum.NO_CODEC && needsTranscoding) {
                 isTranscodeNeeded = true;
@@ -498,26 +499,21 @@ public final class FFmpegTranscoder {
         int outputAudioIndex = 0;
         for (AudioStream stream : streamData.getAudioStreams()) {
             AudioCodecEnum audioCodec = config.getAudioCodec();
-            // TODO: rename enum to passthrough
             if (audioCodec != AudioCodecEnum.NO_CODEC && !audioCodec.isSupportedByContainer(videoContainer)) {
                 log.error("Target container {} does not support audio codec: {} in stream #{}",
                     videoContainer, audioCodec, stream.getIndex());
                 audioCodec = AudioCodecEnum.getFallbackCodec(videoContainer);
+                if (audioCodec == null) {
+                    throw new NoFallbackAvailableException(
+                        "Impossible to transcode audio to container " + videoContainer);
+                }
+
                 log.error("Falling back to: {}", audioCodec);
             }
-
-            if (audioCodec == null) {
-                log.error("Target container {} does not support audio, dropping audio stream #{}",
-                    videoContainer, stream.getIndex());
-                continue;
-            }
-
-            AudioBitrateEnum audioBitrate = config.getAudioBitrate();
 
             boolean needsTranscoding = !audioCodec.getCodecName().equals(stream.getCodecName());
 
             args.add("-map", "0:" + stream.getIndex());
-
             args.add("-c:a:" + outputAudioIndex);
             if (audioCodec != AudioCodecEnum.NO_CODEC && needsTranscoding) {
                 isTranscodeNeeded = true;
@@ -528,6 +524,7 @@ public final class FFmpegTranscoder {
                 args.add(audioCodec.getFfmpegCodecName());
 
                 args.add("-b:a:" + outputAudioIndex);
+                AudioBitrateEnum audioBitrate = config.getAudioBitrate();
                 if (audioBitrate != AudioBitrateEnum.NO_AUDIO) {
                     args.add(audioBitrate.getValue() + "k");
                 } else {
@@ -554,16 +551,16 @@ public final class FFmpegTranscoder {
 
         int outputSubtitleIndex = 0;
         for (SubtitleStream stream : streamData.getSubtitleStreams()) {
-            SubtitleCodecEnum subtitleCodec = SubtitleCodecEnum.getTargetSubtitleCodec(videoContainer, stream.getCodecName());
+            SubtitleCodecEnum subtitleCodec = SubtitleCodecEnum.getTargetSubtitleCodec(
+                videoContainer, stream.getCodecName());
             if (subtitleCodec == null) {
                 continue;
             }
 
-            args.add("-map", "0:" + stream.getIndex());
-
             boolean needsTranscoding = !subtitleCodec.getCodecName().equals(stream.getCodecName())
                 && subtitleCodec != SubtitleCodecEnum.COPY;
 
+            args.add("-map", "0:" + stream.getIndex());
             args.add("-c:s:" + outputSubtitleIndex);
             if (needsTranscoding) {
                 isTranscodeNeeded = true;
@@ -600,9 +597,7 @@ public final class FFmpegTranscoder {
                     // TODO: MOV: bin_data transcoding
                     args.add(
                         "-map", "0:" + stream.getIndex(),
-                        "-c:d:" + outputDataIndex,
-                        "copy"
-                    );
+                        "-c:d:" + outputDataIndex, "copy");
 
                     outputDataIndex++;
                 }
