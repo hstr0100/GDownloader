@@ -56,10 +56,13 @@ public class VideoStream extends AbstractStream {
 
     @JsonIgnore
     public boolean isThumbnail() {
+        boolean hasAttachmentDisposition = getDisposition().containsKey("attached_pic")
+            && getDisposition().get("attached_pic") == 1;
+
         return getCodecName().equals("png")
             || getCodecName().equals("jpg")
             || getCodecName().equals("jpeg")
-            || getCodecName().equals("mjpeg")// TODO: check if frame count matches 1
+            || getCodecName().equals("mjpeg") && hasAttachmentDisposition
             || getCodecName().equals("webp");
     }
 }

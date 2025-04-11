@@ -63,9 +63,7 @@ public enum EncoderEnum {
     H264_AUTO("", H264, EncoderTypeEnum.AUTO),
     H265_AUTO("", H265, EncoderTypeEnum.AUTO),
     VP9_AUTO("", VP9, EncoderTypeEnum.AUTO),
-    AV1_AUTO("", AV1, EncoderTypeEnum.AUTO),
-    // Generic auto detection mode
-    AUTO("", H264, EncoderTypeEnum.AUTO);
+    AV1_AUTO("", AV1, EncoderTypeEnum.AUTO);
 
     private final String ffmpegCodecName;
     private final VideoCodecEnum videoCodec;

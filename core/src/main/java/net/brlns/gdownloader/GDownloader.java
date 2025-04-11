@@ -126,8 +126,10 @@ import static net.brlns.gdownloader.util.StringUtils.nullOrEmpty;
 // TODO ctrl+z to undo removals
 // prio
 // TODO ffmpeg transcoding settings
+// TODO reseting download links should also refresh filter references
 // TODO right click > sort by
 // TODO display number in download queue
+// TODO transcoding presets
 /**
  * GDownloader - GUI wrapper for yt-dlp
  *

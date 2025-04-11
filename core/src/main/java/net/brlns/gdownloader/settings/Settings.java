@@ -73,8 +73,8 @@ public class Settings {
     private boolean mergeAllAudioTracks = false;
 
     // TODO: ui
-    @JsonProperty("KeepRawVideoFilesAfterTranscode")
-    private boolean keepRawVideoFilesAfterTranscode = false;
+    @JsonProperty("KeepRawMediaFilesAfterTranscode")
+    private boolean keepRawMediaFilesAfterTranscode = false;
 
     @Deprecated
     @JsonProperty("ReadCookies")

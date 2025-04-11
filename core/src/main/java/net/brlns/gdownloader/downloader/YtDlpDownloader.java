@@ -327,6 +327,7 @@ public class YtDlpDownloader extends AbstractDownloader {
             for (Path path : paths) {
                 // If no codec is defined, the default audio codec provided by the source will be passed through.
                 AudioCodecEnum audioCodec = AudioCodecEnum.NO_CODEC;
+                AudioBitrateEnum audioBitrate = quality.getAudioBitrate();
                 if (quality.getAudioCodec() != AudioCodecEnum.NO_CODEC) {
                     // Check if the user has selected a custom audio codec.
                     audioCodec = quality.getAudioCodec();
@@ -334,6 +335,10 @@ public class YtDlpDownloader extends AbstractDownloader {
                     // If no custom codec is set, check if "Convert audio to a widely supported codec" is enabled.
                     // If enabled, default to "aac".
                     audioCodec = AudioCodecEnum.AAC; // Opus is not supported by some native video players
+                    if (audioBitrate.getValue() > 256) {
+                        // Since this option is decided automatically by us, lets cap the bitrate to a reasonable value
+                        audioBitrate = AudioBitrateEnum.BITRATE_256;
+                    }
                 }
 
                 // TODO
@@ -346,7 +351,7 @@ public class YtDlpDownloader extends AbstractDownloader {
                     //.rateControlMode(RateControlModeEnum.CRF)
                     //.rateControlValue(22)
                     //.videoBitrate(5000)
-                    .audioBitrate(quality.getAudioBitrate())
+                    .audioBitrate(audioBitrate)
                     .build();
 
                 File inputFile = path.toFile();
@@ -380,7 +385,7 @@ public class YtDlpDownloader extends AbstractDownloader {
                         }
 
                         log.info("Transcoding successful - exit code: {}", exitCode);
-                        if (!main.getConfig().isKeepRawVideoFilesAfterTranscode()) {
+                        if (!main.getConfig().isKeepRawMediaFilesAfterTranscode()) {
                             Files.deleteIfExists(inputFile.toPath());
                             tmpFile.renameTo(inputFile);
                         } else {
@@ -396,7 +401,7 @@ public class YtDlpDownloader extends AbstractDownloader {
                         log.info("Transcoding not required - exit code: {}", exitCode);
                     }
                 } catch (Exception e) {
-                    log.error("Failed to transcode media file {}", path, e);
+                    log.error("Failed to transcode media file: {}", path, e);
                     return new DownloadResult(FLAG_TRANSCODING_FAILED, e.getMessage());
                 }
             }
@@ -443,7 +448,6 @@ public class YtDlpDownloader extends AbstractDownloader {
 
             for (Path path : paths) {
                 if (!Files.isDirectory(path)) {
-
                     Path targetPath = determineTargetPath(tmpPath, finalPath, path, quality);
 
                     try {

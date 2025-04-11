@@ -72,7 +72,7 @@ public class FFmpegCompatibilityScanner {
 
         try {
             for (EncoderEnum encoder : EncoderEnum.values()) {
-                if (encoder == EncoderEnum.NO_ENCODER || encoder == EncoderEnum.AUTO
+                if (encoder == EncoderEnum.NO_ENCODER
                     || encoder.getEncoderType() == EncoderTypeEnum.AUTO) {
                     continue;
                 }

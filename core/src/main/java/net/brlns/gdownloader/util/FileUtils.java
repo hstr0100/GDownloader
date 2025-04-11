@@ -214,7 +214,7 @@ public final class FileUtils {
     }
 
     public static File deriveTempFile(@NonNull File inputFile, @Nullable String extension) {
-        String suffix = TMP_FILE_IDENTIFIER + String.format(".%04x", (int)(Math.random() * 0xFFFF));
+        String suffix = TMP_FILE_IDENTIFIER + String.format(".%03x", (int)(Math.random() * 0xFFF));
 
         File outputFile = deriveFile(inputFile, suffix, extension);
         outputFile.deleteOnExit();

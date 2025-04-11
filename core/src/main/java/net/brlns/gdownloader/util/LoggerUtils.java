@@ -101,8 +101,14 @@ public final class LoggerUtils {
         @Override
         public FilterReply decide(ILoggingEvent event) {
             String message = event.getFormattedMessage();
-            if (message != null && message.contains("[download]") && message.contains("ETA")) {
-                return FilterReply.DENY;
+            if (message != null) {
+                if (message.contains("[download]") && message.contains("ETA")) {
+                    return FilterReply.DENY;
+                }
+
+                if (message.contains("bitrate=") && message.contains("time=")) {
+                    return FilterReply.DENY;
+                }
             }
 
             return FilterReply.NEUTRAL;

@@ -31,7 +31,7 @@ import net.brlns.gdownloader.settings.enums.VideoContainerEnum;
 public class FFmpegConfig {
 
     @Builder.Default
-    private EncoderEnum videoEncoder = EncoderEnum.AUTO;
+    private EncoderEnum videoEncoder = EncoderEnum.NO_ENCODER;
     @Builder.Default
     private VideoContainerEnum videoContainer = VideoContainerEnum.MP4;
     @Builder.Default
@@ -47,7 +47,7 @@ public class FFmpegConfig {
     @Builder.Default
     private int videoBitrate = 5000;
     @Builder.Default
-    private AudioBitrateEnum audioBitrate = AudioBitrateEnum.BITRATE_320;
+    private AudioBitrateEnum audioBitrate = AudioBitrateEnum.BITRATE_256;
 
     @JsonIgnore
     public String getFileSuffix() {
