@@ -50,8 +50,6 @@ public final class FFmpegProcessRunner {
 
     private static int runProcess(FFmpegTranscoder transcoder, Optional<String> executable,
         ProcessArguments arguments, FFmpegProcessOptions options) {
-        boolean taskStarted = false;
-
         try {
             String ffmpegBinary = executable.orElseThrow(()
                 -> new IOException("Please install FFmpeg to use the transcoding option"));
@@ -72,6 +70,7 @@ public final class FFmpegProcessRunner {
 
                 String line;
                 if (options.isLazyReader()) {
+                    // This reader is better suited for status polling and long-running tasks, as it avoids busy-waiting constantly.
                     while (!options.getCancelHook().get() && process.isAlive()) {
                         if (Thread.currentThread().isInterrupted()) {
                             process.destroyForcibly();
@@ -92,6 +91,7 @@ public final class FFmpegProcessRunner {
                         }
                     }
                 } else {
+                    // This reader is for tasks that need an immediate output.
                     while (!options.getCancelHook().get() && process.isAlive() && (line = reader.readLine()) != null) {
                         processLine(line, options);
                     }
@@ -119,7 +119,7 @@ public final class FFmpegProcessRunner {
                     log.debug("FFmpeg error: {}", e.getMessage(), e);
                 }
 
-                listener.updateProgress(options.getLogPrefix() + "error: " + e.getMessage(), taskStarted, -1);
+                listener.updateProgress(options.getLogPrefix() + "error: " + e.getMessage(), options.getTaskStarted().get(), -1);
             } else {
                 log.error("FFmpeg error: {}", e.getMessage(), e);
             }

@@ -36,6 +36,7 @@ import net.brlns.gdownloader.process.ProcessArguments;
 import net.brlns.gdownloader.process.ProcessMonitor;
 import net.brlns.gdownloader.settings.enums.VideoContainerEnum;
 import net.brlns.gdownloader.updater.SystemExecutableLocator;
+import net.brlns.gdownloader.util.FileUtils;
 
 import static net.brlns.gdownloader.settings.enums.VideoContainerEnum.*;
 import static net.brlns.gdownloader.util.FileUtils.getBinaryName;
@@ -90,8 +91,10 @@ public final class FFmpegTranscoder {
             return encoder;
         }
 
-        VideoCodecEnum targetCodec = encoder.getVideoCodec();
+        return resolveEncoder(encoder.getVideoCodec());
+    }
 
+    protected EncoderEnum resolveEncoder(VideoCodecEnum targetCodec) {
         // Try each encoder type in the fallback order for the target codec
         for (EncoderTypeEnum type : EncoderTypeEnum.values()) {
             if (type == EncoderTypeEnum.AUTO) {
@@ -164,7 +167,7 @@ public final class FFmpegTranscoder {
 
         MediaStreamData streamData = getMediaStreams(inputFile);
         if (streamData == null) {
-            throw new RuntimeException("Unable to obtain stream data from " + inputFile);
+            throw new IllegalArgumentException("Unable to obtain stream data from " + inputFile);
         }
 
         args.add("-map_metadata", "0");
@@ -187,13 +190,28 @@ public final class FFmpegTranscoder {
         boolean isTranscodeNeeded = false;
         String logPrefix = "";
 
+        VideoContainerEnum videoContainer = config.getVideoContainer();
+
         int outputVideoIndex = 0;
         for (VideoStream stream : streamData.getVideoStreams()) {
             args.add("-map", "0:" + stream.getIndex());
 
             EncoderEnum actualEncoder = resolveEncoder(config.getVideoEncoder());
-            EncoderTypeEnum encoderType = actualEncoder.getEncoderType();
             VideoCodecEnum videoCodec = actualEncoder.getVideoCodec();
+
+            if (!videoCodec.isSupportedByContainer(videoContainer)) {
+                log.error("Target container {} does not support video codec: {} in stream #{}",
+                    videoContainer, videoCodec, stream.getIndex());
+                videoCodec = VideoCodecEnum.getFallbackCodec(videoContainer);
+                if (videoCodec == null) {
+                    throw new IllegalArgumentException("Impossible to transcode to container " + videoContainer);
+                }
+
+                actualEncoder = resolveEncoder(videoCodec);
+                log.error("Falling back to: {}", actualEncoder);
+            }
+
+            EncoderTypeEnum encoderType = actualEncoder.getEncoderType();
 
             boolean needsTranscoding = !videoCodec.getCodecName().equals(stream.getCodecName());
 
@@ -444,7 +462,6 @@ public final class FFmpegTranscoder {
             outputVideoIndex++;
         }
 
-        VideoContainerEnum videoContainer = config.getVideoContainer();
         for (VideoStream stream : streamData.getThumbnailStreams()) {
             if (Stream.of(MP4, MOV, MKV)
                 .noneMatch(c -> videoContainer == c)) {
@@ -505,8 +522,8 @@ public final class FFmpegTranscoder {
                 }
 
                 args.add(audioCodec.getFfmpegCodecName());
-                args.add("-b:a:" + outputAudioIndex);
 
+                args.add("-b:a:" + outputAudioIndex);
                 if (audioBitrate != AudioBitrateEnum.NO_AUDIO) {
                     args.add(audioBitrate.getValue() + "k");
                 } else {
@@ -677,7 +694,7 @@ public final class FFmpegTranscoder {
 
         try {
             String ext = getTargetThumbnailExtension(stream.getCodecName());
-            File tmp = File.createTempFile("gdownloader", "ffmpeg_thumb" + ext);
+            File tmp = File.createTempFile(FileUtils.TMP_FILE_IDENTIFIER, "ffthumb" + ext);
             tmp.deleteOnExit();
 
             args.add(tmp.getAbsolutePath());

@@ -62,9 +62,7 @@ import net.brlns.gdownloader.util.collection.ExpiringSet;
 import static net.brlns.gdownloader.downloader.enums.DownloadFlagsEnum.*;
 import static net.brlns.gdownloader.downloader.enums.QueueCategoryEnum.*;
 import static net.brlns.gdownloader.lang.Language.*;
-import static net.brlns.gdownloader.settings.enums.PlayListOptionEnum.ALWAYS_ASK;
-import static net.brlns.gdownloader.settings.enums.PlayListOptionEnum.DOWNLOAD_PLAYLIST;
-import static net.brlns.gdownloader.settings.enums.PlayListOptionEnum.DOWNLOAD_SINGLE;
+import static net.brlns.gdownloader.settings.enums.PlayListOptionEnum.*;
 import static net.brlns.gdownloader.util.URLUtils.*;
 
 /**

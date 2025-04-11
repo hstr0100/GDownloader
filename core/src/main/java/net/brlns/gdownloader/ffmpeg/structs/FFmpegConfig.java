@@ -19,6 +19,7 @@ package net.brlns.gdownloader.ffmpeg.structs;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NonNull;
 import net.brlns.gdownloader.ffmpeg.enums.*;
 import net.brlns.gdownloader.settings.enums.VideoContainerEnum;
 
@@ -30,22 +31,37 @@ import net.brlns.gdownloader.settings.enums.VideoContainerEnum;
 @Builder
 public class FFmpegConfig {
 
+    @NonNull
     @Builder.Default
     private EncoderEnum videoEncoder = EncoderEnum.NO_ENCODER;
+
+    @NonNull
     @Builder.Default
     private VideoContainerEnum videoContainer = VideoContainerEnum.MP4;
+
+    @NonNull
     @Builder.Default
     private AudioCodecEnum audioCodec = AudioCodecEnum.NO_CODEC;
+
+    @NonNull
     @Builder.Default
     private EncoderPreset speedPreset = EncoderPreset.NO_PRESET;
+
+    @NonNull
     @Builder.Default
     private EncoderProfile profile = EncoderProfile.NO_PROFILE;
+
+    @NonNull
     @Builder.Default
     private RateControlModeEnum rateControlMode = RateControlModeEnum.CRF;
+
     @Builder.Default
     private int rateControlValue = 23;
+
     @Builder.Default
     private int videoBitrate = 5000;
+
+    @NonNull
     @Builder.Default
     private AudioBitrateEnum audioBitrate = AudioBitrateEnum.BITRATE_256;
 

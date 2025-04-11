@@ -16,8 +16,19 @@
  */
 package net.brlns.gdownloader.ffmpeg.enums;
 
+import jakarta.annotation.Nullable;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NonNull;
+import net.brlns.gdownloader.settings.enums.VideoContainerEnum;
+
+import static net.brlns.gdownloader.settings.enums.VideoContainerEnum.AVI;
+import static net.brlns.gdownloader.settings.enums.VideoContainerEnum.FLV;
+import static net.brlns.gdownloader.settings.enums.VideoContainerEnum.MKV;
+import static net.brlns.gdownloader.settings.enums.VideoContainerEnum.MOV;
+import static net.brlns.gdownloader.settings.enums.VideoContainerEnum.MP4;
+import static net.brlns.gdownloader.settings.enums.VideoContainerEnum.WEBM;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -25,12 +36,29 @@ import lombok.Getter;
 @Getter
 @AllArgsConstructor
 public enum VideoCodecEnum {
-    NO_CODEC("", ""),
-    H264("h264", "H264"),
-    H265("h265", "HEVC"),
-    VP9("vp9", "VP9"),
-    AV1("av1", "AV1");
+    NO_CODEC("", "", List.of()),
+    H264("h264", "H264", List.of(MP4, MKV, WEBM, AVI, FLV, MOV)),
+    H265("h265", "HEVC", List.of(MP4, MKV, MOV)),
+    VP9("vp9", "VP9", List.of(MP4, MKV, WEBM)),
+    AV1("av1", "AV1", List.of(MP4, MKV, WEBM, MOV));
 
     private final String codecName;
     private final String vaapiName;
+    private final List<VideoContainerEnum> supportedContainers;
+
+    public boolean isSupportedByContainer(VideoContainerEnum container) {
+        return supportedContainers.contains(container);
+    }
+
+    @Nullable
+    public static VideoCodecEnum getFallbackCodec(@NonNull VideoContainerEnum container) {
+        return switch (container) {
+            case WEBM ->
+                VP9;
+            case AVI, FLV, MP4, MOV, MKV ->
+                H264;
+            default ->
+                null;
+        };
+    }
 }

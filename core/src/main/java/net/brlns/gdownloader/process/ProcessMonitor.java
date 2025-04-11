@@ -96,10 +96,6 @@ public final class ProcessMonitor {
 
             log.warn("Interrupted while waiting for process monitor to terminate", e);
         }
-
-        if (log.isDebugEnabled()) {
-            log.debug("Processes left in queue: {}", trackedProcesses.size());
-        }
     }
 
     public ProcessMonitor() {
