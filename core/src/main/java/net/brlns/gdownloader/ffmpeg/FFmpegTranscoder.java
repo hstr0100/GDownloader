@@ -19,6 +19,7 @@ package net.brlns.gdownloader.ffmpeg;
 import jakarta.annotation.Nullable;
 import jakarta.annotation.PreDestroy;
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -167,7 +168,7 @@ public final class FFmpegTranscoder {
 
         MediaStreamData streamData = getMediaStreams(inputFile);
         if (streamData == null) {
-            throw new IllegalArgumentException("Unable to obtain stream data from " + inputFile);
+            throw new IOException("Unable to obtain stream data from " + inputFile);
         }
 
         args.add("-map_metadata", "0");
@@ -226,7 +227,7 @@ public final class FFmpegTranscoder {
                 args.add(actualEncoder.getFfmpegCodecName());
 
                 EncoderProfile profile = config.getProfile();
-                if (profile != null && !profile.equals(EncoderProfile.NO_PROFILE)
+                if (!profile.equals(EncoderProfile.NO_PROFILE)
                     && getCompatScanner().isCompatible(actualEncoder, profile)) {
                     args.add(
                         "-profile:v:" + outputVideoIndex,
@@ -234,8 +235,7 @@ public final class FFmpegTranscoder {
                 }
 
                 EncoderPreset speedPreset = config.getSpeedPreset();
-                if (speedPreset != null
-                    && !speedPreset.equals(EncoderPreset.NO_PRESET)
+                if (!speedPreset.equals(EncoderPreset.NO_PRESET)
                     && !speedPreset.getFfmpegPresetCommand().isEmpty()
                     && getCompatScanner().isCompatible(actualEncoder, speedPreset)) {
                     // AMF uses -quality, AV1 software uses -usage.

@@ -45,6 +45,7 @@ import net.brlns.gdownloader.ffmpeg.structs.FFmpegConfig;
 import net.brlns.gdownloader.persistence.PersistenceManager;
 import net.brlns.gdownloader.process.ProcessArguments;
 import net.brlns.gdownloader.settings.QualitySettings;
+import net.brlns.gdownloader.settings.enums.VideoContainerEnum;
 import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
 import net.brlns.gdownloader.util.DirectoryUtils;
 import net.brlns.gdownloader.util.FileUtils;
@@ -298,11 +299,15 @@ public class YtDlpDownloader extends AbstractDownloader {
         return new DownloadResult(success ? FLAG_SUCCESS : FLAG_UNSUPPORTED, lastOutput);
     }
 
-    // TODO: i10n, settings, ui
+    // TODO: l10n, settings, ui
     @Override
     protected DownloadResult transcodeMediaFiles(QueueEntry entry) {
         try {
             QualitySettings quality = entry.getFilter().getQualitySettings();
+            if (quality.getVideoContainer() == VideoContainerEnum.GIF) {
+                // Not implemented, not supported. Just give up and smile.
+                return new DownloadResult(FLAG_SUCCESS);
+            }
 
             File tmpPath = entry.getTmpDirectory();
             List<Path> paths = Files.walk(tmpPath.toPath())
@@ -382,7 +387,7 @@ public class YtDlpDownloader extends AbstractDownloader {
                             tmpFile.renameTo(finalFile);
                         }
 
-                        return new DownloadResult(FLAG_SUCCESS, "Transcoding successful");
+                        return new DownloadResult(FLAG_SUCCESS);
                     } else if (exitCode > 0) {
                         log.error("FFmpeg transcoding error - exit code: {}", exitCode);
                         return new DownloadResult(FLAG_TRANSCODING_FAILED, lastOutput.get());
@@ -395,7 +400,7 @@ public class YtDlpDownloader extends AbstractDownloader {
                 }
             }
 
-            return new DownloadResult(FLAG_SUCCESS, "Transcoding not required");
+            return new DownloadResult(FLAG_SUCCESS);
         } catch (IOException e) {
             log.error("Failed to scan media files", e);
             return new DownloadResult(FLAG_TRANSCODING_FAILED, e.getMessage());

@@ -23,12 +23,7 @@ import lombok.Getter;
 import lombok.NonNull;
 import net.brlns.gdownloader.settings.enums.VideoContainerEnum;
 
-import static net.brlns.gdownloader.settings.enums.VideoContainerEnum.AVI;
-import static net.brlns.gdownloader.settings.enums.VideoContainerEnum.FLV;
-import static net.brlns.gdownloader.settings.enums.VideoContainerEnum.MKV;
-import static net.brlns.gdownloader.settings.enums.VideoContainerEnum.MOV;
-import static net.brlns.gdownloader.settings.enums.VideoContainerEnum.MP4;
-import static net.brlns.gdownloader.settings.enums.VideoContainerEnum.WEBM;
+import static net.brlns.gdownloader.settings.enums.VideoContainerEnum.*;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -39,7 +34,7 @@ public enum VideoCodecEnum {
     NO_CODEC("", "", List.of()),
     H264("h264", "H264", List.of(MP4, MKV, WEBM, AVI, FLV, MOV)),
     H265("h265", "HEVC", List.of(MP4, MKV, MOV)),
-    VP9("vp9", "VP9", List.of(MP4, MKV, WEBM)),
+    VP9("vp9", "VP9", List.of(MP4, MKV, WEBM)),// while VP9 is technically supported by MP4, client compatibility is not great.
     AV1("av1", "AV1", List.of(MP4, MKV, WEBM, MOV));
 
     private final String codecName;
