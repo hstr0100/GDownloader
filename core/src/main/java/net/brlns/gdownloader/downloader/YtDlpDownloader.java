@@ -283,7 +283,8 @@ public class YtDlpDownloader extends AbstractDownloader {
                 if (type == VIDEO) {
                     DownloadResult transcodeResult = transcodeMediaFiles(entry);
 
-                    if (!FLAG_SUCCESS.isSet(transcodeResult.getFlags())) {
+                    if (main.getConfig().isFailDownloadsOnTranscodingFailures()
+                        && !FLAG_SUCCESS.isSet(transcodeResult.getFlags())) {
                         return transcodeResult;
                     }
                 }
@@ -302,13 +303,20 @@ public class YtDlpDownloader extends AbstractDownloader {
     // TODO: l10n, settings, ui
     @Override
     protected DownloadResult transcodeMediaFiles(QueueEntry entry) {
-        try {
-            QualitySettings quality = entry.getFilter().getQualitySettings();
-            if (quality.getVideoContainer() == VideoContainerEnum.GIF) {
-                // Not implemented, not supported. Just give up and smile.
-                return new DownloadResult(FLAG_SUCCESS);
-            }
+        // TODO: ui settings need to be disabled if ffmpeg is not found
+        if (!main.getFfmpegTranscoder().hasFFmpeg()) {
+            // FFmpeg not found, nothing we can do.
+            log.error("FFmpeg not found, unable to transcode media files");
+            return new DownloadResult(FLAG_SUCCESS);
+        }
 
+        QualitySettings quality = entry.getFilter().getQualitySettings();
+        if (quality.getVideoContainer() == VideoContainerEnum.GIF) {
+            // Not implemented, not supported. Just give up and smile.
+            return new DownloadResult(FLAG_SUCCESS);
+        }
+
+        try {
             File tmpPath = entry.getTmpDirectory();
             List<Path> paths = Files.walk(tmpPath.toPath())
                 .filter(path -> !path.equals(tmpPath.toPath()))

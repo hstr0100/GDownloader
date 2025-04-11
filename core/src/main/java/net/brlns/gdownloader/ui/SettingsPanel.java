@@ -883,16 +883,16 @@ public class SettingsPanel {
         );
 
         addCheckBox(panel, gbcPanel,
-            "settings.download_youtube_channels",
-            settings::isDownloadYoutubeChannels,
-            settings::setDownloadYoutubeChannels,
+            "settings.use_sponsor_block",
+            settings::isUseSponsorBlock,
+            settings::setUseSponsorBlock,
             false
         );
 
         addCheckBox(panel, gbcPanel,
-            "settings.use_sponsor_block",
-            settings::isUseSponsorBlock,
-            settings::setUseSponsorBlock,
+            "settings.download_youtube_channels",
+            settings::isDownloadYoutubeChannels,
+            settings::setDownloadYoutubeChannels,
             false
         );
 

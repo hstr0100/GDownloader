@@ -65,6 +65,10 @@ public final class FFmpegTranscoder {
         compatScanner = new FFmpegCompatibilityScanner(this);
     }
 
+    public boolean hasFFmpeg() {
+        return getFfmpegPath().isPresent();
+    }
+
     public Optional<File> getFfmpegPath() {
         if (ffmpegPath.isEmpty() && !queriedForSystemBinary) {
             ffmpegPath = Optional.ofNullable(

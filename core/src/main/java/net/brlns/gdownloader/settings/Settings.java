@@ -76,6 +76,10 @@ public class Settings {
     @JsonProperty("KeepRawMediaFilesAfterTranscode")
     private boolean keepRawMediaFilesAfterTranscode = false;
 
+    // TODO: ui
+    @JsonProperty("FailDownloadsOnTranscodingFailures")
+    private boolean failDownloadsOnTranscodingFailures = true;
+
     @Deprecated
     @JsonProperty("ReadCookies")
     private boolean readCookies = false;
