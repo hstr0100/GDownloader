@@ -49,7 +49,12 @@ public enum EncoderProfileEnum {
     private final String profileName;
     private final VideoCodecEnum videoCodec;
 
-    public static Optional<EncoderProfileEnum> findByNameAndCodec(String name, @NonNull VideoCodecEnum codec) {
+    public EncoderProfile toProfile() {
+        return new EncoderProfile(this);
+    }
+
+    public static Optional<EncoderProfileEnum> findByNameAndCodec(
+        String name, @NonNull VideoCodecEnum codec) {
         return Arrays.stream(values())
             .filter(p -> p.getProfileName().equalsIgnoreCase(name)
             && p.getVideoCodec() == codec)
@@ -59,7 +64,7 @@ public enum EncoderProfileEnum {
     public static List<EncoderProfile> getProfilesForCodec(@NonNull VideoCodecEnum codec) {
         return Arrays.stream(values())
             .filter(profile -> profile.getVideoCodec() == codec)
-            .map(profile -> new EncoderProfile(profile, profile.getProfileName()))
+            .map(profile -> profile.toProfile())
             .collect(Collectors.toList());
     }
 

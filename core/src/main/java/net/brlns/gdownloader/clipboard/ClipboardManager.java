@@ -146,13 +146,13 @@ public class ClipboardManager {
 
             if (clipboardContainedURLs()) {
                 ToastMessenger.show(
-                    l10n("gui.add_from_clipboard.toast-empty"),
+                    l10n("gui.add_from_clipboard.toast_empty"),
                     3000,
                     MessageTypeEnum.WARNING,
                     false, true);
             } else {
                 ToastMessenger.show(
-                    l10n("gui.add_from_clipboard.toast-pasted"),
+                    l10n("gui.add_from_clipboard.toast_pasted"),
                     3000,
                     MessageTypeEnum.INFO,
                     false, true);

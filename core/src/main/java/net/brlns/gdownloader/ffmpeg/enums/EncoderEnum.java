@@ -21,17 +21,25 @@ import java.util.Optional;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NonNull;
+import net.brlns.gdownloader.settings.enums.ISettingsEnum;
 
+import static net.brlns.gdownloader.ffmpeg.enums.EncoderEnum.*;
 import static net.brlns.gdownloader.ffmpeg.enums.EncoderTypeEnum.*;
 import static net.brlns.gdownloader.ffmpeg.enums.VideoCodecEnum.*;
+import static net.brlns.gdownloader.lang.Language.l10n;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
 @Getter
 @AllArgsConstructor
-public enum EncoderEnum {
+public enum EncoderEnum implements ISettingsEnum {
     NO_ENCODER("", NO_CODEC, null),
+    // Auto detection mode per codec
+    H264_AUTO("", H264, AUTO),
+    H265_AUTO("", H265, AUTO),
+    VP9_AUTO("", VP9, AUTO),
+    AV1_AUTO("", AV1, AUTO),
     // Software encoding presets
     H264_SOFTWARE("libx264", H264, SOFTWARE),
     H265_SOFTWARE("libx265", H265, SOFTWARE),
@@ -58,22 +66,35 @@ public enum EncoderEnum {
     AV1_VAAPI("av1_vaapi", AV1, VAAPI),
     // V4L2M2M presets
     H264_V4L2M2M("h264_v4l2m2m", H264, V4L2M2M),
-    H265_V4L2M2M("hevc_v4l2m2m", H265, V4L2M2M),
-    // Auto detection mode per codec
-    H264_AUTO("", H264, EncoderTypeEnum.AUTO),
-    H265_AUTO("", H265, EncoderTypeEnum.AUTO),
-    VP9_AUTO("", VP9, EncoderTypeEnum.AUTO),
-    AV1_AUTO("", AV1, EncoderTypeEnum.AUTO);
+    H265_V4L2M2M("hevc_v4l2m2m", H265, V4L2M2M);
 
     private final String ffmpegCodecName;
     private final VideoCodecEnum videoCodec;
     private final EncoderTypeEnum encoderType;
 
+    @Override
+    public String getDisplayName() {
+        if (this == NO_ENCODER) {
+            return l10n("enums.transcode.encoder.no_encoder");
+        }
+
+        return encoderType.name() + " - " + videoCodec.getDisplayName();
+    }
+
+    public boolean isAutomatic() {
+        return this.getEncoderType() == AUTO;
+    }
+
+    @Override
+    public String getTranslationKey() {
+        return "";
+    }
+
     public static Optional<EncoderEnum> findByName(@NonNull String name) {
         return Arrays.stream(values())
             .filter(
                 e -> e.getFfmpegCodecName().equalsIgnoreCase(name)
-                && e.getEncoderType() != EncoderTypeEnum.AUTO
+                && !e.isAutomatic()
             ).findFirst();
     }
 }

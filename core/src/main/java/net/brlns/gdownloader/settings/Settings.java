@@ -72,11 +72,9 @@ public class Settings {
     @JsonProperty("MergeAllAudioTracks")
     private boolean mergeAllAudioTracks = false;
 
-    // TODO: ui
     @JsonProperty("KeepRawMediaFilesAfterTranscode")
     private boolean keepRawMediaFilesAfterTranscode = false;
 
-    // TODO: ui
     @JsonProperty("FailDownloadsOnTranscodingFailures")
     private boolean failDownloadsOnTranscodingFailures = true;
 

@@ -45,6 +45,7 @@ import net.brlns.gdownloader.ui.custom.CustomCheckBoxUI;
 import net.brlns.gdownloader.ui.custom.CustomComboBoxUI;
 import net.brlns.gdownloader.ui.custom.CustomScrollBarUI;
 import net.brlns.gdownloader.ui.custom.CustomSliderUI;
+import net.brlns.gdownloader.ui.custom.CustomSpinnerUI;
 import net.brlns.gdownloader.ui.message.MessageTypeEnum;
 import net.brlns.gdownloader.ui.message.PopupMessenger;
 import net.brlns.gdownloader.ui.themes.UIColors;
@@ -418,117 +419,6 @@ public class SettingsPanel {
 
             frame.setVisible(true);
         });
-    }
-
-    private <T extends Enum<T> & ISettingsEnum> JComboBox<String> addComboBox(JPanel panel,
-        GridBagConstraints gbcPanel, String labelString, Class<T> enumClass,
-        Supplier<T> getter, Consumer<T> setter, boolean requiresRestart) {
-
-        JLabel label = createLabel(labelString, LIGHT_TEXT);
-
-        gbcPanel.gridx = 0;
-        gbcPanel.gridy++;
-        gbcPanel.weightx = 0.5;
-        gbcPanel.gridwidth = 1;
-        panel.add(label, gbcPanel);
-
-        JComboBox<String> comboBox = new JComboBox<>(ISettingsEnum.getDisplayNames(enumClass));
-        if (requiresRestart) {
-            comboBox.setToolTipText(l10n("settings.requires_restart.tooltip"));
-        }
-
-        comboBox.setSelectedIndex(getter.get().ordinal());
-
-        comboBox.addActionListener((ActionEvent e) -> {
-            setter.accept(ISettingsEnum.getEnumByIndex(enumClass, comboBox.getSelectedIndex()));
-        });
-
-        customizeComboBox(comboBox);
-
-        gbcPanel.gridx = 1;
-        gbcPanel.weightx = 0.5;
-        gbcPanel.gridwidth = GridBagConstraints.REMAINDER;
-        panel.add(comboBox, gbcPanel);
-
-        return comboBox;
-    }
-
-    private void addCheckBox(JPanel panel, GridBagConstraints gbcPanel, String labelString,
-        Supplier<Boolean> getter, Consumer<Boolean> setter, boolean requiresRestart) {
-
-        JLabel label = createLabel(labelString, LIGHT_TEXT);
-
-        gbcPanel.gridx = 0;
-        gbcPanel.gridy++;
-        gbcPanel.weightx = 0.5;
-        gbcPanel.gridwidth = 1;
-        panel.add(label, gbcPanel);
-
-        JCheckBox checkBox = new JCheckBox();
-        checkBox.setSelected(getter.get());
-        if (requiresRestart) {
-            checkBox.setToolTipText(l10n("settings.requires_restart.tooltip"));
-        }
-
-        checkBox.addActionListener((ActionEvent e) -> {
-            setter.accept(checkBox.isSelected());
-        });
-
-        customizeComponent(checkBox, BACKGROUND, LIGHT_TEXT);
-
-        gbcPanel.gridx = 1;
-        gbcPanel.weightx = 0.5;
-        gbcPanel.gridwidth = GridBagConstraints.REMAINDER;
-        panel.add(checkBox, gbcPanel);
-    }
-
-    private void addLabel(JPanel panel, GridBagConstraints gbcPanel, String labelString) {
-        JLabel label = createLabel(labelString, FOREGROUND);
-
-        gbcPanel.gridx = 0;
-        gbcPanel.gridy++;
-        gbcPanel.weightx = 0.5;
-        gbcPanel.gridwidth = 1;
-        gbcPanel.insets = new Insets(20, 5, 10, 5);
-
-        panel.add(label, gbcPanel);
-
-        gbcPanel.insets = new Insets(5, 5, 5, 5);
-    }
-
-    private void addSlider(JPanel panel, GridBagConstraints gbcPanel, String labelString,
-        int min, int max, Supplier<Integer> getter, Consumer<Integer> setter) {
-
-        JLabel label = createLabel(labelString, LIGHT_TEXT);
-
-        gbcPanel.gridx = 0;
-        gbcPanel.gridy++;
-        gbcPanel.weightx = 0.5;
-        gbcPanel.gridwidth = 1;
-        panel.add(label, gbcPanel);
-
-        JSlider slider = new JSlider(min, max, getter.get());
-        int tickSpacing = max <= 20 ? 1
-            : Math.min(100, Math.max(5, (int)(5 * Math.pow(2, Math.floor(Math.log10(max / 50))))));
-        slider.setMajorTickSpacing(tickSpacing);
-        slider.setSnapToTicks(tickSpacing == 1);
-        slider.setPaintTicks(true);
-        slider.setPaintLabels(true);
-
-        slider.addChangeListener((ChangeEvent e) -> {
-            JSlider source = (JSlider)e.getSource();
-            if (!source.getValueIsAdjusting()) {
-                int sliderValue = source.getValue();
-                setter.accept(sliderValue);
-            }
-        });
-
-        customizeSlider(slider, BACKGROUND, SLIDER_FOREGROUND);
-
-        gbcPanel.gridx = 1;
-        gbcPanel.weightx = 0.5;
-        gbcPanel.gridwidth = GridBagConstraints.REMAINDER;
-        panel.add(slider, gbcPanel);
     }
 
     private JPanel createGeneralSettings() {
@@ -1027,6 +917,20 @@ public class SettingsPanel {
             settings::setMaxFragmentRetries
         );
 
+        addCheckBox(panel, gbcPanel,
+            "settings.transcode.keep_raw_media_files_after_transcode",
+            settings::isKeepRawMediaFilesAfterTranscode,
+            settings::setKeepRawMediaFilesAfterTranscode,
+            false
+        );
+
+        addCheckBox(panel, gbcPanel,
+            "settings.transcode.fail_downloads_on_transcoding_failures",
+            settings::isFailDownloadsOnTranscodingFailures,
+            settings::setFailDownloadsOnTranscodingFailures,
+            false
+        );
+
         gbcPanel.gridx = 0;
         gbcPanel.gridy++;
         gbcPanel.weightx = 1;
@@ -1283,14 +1187,126 @@ public class SettingsPanel {
         return panelWrapper;
     }
 
-    private JLabel createLabel(String text, UIColors uiColor) {
+    public static <T extends Enum<T> & ISettingsEnum> JComboBox<String> addComboBox(JPanel panel,
+        GridBagConstraints gbcPanel, String labelString, Class<T> enumClass,
+        Supplier<T> getter, Consumer<T> setter, boolean requiresRestart) {
+
+        JLabel label = createLabel(labelString, LIGHT_TEXT);
+
+        gbcPanel.gridx = 0;
+        gbcPanel.gridy++;
+        gbcPanel.weightx = 0.5;
+        gbcPanel.gridwidth = 1;
+        panel.add(label, gbcPanel);
+
+        JComboBox<String> comboBox = new JComboBox<>(ISettingsEnum.getDisplayNames(enumClass));
+        if (requiresRestart) {
+            comboBox.setToolTipText(l10n("settings.requires_restart.tooltip"));
+        }
+
+        comboBox.setSelectedIndex(getter.get().ordinal());
+
+        comboBox.addActionListener((ActionEvent e) -> {
+            setter.accept(ISettingsEnum.getEnumByIndex(enumClass, comboBox.getSelectedIndex()));
+        });
+
+        customizeComboBox(comboBox);
+
+        gbcPanel.gridx = 1;
+        gbcPanel.weightx = 0.5;
+        gbcPanel.gridwidth = GridBagConstraints.REMAINDER;
+        panel.add(comboBox, gbcPanel);
+
+        return comboBox;
+    }
+
+    public static void addCheckBox(JPanel panel, GridBagConstraints gbcPanel, String labelString,
+        Supplier<Boolean> getter, Consumer<Boolean> setter, boolean requiresRestart) {
+
+        JLabel label = createLabel(labelString, LIGHT_TEXT);
+
+        gbcPanel.gridx = 0;
+        gbcPanel.gridy++;
+        gbcPanel.weightx = 0.5;
+        gbcPanel.gridwidth = 1;
+        panel.add(label, gbcPanel);
+
+        JCheckBox checkBox = new JCheckBox();
+        checkBox.setSelected(getter.get());
+        if (requiresRestart) {
+            checkBox.setToolTipText(l10n("settings.requires_restart.tooltip"));
+        }
+
+        checkBox.addActionListener((ActionEvent e) -> {
+            setter.accept(checkBox.isSelected());
+        });
+
+        customizeComponent(checkBox, BACKGROUND, LIGHT_TEXT);
+
+        gbcPanel.gridx = 1;
+        gbcPanel.weightx = 0.5;
+        gbcPanel.gridwidth = GridBagConstraints.REMAINDER;
+        panel.add(checkBox, gbcPanel);
+    }
+
+    public static void addLabel(JPanel panel, GridBagConstraints gbcPanel, String labelString) {
+        JLabel label = createLabel(labelString, FOREGROUND);
+
+        gbcPanel.gridx = 0;
+        gbcPanel.gridy++;
+        gbcPanel.weightx = 0.5;
+        gbcPanel.gridwidth = 1;
+        gbcPanel.insets = new Insets(20, 5, 10, 5);
+
+        panel.add(label, gbcPanel);
+
+        gbcPanel.insets = new Insets(5, 5, 5, 5);
+    }
+
+    public static void addSlider(JPanel panel, GridBagConstraints gbcPanel, String labelString,
+        int min, int max, Supplier<Integer> getter, Consumer<Integer> setter) {
+
+        JLabel label = createLabel(labelString, LIGHT_TEXT);
+
+        gbcPanel.gridx = 0;
+        gbcPanel.gridy++;
+        gbcPanel.weightx = 0.5;
+        gbcPanel.gridwidth = 1;
+        panel.add(label, gbcPanel);
+
+        JSlider slider = new JSlider(min, max, getter.get());
+        int tickSpacing = max <= 20 ? 1
+            : Math.min(100, Math.max(5, (int)(5 * Math.pow(2, Math.floor(Math.log10(max / 50))))));
+        slider.setMajorTickSpacing(tickSpacing);
+        slider.setSnapToTicks(tickSpacing == 1);
+        slider.setPaintTicks(true);
+        slider.setPaintLabels(true);
+
+        slider.addChangeListener((ChangeEvent e) -> {
+            JSlider source = (JSlider)e.getSource();
+            if (!source.getValueIsAdjusting()) {
+                int sliderValue = source.getValue();
+                setter.accept(sliderValue);
+            }
+        });
+
+        customizeSlider(slider, BACKGROUND, SLIDER_FOREGROUND);
+
+        gbcPanel.gridx = 1;
+        gbcPanel.weightx = 0.5;
+        gbcPanel.gridwidth = GridBagConstraints.REMAINDER;
+        panel.add(slider, gbcPanel);
+    }
+
+    public static JLabel createLabel(String text, UIColors uiColor) {
         JLabel label = new JLabel(l10n(text));
         label.setForeground(color(uiColor));
 
         return label;
     }
 
-    private JButton createButton(String text, String tooltipText, UIColors backgroundColor, UIColors textColor, UIColors hoverColor) {
+    public static JButton createButton(String text, String tooltipText,
+        UIColors backgroundColor, UIColors textColor, UIColors hoverColor) {
         CustomButton button = new CustomButton(l10n(text),
             color(hoverColor),
             color(hoverColor).brighter());
@@ -1305,20 +1321,25 @@ public class SettingsPanel {
         return button;
     }
 
-    private void customizeComboBox(JComboBox<String> component) {
+    public static void customizeComboBox(JComboBox<String> component) {
         component.setUI(new CustomComboBoxUI());
     }
 
-    private void customizeComponent(JComponent component, UIColors backgroundColor, UIColors textColor) {
+    public static void customizeComponent(JComponent component, UIColors backgroundColor, UIColors textColor) {
         component.setForeground(color(textColor));
         component.setBackground(color(backgroundColor));
 
-        if (component instanceof JCheckBox jCheckBox) {
-            jCheckBox.setUI(new CustomCheckBoxUI());
+        switch (component) {
+            case JCheckBox jCheckBox ->
+                jCheckBox.setUI(new CustomCheckBoxUI());
+            case JSpinner jSpinner ->
+                jSpinner.setUI(new CustomSpinnerUI());
+            default -> {
+            }
         }
     }
 
-    private void customizeSlider(JSlider slider, UIColors backgroundColor, UIColors textColor) {
+    public static void customizeSlider(JSlider slider, UIColors backgroundColor, UIColors textColor) {
         slider.setForeground(color(textColor));
         slider.setBackground(color(backgroundColor));
         slider.setOpaque(true);

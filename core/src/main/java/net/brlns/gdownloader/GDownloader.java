@@ -129,7 +129,6 @@ import static net.brlns.gdownloader.util.StringUtils.nullOrEmpty;
 // TODO reseting download links should also refresh filter references
 // TODO right click > sort by
 // TODO display number in download queue
-// TODO transcoding presets
 /**
  * GDownloader - GUI wrapper for yt-dlp
  *
@@ -256,7 +255,7 @@ public final class GDownloader {
         Language.initLanguage(config);
         updateConfig();
 
-        log.info(l10n("startup"));
+        log.info(l10n("_startup"));
 
         ThemeProvider.setTheme(config.getTheme());
 
@@ -279,7 +278,7 @@ public final class GDownloader {
             clipboardManager = new ClipboardManager(this);
             downloadManager = new DownloadManager(this);
 
-            processMonitor.setShouldStopAll(() -> !downloadManager.isRunning());
+            processMonitor.setShouldStopCancellable(() -> !downloadManager.isRunning());
 
             guiManager = new GUIManager(this);
 
@@ -475,6 +474,8 @@ public final class GDownloader {
             if (!userInitiated) {
                 downloadManager.init();
             }
+
+            ffmpegTranscoder.init();
         }, 5);
 
         return true;
@@ -1131,18 +1132,19 @@ public final class GDownloader {
         }
     }
 
-    public static List<String> readOutput(String... command) throws IOException, InterruptedException {
+    public List<String> readOutput(String... command)
+        throws IOException, InterruptedException {
         return readOutput(Arrays.asList(command));
     }
 
-    public static List<String> readOutput(List<String> command) throws IOException, InterruptedException {
-        ProcessBuilder processBuilder = new ProcessBuilder(command);
-        processBuilder.redirectErrorStream(true);
-        Process process = processBuilder.start();
+    public List<String> readOutput(List<String> command)
+        throws IOException, InterruptedException {
+        Process process = processMonitor.startProcess(command);
 
         List<String> list = new ArrayList<>();
         try (
-            BufferedReader in = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+            BufferedReader in = new BufferedReader(
+                new InputStreamReader(process.getInputStream()))) {
             String line;
             while ((line = in.readLine()) != null) {
                 list.add(line);

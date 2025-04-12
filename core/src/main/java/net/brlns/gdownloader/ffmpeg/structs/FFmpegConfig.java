@@ -17,6 +17,7 @@
 package net.brlns.gdownloader.ffmpeg.structs;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NonNull;
@@ -26,43 +27,55 @@ import net.brlns.gdownloader.settings.enums.VideoContainerEnum;
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-// TODO: jackson mappings
 @Data
 @Builder
 public class FFmpegConfig {
 
+    @Builder.Default
+    @JsonProperty("Enabled")
+    private boolean enabled = true;
+
     @NonNull
     @Builder.Default
+    @JsonProperty("VideoEncoder")
     private EncoderEnum videoEncoder = EncoderEnum.NO_ENCODER;
 
     @NonNull
     @Builder.Default
+    @JsonProperty("VideoContainer")
     private VideoContainerEnum videoContainer = VideoContainerEnum.MP4;
 
     @NonNull
     @Builder.Default
-    private AudioCodecEnum audioCodec = AudioCodecEnum.NO_CODEC;
-
-    @NonNull
-    @Builder.Default
+    @JsonProperty("SpeedPreset")
     private EncoderPreset speedPreset = EncoderPreset.NO_PRESET;
 
     @NonNull
     @Builder.Default
+    @JsonProperty("Profile")
     private EncoderProfile profile = EncoderProfile.NO_PROFILE;
 
     @NonNull
     @Builder.Default
+    @JsonProperty("RateControlMode")
     private RateControlModeEnum rateControlMode = RateControlModeEnum.CRF;
 
     @Builder.Default
+    @JsonProperty("RateControlValue")
     private int rateControlValue = 23;
 
     @Builder.Default
+    @JsonProperty("VideoBitrate")
     private int videoBitrate = 5000;
 
     @NonNull
     @Builder.Default
+    @JsonProperty("AudioCodec")
+    private AudioCodecEnum audioCodec = AudioCodecEnum.NO_CODEC;
+
+    @NonNull
+    @Builder.Default
+    @JsonProperty("AudioBitrate")
     private AudioBitrateEnum audioBitrate = AudioBitrateEnum.BITRATE_256;
 
     @JsonIgnore

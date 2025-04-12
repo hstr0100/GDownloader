@@ -41,6 +41,12 @@ public enum VideoCodecEnum {
     private final String vaapiName;
     private final List<VideoContainerEnum> supportedContainers;
 
+    public String getDisplayName() {
+        return vaapiName
+            .replace("H264", "H.264")
+            .replace("HEVC", "HEVC/H.265");
+    }
+
     public boolean isSupportedByContainer(VideoContainerEnum container) {
         return supportedContainers.contains(container);
     }

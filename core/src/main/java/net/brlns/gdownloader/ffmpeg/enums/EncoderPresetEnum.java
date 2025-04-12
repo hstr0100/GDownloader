@@ -53,7 +53,12 @@ public enum EncoderPresetEnum {
         videoCodecs = videoCodecsIn;
     }
 
-    public static Optional<EncoderPresetEnum> findByNameAndCodec(String name, @NonNull VideoCodecEnum codec) {
+    public EncoderPreset toPreset() {
+        return new EncoderPreset(this);
+    }
+
+    public static Optional<EncoderPresetEnum> findByNameAndCodec(
+        String name, @NonNull VideoCodecEnum codec) {
         return Arrays.stream(values())
             .filter(p -> p.getPresetName().equalsIgnoreCase(name)
             && p.getVideoCodecs().stream().anyMatch(c -> c == codec))
@@ -63,7 +68,7 @@ public enum EncoderPresetEnum {
     public static List<EncoderPreset> getPresetsForCodec(@NonNull VideoCodecEnum codec) {
         return Arrays.stream(values())
             .filter(preset -> preset.getVideoCodecs().contains(codec))
-            .map(preset -> new EncoderPreset(preset, "-preset", preset.getPresetName()))
+            .map(preset -> preset.toPreset())
             .collect(Collectors.toList());
     }
 }

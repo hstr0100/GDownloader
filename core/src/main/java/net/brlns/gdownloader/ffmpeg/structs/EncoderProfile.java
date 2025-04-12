@@ -16,15 +16,19 @@
  */
 package net.brlns.gdownloader.ffmpeg.structs;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import net.brlns.gdownloader.ffmpeg.enums.EncoderProfileEnum;
 
+import static net.brlns.gdownloader.ffmpeg.structs.EncoderProfile.NO_PROFILE;
+import static net.brlns.gdownloader.lang.Language.l10n;
+
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-// TODO: jackson mappings
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -32,7 +36,20 @@ public class EncoderProfile {
 
     public static final EncoderProfile NO_PROFILE = new EncoderProfile();
 
+    @JsonProperty("ProfileEnum")
     private EncoderProfileEnum profileEnum = EncoderProfileEnum.NO_PROFILE;
+    @JsonProperty("FFmpegProfileName")
     private String ffmpegProfileName = "";
 
+    public EncoderProfile(EncoderProfileEnum profileEnumIn) {
+        profileEnum = profileEnumIn;
+        ffmpegProfileName = profileEnum.getProfileName();
+    }
+
+    @JsonIgnore
+    public String getDisplayName() {
+        return this.equals(NO_PROFILE)
+            ? l10n("enums.transcode.profile.no_profile")
+            : ffmpegProfileName;
+    }
 }

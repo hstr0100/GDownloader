@@ -18,18 +18,32 @@ package net.brlns.gdownloader.ffmpeg.enums;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import net.brlns.gdownloader.settings.enums.ISettingsEnum;
+
+import static net.brlns.gdownloader.ffmpeg.enums.RateControlModeEnum.*;
+import static net.brlns.gdownloader.lang.Language.l10n;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
 @Getter
 @AllArgsConstructor
-public enum RateControlModeEnum {
-    CBR("cbr"), // Constant Bitrate
-    VBR("vbr"), // Variable Bitrate
-    CRF("crf"), // Constant Rate Factor
-    CQP("cqp"), // Constant Quantization Parameter
-    DEFAULT("");
+public enum RateControlModeEnum implements ISettingsEnum {
+    CBR("cbr", "enums.transcode.rc.cbr"), // Constant Bitrate
+    VBR("vbr", "enums.transcode.rc.vbr"), // Variable Bitrate
+    CRF("crf", "enums.transcode.rc.crf"), // Constant Rate Factor
+    CQP("cqp", "enums.transcode.rc.cqp"), // Constant Quantization Parameter
+    DEFAULT("", "enums.transcode.preset.custom");
 
     private final String mode;
+    private final String translationKey;
+
+    @Override
+    public String getDisplayName() {
+        if (this == DEFAULT) {
+            return l10n(translationKey);
+        }
+
+        return name() + " - " + l10n(translationKey);
+    }
 }

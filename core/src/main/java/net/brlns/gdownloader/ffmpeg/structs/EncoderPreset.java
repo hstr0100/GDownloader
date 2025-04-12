@@ -16,15 +16,19 @@
  */
 package net.brlns.gdownloader.ffmpeg.structs;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import net.brlns.gdownloader.ffmpeg.enums.EncoderPresetEnum;
 
+import static net.brlns.gdownloader.ffmpeg.structs.EncoderPreset.NO_PRESET;
+import static net.brlns.gdownloader.lang.Language.l10n;
+
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-// TODO: jackson mappings
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -32,8 +36,25 @@ public class EncoderPreset {
 
     public static final EncoderPreset NO_PRESET = new EncoderPreset();
 
+    @JsonProperty("SpeedPresetEnum")
     private EncoderPresetEnum presetEnum = EncoderPresetEnum.NO_PRESET;
+
+    @JsonProperty("SpeedPresetCommand")
     private String ffmpegPresetCommand = "";
+
+    @JsonProperty("FFmpegSpeedPresetName")
     private String ffmpegPresetName = "";
 
+    public EncoderPreset(EncoderPresetEnum presetEnumIn) {
+        presetEnum = presetEnumIn;
+        ffmpegPresetCommand = "-preset";
+        ffmpegPresetName = presetEnumIn.getPresetName();
+    }
+
+    @JsonIgnore
+    public String getDisplayName() {
+        return this.equals(NO_PRESET)
+            ? l10n("enums.transcode.speed_preset.no_preset")
+            : ffmpegPresetName;
+    }
 }

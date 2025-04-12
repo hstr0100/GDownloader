@@ -135,7 +135,7 @@ public class DownloadManager implements IEvent {
 
                 if (nextId > 0 && main.getConfig().isRestoreSessionAfterRestart()) {
                     ToastMessenger.show(
-                        l10n("gui.restoring-session.toast"),
+                        l10n("gui.restoring_session.toast"),
                         5000,
                         MessageTypeEnum.INFO,
                         false, true);

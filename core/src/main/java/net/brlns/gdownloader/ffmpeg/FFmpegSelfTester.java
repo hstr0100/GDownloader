@@ -48,14 +48,13 @@ public class FFmpegSelfTester {
         Map<EncoderEnum, TestResult> results = new EnumMap<>(EncoderEnum.class);
 
         for (EncoderEnum encoder : EncoderEnum.values()) {
-            if (encoder != EncoderEnum.NO_ENCODER
-                && encoder.getEncoderType() != EncoderTypeEnum.AUTO) {
+            if (encoder != EncoderEnum.NO_ENCODER && !encoder.isAutomatic()) {
                 testPreset(encoder, results);
             }
         }
 
         for (EncoderEnum encoder : EncoderEnum.values()) {
-            if (encoder.getEncoderType() == EncoderTypeEnum.AUTO) {
+            if (encoder.isAutomatic()) {
                 testAutoPreset(encoder, results);
             }
         }

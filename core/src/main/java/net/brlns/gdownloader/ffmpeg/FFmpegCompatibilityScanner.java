@@ -26,6 +26,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -59,39 +60,92 @@ public class FFmpegCompatibilityScanner {
     private final Map<EncoderEnum, EncoderCapability> encoderCapabilities = new ConcurrentHashMap<>();
 
     private final AtomicBoolean capabilitiesScanned = new AtomicBoolean(false);
+    private final ReentrantLock capabilitiesLock = new ReentrantLock();
     private final AtomicBoolean encodersScanned = new AtomicBoolean(false);
+    private final ReentrantLock encodersLock = new ReentrantLock();
 
     private final FFmpegTranscoder transcoder;
 
     private Optional<File> vainfoExecutable;
 
-    public void scanEncoderCapabilities() {
-        if (capabilitiesScanned.get()) {
-            return;
+    public void init() {
+        getAvailableFFmpegEncoders();
+        getEncoderCapabilities();
+    }
+
+    public Set<String> getAvailableFFmpegEncoders() {
+        encodersLock.lock();
+        try {
+            if (encodersScanned.get()) {
+                return availableEncoders;
+            }
+
+            List<String> lines = new ArrayList<>();
+
+            FFmpegProcessRunner.runFFmpeg(
+                transcoder,
+                new ProcessArguments("-hide_banner", "-encoders"),
+                FFmpegProcessOptions.builder()
+                    .listener((output, hasTaskStarted, progress) -> {
+                        lines.add(output);
+                    }).build());
+
+            boolean encoderSection = false;
+            for (String line : lines) {
+                if (line.contains("------")) {
+                    encoderSection = true;
+                    continue;
+                }
+
+                if (encoderSection && line.contains("V")) {
+                    String[] parts = line.trim().split(" ");
+                    if (parts.length >= 2) {
+                        availableEncoders.add(parts[1]);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Error getting FFmpeg encoders: {}", e.getMessage());
+        } finally {
+            encodersScanned.set(true);
+            encodersLock.unlock();
         }
 
+        return availableEncoders;
+    }
+
+    private Map<EncoderEnum, EncoderCapability> getEncoderCapabilities() {
+        capabilitiesLock.lock();
         try {
+            if (capabilitiesScanned.get()) {
+                return encoderCapabilities;
+            }
+
             for (EncoderEnum encoder : EncoderEnum.values()) {
-                if (encoder == EncoderEnum.NO_ENCODER
-                    || encoder.getEncoderType() == EncoderTypeEnum.AUTO) {
+                if (encoder == EncoderEnum.NO_ENCODER || encoder.isAutomatic()) {
                     continue;
                 }
 
-                if (encoder == EncoderEnum.H264_SOFTWARE || encoder == EncoderEnum.H265_SOFTWARE) {
-                    // FFmpeg does not output the options available for these
-                    encoderCapabilities.put(encoder, new EncoderCapability(
-                        EncoderPresetEnum.getPresetsForCodec(encoder.getVideoCodec()),
-                        EncoderProfileEnum.getProfilesForCodec(encoder.getVideoCodec())
-                    ));
+                if (isEncoderAvailable(encoder)) {
+                    if (encoder == EncoderEnum.H264_SOFTWARE || encoder == EncoderEnum.H265_SOFTWARE) {
+                        // FFmpeg does not output the options available for these
+                        encoderCapabilities.put(encoder, new EncoderCapability(
+                            EncoderPresetEnum.getPresetsForCodec(encoder.getVideoCodec()),
+                            EncoderProfileEnum.getProfilesForCodec(encoder.getVideoCodec())
+                        ));
 
-                    continue;
+                        continue;
+                    }
+
+                    scanEncoder(encoder);
                 }
-
-                scanEncoder(encoder);
             }
         } finally {
             capabilitiesScanned.set(true);
+            capabilitiesLock.unlock();
         }
+
+        return encoderCapabilities;
     }
 
     private void scanEncoder(EncoderEnum encoder) {
@@ -176,8 +230,10 @@ public class FFmpegCompatibilityScanner {
             }
         }
 
-        log.debug("Detected capabilities for {}: command={}, presets={}, profiles={}",
-            encoder, presetCommand, presetValues, profileValues);
+        if (log.isDebugEnabled()) {
+            log.debug("Detected capabilities for {}: command={}, presets={}, profiles={}",
+                encoder, presetCommand, presetValues, profileValues);
+        }
 
         String identifiedPresetCommand = presetCommand.getCommandFlag();
         EncoderCapability capability = new EncoderCapability(
@@ -191,9 +247,9 @@ public class FFmpegCompatibilityScanner {
         encoderCapabilities.put(encoder, capability);
     }
 
-    protected EncoderCapability getEncoderCapability(EncoderEnum encoder) {
-        scanEncoderCapabilities();
-        return encoderCapabilities.getOrDefault(encoder,
+    protected EncoderCapability getEncoderCapability(EncoderEnum encoderIn) {
+        EncoderEnum encoder = transcoder.resolveEncoder(encoderIn);
+        return getEncoderCapabilities().getOrDefault(encoder,
             new EncoderCapability(List.of(), List.of()));
     }
 
@@ -213,69 +269,33 @@ public class FFmpegCompatibilityScanner {
         return getAvailableProfiles(encoder).contains(profile);
     }
 
-    public Set<String> getAvailableFFmpegEncoders() {
-        if (encodersScanned.get()) {
-            return availableEncoders;
-        }
-
-        Set<String> encoders = new HashSet<>();
-
-        try {
-            List<String> lines = new ArrayList<>();
-
-            FFmpegProcessRunner.runFFmpeg(
-                transcoder,
-                new ProcessArguments("-hide_banner", "-encoders"),
-                FFmpegProcessOptions.builder()
-                    .listener((output, hasTaskStarted, progress) -> {
-                        lines.add(output);
-                    }).build());
-
-            boolean encoderSection = false;
-            for (String line : lines) {
-                if (line.contains("------")) {
-                    encoderSection = true;
-                    continue;
-                }
-
-                if (encoderSection && line.contains("V")) {
-                    String[] parts = line.trim().split(" ");
-                    if (parts.length >= 2) {
-                        encoders.add(parts[1]);
-                    }
-                }
-            }
-
-            availableEncoders.addAll(encoders);
-            encodersScanned.set(true);
-
-            scanEncoderCapabilities();
-        } catch (Exception e) {
-            log.warn("Error getting FFmpeg encoders: {}", e.getMessage());
-        }
-
-        return encoders;
-    }
-
     private boolean isFFmpegEncoderPresent(EncoderEnum encoder) {
         return getAvailableFFmpegEncoders().contains(encoder.getFfmpegCodecName());
     }
 
-    public boolean isEncoderAvailable(EncoderEnum encoder) {
+    public boolean isEncoderAvailable(EncoderEnum encoderIn) {
+        EncoderEnum encoder = transcoder.resolveEncoder(encoderIn);
         return testedEncoders.computeIfAbsent(encoder, key -> {
-            log.debug("Checking encoder: {}", key);
-
             if (isFFmpegEncoderPresent(key)) {
-                log.debug("Encoder {} is available, testing...", key);
+                if (log.isDebugEnabled()) {
+                    log.debug("Encoder {} is available, testing...", key);
+                }
 
                 if (testEncoder(key)) {
-                    log.debug("Found working encoder: {}", key);
+                    if (log.isDebugEnabled()) {
+                        log.debug("Found working encoder: {}", key);
+                    }
+
                     return true;
                 } else {
-                    log.debug("Encoder {} is available but failed testing", key);
+                    if (log.isDebugEnabled()) {
+                        log.debug("Encoder {} is available but failed testing", key);
+                    }
                 }
             } else {
-                log.debug("Encoder {} is not available in FFmpeg", key);
+                if (log.isDebugEnabled()) {
+                    log.debug("Encoder {} is not available in FFmpeg", key);
+                }
             }
 
             return false;
@@ -377,7 +397,9 @@ public class FFmpegCompatibilityScanner {
                                 fastestTime = encodeTime;
                                 fastestDevice = devicePath;
 
-                                log.debug("Device: {} encode time: {}ms", devicePath, encodeTime);
+                                if (log.isDebugEnabled()) {
+                                    log.debug("Device: {} encode time: {}ms", devicePath, encodeTime);
+                                }
                             }
                         }
                     }
@@ -388,8 +410,10 @@ public class FFmpegCompatibilityScanner {
         }
 
         vaapiDevices.put(encoder, fastestDevice);
-        log.debug("Selected VAAPI device {} for codec {} with encode time {}ms",
-            fastestDevice, encoder, fastestTime);
+        if (log.isDebugEnabled()) {
+            log.debug("Selected VAAPI device {} for codec {} with encode time {}ms",
+                fastestDevice, encoder, fastestTime);
+        }
 
         return fastestDevice;
     }
@@ -410,7 +434,9 @@ public class FFmpegCompatibilityScanner {
 
             return exitCode == 0 ? endTime - startTime : -1;
         } catch (Exception e) {
-            log.debug("Error testing VAAPI encode speed for device {}: {}", devicePath, e.getMessage());
+            if (log.isDebugEnabled()) {
+                log.debug("Error testing VAAPI encode speed for device {}: {}", devicePath, e.getMessage());
+            }
 
             return -1;
         }
@@ -424,7 +450,10 @@ public class FFmpegCompatibilityScanner {
             return device;
         }
 
-        log.debug("Unable to locate a v4l2m2m device, handing off detection to ffmpeg");
+        if (log.isDebugEnabled()) {
+            log.debug("Unable to locate a v4l2m2m device, handing off detection to ffmpeg");
+        }
+
         return null;
     }
 
@@ -463,11 +492,16 @@ public class FFmpegCompatibilityScanner {
             int exitCode = process.waitFor();
 
             boolean result = exitCode == 0 && hasVaapiCodec;
-            log.debug("vaapi entrypoint for encoder {} in {}: {}", encoder, devicePath, result ? "AVAILABLE" : "MISSING");
+            if (log.isDebugEnabled()) {
+                log.debug("vaapi entrypoint for encoder {} in {}: {}", encoder, devicePath, result ? "AVAILABLE" : "MISSING");
+            }
 
             return result;
         } catch (Exception e) {
-            log.debug("vainfo error: {}", e.getMessage());
+            if (log.isDebugEnabled()) {
+                log.debug("vainfo error: {}", e.getMessage());
+            }
+
             return false;
         }
     }
@@ -478,8 +512,8 @@ public class FFmpegCompatibilityScanner {
 
     public boolean testEncoder(EncoderEnum encoder, boolean verbose) {
         try {
-            // Resolve AUTO encoders first
-            if (encoder.getEncoderType() == EncoderTypeEnum.AUTO) {
+            // Resolve automatic encoders first
+            if (encoder.isAutomatic()) {
                 EncoderEnum resolved = transcoder.resolveEncoder(encoder);
                 log.info("Auto encoder resolved to: {}", resolved);
 
@@ -487,7 +521,9 @@ public class FFmpegCompatibilityScanner {
             }
 
             ProcessArguments args = getTestVideoCommand(encoder);
-            log.debug("Test command: {}", args);
+            if (log.isDebugEnabled()) {
+                log.debug("Test command: {}", args);
+            }
 
             FFmpegProcessOptions options = FFmpegProcessOptions.builder()
                 .timeoutUnit(TimeUnit.SECONDS)

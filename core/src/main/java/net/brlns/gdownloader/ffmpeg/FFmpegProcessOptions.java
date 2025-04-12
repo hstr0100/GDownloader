@@ -51,6 +51,8 @@ public class FFmpegProcessOptions {
 
     private boolean lazyReader;
 
+    private boolean cancellable;
+
     @Builder.Default
     private final String logPrefix = "";
 

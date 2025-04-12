@@ -24,7 +24,7 @@ public enum EncoderTypeEnum {
      * Supported hardware video encoder types in order of fallback preference.
      * We will attempt to use encoders in this order when available.
      */
-    NVENC, // Nvidia NVENC - HW encoder
+    NVENC, // Nvidia NVENC - HW encoder - Absolutely thoroughly untested
     AMF, // AMD Advanced Media Framework - HW encoder
     QSV, // Intel Quick Sync - HW encoder
     V4L2M2M, // Video4Linux2 memory-to-memory - Generic - RPI/Linux only - HW encoder

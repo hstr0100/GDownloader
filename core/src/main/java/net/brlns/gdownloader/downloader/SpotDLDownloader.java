@@ -320,7 +320,7 @@ public class SpotDLDownloader extends AbstractDownloader {
         entry.setLastCommandLine(finalArgs, true);
 
         Process process = main.getProcessMonitor()
-            .startProcess(finalArgs, entry.getCancelHook());
+            .startProcess(finalArgs, entry.getCancelHook(), true);
         entry.setProcess(process);
 
         String lastOutput = "";

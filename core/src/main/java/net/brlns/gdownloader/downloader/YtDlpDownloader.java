@@ -155,7 +155,7 @@ public class YtDlpDownloader extends AbstractDownloader {
                 }
             }
 
-            List<String> list = GDownloader.readOutput(arguments);
+            List<String> list = main.readOutput(arguments);
 
             if (main.getConfig().isDebugMode()) {
                 long what = System.currentTimeMillis() - start;
@@ -280,7 +280,7 @@ public class YtDlpDownloader extends AbstractDownloader {
                     log.error("Failed to download {}: {}", type, lastOutput);
                 }
             } else {
-                if (type == VIDEO) {
+                if (type == VIDEO/* && config.isEnabled() */) {
                     DownloadResult transcodeResult = transcodeMediaFiles(entry);
 
                     if (main.getConfig().isFailDownloadsOnTranscodingFailures()
@@ -360,7 +360,7 @@ public class YtDlpDownloader extends AbstractDownloader {
                 File tmpFile = FileUtils.deriveTempFile(inputFile, config.getVideoContainer().getFileExtension());
 
                 try {
-                    entry.updateStatus(DownloadStatusEnum.TRANSCODING, "Starting transcoder...");
+                    entry.updateStatus(DownloadStatusEnum.TRANSCODING, l10n("gui.transcode.starting"));
 
                     int exitCode = manager.getMain().getFfmpegTranscoder().startTranscode(
                         config, inputFile, tmpFile, entry.getCancelHook(),
@@ -496,7 +496,7 @@ public class YtDlpDownloader extends AbstractDownloader {
         entry.setLastCommandLine(finalArgs, true);
 
         Process process = main.getProcessMonitor()
-            .startProcess(finalArgs, entry.getCancelHook());
+            .startProcess(finalArgs, entry.getCancelHook(), true);
         entry.setProcess(process);
 
         String lastOutput = "";

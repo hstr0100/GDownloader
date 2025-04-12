@@ -50,7 +50,7 @@ public final class ProcessMonitor {
     private final AtomicBoolean closed = new AtomicBoolean();
 
     @Setter
-    private Supplier<Boolean> shouldStopAll = () -> closed.get();
+    private Supplier<Boolean> shouldStopCancellable = () -> closed.get();
 
     @PreDestroy
     public void close() {
@@ -135,7 +135,8 @@ public final class ProcessMonitor {
                         continue;
                     }
 
-                    if (closed.get() || shouldStopAll.get() || trackedProcess.getCancelHook().get()) {
+                    if (closed.get() || shouldStopCancellable.get() && trackedProcess.isCancellable()
+                        || trackedProcess.getCancelHook().get()) {
                         if (log.isDebugEnabled()) {
                             log.debug("Process Monitor is stopping #{}", process.pid());
                         }
@@ -161,38 +162,40 @@ public final class ProcessMonitor {
     }
 
     public Process startProcess(List<String> arguments) throws IOException {
-        return startProcess(arguments, new AtomicBoolean());
+        return startProcess(arguments, new AtomicBoolean(), false);
     }
 
-    public Process startProcess(List<String> arguments, AtomicBoolean cancelHook) throws IOException {
+    public Process startProcess(List<String> arguments,
+        AtomicBoolean cancelHook, boolean cancellable) throws IOException {
         Process process = new ProcessBuilder(arguments)
             .redirectErrorStream(true)
             .start();
 
-        trackProcess(process, cancelHook);
+        trackProcess(process, cancelHook, cancellable);
         return process;
     }
 
     public Process startSilentProcess(List<String> arguments) throws IOException {
-        return startSilentProcess(arguments, new AtomicBoolean());
+        return startSilentProcess(arguments, new AtomicBoolean(), false);
     }
 
-    public Process startSilentProcess(List<String> arguments, AtomicBoolean cancelHook) throws IOException {
+    public Process startSilentProcess(List<String> arguments,
+        AtomicBoolean cancelHook, boolean cancellable) throws IOException {
         Process process = new ProcessBuilder(arguments)
             .redirectError(ProcessBuilder.Redirect.DISCARD)
             .redirectOutput(ProcessBuilder.Redirect.DISCARD)
             .start();
 
-        trackProcess(process, cancelHook);
+        trackProcess(process, cancelHook, cancellable);
         return process;
     }
 
-    private void trackProcess(Process process, AtomicBoolean cancelHook) {
+    private void trackProcess(Process process, AtomicBoolean cancelHook, boolean cancellable) {
         if (log.isTraceEnabled()) {
             log.trace("Tracking process #{}", process.pid());
         }
 
-        trackedProcesses.offer(new TrackedProcess(process, cancelHook));
+        trackedProcesses.offer(new TrackedProcess(process, cancelHook, cancellable));
 
         lock.lock();
         try {

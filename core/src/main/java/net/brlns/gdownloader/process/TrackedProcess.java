@@ -30,4 +30,6 @@ public class TrackedProcess {
     private final Process process;
     @NonNull
     private final AtomicBoolean cancelHook;
+
+    private final boolean cancellable;
 }

@@ -61,10 +61,10 @@ public final class FFmpegProcessRunner {
             Process process;
             if (options.isDiscardOutput()) {
                 process = transcoder.getProcessMonitor()
-                    .startSilentProcess(command, options.getCancelHook());
+                    .startSilentProcess(command, options.getCancelHook(), options.isCancellable());
             } else {
                 process = transcoder.getProcessMonitor()
-                    .startProcess(command, options.getCancelHook());
+                    .startProcess(command, options.getCancelHook(), options.isCancellable());
             }
 
             try (

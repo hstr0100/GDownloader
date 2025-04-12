@@ -66,6 +66,10 @@ public final class FFmpegTranscoder {
         compatScanner = new FFmpegCompatibilityScanner(this);
     }
 
+    public void init() {
+        compatScanner.init();
+    }
+
     public boolean hasFFmpeg() {
         return getFfmpegPath().isPresent();
     }
@@ -93,7 +97,7 @@ public final class FFmpegTranscoder {
     }
 
     protected EncoderEnum resolveEncoder(EncoderEnum encoder) {
-        if (encoder.getEncoderType() != EncoderTypeEnum.AUTO) {
+        if (!encoder.isAutomatic()) {
             return encoder;
         }
 
@@ -139,10 +143,11 @@ public final class FFmpegTranscoder {
     }
 
     // TODO abstraction
+    // TODO separate bitrate for audio-only mode
     public int startTranscode(FFmpegConfig config, File inputFile,
         File outputFile, AtomicBoolean cancelHook, FFmpegProgressListener listener) throws Exception {
         if (config.getVideoEncoder() == EncoderEnum.NO_ENCODER
-            && config.getAudioCodec() == AudioCodecEnum.NO_CODEC) {
+            && config.getAudioCodec() == AudioCodecEnum.NO_CODEC || !config.isEnabled()) {
             if (log.isDebugEnabled()) {
                 log.debug("Transcoding not configured, returning -3");
             }
@@ -151,10 +156,7 @@ public final class FFmpegTranscoder {
         }
 
         if (!inputFile.exists()) {
-            if (log.isDebugEnabled()) {
-                log.debug("Input file does not exist, returning -4");
-            }
-
+            log.error("Input file does not exist, returning -4");
             return -4;
         }
 
@@ -169,14 +171,13 @@ public final class FFmpegTranscoder {
             (log.isDebugEnabled() ? "error" : "quiet"),
             "-stats",
             "-y",
-            "-i", inputFile.getAbsolutePath());
+            "-i", inputFile.getAbsolutePath(),
+            "-map_metadata", "0");
 
         MediaStreamData streamData = getMediaStreams(inputFile);
         if (streamData == null) {
             throw new IOException("Unable to obtain stream data from " + inputFile);
         }
-
-        args.add("-map_metadata", "0");
 
         FFmpegProgressCalculator progressCalculator = null;
         for (AbstractStream stream : streamData.getStreams()) {
@@ -444,8 +445,7 @@ public final class FFmpegTranscoder {
                         String vaapiDevice = getCompatScanner().detectVaapiDevice(actualEncoder);
                         args.add(
                             "-vaapi_device", vaapiDevice,
-                            "-filter:v:" + outputVideoIndex,
-                            "format=nv12,hwupload");
+                            "-filter:v:" + outputVideoIndex, "format=nv12,hwupload");
                     }
                     case V4L2M2M -> {
                         String device = getCompatScanner().detectV4l2m2mDevice();
@@ -622,19 +622,22 @@ public final class FFmpegTranscoder {
 
         log.info("FFmpeg transcode command: {}", args);
 
-        int exitCode = FFmpegProcessRunner.runFFmpeg(
-            this, args,
-            FFmpegProcessOptions.builder()
-                .cancelHook(cancelHook)
-                .calculator(progressCalculator)
-                .logOutput(log.isDebugEnabled())
-                .logPrefix(logPrefix)
-                .lazyReader(true)
-                .listener(listener)
-                .build());
-
-        if (exitCode != 0) {
-            Files.deleteIfExists(outputFile.toPath());
+        int exitCode = 234;
+        try {
+            exitCode = FFmpegProcessRunner.runFFmpeg(
+                this, args,
+                FFmpegProcessOptions.builder()
+                    .cancelHook(cancelHook)
+                    .calculator(progressCalculator)
+                    .logOutput(log.isDebugEnabled())
+                    .logPrefix(logPrefix)
+                    .lazyReader(true)
+                    .listener(listener)
+                    .build());
+        } finally {
+            if (exitCode != 0) {
+                Files.deleteIfExists(outputFile.toPath());
+            }
         }
 
         return exitCode;
