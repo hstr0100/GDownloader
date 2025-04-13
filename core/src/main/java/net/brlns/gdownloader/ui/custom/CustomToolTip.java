@@ -21,8 +21,10 @@ import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
+import javax.swing.BorderFactory;
 import javax.swing.JComponent;
 import javax.swing.JToolTip;
+import javax.swing.UIManager;
 import javax.swing.plaf.basic.BasicToolTipUI;
 
 import static net.brlns.gdownloader.ui.themes.ThemeProvider.*;
@@ -32,6 +34,12 @@ import static net.brlns.gdownloader.ui.themes.UIColors.*;
  * @author Gabriel / hstr0100 / vertx010
  */
 public class CustomToolTip extends JToolTip {
+
+    static {
+        UIManager.put("ToolTip.background", color(TOOLTIP_BACKGROUND));
+        UIManager.put("ToolTip.foreground", color(TOOLTIP_FOREGROUND));
+        UIManager.put("ToolTip.border", BorderFactory.createEmptyBorder(5, 5, 5, 5));
+    }
 
     @Override
     public void updateUI() {

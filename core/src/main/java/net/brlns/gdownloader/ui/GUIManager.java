@@ -117,15 +117,6 @@ public final class GUIManager {
         //uiScale = Math.clamp(mainIn.getConfig().getUiScale(), 0.5, 3.0);
         settingsPanel = new SettingsPanel(main, this);
 
-        UIManager.put("ToolTip.background", color(TOOLTIP_BACKGROUND));
-        UIManager.put("ToolTip.foreground", color(TOOLTIP_FOREGROUND));
-        UIManager.put("ToolTip.border", BorderFactory.createEmptyBorder(5, 5, 5, 5));
-
-        UIManager.put("ComboBox.background", new ColorUIResource(color(COMBO_BOX_BACKGROUND)));
-        UIManager.put("ComboBox.selectionBackground", new ColorUIResource(color(COMBO_BOX_SELECTION_BACKGROUND)));
-        UIManager.put("ComboBox.selectionForeground", new ColorUIResource(color(COMBO_BOX_SELECTION_FOREGROUND)));
-        UIManager.put("ComboBox.borderPaintsFocus", Boolean.FALSE);
-
         Timer mediaCardQueueTimer = new Timer(50, e -> processMediaCardQueue());
         mediaCardQueueTimer.start();
     }

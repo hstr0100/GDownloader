@@ -1220,16 +1220,16 @@ public class SettingsPanel {
 
     public static void enableComponents(List<Component> components, boolean enable) {
         for (Component component : components) {
-            enableComponent(component, enable);
+            enableComponents(component, enable);
         }
     }
 
-    public static void enableComponent(Component component, boolean enable) {
+    public static void enableComponents(Component component, boolean enable) {
         component.setEnabled(enable);
 
         if (component instanceof Container container) {
             for (Component c : container.getComponents()) {
-                enableComponent(c, enable);
+                enableComponents(c, enable);
             }
         }
     }
@@ -1374,7 +1374,7 @@ public class SettingsPanel {
         return button;
     }
 
-    public static void customizeComboBox(JComboBox<String> component) {
+    public static void customizeComboBox(JComboBox<?> component) {
         component.setUI(new CustomComboBoxUI());
     }
 
