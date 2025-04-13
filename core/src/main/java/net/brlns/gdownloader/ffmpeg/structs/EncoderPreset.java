@@ -17,6 +17,7 @@
 package net.brlns.gdownloader.ffmpeg.structs;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -30,8 +31,9 @@ import static net.brlns.gdownloader.lang.Language.l10n;
  * @author Gabriel / hstr0100 / vertx010
  */
 @Data
-@NoArgsConstructor
 @AllArgsConstructor
+@NoArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class EncoderPreset {
 
     public static final EncoderPreset NO_PRESET = new EncoderPreset();
@@ -49,6 +51,10 @@ public class EncoderPreset {
         presetEnum = presetEnumIn;
         ffmpegPresetCommand = "-preset";
         ffmpegPresetName = presetEnumIn.getPresetName();
+    }
+
+    public boolean isDefault() {
+        return this.equals(NO_PRESET);
     }
 
     @JsonIgnore

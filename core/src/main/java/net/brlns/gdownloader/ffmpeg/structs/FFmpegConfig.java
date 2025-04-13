@@ -18,8 +18,10 @@ package net.brlns.gdownloader.ffmpeg.structs;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import net.brlns.gdownloader.ffmpeg.enums.*;
 import net.brlns.gdownloader.settings.enums.VideoContainerEnum;
@@ -29,6 +31,8 @@ import net.brlns.gdownloader.settings.enums.VideoContainerEnum;
  */
 @Data
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class FFmpegConfig {
 
     @Builder.Default

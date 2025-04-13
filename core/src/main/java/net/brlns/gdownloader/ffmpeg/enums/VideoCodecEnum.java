@@ -47,6 +47,10 @@ public enum VideoCodecEnum {
             .replace("HEVC", "HEVC/H.265");
     }
 
+    public boolean isDefault() {
+        return this == NO_CODEC;
+    }
+
     public boolean isSupportedByContainer(VideoContainerEnum container) {
         return supportedContainers.contains(container);
     }

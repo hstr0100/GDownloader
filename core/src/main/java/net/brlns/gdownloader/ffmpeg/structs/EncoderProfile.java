@@ -17,6 +17,7 @@
 package net.brlns.gdownloader.ffmpeg.structs;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -30,8 +31,9 @@ import static net.brlns.gdownloader.lang.Language.l10n;
  * @author Gabriel / hstr0100 / vertx010
  */
 @Data
-@NoArgsConstructor
 @AllArgsConstructor
+@NoArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class EncoderProfile {
 
     public static final EncoderProfile NO_PROFILE = new EncoderProfile();
@@ -44,6 +46,10 @@ public class EncoderProfile {
     public EncoderProfile(EncoderProfileEnum profileEnumIn) {
         profileEnum = profileEnumIn;
         ffmpegProfileName = profileEnum.getProfileName();
+    }
+
+    public boolean isDefault() {
+        return this.equals(NO_PROFILE);
     }
 
     @JsonIgnore

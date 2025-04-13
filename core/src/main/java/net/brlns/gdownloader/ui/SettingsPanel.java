@@ -16,6 +16,7 @@
  */
 package net.brlns.gdownloader.ui;
 
+import jakarta.annotation.Nullable;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.MouseAdapter;
@@ -24,6 +25,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import javax.swing.*;
@@ -965,209 +967,10 @@ public class SettingsPanel {
         mainPanel.setBackground(color(BACKGROUND));
         mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
+        mainPanel.add(createQualitySettingsCard(settings.getGlobalQualitySettings(), null));
         for (AbstractUrlFilter filter : settings.getUrlFilters()) {
             QualitySettings qualitySettings = filter.getQualitySettings();
-
-            JPanel card = new JPanel() {
-                @Override
-                protected void paintComponent(Graphics g) {
-                    Graphics2D g2d = (Graphics2D)g.create();
-
-                    int arcSize = 10;
-                    g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                    g2d.setColor(getBackground());
-                    g2d.fillRoundRect(5, 5, getWidth() - 10, getHeight() - 10, arcSize, arcSize);
-
-                    g2d.dispose();
-                }
-            };
-            card.setOpaque(false);
-            card.setLayout(new BorderLayout());
-            card.setBackground(color(MEDIA_CARD));
-            card.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(color(BACKGROUND), 5),
-                BorderFactory.createEmptyBorder(10, 10, 10, 10)
-            ));
-
-            JPanel titlePanel = new JPanel(new BorderLayout());
-            titlePanel.setOpaque(false);
-
-            JLabel titleLabel = new JLabel(filter.getDisplayName());
-            titleLabel.setForeground(color(FOREGROUND));
-            titleLabel.setFont(titleLabel.getFont().deriveFont(Font.BOLD));
-
-            JLabel expandLabel = new JLabel("▼");
-            expandLabel.setForeground(color(FOREGROUND));
-            expandLabel.setFont(expandLabel.getFont().deriveFont(Font.BOLD));
-
-            titlePanel.add(titleLabel, BorderLayout.WEST);
-            titlePanel.add(expandLabel, BorderLayout.EAST);
-            titlePanel.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0));
-
-            JPanel itemPanel = new JPanel(new GridBagLayout());
-            itemPanel.setOpaque(false);
-            itemPanel.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
-            itemPanel.setVisible(false);
-
-            GridBagConstraints gbcItem = new GridBagConstraints();
-            gbcItem.insets = new Insets(5, 10, 5, 10);
-            gbcItem.anchor = GridBagConstraints.WEST;
-            gbcItem.fill = GridBagConstraints.HORIZONTAL;
-            //gbcItem.weightx = 1;
-
-            gbcItem.gridy = 1;
-
-            if (!filter.isAudioOnly()) {
-                addComboBox(itemPanel, gbcItem,
-                    "settings.quality_selector",
-                    QualitySelectorEnum.class,
-                    qualitySettings::getSelector,
-                    qualitySettings::setSelector,
-                    false
-                );
-
-                JComboBox<String> minHeightComboBox = addComboBox(itemPanel, gbcItem,
-                    "settings.minimum_quality",
-                    ResolutionEnum.class,
-                    qualitySettings::getMinHeight,
-                    qualitySettings::setMinHeight,
-                    false
-                );
-
-                JComboBox<String> maxHeightComboBox = addComboBox(itemPanel, gbcItem,
-                    "settings.maximum_quality",
-                    ResolutionEnum.class,
-                    qualitySettings::getMaxHeight,
-                    qualitySettings::setMaxHeight,
-                    false
-                );
-
-                {
-                    Arrays.stream(minHeightComboBox.getActionListeners())
-                        .forEach(minHeightComboBox::removeActionListener);
-
-                    minHeightComboBox.addActionListener((ActionEvent e) -> {
-                        ResolutionEnum minResolution = ISettingsEnum.getEnumByIndex(ResolutionEnum.class, minHeightComboBox.getSelectedIndex());
-                        ResolutionEnum maxResolution = minResolution.getValidMax(qualitySettings.getMaxHeight());
-
-                        qualitySettings.setMinHeight(minResolution);
-                        qualitySettings.setMaxHeight(maxResolution);
-
-                        maxHeightComboBox.setSelectedIndex(ISettingsEnum.getEnumIndex(ResolutionEnum.class, maxResolution));
-                    });
-
-                    Arrays.stream(maxHeightComboBox.getActionListeners())
-                        .forEach(maxHeightComboBox::removeActionListener);
-
-                    maxHeightComboBox.addActionListener((ActionEvent e) -> {
-                        ResolutionEnum maxResolution = ISettingsEnum.getEnumByIndex(ResolutionEnum.class, maxHeightComboBox.getSelectedIndex());
-                        ResolutionEnum minResolution = maxResolution.getValidMin(qualitySettings.getMinHeight());
-
-                        qualitySettings.setMinHeight(minResolution);
-                        qualitySettings.setMaxHeight(maxResolution);
-
-                        minHeightComboBox.setSelectedIndex(ISettingsEnum.getEnumIndex(ResolutionEnum.class, minResolution));
-                    });
-                }
-
-                addComboBox(itemPanel, gbcItem,
-                    "settings.video_container",
-                    VideoContainerEnum.class,
-                    qualitySettings::getVideoContainer,
-                    qualitySettings::setVideoContainer,
-                    false
-                );
-
-                addComboBox(itemPanel, gbcItem,
-                    "settings.fps",
-                    FPSEnum.class,
-                    qualitySettings::getFps,
-                    qualitySettings::setFps,
-                    false
-                );
-
-                addComboBox(itemPanel, gbcItem,
-                    "settings.subtitle_container",
-                    SubtitleContainerEnum.class,
-                    qualitySettings::getSubtitleContainer,
-                    qualitySettings::setSubtitleContainer,
-                    false
-                );
-
-                addComboBox(itemPanel, gbcItem,
-                    "settings.thumbnail_container",
-                    ThumbnailContainerEnum.class,
-                    qualitySettings::getThumbnailContainer,
-                    qualitySettings::setThumbnailContainer,
-                    false
-                );
-            }
-
-            if (!filter.isVideoOnly()) {
-                addComboBox(itemPanel, gbcItem,
-                    "settings.audio_container",
-                    AudioContainerEnum.class,
-                    qualitySettings::getAudioContainer,
-                    qualitySettings::setAudioContainer,
-                    false
-                );
-
-                addComboBox(itemPanel, gbcItem,
-                    "settings.audio_bitrate",
-                    AudioBitrateEnum.class,
-                    qualitySettings::getAudioBitrate,
-                    qualitySettings::setAudioBitrate,
-                    false
-                );
-
-                // TODO: spotify is not implemented.
-                addComboBox(itemPanel, gbcItem,
-                    "settings.audio_codec",
-                    AudioCodecEnum.class,
-                    qualitySettings::getAudioCodec,
-                    qualitySettings::setAudioCodec,
-                    false
-                );
-            }
-
-            MouseAdapter cardListener = new MouseAdapter() {
-                private boolean isExpanded = false;
-
-                @Override
-                public void mouseClicked(MouseEvent e) {
-                    if (e.getSource() == titlePanel) {
-                        isExpanded = !itemPanel.isVisible();
-                        itemPanel.setVisible(isExpanded);
-                        expandLabel.setText(isExpanded ? "▲" : "▼");
-
-                        card.setBackground(isExpanded
-                            ? color(MEDIA_CARD_HOVER) : color(MEDIA_CARD));
-
-                        card.revalidate();
-                    }
-                }
-
-                @Override
-                public void mouseEntered(MouseEvent e) {
-                    if (!isExpanded) {
-                        card.setBackground(color(MEDIA_CARD_HOVER));
-                    }
-                }
-
-                @Override
-                public void mouseExited(MouseEvent e) {
-                    if (!isExpanded) {
-                        card.setBackground(color(MEDIA_CARD));
-                    }
-                }
-            };
-
-            titlePanel.addMouseListener(cardListener);
-
-            card.add(titlePanel, BorderLayout.NORTH);
-            card.add(itemPanel, BorderLayout.CENTER);
-
-            mainPanel.add(card);
+            mainPanel.add(createQualitySettingsCard(qualitySettings, filter));
         }
 
         JScrollPane scrollPane = new JScrollPane(mainPanel);
@@ -1185,6 +988,250 @@ public class SettingsPanel {
         panelWrapper.add(scrollPane, BorderLayout.CENTER);
 
         return panelWrapper;
+    }
+
+    private JPanel createQualitySettingsCard(QualitySettings qualitySettings, @Nullable AbstractUrlFilter filter) {
+        JPanel card = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2d = (Graphics2D)g.create();
+
+                int arcSize = 10;
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2d.setColor(getBackground());
+                g2d.fillRoundRect(5, 5, getWidth() - 10, getHeight() - 10, arcSize, arcSize);
+
+                g2d.dispose();
+            }
+        };
+        card.setOpaque(false);
+        card.setLayout(new BorderLayout());
+        card.setBackground(color(MEDIA_CARD));
+        card.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(color(BACKGROUND), 5),
+            BorderFactory.createEmptyBorder(10, 10, 10, 10)
+        ));
+
+        JPanel titlePanel = new JPanel(new BorderLayout());
+        titlePanel.setOpaque(false);
+
+        JLabel titleLabel = new JLabel(filter == null
+            ? l10n("settings.global_quality_settings.title")
+            : filter.getDisplayName());
+        titleLabel.setForeground(color(FOREGROUND));
+        titleLabel.setFont(titleLabel.getFont().deriveFont(Font.BOLD));
+
+        JLabel expandLabel = new JLabel("▼");
+        expandLabel.setForeground(color(FOREGROUND));
+        expandLabel.setFont(expandLabel.getFont().deriveFont(Font.BOLD));
+
+        titlePanel.add(titleLabel, BorderLayout.WEST);
+        titlePanel.add(expandLabel, BorderLayout.EAST);
+        titlePanel.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0));
+
+        JPanel itemPanel = new JPanel(new GridBagLayout());
+        itemPanel.setOpaque(false);
+        itemPanel.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
+        itemPanel.setVisible(false);
+
+        GridBagConstraints gbcItem = new GridBagConstraints();
+        gbcItem.insets = new Insets(5, 10, 5, 10);
+        gbcItem.anchor = GridBagConstraints.WEST;
+        gbcItem.fill = GridBagConstraints.HORIZONTAL;
+        //gbcItem.weightx = 1;
+
+        gbcItem.gridy = 1;
+
+        List<Component> toggleableComponents = new ArrayList<>();
+
+        AtomicReference<JCheckBox> useGlobalCheckbox = new AtomicReference<>();
+        if (filter == null || !filter.isAudioOnly()) {
+            if (filter != null) {
+                useGlobalCheckbox.set(addCheckBox(itemPanel, gbcItem,
+                    "settings.use_global_settings",
+                    qualitySettings::isUseGlobalSettings,
+                    qualitySettings::setUseGlobalSettings,
+                    true
+                ));
+            }
+
+            toggleableComponents.add(addComboBox(itemPanel, gbcItem,
+                "settings.quality_selector",
+                QualitySelectorEnum.class,
+                qualitySettings::getSelector,
+                qualitySettings::setSelector,
+                false
+            ));
+
+            JComboBox<String> minHeightComboBox = addComboBox(itemPanel, gbcItem,
+                "settings.minimum_quality",
+                ResolutionEnum.class,
+                qualitySettings::getMinHeight,
+                qualitySettings::setMinHeight,
+                false
+            );
+            toggleableComponents.add(minHeightComboBox);
+
+            JComboBox<String> maxHeightComboBox = addComboBox(itemPanel, gbcItem,
+                "settings.maximum_quality",
+                ResolutionEnum.class,
+                qualitySettings::getMaxHeight,
+                qualitySettings::setMaxHeight,
+                false
+            );
+            toggleableComponents.add(maxHeightComboBox);
+
+            {
+                Arrays.stream(minHeightComboBox.getActionListeners())
+                    .forEach(minHeightComboBox::removeActionListener);
+
+                minHeightComboBox.addActionListener((ActionEvent e) -> {
+                    ResolutionEnum minResolution = ISettingsEnum.getEnumByIndex(ResolutionEnum.class, minHeightComboBox.getSelectedIndex());
+                    ResolutionEnum maxResolution = minResolution.getValidMax(qualitySettings.getMaxHeight());
+
+                    qualitySettings.setMinHeight(minResolution);
+                    qualitySettings.setMaxHeight(maxResolution);
+
+                    maxHeightComboBox.setSelectedIndex(ISettingsEnum.getEnumIndex(ResolutionEnum.class, maxResolution));
+                });
+
+                Arrays.stream(maxHeightComboBox.getActionListeners())
+                    .forEach(maxHeightComboBox::removeActionListener);
+
+                maxHeightComboBox.addActionListener((ActionEvent e) -> {
+                    ResolutionEnum maxResolution = ISettingsEnum.getEnumByIndex(ResolutionEnum.class, maxHeightComboBox.getSelectedIndex());
+                    ResolutionEnum minResolution = maxResolution.getValidMin(qualitySettings.getMinHeight());
+
+                    qualitySettings.setMinHeight(minResolution);
+                    qualitySettings.setMaxHeight(maxResolution);
+
+                    minHeightComboBox.setSelectedIndex(ISettingsEnum.getEnumIndex(ResolutionEnum.class, minResolution));
+                });
+            }
+
+            toggleableComponents.add(addComboBox(itemPanel, gbcItem,
+                "settings.video_container",
+                VideoContainerEnum.class,
+                qualitySettings::getVideoContainer,
+                qualitySettings::setVideoContainer,
+                false
+            ));
+
+            toggleableComponents.add(addComboBox(itemPanel, gbcItem,
+                "settings.fps",
+                FPSEnum.class,
+                qualitySettings::getFps,
+                qualitySettings::setFps,
+                false
+            ));
+
+            toggleableComponents.add(addComboBox(itemPanel, gbcItem,
+                "settings.subtitle_container",
+                SubtitleContainerEnum.class,
+                qualitySettings::getSubtitleContainer,
+                qualitySettings::setSubtitleContainer,
+                false
+            ));
+
+            toggleableComponents.add(addComboBox(itemPanel, gbcItem,
+                "settings.thumbnail_container",
+                ThumbnailContainerEnum.class,
+                qualitySettings::getThumbnailContainer,
+                qualitySettings::setThumbnailContainer,
+                false
+            ));
+        }
+
+        if (filter == null || !filter.isVideoOnly()) {
+            toggleableComponents.add(addComboBox(itemPanel, gbcItem,
+                "settings.audio_container",
+                AudioContainerEnum.class,
+                qualitySettings::getAudioContainer,
+                qualitySettings::setAudioContainer,
+                false
+            ));
+
+            toggleableComponents.add(addComboBox(itemPanel, gbcItem,
+                "settings.audio_bitrate",
+                AudioBitrateEnum.class,
+                qualitySettings::getAudioBitrate,
+                qualitySettings::setAudioBitrate,
+                false
+            ));
+
+            // TODO: remove
+            toggleableComponents.add(addComboBox(itemPanel, gbcItem,
+                "settings.audio_codec",
+                AudioCodecEnum.class,
+                qualitySettings::getAudioCodec,
+                qualitySettings::setAudioCodec,
+                false
+            ));
+        }
+
+        JCheckBox globalCheckbox;
+        if ((globalCheckbox = useGlobalCheckbox.get()) != null) {
+            enableComponents(toggleableComponents, !globalCheckbox.isSelected());
+
+            globalCheckbox.addActionListener(e -> {
+                enableComponents(toggleableComponents, !globalCheckbox.isSelected());
+            });
+        }
+
+        MouseAdapter cardListener = new MouseAdapter() {
+            private boolean isExpanded = false;
+
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.getSource() == titlePanel) {
+                    isExpanded = !itemPanel.isVisible();
+                    itemPanel.setVisible(isExpanded);
+                    expandLabel.setText(isExpanded ? "▲" : "▼");
+
+                    card.setBackground(isExpanded
+                        ? color(MEDIA_CARD_HOVER) : color(MEDIA_CARD));
+
+                    card.revalidate();
+                }
+            }
+
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                if (!isExpanded) {
+                    card.setBackground(color(MEDIA_CARD_HOVER));
+                }
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                if (!isExpanded) {
+                    card.setBackground(color(MEDIA_CARD));
+                }
+            }
+        };
+
+        titlePanel.addMouseListener(cardListener);
+
+        card.add(titlePanel, BorderLayout.NORTH);
+        card.add(itemPanel, BorderLayout.CENTER);
+
+        return card;
+    }
+
+    public static void enableComponents(List<Component> components, boolean enable) {
+        for (Component component : components) {
+            enableComponent(component, enable);
+        }
+    }
+
+    public static void enableComponent(Component component, boolean enable) {
+        component.setEnabled(enable);
+
+        if (component instanceof Container container) {
+            for (Component c : container.getComponents()) {
+                enableComponent(c, enable);
+            }
+        }
     }
 
     public static <T extends Enum<T> & ISettingsEnum> JComboBox<String> addComboBox(JPanel panel,
@@ -1220,7 +1267,7 @@ public class SettingsPanel {
         return comboBox;
     }
 
-    public static void addCheckBox(JPanel panel, GridBagConstraints gbcPanel, String labelString,
+    public static JCheckBox addCheckBox(JPanel panel, GridBagConstraints gbcPanel, String labelString,
         Supplier<Boolean> getter, Consumer<Boolean> setter, boolean requiresRestart) {
 
         JLabel label = createLabel(labelString, LIGHT_TEXT);
@@ -1247,9 +1294,11 @@ public class SettingsPanel {
         gbcPanel.weightx = 0.5;
         gbcPanel.gridwidth = GridBagConstraints.REMAINDER;
         panel.add(checkBox, gbcPanel);
+
+        return checkBox;
     }
 
-    public static void addLabel(JPanel panel, GridBagConstraints gbcPanel, String labelString) {
+    public static JLabel addLabel(JPanel panel, GridBagConstraints gbcPanel, String labelString) {
         JLabel label = createLabel(labelString, FOREGROUND);
 
         gbcPanel.gridx = 0;
@@ -1261,9 +1310,11 @@ public class SettingsPanel {
         panel.add(label, gbcPanel);
 
         gbcPanel.insets = new Insets(5, 5, 5, 5);
+
+        return label;
     }
 
-    public static void addSlider(JPanel panel, GridBagConstraints gbcPanel, String labelString,
+    public static JSlider addSlider(JPanel panel, GridBagConstraints gbcPanel, String labelString,
         int min, int max, Supplier<Integer> getter, Consumer<Integer> setter) {
 
         JLabel label = createLabel(labelString, LIGHT_TEXT);
@@ -1296,6 +1347,8 @@ public class SettingsPanel {
         gbcPanel.weightx = 0.5;
         gbcPanel.gridwidth = GridBagConstraints.REMAINDER;
         panel.add(slider, gbcPanel);
+
+        return slider;
     }
 
     public static JLabel createLabel(String text, UIColors uiColor) {

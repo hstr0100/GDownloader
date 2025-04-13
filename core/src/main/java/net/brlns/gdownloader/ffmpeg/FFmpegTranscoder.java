@@ -35,6 +35,7 @@ import net.brlns.gdownloader.ffmpeg.structs.EncoderProfile;
 import net.brlns.gdownloader.ffmpeg.structs.FFmpegConfig;
 import net.brlns.gdownloader.process.ProcessArguments;
 import net.brlns.gdownloader.process.ProcessMonitor;
+import net.brlns.gdownloader.settings.Settings;
 import net.brlns.gdownloader.settings.enums.VideoContainerEnum;
 import net.brlns.gdownloader.updater.SystemExecutableLocator;
 import net.brlns.gdownloader.util.FileUtils;
@@ -499,6 +500,19 @@ public final class FFmpegTranscoder {
         int outputAudioIndex = 0;
         for (AudioStream stream : streamData.getAudioStreams()) {
             AudioCodecEnum audioCodec = config.getAudioCodec();
+            AudioBitrateEnum audioBitrate = config.getAudioBitrate();
+            Settings mainSettings = getMainSettings();
+            if (audioCodec == AudioCodecEnum.NO_CODEC
+                && mainSettings != null && mainSettings.isTranscodeAudioToAAC()) {
+                // If no custom codec is set, check if "Convert audio to a widely supported codec" is enabled.
+                // If enabled, default to "aac".
+                audioCodec = AudioCodecEnum.AAC; // Opus is not supported by some native video players
+                if (audioBitrate.getValue() > 256) {
+                    // Since this option is decided automatically by us, lets cap the bitrate to a reasonable value
+                    audioBitrate = AudioBitrateEnum.BITRATE_256;
+                }
+            }
+
             if (audioCodec != AudioCodecEnum.NO_CODEC && !audioCodec.isSupportedByContainer(videoContainer)) {
                 log.error("Target container {} does not support audio codec: {} in stream #{}",
                     videoContainer, audioCodec, stream.getIndex());
@@ -524,7 +538,6 @@ public final class FFmpegTranscoder {
                 args.add(audioCodec.getFfmpegCodecName());
 
                 args.add("-b:a:" + outputAudioIndex);
-                AudioBitrateEnum audioBitrate = config.getAudioBitrate();
                 if (audioBitrate != AudioBitrateEnum.NO_AUDIO) {
                     args.add(audioBitrate.getValue() + "k");
                 } else {
@@ -537,6 +550,7 @@ public final class FFmpegTranscoder {
                     args.add(bitrate + "k");
                 }
             } else {
+                // If no codec is defined, the default audio codec provided by the source will be passed through.
                 args.add("copy");
             }
 
@@ -722,6 +736,16 @@ public final class FFmpegTranscoder {
             default ->// WebP is usually a mistake
                 ".png";
         };
+    }
+
+    @Nullable
+    private Settings getMainSettings() {
+        GDownloader instance = GDownloader.getInstance();
+        if (instance != null) {
+            return instance.getConfig();
+        }
+
+        return null;
     }
 
     @PreDestroy

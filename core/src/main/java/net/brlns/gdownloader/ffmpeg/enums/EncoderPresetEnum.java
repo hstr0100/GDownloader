@@ -57,6 +57,10 @@ public enum EncoderPresetEnum {
         return new EncoderPreset(this);
     }
 
+    public boolean isDefault() {
+        return this == NO_PRESET;
+    }
+
     public static Optional<EncoderPresetEnum> findByNameAndCodec(
         String name, @NonNull VideoCodecEnum codec) {
         return Arrays.stream(values())

@@ -40,10 +40,14 @@ public enum RateControlModeEnum implements ISettingsEnum {
 
     @Override
     public String getDisplayName() {
-        if (this == DEFAULT) {
-            return l10n(translationKey);
+        if (isDefault()) {
+            return l10n(translationKey, CRF.name());
         }
 
         return name() + " - " + l10n(translationKey);
+    }
+
+    public boolean isDefault() {
+        return this == DEFAULT;
     }
 }

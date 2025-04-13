@@ -37,6 +37,7 @@ import net.brlns.gdownloader.downloader.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.process.ProcessArguments;
 import net.brlns.gdownloader.settings.QualitySettings;
+import net.brlns.gdownloader.settings.Settings;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -202,6 +203,15 @@ public abstract class AbstractUrlFilter {
 
     @JsonProperty("QualitySettings")
     private QualitySettings qualitySettings = QualitySettings.builder().build();
+
+    @JsonIgnore
+    public QualitySettings getActiveQualitySettings(Settings config) {
+        if (qualitySettings.isUseGlobalSettings()) {
+            return config.getGlobalQualitySettings();
+        }
+
+        return qualitySettings;
+    }
 
     public AbstractUrlFilter() {
         extraYtDlpArguments.put(DownloadTypeEnum.ALL, new ArrayList<>());

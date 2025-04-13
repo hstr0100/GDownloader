@@ -55,7 +55,11 @@ public enum AudioBitrateEnum implements ISettingsEnum {
 
     @Override
     public String getDisplayName() {
-        return this == NO_AUDIO ? l10n("enums.audio.no_audio") : displayName;
+        return isDefault() ? l10n("enums.audio.no_audio") : displayName;
+    }
+
+    public boolean isDefault() {
+        return this == NO_AUDIO;
     }
 
     @Override

@@ -74,7 +74,7 @@ public enum EncoderEnum implements ISettingsEnum {
 
     @Override
     public String getDisplayName() {
-        if (this == NO_ENCODER) {
+        if (isDefault()) {
             return l10n("enums.transcode.encoder.no_encoder");
         }
 
@@ -83,6 +83,10 @@ public enum EncoderEnum implements ISettingsEnum {
 
     public boolean isAutomatic() {
         return this.getEncoderType() == AUTO;
+    }
+
+    public boolean isDefault() {
+        return this == NO_ENCODER;
     }
 
     @Override

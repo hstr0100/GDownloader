@@ -40,7 +40,6 @@ import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.downloader.structs.DownloadResult;
 import net.brlns.gdownloader.downloader.structs.MediaInfo;
 import net.brlns.gdownloader.ffmpeg.enums.AudioBitrateEnum;
-import net.brlns.gdownloader.ffmpeg.enums.AudioCodecEnum;
 import net.brlns.gdownloader.ffmpeg.structs.FFmpegConfig;
 import net.brlns.gdownloader.persistence.PersistenceManager;
 import net.brlns.gdownloader.process.ProcessArguments;
@@ -200,7 +199,7 @@ public class YtDlpDownloader extends AbstractDownloader {
             return new DownloadResult(combineFlags(FLAG_NO_METHOD, FLAG_NO_METHOD_VIDEO));
         }
 
-        QualitySettings quality = filter.getQualitySettings();
+        QualitySettings quality = filter.getActiveQualitySettings(main.getConfig());
         AudioBitrateEnum audioBitrate = quality.getAudioBitrate();
 
         if (!downloadVideo && downloadAudio && audioBitrate == AudioBitrateEnum.NO_AUDIO) {
@@ -280,7 +279,7 @@ public class YtDlpDownloader extends AbstractDownloader {
                     log.error("Failed to download {}: {}", type, lastOutput);
                 }
             } else {
-                if (type == VIDEO/* && config.isEnabled() */) {
+                if (type == VIDEO && quality.getTranscodingSettings().isEnabled()) {
                     DownloadResult transcodeResult = transcodeMediaFiles(entry);
 
                     if (main.getConfig().isFailDownloadsOnTranscodingFailures()
@@ -310,7 +309,7 @@ public class YtDlpDownloader extends AbstractDownloader {
             return new DownloadResult(FLAG_SUCCESS);
         }
 
-        QualitySettings quality = entry.getFilter().getQualitySettings();
+        QualitySettings quality = entry.getFilter().getActiveQualitySettings(main.getConfig());
         if (quality.getVideoContainer() == VideoContainerEnum.GIF) {
             // Not implemented, not supported. Just give up and smile.
             return new DownloadResult(FLAG_SUCCESS);
@@ -326,36 +325,9 @@ public class YtDlpDownloader extends AbstractDownloader {
 
             AtomicReference<String> lastOutput = new AtomicReference<>();
 
+            FFmpegConfig config = quality.getTranscodingSettings();
+
             for (Path path : paths) {
-                // If no codec is defined, the default audio codec provided by the source will be passed through.
-                AudioCodecEnum audioCodec = AudioCodecEnum.NO_CODEC;
-                AudioBitrateEnum audioBitrate = quality.getAudioBitrate();
-                if (quality.getAudioCodec() != AudioCodecEnum.NO_CODEC) {
-                    // Check if the user has selected a custom audio codec.
-                    audioCodec = quality.getAudioCodec();
-                } else if (main.getConfig().isTranscodeAudioToAAC()) {
-                    // If no custom codec is set, check if "Convert audio to a widely supported codec" is enabled.
-                    // If enabled, default to "aac".
-                    audioCodec = AudioCodecEnum.AAC; // Opus is not supported by some native video players
-                    if (audioBitrate.getValue() > 256) {
-                        // Since this option is decided automatically by us, lets cap the bitrate to a reasonable value
-                        audioBitrate = AudioBitrateEnum.BITRATE_256;
-                    }
-                }
-
-                // TODO
-                FFmpegConfig config = FFmpegConfig.builder()
-                    //.videoEncoder(EncoderEnum.H264_AUTO)
-                    .audioCodec(audioCodec)
-                    //.videoContainer(VideoContainerEnum.MP4)
-                    //.speedPreset(EncoderPreset.NO_PRESET)
-                    //.profile(EncoderProfile.NO_PROFILE)
-                    //.rateControlMode(RateControlModeEnum.CRF)
-                    //.rateControlValue(22)
-                    //.videoBitrate(5000)
-                    .audioBitrate(audioBitrate)
-                    .build();
-
                 File inputFile = path.toFile();
                 File tmpFile = FileUtils.deriveTempFile(inputFile, config.getVideoContainer().getFileExtension());
 
@@ -381,7 +353,7 @@ public class YtDlpDownloader extends AbstractDownloader {
 
                     if (exitCode == 0) {
                         if (!tmpFile.exists()) {
-                            log.error("Transcoding error, output file was missing - exit code: {}", exitCode);
+                            log.error("Transcoding error, output file is missing - exit code: {}", exitCode);
 
                             return new DownloadResult(FLAG_TRANSCODING_FAILED, lastOutput.get());
                         }
@@ -423,7 +395,7 @@ public class YtDlpDownloader extends AbstractDownloader {
         Path deepestDir = null;
         int maxDepth = -1;
 
-        QualitySettings quality = entry.getFilter().getQualitySettings();
+        QualitySettings quality = entry.getFilter().getActiveQualitySettings(main.getConfig());
 
         try {
             List<Path> paths = Files.walk(tmpPath.toPath())

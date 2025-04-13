@@ -67,7 +67,7 @@ public enum PresetEnum implements ISettingsEnum {
 
     @Override
     public String getDisplayName() {
-        if (this == CUSTOM) {
+        if (isDefault()) {
             return l10n("enums.transcode.preset.custom");
         }
 
@@ -77,6 +77,10 @@ public enum PresetEnum implements ISettingsEnum {
     @Override
     public String getTranslationKey() {
         return "";
+    }
+
+    public boolean isDefault() {
+        return this == CUSTOM;
     }
 
     @Override

@@ -53,6 +53,10 @@ public enum EncoderProfileEnum {
         return new EncoderProfile(this);
     }
 
+    public boolean isDefault() {
+        return this == NO_PROFILE;
+    }
+
     public static Optional<EncoderProfileEnum> findByNameAndCodec(
         String name, @NonNull VideoCodecEnum codec) {
         return Arrays.stream(values())

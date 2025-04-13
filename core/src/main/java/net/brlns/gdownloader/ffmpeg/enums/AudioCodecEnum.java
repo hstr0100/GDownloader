@@ -58,7 +58,11 @@ public enum AudioCodecEnum implements ISettingsEnum {
 
     @Override
     public String getDisplayName() {
-        return this == NO_CODEC ? l10n("enums.audio_codec.no_codec") : name().toLowerCase();
+        return isDefault() ? l10n("enums.audio_codec.no_codec") : name().toLowerCase();
+    }
+
+    public boolean isDefault() {
+        return this == NO_CODEC;
     }
 
     @Nullable

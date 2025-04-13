@@ -159,6 +159,12 @@ public class QueueEntry {
         main.openDownloadsDirectory();
     }
 
+    public void recreateQueueEntry() {
+        main.getGuiManager().removeMediaCard(
+            mediaCard.getId(), CloseReasonEnum.MANUAL);
+        main.getDownloadManager().captureUrl(url, true);
+    }
+
     @Nullable
     public DownloaderIdEnum getForcedDownloader() {
         return forcedDownloader.get();
@@ -485,10 +491,7 @@ public class QueueEntry {
             }
         }
 
-        if (main.getConfig().isDebugMode()) {
-            addRightClick(l10n("gui.copy_command_line"),
-                constructCommandLineMenu(lastCommandLine));
-        }
+        updateExtraRightClickOptions();
     }
 
     public void logError(String output) {
@@ -497,8 +500,7 @@ public class QueueEntry {
         }
 
         if (!errorLog.isEmpty()) {
-            addRightClick(l10n("gui.copy_error_log"),
-                constructLogMenu(errorLog));
+            updateExtraRightClickOptions();
         }
 
         errorLog.remove(output);
@@ -511,8 +513,7 @@ public class QueueEntry {
         }
 
         if (!downloadLog.isEmpty()) {
-            addRightClick(l10n("gui.copy_download_log"),
-                constructLogMenu(downloadLog));
+            updateExtraRightClickOptions();
         }
 
         downloadLog.remove(output);
@@ -580,22 +581,35 @@ public class QueueEntry {
 
         addRightClick(menu);
 
+        updateMediaRightClickOptions();
+        updateExtraRightClickOptions();
+    }
+
+    public void updateExtraRightClickOptions() {
+        NestedMenuEntry extrasSubmenu = new NestedMenuEntry();
+
         if (main.getConfig().isDebugMode() && !lastCommandLine.isEmpty()) {
-            addRightClick(l10n("gui.copy_command_line"),
+            extrasSubmenu.put(l10n("gui.copy_command_line"),
                 constructCommandLineMenu(lastCommandLine));
         }
 
         if (!errorLog.isEmpty()) {
-            addRightClick(l10n("gui.copy_error_log"),
+            extrasSubmenu.put(l10n("gui.copy_error_log"),
                 constructLogMenu(errorLog));
         }
 
         if (!downloadLog.isEmpty()) {
-            addRightClick(l10n("gui.copy_download_log"),
+            extrasSubmenu.put(l10n("gui.copy_download_log"),
                 constructLogMenu(downloadLog));
         }
 
-        updateMediaRightClickOptions();
+        extrasSubmenu.put(l10n("gui.recreate_entry"),
+            new RunnableMenuEntry(() -> recreateQueueEntry()));
+
+        if (!extrasSubmenu.isEmpty()) {
+            addRightClick(l10n("gui.more_options"),
+                extrasSubmenu);
+        }
     }
 
     public void updateMediaRightClickOptions() {

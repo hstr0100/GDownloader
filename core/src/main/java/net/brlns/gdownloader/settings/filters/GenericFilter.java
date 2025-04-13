@@ -71,7 +71,7 @@ public class GenericFilter extends AbstractUrlFilter {
     @Override
     protected ProcessArguments buildArguments(AbstractDownloader downloader, DownloadTypeEnum typeEnum, DownloadManager manager, File savePath, String inputUrl) {
         Settings config = manager.getMain().getConfig();
-        QualitySettings quality = getQualitySettings();
+        QualitySettings quality = getActiveQualitySettings(config);
         AudioBitrateEnum audioBitrate = quality.getAudioBitrate();
 
         ProcessArguments arguments = new ProcessArguments();
@@ -155,7 +155,7 @@ public class GenericFilter extends AbstractUrlFilter {
                     case VIDEO -> {
                         VideoContainerEnum videoContainer = quality.getVideoContainer();
 
-                        String qualitySelector = getQualitySettings().buildQualitySelector();
+                        String qualitySelector = quality.buildQualitySelector();
 
                         if (config.isMergeAllAudioTracks()) {
                             // TODO: Update this once the following yt-dlp feature request is addressed:

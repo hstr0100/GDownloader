@@ -231,6 +231,9 @@ public class Settings {
     @JsonProperty("UrlFilters")
     private List<AbstractUrlFilter> urlFilters = new ArrayList<>();
 
+    @JsonProperty("GlobalQualitySettings")
+    private QualitySettings globalQualitySettings = QualitySettings.builder().build();
+
     public Settings() {
         urlFilters.addAll(AbstractUrlFilter.getDefaultUrlFilters());
     }
