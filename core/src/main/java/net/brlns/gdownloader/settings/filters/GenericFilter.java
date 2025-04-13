@@ -171,7 +171,7 @@ public class GenericFilter extends AbstractUrlFilter {
                             "-o", savePath.getAbsolutePath() + File.separator + getVideoNamePattern(),
                             "-f", qualitySelector,
                             "--merge-output-format",
-                            videoContainer.getValue()
+                            videoContainer.getValue()// TODO: same as source will actually default to mp4
                         );
 
                         if (isEmbedThumbnailAndMetadata()) {
@@ -186,7 +186,7 @@ public class GenericFilter extends AbstractUrlFilter {
                                         "--sub-langs",
                                         "all,-live_chat"
                                     );
-                                case MKV, MP4, MOV ->
+                                case MKV, MP4, MOV, DEFAULT ->
                                     arguments.add(
                                         "--convert-thumbnails", "png",
                                         "--embed-thumbnail",

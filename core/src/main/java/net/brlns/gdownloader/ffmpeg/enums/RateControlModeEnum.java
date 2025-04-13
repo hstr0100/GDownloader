@@ -29,11 +29,11 @@ import static net.brlns.gdownloader.lang.Language.l10n;
 @Getter
 @AllArgsConstructor
 public enum RateControlModeEnum implements ISettingsEnum {
+    DEFAULT("", "enums.transcode.rc.default"),
     CBR("cbr", "enums.transcode.rc.cbr"), // Constant Bitrate
     VBR("vbr", "enums.transcode.rc.vbr"), // Variable Bitrate
     CRF("crf", "enums.transcode.rc.crf"), // Constant Rate Factor
-    CQP("cqp", "enums.transcode.rc.cqp"), // Constant Quantization Parameter
-    DEFAULT("", "enums.transcode.preset.custom");
+    CQP("cqp", "enums.transcode.rc.cqp"); // Constant Quantization Parameter;
 
     private final String mode;
     private final String translationKey;
@@ -49,5 +49,13 @@ public enum RateControlModeEnum implements ISettingsEnum {
 
     public boolean isDefault() {
         return this == DEFAULT;
+    }
+
+    public boolean isQpValue() {
+        return this == DEFAULT || this == CRF || this == CQP;
+    }
+
+    public boolean isBitrateValue() {
+        return this == VBR || this == CBR;
     }
 }

@@ -21,6 +21,7 @@ import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NonNull;
+import net.brlns.gdownloader.lang.ITranslatable;
 import net.brlns.gdownloader.settings.enums.VideoContainerEnum;
 
 import static net.brlns.gdownloader.settings.enums.VideoContainerEnum.*;
@@ -30,7 +31,7 @@ import static net.brlns.gdownloader.settings.enums.VideoContainerEnum.*;
  */
 @Getter
 @AllArgsConstructor
-public enum VideoCodecEnum {
+public enum VideoCodecEnum implements ITranslatable {
     NO_CODEC("", "", List.of()),
     H264("h264", "H264", List.of(MP4, MKV, WEBM, AVI, FLV, MOV)),
     H265("h265", "HEVC", List.of(MP4, MKV, MOV)),
@@ -41,7 +42,12 @@ public enum VideoCodecEnum {
     private final String vaapiName;
     private final List<VideoContainerEnum> supportedContainers;
 
+    @Override
     public String getDisplayName() {
+        if (isDefault()) {
+            throw new UnsupportedOperationException();
+        }
+
         return vaapiName
             .replace("H264", "H.264")
             .replace("HEVC", "HEVC/H.265");

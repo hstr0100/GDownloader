@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 hstr0100
+ * Copyright (C) 2025 hstr0100
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,33 +14,13 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package net.brlns.gdownloader.settings.enums;
+package net.brlns.gdownloader.lang;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-public enum AudioContainerEnum implements ISettingsEnum, IContainerEnum {
-    MP3,
-    AAC,
-    WAV,
-    FLAC,
-    ALAC,
-    M4A,
-    OPUS,
-    VORBIS;
+public interface ITranslatable {
 
-    @Override
-    public String getValue() {
-        return name().toLowerCase();
-    }
+    String getDisplayName();
 
-    @Override
-    public String getTranslationKey() {
-        return "";
-    }
-
-    @Override
-    public String getDisplayName() {
-        return name().toLowerCase();
-    }
 }

@@ -23,6 +23,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import net.brlns.gdownloader.ffmpeg.enums.EncoderProfileEnum;
+import net.brlns.gdownloader.lang.ITranslatable;
 
 import static net.brlns.gdownloader.ffmpeg.structs.EncoderProfile.NO_PROFILE;
 import static net.brlns.gdownloader.lang.Language.l10n;
@@ -34,7 +35,7 @@ import static net.brlns.gdownloader.lang.Language.l10n;
 @AllArgsConstructor
 @NoArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class EncoderProfile {
+public class EncoderProfile implements ITranslatable {
 
     public static final EncoderProfile NO_PROFILE = new EncoderProfile();
 
@@ -53,6 +54,7 @@ public class EncoderProfile {
     }
 
     @JsonIgnore
+    @Override
     public String getDisplayName() {
         return this.equals(NO_PROFILE)
             ? l10n("enums.transcode.profile.no_profile")

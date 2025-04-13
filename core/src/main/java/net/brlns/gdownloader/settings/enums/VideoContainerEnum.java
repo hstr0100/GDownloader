@@ -16,10 +16,13 @@
  */
 package net.brlns.gdownloader.settings.enums;
 
+import static net.brlns.gdownloader.lang.Language.l10n;
+
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
 public enum VideoContainerEnum implements ISettingsEnum, IContainerEnum {
+    DEFAULT,
     MP4,
     MKV,
     WEBM,
@@ -30,6 +33,10 @@ public enum VideoContainerEnum implements ISettingsEnum, IContainerEnum {
 
     @Override
     public String getValue() {
+        if (isDefault()) {
+            return MP4.getValue();
+        }
+
         return name().toLowerCase();
     }
 
@@ -38,12 +45,16 @@ public enum VideoContainerEnum implements ISettingsEnum, IContainerEnum {
         return "";
     }
 
-    public String getFileExtension() {
+    @Override
+    public String getDisplayName() {
+        if (isDefault()) {
+            return l10n("enums.containers.video.default");
+        }
+
         return name().toLowerCase();
     }
 
-    @Override
-    public String getDisplayName() {
-        return name().toLowerCase();
+    public boolean isDefault() {
+        return this == DEFAULT;
     }
 }

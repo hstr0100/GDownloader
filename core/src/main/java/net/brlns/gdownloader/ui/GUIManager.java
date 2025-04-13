@@ -39,7 +39,6 @@ import java.util.function.Supplier;
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.Timer;
-import javax.swing.plaf.ColorUIResource;
 import javax.swing.plaf.basic.BasicButtonUI;
 import lombok.Data;
 import lombok.Getter;

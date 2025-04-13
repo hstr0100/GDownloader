@@ -23,6 +23,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import net.brlns.gdownloader.ffmpeg.enums.EncoderPresetEnum;
+import net.brlns.gdownloader.lang.ITranslatable;
 
 import static net.brlns.gdownloader.ffmpeg.structs.EncoderPreset.NO_PRESET;
 import static net.brlns.gdownloader.lang.Language.l10n;
@@ -34,7 +35,7 @@ import static net.brlns.gdownloader.lang.Language.l10n;
 @AllArgsConstructor
 @NoArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class EncoderPreset {
+public class EncoderPreset implements ITranslatable {
 
     public static final EncoderPreset NO_PRESET = new EncoderPreset();
 
@@ -58,6 +59,7 @@ public class EncoderPreset {
     }
 
     @JsonIgnore
+    @Override
     public String getDisplayName() {
         return this.equals(NO_PRESET)
             ? l10n("enums.transcode.speed_preset.no_preset")

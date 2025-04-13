@@ -325,11 +325,16 @@ public class YtDlpDownloader extends AbstractDownloader {
 
             AtomicReference<String> lastOutput = new AtomicReference<>();
 
-            FFmpegConfig config = quality.getTranscodingSettings();
+            // Copy the config, so we can make changes to the selected container
+            FFmpegConfig config = GDownloader.OBJECT_MAPPER.convertValue(
+                quality.getTranscodingSettings(), FFmpegConfig.class);
+            if (config.getVideoContainer().isDefault()) {
+                config.setVideoContainer(quality.getVideoContainer());
+            }
 
             for (Path path : paths) {
                 File inputFile = path.toFile();
-                File tmpFile = FileUtils.deriveTempFile(inputFile, config.getVideoContainer().getFileExtension());
+                File tmpFile = FileUtils.deriveTempFile(inputFile, config.getVideoContainer().getValue());
 
                 try {
                     entry.updateStatus(DownloadStatusEnum.TRANSCODING, l10n("gui.transcode.starting"));

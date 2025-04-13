@@ -17,16 +17,18 @@
 package net.brlns.gdownloader.settings.enums;
 
 import java.util.Arrays;
+import net.brlns.gdownloader.lang.ITranslatable;
 
 import static net.brlns.gdownloader.lang.Language.*;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-public interface ISettingsEnum {
+public interface ISettingsEnum extends ITranslatable {
 
     String getTranslationKey();
 
+    @Override
     default String getDisplayName() {
         return l10n(getTranslationKey());
     }

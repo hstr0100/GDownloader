@@ -47,7 +47,7 @@ public class FFmpegConfig {
     @NonNull
     @Builder.Default
     @JsonProperty("VideoContainer")
-    private VideoContainerEnum videoContainer = VideoContainerEnum.MP4;
+    private VideoContainerEnum videoContainer = VideoContainerEnum.DEFAULT;
 
     @NonNull
     @Builder.Default

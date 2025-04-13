@@ -42,20 +42,15 @@ import net.brlns.gdownloader.settings.QualitySettings;
 import net.brlns.gdownloader.settings.Settings;
 import net.brlns.gdownloader.settings.enums.*;
 import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
-import net.brlns.gdownloader.ui.custom.CustomButton;
-import net.brlns.gdownloader.ui.custom.CustomCheckBoxUI;
-import net.brlns.gdownloader.ui.custom.CustomComboBoxUI;
 import net.brlns.gdownloader.ui.custom.CustomScrollBarUI;
-import net.brlns.gdownloader.ui.custom.CustomSliderUI;
-import net.brlns.gdownloader.ui.custom.CustomSpinnerUI;
 import net.brlns.gdownloader.ui.message.MessageTypeEnum;
 import net.brlns.gdownloader.ui.message.PopupMessenger;
-import net.brlns.gdownloader.ui.themes.UIColors;
 
 import static net.brlns.gdownloader.lang.Language.*;
 import static net.brlns.gdownloader.ui.GUIManager.createIconButton;
 import static net.brlns.gdownloader.ui.GUIManager.loadIcon;
 import static net.brlns.gdownloader.ui.GUIManager.runOnEDT;
+import static net.brlns.gdownloader.ui.UIUtils.*;
 import static net.brlns.gdownloader.ui.themes.ThemeProvider.*;
 import static net.brlns.gdownloader.ui.themes.UIColors.*;
 
@@ -554,6 +549,7 @@ public class SettingsPanel {
             });
 
             customizeSlider(slider, BACKGROUND, SLIDER_FOREGROUND);
+            slider.putClientProperty("associated-label", label);
 
             gbcPanel.gridx = 1;
             gbcPanel.weightx = 1;
@@ -667,6 +663,9 @@ public class SettingsPanel {
             });
 
             selectButton.setPreferredSize(new Dimension(20, downloadPathField.getPreferredSize().height));
+
+            downloadPathField.putClientProperty("associated-label", label);
+            selectButton.putClientProperty("associated-label", label);
 
             gbcPanel.gridx = 2;
             gbcPanel.weightx = 0.1;
@@ -1042,7 +1041,7 @@ public class SettingsPanel {
 
         gbcItem.gridy = 1;
 
-        List<Component> toggleableComponents = new ArrayList<>();
+        List<JComponent> toggleableComponents = new ArrayList<>();
 
         AtomicReference<JCheckBox> useGlobalCheckbox = new AtomicReference<>();
         if (filter == null || !filter.isAudioOnly()) {
@@ -1171,10 +1170,10 @@ public class SettingsPanel {
 
         JCheckBox globalCheckbox;
         if ((globalCheckbox = useGlobalCheckbox.get()) != null) {
-            enableComponents(toggleableComponents, !globalCheckbox.isSelected());
+            enableComponentsAndLabels(toggleableComponents, !globalCheckbox.isSelected());
 
             globalCheckbox.addActionListener(e -> {
-                enableComponents(toggleableComponents, !globalCheckbox.isSelected());
+                enableComponentsAndLabels(toggleableComponents, !globalCheckbox.isSelected());
             });
         }
 
@@ -1218,22 +1217,6 @@ public class SettingsPanel {
         return card;
     }
 
-    public static void enableComponents(List<Component> components, boolean enable) {
-        for (Component component : components) {
-            enableComponents(component, enable);
-        }
-    }
-
-    public static void enableComponents(Component component, boolean enable) {
-        component.setEnabled(enable);
-
-        if (component instanceof Container container) {
-            for (Component c : container.getComponents()) {
-                enableComponents(c, enable);
-            }
-        }
-    }
-
     public static <T extends Enum<T> & ISettingsEnum> JComboBox<String> addComboBox(JPanel panel,
         GridBagConstraints gbcPanel, String labelString, Class<T> enumClass,
         Supplier<T> getter, Consumer<T> setter, boolean requiresRestart) {
@@ -1258,6 +1241,7 @@ public class SettingsPanel {
         });
 
         customizeComboBox(comboBox);
+        comboBox.putClientProperty("associated-label", label);
 
         gbcPanel.gridx = 1;
         gbcPanel.weightx = 0.5;
@@ -1289,6 +1273,7 @@ public class SettingsPanel {
         });
 
         customizeComponent(checkBox, BACKGROUND, LIGHT_TEXT);
+        checkBox.putClientProperty("associated-label", label);
 
         gbcPanel.gridx = 1;
         gbcPanel.weightx = 0.5;
@@ -1342,6 +1327,7 @@ public class SettingsPanel {
         });
 
         customizeSlider(slider, BACKGROUND, SLIDER_FOREGROUND);
+        slider.putClientProperty("associated-label", label);
 
         gbcPanel.gridx = 1;
         gbcPanel.weightx = 0.5;
@@ -1349,55 +1335,6 @@ public class SettingsPanel {
         panel.add(slider, gbcPanel);
 
         return slider;
-    }
-
-    public static JLabel createLabel(String text, UIColors uiColor) {
-        JLabel label = new JLabel(l10n(text));
-        label.setForeground(color(uiColor));
-
-        return label;
-    }
-
-    public static JButton createButton(String text, String tooltipText,
-        UIColors backgroundColor, UIColors textColor, UIColors hoverColor) {
-        CustomButton button = new CustomButton(l10n(text),
-            color(hoverColor),
-            color(hoverColor).brighter());
-
-        button.setToolTipText(l10n(tooltipText));
-
-        button.setFocusPainted(false);
-        button.setForeground(color(textColor));
-        button.setBackground(color(backgroundColor));
-        button.setBorder(BorderFactory.createEmptyBorder(10, 25, 10, 25));
-
-        return button;
-    }
-
-    public static void customizeComboBox(JComboBox<?> component) {
-        component.setUI(new CustomComboBoxUI());
-    }
-
-    public static void customizeComponent(JComponent component, UIColors backgroundColor, UIColors textColor) {
-        component.setForeground(color(textColor));
-        component.setBackground(color(backgroundColor));
-
-        switch (component) {
-            case JCheckBox jCheckBox ->
-                jCheckBox.setUI(new CustomCheckBoxUI());
-            case JSpinner jSpinner ->
-                jSpinner.setUI(new CustomSpinnerUI());
-            default -> {
-            }
-        }
-    }
-
-    public static void customizeSlider(JSlider slider, UIColors backgroundColor, UIColors textColor) {
-        slider.setForeground(color(textColor));
-        slider.setBackground(color(backgroundColor));
-        slider.setOpaque(true);
-        slider.setBorder(BorderFactory.createEmptyBorder());
-        slider.setUI(new CustomSliderUI(slider));
     }
 
     @Data

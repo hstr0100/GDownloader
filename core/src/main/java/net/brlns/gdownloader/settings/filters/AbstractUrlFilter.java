@@ -35,6 +35,7 @@ import net.brlns.gdownloader.downloader.AbstractDownloader;
 import net.brlns.gdownloader.downloader.DownloadManager;
 import net.brlns.gdownloader.downloader.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
+import net.brlns.gdownloader.lang.ITranslatable;
 import net.brlns.gdownloader.process.ProcessArguments;
 import net.brlns.gdownloader.settings.QualitySettings;
 import net.brlns.gdownloader.settings.Settings;
@@ -71,7 +72,7 @@ import net.brlns.gdownloader.settings.Settings;
 
     @JsonSubTypes.Type(value = GenericFilter.class, name = GenericFilter.ID)
 })
-public abstract class AbstractUrlFilter {
+public abstract class AbstractUrlFilter implements ITranslatable {
 
     @JsonIgnore
     private static final List<Class<?>> DEFAULTS = new ArrayList<>();
@@ -231,6 +232,7 @@ public abstract class AbstractUrlFilter {
     }
 
     @JsonIgnore
+    @Override
     public String getDisplayName() {
         String name = getFilterName();
         if (name.isEmpty()) {

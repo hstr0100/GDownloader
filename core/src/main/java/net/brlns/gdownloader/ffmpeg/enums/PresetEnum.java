@@ -37,7 +37,7 @@ import static net.brlns.gdownloader.lang.Language.l10n;
 public enum PresetEnum implements ISettingsEnum {
     // TODO: more presets
     // User defined
-    CUSTOM("", NO_ENCODER, NO_PRESET, NO_PROFILE, CRF, 0, 0),
+    CUSTOM("enums.transcode.preset.custom", NO_ENCODER, NO_PRESET, NO_PROFILE, CRF, 0, 0),
     // H264 Presets
     H264_QUALITY("enums.transcode.preset.quality", H264_AUTO, NO_PRESET, NO_PROFILE, CRF, 18, 0),
     H264_MEDIUM("enums.transcode.preset.medium", H264_AUTO, NO_PRESET, NO_PROFILE, CRF, 23, 0),
@@ -68,7 +68,7 @@ public enum PresetEnum implements ISettingsEnum {
     @Override
     public String getDisplayName() {
         if (isDefault()) {
-            return l10n("enums.transcode.preset.custom");
+            return l10n(presetTranslationKey);
         }
 
         return encoder.getVideoCodec().getDisplayName() + " - " + l10n(presetTranslationKey);
@@ -81,11 +81,6 @@ public enum PresetEnum implements ISettingsEnum {
 
     public boolean isDefault() {
         return this == CUSTOM;
-    }
-
-    @Override
-    public String toString() {
-        return getDisplayName();
     }
 
     public void applyToConfig(FFmpegConfig config) {

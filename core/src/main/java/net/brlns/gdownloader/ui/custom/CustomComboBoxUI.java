@@ -18,7 +18,6 @@ package net.brlns.gdownloader.ui.custom;
 
 import java.awt.Color;
 import java.awt.Component;
-import java.awt.Container;
 import java.awt.Graphics;
 import java.awt.Rectangle;
 import java.awt.event.FocusAdapter;
