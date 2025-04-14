@@ -160,7 +160,7 @@ public class SettingsPanel {
             };
 
             frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-            frame.setSize(1000, 635);
+            frame.setSize(1000, 655);
             frame.setLayout(new BorderLayout());
             //frame.setResizable(false);
             frame.setLocationRelativeTo(null);
@@ -492,6 +492,13 @@ public class SettingsPanel {
             .labelKey("settings.play_sounds")
             .getter(settings::isPlaySounds)
             .setter(settings::setPlaySounds)
+            .build());
+
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.display_downloads_complete_notification")
+            .getter(settings::isDisplayDownloadsCompleteNotification)
+            .setter(settings::setDisplayDownloadsCompleteNotification)
             .build());
 
         addCheckBox(panel, CheckBoxBuilder.builder()

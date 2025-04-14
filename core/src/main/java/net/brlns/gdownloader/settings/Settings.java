@@ -218,6 +218,9 @@ public class Settings {
     @JsonProperty("PlaySounds")
     private boolean playSounds = false;
 
+    @JsonProperty("DisplayDownloadsCompleteNotification")
+    private boolean displayDownloadsCompleteNotification = true;
+
     @JsonProperty("AutoDownloadRetry")
     private boolean autoDownloadRetry = true;
 

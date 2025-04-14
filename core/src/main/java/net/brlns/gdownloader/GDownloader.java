@@ -128,7 +128,6 @@ import static net.brlns.gdownloader.util.StringUtils.nullOrEmpty;
 // TODO reseting download links should also refresh filter references
 // TODO right click > sort by
 // TODO display number in download queue
-// TODO play notification tone when downloads are complete
 /**
  * GDownloader - GUI wrapper for yt-dlp
  *

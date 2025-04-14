@@ -55,7 +55,9 @@ import net.brlns.gdownloader.settings.filters.YoutubePlaylistFilter;
 import net.brlns.gdownloader.ui.GUIManager;
 import net.brlns.gdownloader.ui.MediaCard;
 import net.brlns.gdownloader.ui.message.MessageTypeEnum;
+import net.brlns.gdownloader.ui.message.PopupMessenger;
 import net.brlns.gdownloader.ui.message.ToastMessenger;
+import net.brlns.gdownloader.util.DownloadIntervalometer;
 import net.brlns.gdownloader.util.collection.ConcurrentRearrangeableDeque;
 import net.brlns.gdownloader.util.collection.ExpiringSet;
 
@@ -98,6 +100,8 @@ public class DownloadManager implements IEvent {
     @Getter
     private final AtomicLong downloadCounter = new AtomicLong();
 
+    private final AtomicInteger completeCounter = new AtomicInteger();
+
     private final AtomicBoolean downloadsBlocked = new AtomicBoolean(true);
     private final AtomicBoolean downloadsRunning = new AtomicBoolean(false);
     private final AtomicBoolean downloadsManuallyStarted = new AtomicBoolean(false);
@@ -109,6 +113,8 @@ public class DownloadManager implements IEvent {
     private final ExecutorService forcefulExecutor = Executors.newVirtualThreadPerTaskExecutor();// No limits, power to ya
     private final String _forceStartKey = l10n("gui.force_download_start");
     private final String _restartKey = l10n("gui.restart_download");
+
+    private final DownloadIntervalometer intervalometer = new DownloadIntervalometer(5, 15);
 
     @SuppressWarnings("this-escape")
     public DownloadManager(GDownloader mainIn) {
@@ -577,6 +583,7 @@ public class DownloadManager implements IEvent {
         downloadsRunning.set(false);
         downloadsManuallyStarted.set(false);
         suggestedDownloaderId.set(null);
+        completeCounter.set(0);
 
         fireListeners();
     }
@@ -631,6 +638,16 @@ public class DownloadManager implements IEvent {
         }
 
         if (downloadsRunning.get() && runningDownloads.isEmpty()) {
+            if (main.getConfig().isDisplayDownloadsCompleteNotification()
+                && completeCounter.get() > 0) {
+                PopupMessenger.show(
+                    l10n("gui.downloads_complete.notification_title"),
+                    l10n("gui.downloads_complete.complete"),
+                    4000,
+                    MessageTypeEnum.INFO,
+                    true, true);
+            }
+
             stopDownloads();
         }
     }
@@ -964,6 +981,19 @@ public class DownloadManager implements IEvent {
                             entry.updateStatus(DownloadStatusEnum.RETRYING, l10n("gui.download_status.retrying",
                                 String.format("%d/%d", entry.getRetryCounter().get(), maxRetries)) + ": " + lastOutput);
                         } else {
+                            if (main.getConfig().isRandomIntervalBetweenDownloads()) {
+                                int currentWaitTime = intervalometer.getAndCompute(entry.getUrl());
+                                if (currentWaitTime > 0) {
+                                    entry.updateStatus(DownloadStatusEnum.WAITING, l10n("gui.intervalometer.waiting", currentWaitTime));
+
+                                    try {
+                                        intervalometer.park(currentWaitTime, entry.getCancelHook(), downloadsRunning);
+                                    } catch (InterruptedException e) {
+                                        log.warn("Interrupted");
+                                    }
+                                }
+                            }
+
                             entry.updateStatus(DownloadStatusEnum.STARTING, l10n("gui.download_status.starting"));
                         }
 
@@ -1075,6 +1105,7 @@ public class DownloadManager implements IEvent {
                 entry.getRunning().set(false);
 
                 dequeue(RUNNING, entry);
+                completeCounter.incrementAndGet();
             }
         };
 
