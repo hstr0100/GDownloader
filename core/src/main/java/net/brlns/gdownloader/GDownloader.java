@@ -330,10 +330,27 @@ public final class GDownloader {
 
             updateStartupStatus();
 
-            mainTicker.scheduleAtFixedRate(() -> {
-                clipboardManager.tickClipboard();
+            AtomicBoolean failedOnce = new AtomicBoolean();
+            mainTicker.scheduleAtFixedRate(new Runnable() {
+                @Override
+                public void run() {
+                    loop(clipboardManager::tickClipboard);
+                    loop(downloadManager::processQueue);
+                }
 
-                downloadManager.processQueue();
+                private void loop(Runnable action) {
+                    try {
+                        action.run();
+                    } catch (Exception e) {
+                        if (failedOnce.compareAndSet(false, true)) {
+                            log.error("Looper task has failed at least once: {}", e.getMessage());
+
+                            if (log.isDebugEnabled()) {
+                                log.error("Exception: ", e);
+                            }
+                        }
+                    }
+                }
             }, 0, 50, TimeUnit.MILLISECONDS);
 
             // Java doesn't natively support detecting a click outside of the program window,
