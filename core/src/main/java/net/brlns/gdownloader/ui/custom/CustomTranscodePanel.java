@@ -321,9 +321,6 @@ public final class CustomTranscodePanel extends JPanel {
 
             int value = rateControlSlider.getValue();
             config.setRateControlValue(value);
-            if (value == 0) {
-                new Throwable().printStackTrace();
-            }
 
             rateControlValueLabel.setText(l10n("settings.transcode.rate_control.value", value));
 

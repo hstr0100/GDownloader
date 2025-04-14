@@ -50,6 +50,10 @@ public final class SystemExecutableLocator {
         String pathEnv = System.getenv("PATH");
         if (pathEnv != null) {
             for (String path : pathEnv.split(File.pathSeparator)) {
+                if (path == null || path.trim().isEmpty()) {
+                    continue;
+                }
+
                 File file = new File(path, executable);
                 if (file.exists() && file.canExecute()) {
                     log.info("Found {} executable at PATH: {}", executableName, file);
