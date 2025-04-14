@@ -700,7 +700,7 @@ public final class FFmpegTranscoder {
                 return mediaStreamData;
             }
         } catch (Exception e) {
-            log.error("Error running ffprobe: {}", e.getMessage(), e);
+            log.error("Error running ffprobe: {}: args: {}", e.getMessage(), args, e);
         }
 
         return null;

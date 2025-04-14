@@ -94,7 +94,7 @@ public final class FFmpegProcessRunner {
                     }
                 } else {
                     // This reader is for tasks that need an immediate output.
-                    while (!options.getCancelHook().get() && process.isAlive() && (line = reader.readLine()) != null) {
+                    while (!options.getCancelHook().get() && (line = reader.readLine()) != null) {
                         processLine(line, options);
                     }
                 }

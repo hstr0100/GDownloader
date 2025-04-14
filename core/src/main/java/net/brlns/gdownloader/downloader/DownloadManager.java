@@ -1006,7 +1006,7 @@ public class DownloadManager implements IEvent {
                         boolean disabled = FLAG_DOWNLOADER_DISABLED.isSet(flags);
                         boolean transcodingFailed = FLAG_TRANSCODING_FAILED.isSet(flags);
 
-                        if (FLAG_MAIN_CATEGORY_FAILED.isSet(flags) || unsupported || disabled) {
+                        if (FLAG_MAIN_CATEGORY_FAILED.isSet(flags) || unsupported || disabled || transcodingFailed) {
                             entry.logError(lastOutput);
 
                             if (transcodingFailed || disabled || unsupported
@@ -1015,7 +1015,9 @@ public class DownloadManager implements IEvent {
                                 log.error("Download of {} failed on {}: {} supported downloader: {}",
                                     entry.getUrl(), downloaderId, lastOutput, !unsupported);
 
-                                entry.blackListDownloader(downloaderId);
+                                if (!transcodingFailed) {
+                                    entry.blackListDownloader(downloaderId);
+                                }
                             } else {
                                 entry.updateStatus(DownloadStatusEnum.RETRYING, lastOutput);
                                 log.warn("Download of {} failed with {}, retrying ({}/{}): {}",
