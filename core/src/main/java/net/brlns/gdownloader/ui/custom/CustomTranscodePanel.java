@@ -151,7 +151,6 @@ public final class CustomTranscodePanel extends JPanel {
             .labelKey("settings.transcode.label.video_encoder")
             .values(new EncoderEnum[] {EncoderEnum.NO_ENCODER})
             //.getter(config::getVideoEncoder)
-            //.setter(config::setVideoEncoder)
             .onSet((encoder) -> {
                 if (initialized.get() && !updatingFromPreset && !ignoreSettingChanges) {
                     config.setVideoEncoder(encoder);
@@ -177,7 +176,6 @@ public final class CustomTranscodePanel extends JPanel {
             .labelKey("settings.transcode.label.speed_preset")
             .values(new EncoderPreset[] {EncoderPreset.NO_PRESET})
             .getter(config::getSpeedPreset)
-            //.setter(config::setVideoEncoder)
             .onSet((speedPreset) -> {
                 if (initialized.get() && !updatingFromPreset && !ignoreSettingChanges) {
                     config.setSpeedPreset(speedPreset);
@@ -191,7 +189,6 @@ public final class CustomTranscodePanel extends JPanel {
             .labelKey("settings.transcode.label.encoder_profile")
             .values(new EncoderProfile[] {EncoderProfile.NO_PROFILE})
             .getter(config::getProfile)
-            //.setter(config::setProfile)
             .onSet((profile) -> {
                 if (initialized.get() && !updatingFromPreset && !ignoreSettingChanges) {
                     config.setProfile(profile);
@@ -205,7 +202,6 @@ public final class CustomTranscodePanel extends JPanel {
             .labelKey("settings.transcode.label.rate_control_mode")
             .values(RateControlModeEnum.values())
             .getter(config::getRateControlMode)
-            //.setter(config::setRateControlMode)
             .onSet((rateControlMode) -> {
                 config.setRateControlMode(rateControlMode);
                 updateControlVisibility();
@@ -603,6 +599,8 @@ public final class CustomTranscodePanel extends JPanel {
         }
 
         if (!enabled) {
+            //setComponentAndLabelVisible(rateControlPanel, false);
+            setComponentAndLabelVisible(bitRatePanel, false);
             return;
         }
 

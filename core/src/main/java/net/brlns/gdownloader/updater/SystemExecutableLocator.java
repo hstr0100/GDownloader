@@ -22,6 +22,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
@@ -69,10 +70,9 @@ public final class SystemExecutableLocator {
             Paths.get("C:\\ffmpeg\\bin") // Windows
         );
 
-        Set<String> executableNames = Set.of(
-            FileUtils.getBinaryName(executable),
-            executable
-        );
+        Set<String> executableNames = new HashSet<>();
+        executableNames.add(FileUtils.getBinaryName(executable));
+        executableNames.add(executable);
 
         for (Path path : commonPaths) {
             for (String name : executableNames) {

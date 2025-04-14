@@ -1062,7 +1062,7 @@ public class SettingsPanel {
                     FFmpegConfig oldConfig = qualitySettings.getTranscodingSettings();
                     FFmpegConfig newConfig = null;
 
-                    if (selected == QualitySelectorEnum.BEST && oldConfig.equals(FFmpegConfig.DEFAULT)) {
+                    if (selected == QualitySelectorEnum.BEST/* && oldConfig.equals(FFmpegConfig.DEFAULT)*/) {
                         newConfig = FFmpegConfig.getCompatiblePreset();
                     } else if (selected != QualitySelectorEnum.BEST && oldConfig.equals(FFmpegConfig.COMPATIBLE_PRESET)) {
                         newConfig = FFmpegConfig.getDefault();
