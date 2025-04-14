@@ -65,6 +65,7 @@ import net.brlns.gdownloader.ui.menu.RunnableMenuEntry;
 import net.brlns.gdownloader.ui.menu.SingleActionMenuEntry;
 import net.brlns.gdownloader.ui.message.MessageTypeEnum;
 import net.brlns.gdownloader.ui.message.ToastMessenger;
+import net.brlns.gdownloader.util.CancelHook;
 import net.brlns.gdownloader.util.DirectoryUtils;
 import net.brlns.gdownloader.util.ImageUtils;
 import net.brlns.gdownloader.util.StringUtils;
@@ -113,7 +114,7 @@ public class QueueEntry {
     private String lastStatusMessage;
 
     private final AtomicBoolean downloadStarted = new AtomicBoolean(false);
-    private final AtomicBoolean cancelHook = new AtomicBoolean(false);
+    private final CancelHook cancelHook = new CancelHook();
     private final AtomicBoolean running = new AtomicBoolean(false);
     private final AtomicBoolean queried = new AtomicBoolean(false);
     private final AtomicInteger retryCounter = new AtomicInteger();

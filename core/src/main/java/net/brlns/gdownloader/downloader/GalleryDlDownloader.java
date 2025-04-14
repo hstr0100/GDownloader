@@ -39,6 +39,7 @@ import net.brlns.gdownloader.downloader.structs.MediaInfo;
 import net.brlns.gdownloader.persistence.PersistenceManager;
 import net.brlns.gdownloader.process.ProcessArguments;
 import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
+import net.brlns.gdownloader.util.CancelHook;
 import net.brlns.gdownloader.util.DirectoryDeduplicator;
 import net.brlns.gdownloader.util.DirectoryUtils;
 import net.brlns.gdownloader.util.FileUtils;
@@ -279,8 +280,8 @@ public class GalleryDlDownloader extends AbstractDownloader {
 
         entry.setLastCommandLine(finalArgs, true);
 
-        Process process = main.getProcessMonitor()
-            .startProcess(finalArgs, entry.getCancelHook(), true);
+        CancelHook cancelHook = entry.getCancelHook().derive(manager::isRunning, true);
+        Process process = main.getProcessMonitor().startProcess(finalArgs, cancelHook);
         entry.setProcess(process);
 
         String lastOutput = "";
@@ -288,7 +289,7 @@ public class GalleryDlDownloader extends AbstractDownloader {
         try (
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
             String line;
-            while (manager.isRunning() && !entry.getCancelHook().get() && process.isAlive()) {
+            while (!cancelHook.get() && process.isAlive()) {
                 if (Thread.currentThread().isInterrupted()) {
                     process.destroyForcibly();
                     throw new InterruptedException("Download interrupted");
@@ -312,7 +313,7 @@ public class GalleryDlDownloader extends AbstractDownloader {
 
             long stopped = System.currentTimeMillis() - start;
 
-            if (!manager.isRunning() || entry.getCancelHook().get()) {
+            if (cancelHook.get()) {
                 if (main.getConfig().isDebugMode()) {
                     log.debug("Download process halted after {}ms.", stopped);
                 }

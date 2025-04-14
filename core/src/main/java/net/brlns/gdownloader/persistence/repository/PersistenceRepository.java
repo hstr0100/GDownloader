@@ -42,8 +42,8 @@ public class PersistenceRepository<K, T> extends AbstractRepository {
             String jpql = "SELECT e FROM " + entityClass.getSimpleName() + " e";
             TypedQuery<T> query = em.createQuery(jpql, entityClass);
 
-            if (log.isDebugEnabled()) {
-                log.info("Get All: {}", query.getResultList());
+            if (log.isTraceEnabled()) {
+                log.trace("Get All: {}", query.getResultList());
             }
 
             return query.getResultList();
@@ -54,8 +54,8 @@ public class PersistenceRepository<K, T> extends AbstractRepository {
     }
 
     public boolean insertAll(List<T> entities) {
-        if (log.isDebugEnabled()) {
-            log.info("Insert All: {}", entities);
+        if (log.isTraceEnabled()) {
+            log.trace("Insert All: {}", entities);
         }
 
         try (EntityManager em = getEmf().createEntityManager()) {
@@ -74,8 +74,8 @@ public class PersistenceRepository<K, T> extends AbstractRepository {
     }
 
     public boolean upsert(T entity) {
-        if (log.isDebugEnabled()) {
-            log.info("Upsert: {}", entity);
+        if (log.isTraceEnabled()) {
+            log.trace("Upsert: {}", entity);
         }
 
         try (EntityManager em = getEmf().createEntityManager()) {
@@ -92,8 +92,8 @@ public class PersistenceRepository<K, T> extends AbstractRepository {
     }
 
     public boolean remove(K id) {
-        if (log.isDebugEnabled()) {
-            log.info("Remove: {}", id);
+        if (log.isTraceEnabled()) {
+            log.trace("Remove: {}", id);
         }
 
         try (EntityManager em = getEmf().createEntityManager()) {
@@ -118,8 +118,8 @@ public class PersistenceRepository<K, T> extends AbstractRepository {
     }
 
     public Optional<T> getById(K id) {
-        if (log.isDebugEnabled()) {
-            log.info("Get: {}", id);
+        if (log.isTraceEnabled()) {
+            log.trace("Get: {}", id);
         }
 
         try (EntityManager em = getEmf().createEntityManager()) {

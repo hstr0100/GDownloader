@@ -277,8 +277,6 @@ public final class GDownloader {
             clipboardManager = new ClipboardManager(this);
             downloadManager = new DownloadManager(this);
 
-            processMonitor.setShouldStopCancellable(() -> !downloadManager.isRunning());
-
             guiManager = new GUIManager(this);
 
             // Register to the system tray

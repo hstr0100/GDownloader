@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
 import lombok.Getter;
 import lombok.Setter;
@@ -39,6 +38,7 @@ import net.brlns.gdownloader.process.ProcessMonitor;
 import net.brlns.gdownloader.settings.Settings;
 import net.brlns.gdownloader.settings.enums.VideoContainerEnum;
 import net.brlns.gdownloader.updater.SystemExecutableLocator;
+import net.brlns.gdownloader.util.CancelHook;
 import net.brlns.gdownloader.util.FileUtils;
 import net.brlns.gdownloader.util.NoFallbackAvailableException;
 
@@ -150,7 +150,7 @@ public final class FFmpegTranscoder {
 
     // TODO abstraction
     public int startTranscode(FFmpegConfig config, File inputFile,
-        File outputFile, AtomicBoolean cancelHook, FFmpegProgressListener listener) throws Exception {
+        File outputFile, CancelHook cancelHook, FFmpegProgressListener listener) throws Exception {
         if (config.getVideoEncoder() == EncoderEnum.NO_ENCODER
             && config.getAudioCodec() == AudioCodecEnum.NO_CODEC) {
             if (log.isDebugEnabled()) {

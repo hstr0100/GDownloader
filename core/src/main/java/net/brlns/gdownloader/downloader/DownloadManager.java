@@ -57,6 +57,7 @@ import net.brlns.gdownloader.ui.MediaCard;
 import net.brlns.gdownloader.ui.message.MessageTypeEnum;
 import net.brlns.gdownloader.ui.message.PopupMessenger;
 import net.brlns.gdownloader.ui.message.ToastMessenger;
+import net.brlns.gdownloader.util.CancelHook;
 import net.brlns.gdownloader.util.DownloadIntervalometer;
 import net.brlns.gdownloader.util.collection.ConcurrentRearrangeableDeque;
 import net.brlns.gdownloader.util.collection.ExpiringSet;
@@ -987,7 +988,8 @@ public class DownloadManager implements IEvent {
                                     entry.updateStatus(DownloadStatusEnum.WAITING, l10n("gui.intervalometer.waiting", currentWaitTime));
 
                                     try {
-                                        intervalometer.park(currentWaitTime, entry.getCancelHook(), downloadsRunning);
+                                        CancelHook cancelHook = entry.getCancelHook().derive(this::isRunning, true);
+                                        intervalometer.park(currentWaitTime, cancelHook);
                                     } catch (InterruptedException e) {
                                         log.warn("Interrupted");
                                     }

@@ -88,7 +88,7 @@ public class DownloadIntervalometer {
         return 0;
     }
 
-    public void park(int timeout, AtomicBoolean cancelHook, AtomicBoolean running) throws InterruptedException {
+    public void park(int timeout, CancelHook cancelHook) throws InterruptedException {
         if (timeout <= 0 || timeout > 120) {
             return;
         }
@@ -97,7 +97,7 @@ public class DownloadIntervalometer {
         while (System.currentTimeMillis() < endTime) {
             TimeUnit.MILLISECONDS.sleep(100);
 
-            if (cancelHook.get() || !running.get()) {
+            if (cancelHook.get()) {
                 return;
             }
         }

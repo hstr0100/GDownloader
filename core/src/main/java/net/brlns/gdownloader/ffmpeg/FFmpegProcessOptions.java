@@ -23,6 +23,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import net.brlns.gdownloader.util.CancelHook;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -57,7 +58,7 @@ public class FFmpegProcessOptions {
     private final String logPrefix = "";
 
     @Builder.Default
-    private final AtomicBoolean cancelHook = new AtomicBoolean();
+    private final CancelHook cancelHook = new CancelHook();
 
     @Builder.Default
     private final AtomicBoolean taskStarted = new AtomicBoolean();

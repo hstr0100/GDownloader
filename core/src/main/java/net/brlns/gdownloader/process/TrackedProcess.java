@@ -16,9 +16,9 @@
  */
 package net.brlns.gdownloader.process;
 
-import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.Data;
 import lombok.NonNull;
+import net.brlns.gdownloader.util.CancelHook;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -29,7 +29,6 @@ public class TrackedProcess {
     @NonNull
     private final Process process;
     @NonNull
-    private final AtomicBoolean cancelHook;
+    private final CancelHook cancelHook;
 
-    private final boolean cancellable;
 }

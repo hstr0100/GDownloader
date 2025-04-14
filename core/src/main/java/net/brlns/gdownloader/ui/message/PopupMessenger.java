@@ -18,11 +18,11 @@ package net.brlns.gdownloader.ui.message;
 
 import java.awt.*;
 import java.awt.event.*;
-import java.util.concurrent.atomic.AtomicBoolean;
 import javax.swing.*;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.ui.custom.CustomDynamicLabel;
 import net.brlns.gdownloader.ui.custom.CustomProgressBar;
+import net.brlns.gdownloader.util.CancelHook;
 
 import static net.brlns.gdownloader.ui.GUIManager.*;
 import static net.brlns.gdownloader.ui.themes.ThemeProvider.*;
@@ -91,7 +91,7 @@ public class PopupMessenger extends AbstractMessenger {
         titleLabel.setHorizontalAlignment(SwingConstants.LEFT);
         titlePanel.add(titleLabel, BorderLayout.WEST);
 
-        AtomicBoolean cancelHook = new AtomicBoolean(false);
+        CancelHook cancelHook = new CancelHook();
 
         titlePanel.add(createIconButton(
             loadIcon("/assets/x-mark.png", ICON, 12),

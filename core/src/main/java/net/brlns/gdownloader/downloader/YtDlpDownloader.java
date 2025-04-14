@@ -46,6 +46,7 @@ import net.brlns.gdownloader.process.ProcessArguments;
 import net.brlns.gdownloader.settings.QualitySettings;
 import net.brlns.gdownloader.settings.enums.VideoContainerEnum;
 import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
+import net.brlns.gdownloader.util.CancelHook;
 import net.brlns.gdownloader.util.DirectoryUtils;
 import net.brlns.gdownloader.util.FileUtils;
 import net.brlns.gdownloader.util.Pair;
@@ -337,8 +338,9 @@ public class YtDlpDownloader extends AbstractDownloader {
                 try {
                     entry.updateStatus(DownloadStatusEnum.TRANSCODING, l10n("gui.transcode.starting"));
 
+                    CancelHook cancelHook = entry.getCancelHook().derive(manager::isRunning, true);
                     int exitCode = manager.getMain().getFfmpegTranscoder().startTranscode(
-                        config, inputFile, tmpFile, entry.getCancelHook(),
+                        config, inputFile, tmpFile, cancelHook,
                         (output, hasTaskStarted, progress) -> {
                             lastOutput.set(output);
 
@@ -350,7 +352,7 @@ public class YtDlpDownloader extends AbstractDownloader {
                         }
                     );
 
-                    if (entry.getCancelHook().get()) {
+                    if (cancelHook.get()) {
                         return new DownloadResult(FLAG_STOPPED);
                     }
 
@@ -470,8 +472,8 @@ public class YtDlpDownloader extends AbstractDownloader {
 
         entry.setLastCommandLine(finalArgs, true);
 
-        Process process = main.getProcessMonitor()
-            .startProcess(finalArgs, entry.getCancelHook(), true);
+        CancelHook cancelHook = entry.getCancelHook().derive(manager::isRunning, true);
+        Process process = main.getProcessMonitor().startProcess(finalArgs, cancelHook);
         entry.setProcess(process);
 
         String lastOutput = "";
@@ -482,7 +484,7 @@ public class YtDlpDownloader extends AbstractDownloader {
             StringBuilder output = new StringBuilder();
             char prevChar = '\0';
 
-            while (manager.isRunning() && !entry.getCancelHook().get() && process.isAlive()) {
+            while (!cancelHook.get() && process.isAlive()) {
                 if (Thread.currentThread().isInterrupted()) {
                     log.debug("Process is closing");
                     process.destroyForcibly();
@@ -519,7 +521,7 @@ public class YtDlpDownloader extends AbstractDownloader {
 
             long stopped = System.currentTimeMillis() - start;
 
-            if (!manager.isRunning() || entry.getCancelHook().get()) {
+            if (cancelHook.get()) {
                 if (main.getConfig().isDebugMode()) {
                     log.debug("Download process halted after {}ms.", stopped);
                 }
