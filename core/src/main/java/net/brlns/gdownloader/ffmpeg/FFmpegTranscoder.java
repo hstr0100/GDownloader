@@ -144,7 +144,6 @@ public final class FFmpegTranscoder {
     }
 
     // TODO abstraction
-    // TODO separate bitrate for audio-only mode
     public int startTranscode(FFmpegConfig config, File inputFile,
         File outputFile, AtomicBoolean cancelHook, FFmpegProgressListener listener) throws Exception {
         if (config.getVideoEncoder() == EncoderEnum.NO_ENCODER

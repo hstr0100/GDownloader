@@ -299,10 +299,8 @@ public class YtDlpDownloader extends AbstractDownloader {
         return new DownloadResult(success ? FLAG_SUCCESS : FLAG_UNSUPPORTED, lastOutput);
     }
 
-    // TODO: l10n, settings, ui
     @Override
     protected DownloadResult transcodeMediaFiles(QueueEntry entry) {
-        // TODO: ui settings need to be disabled if ffmpeg is not found
         if (!main.getFfmpegTranscoder().hasFFmpeg()) {
             // FFmpeg not found, nothing we can do.
             log.error("FFmpeg not found, unable to transcode media files");

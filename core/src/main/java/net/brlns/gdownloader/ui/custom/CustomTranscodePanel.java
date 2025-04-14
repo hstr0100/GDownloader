@@ -1,3 +1,19 @@
+/*
+ * Copyright (C) 2025 hstr0100
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 package net.brlns.gdownloader.ui.custom;
 
 import java.awt.*;
@@ -28,6 +44,11 @@ import static net.brlns.gdownloader.ui.themes.ThemeProvider.color;
 import static net.brlns.gdownloader.ui.themes.UIColors.*;
 import static net.brlns.gdownloader.util.StringUtils.formatBitrate;
 
+/**
+ * @author Gabriel / hstr0100 / vertx010
+ */
+// TODO: investigate erratic behavior of CRF value when selecting VBR
+// TODO: disable all fields if ffmpeg is missing, add l10n
 @Slf4j
 public final class CustomTranscodePanel extends JPanel {
 
@@ -240,7 +261,7 @@ public final class CustomTranscodePanel extends JPanel {
 
     private <T extends JComponent> T addLabeledComponent(JPanel panel,
         String labelKey, @NonNull T component, UIColors rowColorIn) {
-        JLabel label = createLabel(labelKey, FOREGROUND);
+        JLabel label = createLabel(labelKey, LIGHT_TEXT);
 
         wrapComponentRow(panel, label, component, rowColorIn);
 
@@ -262,11 +283,11 @@ public final class CustomTranscodePanel extends JPanel {
         centerPanel.setBackground(background);
         rightPanel.setBackground(background);
 
-        JLabel higherQualityLabel = createLabel("settings.transcode.rate_control.quality", FOREGROUND);
+        JLabel higherQualityLabel = createLabel("settings.transcode.rate_control.quality", LIGHT_TEXT);
         JLabel rateControlValueLabel = new JLabel(
             l10n("settings.transcode.rate_control.value", config.getRateControlValue()));
-        rateControlValueLabel.setForeground(color(FOREGROUND));
-        JLabel fasterSpeedLabel = createLabel("settings.transcode.rate_control.speed", FOREGROUND);
+        rateControlValueLabel.setForeground(color(LIGHT_TEXT));
+        JLabel fasterSpeedLabel = createLabel("settings.transcode.rate_control.speed", LIGHT_TEXT);
 
         leftPanel.add(higherQualityLabel);
         centerPanel.add(rateControlValueLabel);
@@ -277,7 +298,7 @@ public final class CustomTranscodePanel extends JPanel {
         labelPanel.add(rightPanel);
 
         rateControlSlider = new JSlider(JSlider.HORIZONTAL,
-            1, MAX_QP, config.getRateControlValue());
+            0, MAX_QP, config.getRateControlValue());
         customizeSlider(rateControlSlider, backgroundIn, SLIDER_FOREGROUND);
 
         rateControlSlider.setMajorTickSpacing(10);
@@ -318,7 +339,7 @@ public final class CustomTranscodePanel extends JPanel {
         int sliderValue = convertBitrateToSliderValue(bitrate);
 
         JLabel bitRateValueLabel = new JLabel(formatBitrate(bitrate));
-        bitRateValueLabel.setForeground(color(FOREGROUND));
+        bitRateValueLabel.setForeground(color(LIGHT_TEXT));
 
         // Non-linear logarithmic-ish bitrate slider
         bitRateSlider = new JSlider(JSlider.HORIZONTAL, 0, 100, sliderValue);
@@ -534,6 +555,7 @@ public final class CustomTranscodePanel extends JPanel {
     public void setEnabled(boolean enabledIn) {
         assert SwingUtilities.isEventDispatchThread();
 
+        // This will be hard-locked if ffmpeg is not found
         enabled = enabledIn;
         enableComponents(controlsPanel, enabled);
 
