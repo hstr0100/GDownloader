@@ -33,6 +33,7 @@ public interface ISettingsEnum extends ITranslatable {
         return l10n(getTranslationKey());
     }
 
+    @Deprecated
     public static <T extends Enum<T> & ISettingsEnum> T getEnumByIndex(Class<T> enumClass, int index) {
         T[] values = enumClass.getEnumConstants();
 
@@ -43,6 +44,7 @@ public interface ISettingsEnum extends ITranslatable {
         return values[index];
     }
 
+    @Deprecated
     public static <T extends Enum<T> & ISettingsEnum> int getEnumIndex(Class<T> enumClass, T valueToFind) {
         T[] values = enumClass.getEnumConstants();
 
@@ -55,6 +57,7 @@ public interface ISettingsEnum extends ITranslatable {
         throw new IllegalArgumentException("Enum constant not found");
     }
 
+    @Deprecated
     public static <T extends Enum<T> & ISettingsEnum> String[] getDisplayNames(Class<T> enumClass) {
         T[] values = enumClass.getEnumConstants();
 

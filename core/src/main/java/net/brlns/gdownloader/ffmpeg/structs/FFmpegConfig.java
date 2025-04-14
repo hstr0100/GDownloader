@@ -17,6 +17,7 @@
 package net.brlns.gdownloader.ffmpeg.structs;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -33,11 +34,13 @@ import net.brlns.gdownloader.settings.enums.VideoContainerEnum;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class FFmpegConfig {
 
-    @Builder.Default
-    @JsonProperty("Enabled")
-    private boolean enabled = true;
+    @JsonIgnore
+    public static final FFmpegConfig DEFAULT = getDefault();
+    @JsonIgnore
+    public static final FFmpegConfig COMPATIBLE_PRESET = getCompatiblePreset();
 
     @NonNull
     @Builder.Default
@@ -105,5 +108,29 @@ public class FFmpegConfig {
         }
 
         return builder.toString();
+    }
+
+    @JsonIgnore
+    public static boolean isDefault(@NonNull FFmpegConfig config) {
+        return config.equals(DEFAULT);
+    }
+
+    public static boolean isCompatiblePreset(@NonNull FFmpegConfig config) {
+        return config.equals(COMPATIBLE_PRESET);
+    }
+
+    @JsonIgnore
+    public static FFmpegConfig getDefault() {
+        return FFmpegConfig.builder().build();
+    }
+
+    @JsonIgnore
+    public static FFmpegConfig getCompatiblePreset() {
+        return FFmpegConfig.builder()
+            .videoEncoder(EncoderEnum.H264_AUTO)
+            .videoContainer(VideoContainerEnum.MP4)
+            .audioCodec(AudioCodecEnum.AAC)
+            .audioBitrate(AudioBitrateEnum.BITRATE_256)
+            .build();
     }
 }

@@ -18,7 +18,6 @@ package net.brlns.gdownloader.ui.custom;
 
 import java.awt.*;
 import java.util.Dictionary;
-import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JSlider;
 import javax.swing.plaf.basic.BasicSliderUI;
@@ -100,13 +99,6 @@ public class CustomSliderUI extends BasicSliderUI {
                 }
             }
         }
-    }
-
-    @Override
-    public void paint(Graphics g, JComponent c) {
-        c.setBackground(color(BACKGROUND));
-
-        super.paint(g, c);
     }
 
     @Override

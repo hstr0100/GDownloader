@@ -89,10 +89,7 @@ public enum PresetEnum implements ISettingsEnum {
         config.setProfile(profile);
         config.setRateControlMode(rateControlMode);
         config.setRateControlValue(rateControlValue);
-
-        if (bitrate > 0) {
-            config.setVideoBitrate(bitrate);
-        }
+        config.setVideoBitrate(bitrate);
     }
 
     public boolean isPresetMatch(FFmpegConfig config) {

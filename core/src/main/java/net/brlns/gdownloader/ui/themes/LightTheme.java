@@ -69,6 +69,8 @@ public class LightTheme extends AbstractTheme {
         put(TOAST_ERROR, Color.RED);
         put(TOAST_WARNING, new Color(255, 214, 0));
         put(TOAST_INFO, new Color(30, 136, 229));
+        put(SETTINGS_ROW_BACKGROUND_LIGHT, Color.WHITE);
+        put(SETTINGS_ROW_BACKGROUND_DARK, new Color(251, 251, 251));
     }
 
     @Override

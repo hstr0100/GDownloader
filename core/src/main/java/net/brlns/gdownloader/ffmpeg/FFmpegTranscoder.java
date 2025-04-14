@@ -148,7 +148,7 @@ public final class FFmpegTranscoder {
     public int startTranscode(FFmpegConfig config, File inputFile,
         File outputFile, AtomicBoolean cancelHook, FFmpegProgressListener listener) throws Exception {
         if (config.getVideoEncoder() == EncoderEnum.NO_ENCODER
-            && config.getAudioCodec() == AudioCodecEnum.NO_CODEC || !config.isEnabled()) {
+            && config.getAudioCodec() == AudioCodecEnum.NO_CODEC) {
             if (log.isDebugEnabled()) {
                 log.debug("Transcoding not configured, returning -3");
             }

@@ -16,6 +16,8 @@
  */
 package net.brlns.gdownloader.settings.enums;
 
+import java.util.Arrays;
+
 import static net.brlns.gdownloader.lang.Language.l10n;
 
 /**
@@ -56,5 +58,17 @@ public enum VideoContainerEnum implements ISettingsEnum, IContainerEnum {
 
     public boolean isDefault() {
         return this == DEFAULT;
+    }
+
+    public static VideoContainerEnum[] CONTAINERS;
+
+    public static VideoContainerEnum[] allExceptDefault() {
+        if (CONTAINERS != null) {
+            return CONTAINERS;
+        }
+
+        return CONTAINERS = Arrays.stream(values())
+            .filter(c -> !c.isDefault())
+            .toArray(VideoContainerEnum[]::new);
     }
 }

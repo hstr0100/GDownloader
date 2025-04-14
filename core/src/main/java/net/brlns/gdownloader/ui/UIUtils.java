@@ -33,7 +33,10 @@ public final class UIUtils {
 
     public static void setComponentAndLabelVisible(JComponent component, boolean visible) {
         JLabel label = (JLabel)component.getClientProperty("associated-label");
-        label.setVisible(visible);
+        if (label != null) {
+            label.setVisible(visible);
+        }
+
         component.setVisible(visible);
     }
 
@@ -45,7 +48,10 @@ public final class UIUtils {
 
     public static void enableComponentAndLabel(JComponent component, boolean enabled) {
         JLabel label = (JLabel)component.getClientProperty("associated-label");
-        enableComponents(label, enabled);
+        if (label != null) {
+            enableComponents(label, enabled);
+        }
+
         enableComponents(component, enabled);
     }
 
@@ -89,10 +95,6 @@ public final class UIUtils {
     }
 
     public static void customizeComboBox(JComboBox<?> component) {
-        component.setUI(new CustomComboBoxUI());
-    }
-
-    public static void customizeL10nComboBox(JComboBox<?> component) {
         component.setUI(new CustomComboBoxUI());
         setL10nRenderer(component);
     }

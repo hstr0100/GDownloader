@@ -279,7 +279,7 @@ public class YtDlpDownloader extends AbstractDownloader {
                     log.error("Failed to download {}: {}", type, lastOutput);
                 }
             } else {
-                if (type == VIDEO && quality.getTranscodingSettings().isEnabled()) {
+                if (type == VIDEO) {
                     DownloadResult transcodeResult = transcodeMediaFiles(entry);
 
                     if (main.getConfig().isFailDownloadsOnTranscodingFailures()

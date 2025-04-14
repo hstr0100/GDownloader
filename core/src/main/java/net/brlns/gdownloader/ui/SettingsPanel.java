@@ -23,10 +23,8 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Consumer;
 import java.util.function.Supplier;
 import javax.swing.*;
 import javax.swing.event.ChangeEvent;
@@ -34,17 +32,24 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.plaf.basic.BasicButtonUI;
 import lombok.Data;
+import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.ffmpeg.enums.AudioBitrateEnum;
-import net.brlns.gdownloader.ffmpeg.enums.AudioCodecEnum;
+import net.brlns.gdownloader.ffmpeg.structs.FFmpegConfig;
+import net.brlns.gdownloader.lang.ITranslatable;
 import net.brlns.gdownloader.settings.QualitySettings;
 import net.brlns.gdownloader.settings.Settings;
 import net.brlns.gdownloader.settings.enums.*;
 import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
+import net.brlns.gdownloader.ui.builder.CheckBoxBuilder;
+import net.brlns.gdownloader.ui.builder.ComboBoxBuilder;
+import net.brlns.gdownloader.ui.builder.SliderBuilder;
 import net.brlns.gdownloader.ui.custom.CustomScrollBarUI;
+import net.brlns.gdownloader.ui.custom.CustomTranscodePanel;
 import net.brlns.gdownloader.ui.message.MessageTypeEnum;
 import net.brlns.gdownloader.ui.message.PopupMessenger;
+import net.brlns.gdownloader.ui.themes.UIColors;
 
 import static net.brlns.gdownloader.lang.Language.*;
 import static net.brlns.gdownloader.ui.GUIManager.createIconButton;
@@ -57,7 +62,6 @@ import static net.brlns.gdownloader.ui.themes.UIColors.*;
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-// TODO: fix column width
 @Slf4j
 public class SettingsPanel {
 
@@ -156,7 +160,7 @@ public class SettingsPanel {
             };
 
             frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-            frame.setSize(950, 623);
+            frame.setSize(970, 635);
             frame.setLayout(new BorderLayout());
             //frame.setResizable(false);
             frame.setLocationRelativeTo(null);
@@ -419,109 +423,102 @@ public class SettingsPanel {
     }
 
     private JPanel createGeneralSettings() {
-        JPanel panel = new JPanel(new GridBagLayout());
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         panel.setBackground(color(BACKGROUND));
-        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        GridBagConstraints gbcPanel = new GridBagConstraints();
-        gbcPanel.insets = new Insets(5, 5, 5, 5);
-        gbcPanel.anchor = GridBagConstraints.WEST;
-        gbcPanel.fill = GridBagConstraints.HORIZONTAL;
-        //gbcPanel.weightx = 1;
+        addComboBox(panel, ComboBoxBuilder.<LanguageEnum>builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.language")
+            .values(LanguageEnum.values())
+            .getter(settings::getLanguage)
+            .setter(settings::setLanguage)
+            .requiresRestart(true)
+            .build());
 
-        addComboBox(panel, gbcPanel,
-            "settings.language",
-            LanguageEnum.class,
-            settings::getLanguage,
-            settings::setLanguage,
-            true
-        );
+        addComboBox(panel, ComboBoxBuilder.<ThemeEnum>builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.theme")
+            .values(ThemeEnum.values())
+            .getter(settings::getTheme)
+            .setter(settings::setTheme)
+            .requiresRestart(true)
+            .build());
 
-        addComboBox(panel, gbcPanel,
-            "settings.theme",
-            ThemeEnum.class,
-            settings::getTheme,
-            settings::setTheme,
-            true
-        );
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.always_on_top")
+            .getter(settings::isKeepWindowAlwaysOnTop)
+            .setter(settings::setKeepWindowAlwaysOnTop)
+            .build());
 
-        addCheckBox(panel, gbcPanel,
-            "settings.always_on_top",
-            settings::isKeepWindowAlwaysOnTop,
-            settings::setKeepWindowAlwaysOnTop,
-            false
-        );
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.exit_on_close")
+            .getter(settings::isExitOnClose)
+            .setter(settings::setExitOnClose)
+            .build());
 
-        addCheckBox(panel, gbcPanel,
-            "settings.exit_on_close",
-            settings::isExitOnClose,
-            settings::setExitOnClose,
-            false
-        );
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.automatic_updates")
+            .getter(settings::isAutomaticUpdates)
+            .setter(settings::setAutomaticUpdates)
+            .build());
 
-        addCheckBox(panel, gbcPanel,
-            "settings.automatic_updates",
-            settings::isAutomaticUpdates,
-            settings::setAutomaticUpdates,
-            false
-        );
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.debug_mode")
+            .getter(settings::isDebugMode)
+            .setter(settings::setDebugMode)
+            .build());
 
-        addCheckBox(panel, gbcPanel,
-            "settings.debug_mode",
-            settings::isDebugMode,
-            settings::setDebugMode,
-            false
-        );
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.restore_session_after_restart")
+            .getter(settings::isRestoreSessionAfterRestart)
+            .setter(settings::setRestoreSessionAfterRestart)
+            .build());
 
-        addCheckBox(panel, gbcPanel,
-            "settings.restore_session_after_restart",
-            settings::isRestoreSessionAfterRestart,
-            settings::setRestoreSessionAfterRestart,
-            false
-        );
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.start_on_system_startup")
+            .getter(settings::isAutoStart)
+            .setter(settings::setAutoStart)
+            .build());
 
-        addCheckBox(panel, gbcPanel,
-            "settings.start_on_system_startup",
-            settings::isAutoStart,
-            settings::setAutoStart,
-            false
-        );
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.play_sounds")
+            .getter(settings::isPlaySounds)
+            .setter(settings::setPlaySounds)
+            .build());
 
-        addCheckBox(panel, gbcPanel,
-            "settings.play_sounds",
-            settings::isPlaySounds,
-            settings::setPlaySounds,
-            false
-        );
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.display_link_capture_notifications")
+            .getter(settings::isDisplayLinkCaptureNotifications)
+            .setter(settings::setDisplayLinkCaptureNotifications)
+            .build());
 
-        addCheckBox(panel, gbcPanel,
-            "settings.display_link_capture_notifications",
-            settings::isDisplayLinkCaptureNotifications,
-            settings::setDisplayLinkCaptureNotifications,
-            false
-        );
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.auto_scroll_to_bottom")
+            .getter(settings::isAutoScrollToBottom)
+            .setter(settings::setAutoScrollToBottom)
+            .build());
 
-        addCheckBox(panel, gbcPanel,
-            "settings.auto_scroll_to_bottom",
-            settings::isAutoScrollToBottom,
-            settings::setAutoScrollToBottom,
-            false
-        );
-
-        addCheckBox(panel, gbcPanel,
-            "settings.use_system_font",
-            settings::isUseSystemFont,
-            settings::setUseSystemFont,
-            true
-        );
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.use_system_font")
+            .getter(settings::isUseSystemFont)
+            .setter(settings::setUseSystemFont)
+            .requiresRestart(true)
+            .build());
 
         {
+            UIColors background = resolveColor(panel);
             JLabel label = createLabel("settings.font_size", LIGHT_TEXT);
-
-            gbcPanel.gridx = 0;
-            gbcPanel.gridy++;
-            gbcPanel.weightx = 0.5;
-            panel.add(label, gbcPanel);
 
             // Not a lot of fault tolerance here
             List<String> options = new ArrayList<>();
@@ -548,23 +545,11 @@ public class SettingsPanel {
                 }
             });
 
-            customizeSlider(slider, BACKGROUND, SLIDER_FOREGROUND);
-            slider.putClientProperty("associated-label", label);
-
-            gbcPanel.gridx = 1;
-            gbcPanel.weightx = 1;
-            panel.add(slider, gbcPanel);
+            customizeSlider(slider, background, SLIDER_FOREGROUND);
+            wrapComponentRow(panel, label, slider, background);
         }
 
-        gbcPanel.gridx = 0;
-        gbcPanel.gridy++;
-        gbcPanel.weightx = 1;
-        gbcPanel.weighty = 1;
-        gbcPanel.gridwidth = GridBagConstraints.REMAINDER;
-        gbcPanel.fill = GridBagConstraints.BOTH;
-        JPanel filler = new JPanel();
-        filler.setBackground(color(BACKGROUND));
-        panel.add(filler, gbcPanel);
+        panel.add(getFillerPanel());
 
         JScrollPane scrollPane = new JScrollPane(panel);
         scrollPane.getVerticalScrollBar().setUI(new CustomScrollBarUI());
@@ -576,7 +561,7 @@ public class SettingsPanel {
         scrollPane.getViewport().setScrollMode(JViewport.BACKINGSTORE_SCROLL_MODE);
 
         JPanel panelWrapper = new JPanel(new BorderLayout());
-        panelWrapper.setBorder(BorderFactory.createEmptyBorder(2, 2, 2, 2));
+        panelWrapper.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 5));
         panelWrapper.setBackground(color(BACKGROUND));
 
         panelWrapper.add(scrollPane, BorderLayout.CENTER);
@@ -585,37 +570,35 @@ public class SettingsPanel {
     }
 
     private JPanel createDownloadSettings() {
-        JPanel panel = new JPanel(new GridBagLayout());
-        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         panel.setBackground(color(BACKGROUND));
 
-        GridBagConstraints gbcPanel = new GridBagConstraints();
-        gbcPanel.insets = new Insets(5, 5, 5, 5);
-        gbcPanel.anchor = GridBagConstraints.WEST;
-        gbcPanel.fill = GridBagConstraints.HORIZONTAL;
-        //gbcPanel.weightx = 1;
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.read_cookies")
+            .getter(settings::isReadCookiesFromBrowser)
+            .setter(settings::setReadCookiesFromBrowser)
+            .build());
 
-        addCheckBox(panel, gbcPanel,
-            "settings.read_cookies",
-            settings::isReadCookiesFromBrowser,
-            settings::setReadCookiesFromBrowser,
-            false
-        );
-
-        addComboBox(panel, gbcPanel,
-            "settings.browser_for_cookies",
-            BrowserEnum.class,
-            settings::getBrowser,
-            settings::setBrowser,
-            false
-        );
+        addComboBox(panel, ComboBoxBuilder.<BrowserEnum>builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.browser_for_cookies")
+            .values(BrowserEnum.values())
+            .getter(settings::getBrowser)
+            .setter(settings::setBrowser)
+            .build());
 
         {
             JLabel label = createLabel("settings.downloads_path", LIGHT_TEXT);
 
-            gbcPanel.gridx = 0;
-            gbcPanel.gridy++;
-            panel.add(label, gbcPanel);
+            UIColors background = resolveColor(panel);
+            JPanel wrapperPanel = new JPanel(new GridBagLayout());
+            wrapperPanel.setBackground(color(background));
+
+            GridBagConstraints gbcPanel = new GridBagConstraints();
+            gbcPanel.anchor = GridBagConstraints.WEST;
+            gbcPanel.fill = GridBagConstraints.HORIZONTAL;
 
             JTextField downloadPathField = new JTextField(20);
             downloadPathField.setText(main.getDownloadsDirectory().getAbsolutePath());
@@ -640,10 +623,10 @@ public class SettingsPanel {
                 }
             });
 
-            gbcPanel.gridx = 1;
+            gbcPanel.gridx = 0;
             gbcPanel.gridwidth = 1;
             gbcPanel.weightx = 0.9;
-            panel.add(downloadPathField, gbcPanel);
+            wrapperPanel.add(downloadPathField, gbcPanel);
 
             JButton selectButton = createButton(
                 "settings.select_download_directory",
@@ -662,285 +645,301 @@ public class SettingsPanel {
                 }
             });
 
-            selectButton.setPreferredSize(new Dimension(20, downloadPathField.getPreferredSize().height));
+            selectButton.setPreferredSize(new Dimension(30, downloadPathField.getPreferredSize().height));
 
             downloadPathField.putClientProperty("associated-label", label);
             selectButton.putClientProperty("associated-label", label);
 
-            gbcPanel.gridx = 2;
+            gbcPanel.gridx = 1;
             gbcPanel.weightx = 0.1;
-            panel.add(selectButton, gbcPanel);
+            gbcPanel.insets = new Insets(0, 10, 0, 0);
+            wrapperPanel.add(selectButton, gbcPanel);
+
+            wrapComponentRow(panel, label, wrapperPanel, background);
         }
 
-        addCheckBox(panel, gbcPanel,
-            "settings.read_cookies_txt",
-            settings::isReadCookiesFromCookiesTxt,
-            settings::setReadCookiesFromCookiesTxt,
-            false
-        );
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.read_cookies_txt")
+            .getter(settings::isReadCookiesFromCookiesTxt)
+            .setter(settings::setReadCookiesFromCookiesTxt)
+            .build());
 
-        addCheckBox(panel, gbcPanel,
-            "settings.impersonate_browser",
-            settings::isImpersonateBrowser,
-            settings::setImpersonateBrowser,
-            false
-        );
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.impersonate_browser")
+            .getter(settings::isImpersonateBrowser)
+            .setter(settings::setImpersonateBrowser)
+            .build());
 
-        addCheckBox(panel, gbcPanel,
-            "settings.capture_any_clipboard_link",
-            settings::isCaptureAnyLinks,
-            settings::setCaptureAnyLinks,
-            false
-        );
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.capture_any_clipboard_link")
+            .getter(settings::isCaptureAnyLinks)
+            .setter(settings::setCaptureAnyLinks)
+            .build());
 
-        addCheckBox(panel, gbcPanel,
-            "settings.auto_download_start",
-            settings::isAutoDownloadStart,
-            settings::setAutoDownloadStart,
-            false
-        );
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.auto_download_start")
+            .getter(settings::isAutoDownloadStart)
+            .setter(settings::setAutoDownloadStart)
+            .build());
 
-        addCheckBox(panel, gbcPanel,
-            "settings.auto_download_retry",
-            settings::isAutoDownloadRetry,
-            settings::setAutoDownloadRetry,
-            false
-        );
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.auto_download_retry")
+            .getter(settings::isAutoDownloadRetry)
+            .setter(settings::setAutoDownloadRetry)
+            .build());
 
-        addCheckBox(panel, gbcPanel,
-            "settings.download_audio",
-            settings::isDownloadAudio,
-            settings::setDownloadAudio,
-            false
-        );
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.download_audio")
+            .getter(settings::isDownloadAudio)
+            .setter(settings::setDownloadAudio)
+            .build());
 
-        addCheckBox(panel, gbcPanel,
-            "settings.download_video",
-            settings::isDownloadVideo,
-            settings::setDownloadVideo,
-            false
-        );
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.download_video")
+            .getter(settings::isDownloadVideo)
+            .setter(settings::setDownloadVideo)
+            .build());
 
-        addSlider(panel, gbcPanel,
-            "settings.maximum_simultaneous_downloads",
-            1, 10,
-            settings::getMaxSimultaneousDownloads,
-            settings::setMaxSimultaneousDownloads
-        );
+        addSlider(panel, SliderBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.maximum_simultaneous_downloads")
+            .min(1).max(10).majorTickSpacing(1)
+            .snapToTicks(true)
+            .getter(settings::getMaxSimultaneousDownloads)
+            .setter(settings::setMaxSimultaneousDownloads)
+            .build());
 
-        addCheckBox(panel, gbcPanel,
-            "settings.prefer_system_executables",
-            settings::isPreferSystemExecutables,
-            settings::setPreferSystemExecutables,
-            true
-        );
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.prefer_system_executables")
+            .getter(settings::isPreferSystemExecutables)
+            .setter(settings::setPreferSystemExecutables)
+            .requiresRestart(true)
+            .build());
 
-        addCheckBox(panel, gbcPanel,
-            "settings.random_interval_between_downloads",
-            settings::isRandomIntervalBetweenDownloads,
-            settings::setRandomIntervalBetweenDownloads,
-            false
-        );
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.random_interval_between_downloads")
+            .getter(settings::isRandomIntervalBetweenDownloads)
+            .setter(settings::setRandomIntervalBetweenDownloads)
+            .build());
 
-        addCheckBox(panel, gbcPanel,
-            "settings.remove_successful_downloads",
-            settings::isRemoveSuccessfulDownloads,
-            settings::setRemoveSuccessfulDownloads,
-            false
-        );
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.remove_successful_downloads")
+            .getter(settings::isRemoveSuccessfulDownloads)
+            .setter(settings::setRemoveSuccessfulDownloads)
+            .build());
 
-        addCheckBox(panel, gbcPanel,
-            "settings.record_to_download_archive",
-            settings::isRecordToDownloadArchive,
-            settings::setRecordToDownloadArchive,
-            false
-        );
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.record_to_download_archive")
+            .getter(settings::isRecordToDownloadArchive)
+            .setter(settings::setRecordToDownloadArchive)
+            .build());
 
-        addCheckBox(panel, gbcPanel,
-            "settings.remove_from_download_archive",
-            settings::isRemoveFromDownloadArchive,
-            settings::setRemoveFromDownloadArchive,
-            false
-        );
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.remove_from_download_archive")
+            .getter(settings::isRemoveFromDownloadArchive)
+            .setter(settings::setRemoveFromDownloadArchive)
+            .build());
 
-        addLabel(panel, gbcPanel, "settings.downloader.yt_dlp");
+        addLabel(panel, "settings.downloader.yt_dlp");
 
-        addComboBox(panel, gbcPanel,
-            "settings.playlist_download_option",
-            PlayListOptionEnum.class,
-            settings::getPlaylistDownloadOption,
-            settings::setPlaylistDownloadOption,
-            false
-        );
+        addComboBox(panel, ComboBoxBuilder.<PlayListOptionEnum>builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.playlist_download_option")
+            .values(PlayListOptionEnum.values())
+            .getter(settings::getPlaylistDownloadOption)
+            .setter(settings::setPlaylistDownloadOption)
+            .build());
 
-        addCheckBox(panel, gbcPanel,
-            "settings.use_sponsor_block",
-            settings::isUseSponsorBlock,
-            settings::setUseSponsorBlock,
-            false
-        );
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.use_sponsor_block")
+            .getter(settings::isUseSponsorBlock)
+            .setter(settings::setUseSponsorBlock)
+            .build());
 
-        addCheckBox(panel, gbcPanel,
-            "settings.download_youtube_channels",
-            settings::isDownloadYoutubeChannels,
-            settings::setDownloadYoutubeChannels,
-            false
-        );
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.download_youtube_channels")
+            .getter(settings::isDownloadYoutubeChannels)
+            .setter(settings::setDownloadYoutubeChannels)
+            .build());
 
-        addCheckBox(panel, gbcPanel,
-            "settings.transcode_audio_to_aac",
-            settings::isTranscodeAudioToAAC,
-            settings::setTranscodeAudioToAAC,
-            false
-        );
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.transcode_audio_to_aac")
+            .getter(settings::isTranscodeAudioToAAC)
+            .setter(settings::setTranscodeAudioToAAC)
+            .build());
 
         // TODO: this will remain hidden until this yt-dlp feature request is addressed:
         // https://github.com/yt-dlp/yt-dlp/issues/1176
-        // addCheckBox(panel, gbcPanel,
-        //     "settings.merge_all_audio_tracks",
-        //     settings::isMergeAllAudioTracks,
-        //     settings::setMergeAllAudioTracks,
-        //     false
-        // );
-        addCheckBox(panel, gbcPanel,
-            "settings.download_subtitles",
-            settings::isDownloadSubtitles,
-            settings::setDownloadSubtitles,
-            false
-        );
+        //addCheckBox(panel, CheckBoxBuilder.builder()
+        //    .background(resolveColor(panel))
+        //    .labelKey("settings.merge_all_audio_tracks")
+        //    .getter(settings::isMergeAllAudioTracks)
+        //    .setter(settings::setMergeAllAudioTracks)
+        //    .build());
+        AtomicReference<JCheckBox> autoGenSubtitlesCheckBoxRef = new AtomicReference<>();
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.download_subtitles")
+            .getter(settings::isDownloadSubtitles)
+            .setter(settings::setDownloadSubtitles)
+            .onSet((selected) -> {
+                enableComponentAndLabel(autoGenSubtitlesCheckBoxRef.get(), selected);
+            })
+            .build());
 
-        // TODO: this should be grayed out when download_subtitles is disabled
-        addCheckBox(panel, gbcPanel,
-            "settings.download_auto_generated_subtitles",
-            settings::isDownloadAutoGeneratedSubtitles,
-            settings::setDownloadAutoGeneratedSubtitles,
-            false
-        );
+        autoGenSubtitlesCheckBoxRef.set(addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.download_auto_generated_subtitles")
+            .getter(settings::isDownloadAutoGeneratedSubtitles)
+            .setter(settings::setDownloadAutoGeneratedSubtitles)
+            .enabled(settings.isDownloadSubtitles())
+            .build()));
 
-        addCheckBox(panel, gbcPanel,
-            "settings.download_thumbnails",
-            settings::isDownloadThumbnails,
-            settings::setDownloadThumbnails,
-            false
-        );
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.download_thumbnails")
+            .getter(settings::isDownloadThumbnails)
+            .setter(settings::setDownloadThumbnails)
+            .build());
 
-        addCheckBox(panel, gbcPanel,
-            "settings.query_metadata",
-            settings::isQueryMetadata,
-            settings::setQueryMetadata,
-            false
-        );
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.query_metadata")
+            .getter(settings::isQueryMetadata)
+            .setter(settings::setQueryMetadata)
+            .build());
 
-        addCheckBox(panel, gbcPanel,
-            "settings.respect_ytdlp_config_file",
-            settings::isRespectYtDlpConfigFile,
-            settings::setRespectYtDlpConfigFile,
-            false
-        );
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.respect_ytdlp_config_file")
+            .getter(settings::isRespectYtDlpConfigFile)
+            .setter(settings::setRespectYtDlpConfigFile)
+            .build());
 
         // https://github.com/yt-dlp/yt-dlp/issues/12746
         // Might also apply for any future hiccups
-        addCheckBox(panel, gbcPanel,
-            "settings.missing_formats_workaround",
-            settings::isMissingFormatsWorkaround,
-            settings::setMissingFormatsWorkaround,
-            false
-        );
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.missing_formats_workaround")
+            .getter(settings::isMissingFormatsWorkaround)
+            .setter(settings::setMissingFormatsWorkaround)
+            .build());
 
-        addLabel(panel, gbcPanel, "settings.downloader.gallery_dl");
+        addLabel(panel, "settings.downloader.gallery_dl");
 
-        addCheckBox(panel, gbcPanel,
-            "settings.downloader.gallery_dl.enabled",
-            settings::isGalleryDlEnabled,
-            settings::setGalleryDlEnabled,
-            true
-        );
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.downloader.gallery_dl.enabled")
+            .getter(settings::isGalleryDlEnabled)
+            .setter(settings::setGalleryDlEnabled)
+            .requiresRestart(true)
+            .build());
 
-        addCheckBox(panel, gbcPanel,
-            "settings.downloader.gallery_dl.respect_config_file",
-            settings::isRespectGalleryDlConfigFile,
-            settings::setRespectGalleryDlConfigFile,
-            false
-        );
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.downloader.gallery_dl.respect_config_file")
+            .getter(settings::isRespectGalleryDlConfigFile)
+            .setter(settings::setRespectGalleryDlConfigFile)
+            .build());
 
-        addCheckBox(panel, gbcPanel,
-            "settings.downloader.gallery_dl.deduplicate_files",
-            settings::isGalleryDlDeduplication,
-            settings::setGalleryDlDeduplication,
-            false
-        );
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.downloader.gallery_dl.deduplicate_files")
+            .getter(settings::isGalleryDlDeduplication)
+            .setter(settings::setGalleryDlDeduplication)
+            .build());
 
-        addLabel(panel, gbcPanel, "settings.downloader.spotdl");
+        addLabel(panel, "settings.downloader.spotdl");
 
-        addCheckBox(panel, gbcPanel,
-            "settings.downloader.spotdl.enabled",
-            settings::isSpotDLEnabled,
-            settings::setSpotDLEnabled,
-            true
-        );
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.downloader.spotdl.enabled")
+            .getter(settings::isSpotDLEnabled)
+            .setter(settings::setSpotDLEnabled)
+            .requiresRestart(true)
+            .build());
 
-        addCheckBox(panel, gbcPanel,
-            "settings.downloader.spotdl.respect_config_file",
-            settings::isRespectSpotDLConfigFile,
-            settings::setRespectSpotDLConfigFile,
-            false
-        );
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.downloader.spotdl.respect_config_file")
+            .getter(settings::isRespectSpotDLConfigFile)
+            .setter(settings::setRespectSpotDLConfigFile)
+            .build());
 
-        addLabel(panel, gbcPanel, "settings.downloader.direct_http");
+        addLabel(panel, "settings.downloader.direct_http");
 
-        addCheckBox(panel, gbcPanel,
-            "settings.downloader.direct_http.enabled",
-            settings::isDirectHttpEnabled,
-            settings::setDirectHttpEnabled,
-            true
-        );
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.downloader.direct_http.enabled")
+            .getter(settings::isDirectHttpEnabled)
+            .setter(settings::setDirectHttpEnabled)
+            .requiresRestart(true)
+            .build());
 
-        addSlider(panel, gbcPanel,
-            "settings.downloader.direct_http.max_download_chunks",
-            1, 15,
-            settings::getDirectHttpMaxDownloadChunks,
-            settings::setDirectHttpMaxDownloadChunks
-        );
+        addSlider(panel, SliderBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.downloader.direct_http.max_download_chunks")
+            .min(1).max(15).majorTickSpacing(1)
+            .getter(settings::getDirectHttpMaxDownloadChunks)
+            .setter(settings::setDirectHttpMaxDownloadChunks)
+            .build());
 
-        addLabel(panel, gbcPanel, "settings.label.advanced");
+        addLabel(panel, "settings.label.advanced");
 
-        addSlider(panel, gbcPanel,
-            "settings.maximum_download_retries",
-            0, 50,
-            settings::getMaxDownloadRetries,
-            settings::setMaxDownloadRetries
-        );
+        addSlider(panel, SliderBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.downloader.direct_http.max_download_chunks")
+            .min(0).max(15).majorTickSpacing(1)
+            .getter(settings::getDirectHttpMaxDownloadChunks)
+            .setter(settings::setDirectHttpMaxDownloadChunks)
+            .build());
 
-        addSlider(panel, gbcPanel,
-            "settings.maximum_fragment_retries",
-            0, 50,
-            settings::getMaxFragmentRetries,
-            settings::setMaxFragmentRetries
-        );
+        addSlider(panel, SliderBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.maximum_download_retries")
+            .min(0).max(50).majorTickSpacing(5)
+            .getter(settings::getMaxDownloadRetries)
+            .setter(settings::setMaxDownloadRetries)
+            .build());
 
-        addCheckBox(panel, gbcPanel,
-            "settings.transcode.keep_raw_media_files_after_transcode",
-            settings::isKeepRawMediaFilesAfterTranscode,
-            settings::setKeepRawMediaFilesAfterTranscode,
-            false
-        );
+        addSlider(panel, SliderBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.maximum_fragment_retries")
+            .min(0).max(50).majorTickSpacing(5)
+            .getter(settings::getMaxFragmentRetries)
+            .setter(settings::setMaxFragmentRetries)
+            .build());
 
-        addCheckBox(panel, gbcPanel,
-            "settings.transcode.fail_downloads_on_transcoding_failures",
-            settings::isFailDownloadsOnTranscodingFailures,
-            settings::setFailDownloadsOnTranscodingFailures,
-            false
-        );
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.transcode.keep_raw_media_files_after_transcode")
+            .getter(settings::isKeepRawMediaFilesAfterTranscode)
+            .setter(settings::setKeepRawMediaFilesAfterTranscode)
+            .build());
 
-        gbcPanel.gridx = 0;
-        gbcPanel.gridy++;
-        gbcPanel.weightx = 1;
-        gbcPanel.weighty = 1;
-        gbcPanel.gridwidth = GridBagConstraints.REMAINDER;
-        gbcPanel.fill = GridBagConstraints.BOTH;
-        JPanel filler = new JPanel();
-        filler.setBackground(color(BACKGROUND));
-        panel.add(filler, gbcPanel);
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.transcode.fail_downloads_on_transcoding_failures")
+            .getter(settings::isFailDownloadsOnTranscodingFailures)
+            .setter(settings::setFailDownloadsOnTranscodingFailures)
+            .build());
+
+        panel.add(getFillerPanel());
 
         JScrollPane scrollPane = new JScrollPane(panel);
         scrollPane.getVerticalScrollBar().setUI(new CustomScrollBarUI());
@@ -952,7 +951,7 @@ public class SettingsPanel {
         scrollPane.getViewport().setScrollMode(JViewport.BACKINGSTORE_SCROLL_MODE);
 
         JPanel panelWrapper = new JPanel(new BorderLayout());
-        panelWrapper.setBorder(BorderFactory.createEmptyBorder(2, 2, 2, 2));
+        panelWrapper.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 5));
         panelWrapper.setBackground(color(BACKGROUND));
 
         panelWrapper.add(scrollPane, BorderLayout.CENTER);
@@ -964,7 +963,6 @@ public class SettingsPanel {
         JPanel mainPanel = new JPanel();
         mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
         mainPanel.setBackground(color(BACKGROUND));
-        mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
         mainPanel.add(createQualitySettingsCard(settings.getGlobalQualitySettings(), null));
         for (AbstractUrlFilter filter : settings.getUrlFilters()) {
@@ -1028,153 +1026,169 @@ public class SettingsPanel {
         titlePanel.add(expandLabel, BorderLayout.EAST);
         titlePanel.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0));
 
-        JPanel itemPanel = new JPanel(new GridBagLayout());
+        JPanel itemPanel = new JPanel();
+        itemPanel.setLayout(new BoxLayout(itemPanel, BoxLayout.Y_AXIS));
         itemPanel.setOpaque(false);
-        itemPanel.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
         itemPanel.setVisible(false);
 
-        GridBagConstraints gbcItem = new GridBagConstraints();
-        gbcItem.insets = new Insets(5, 10, 5, 10);
-        gbcItem.anchor = GridBagConstraints.WEST;
-        gbcItem.fill = GridBagConstraints.HORIZONTAL;
-        //gbcItem.weightx = 1;
-
-        gbcItem.gridy = 1;
+        addLabel(itemPanel, "settings.selector.panel.title");
 
         List<JComponent> toggleableComponents = new ArrayList<>();
 
         AtomicReference<JCheckBox> useGlobalCheckbox = new AtomicReference<>();
+        AtomicReference<FFmpegConfig> currentFFmpegConfig = new AtomicReference<>(
+            qualitySettings.getTranscodingSettings());
+        AtomicReference<CustomTranscodePanel> transcodePanel = new AtomicReference<>();
+
         if (filter == null || !filter.isAudioOnly()) {
             if (filter != null) {
-                useGlobalCheckbox.set(addCheckBox(itemPanel, gbcItem,
-                    "settings.use_global_settings",
-                    qualitySettings::isUseGlobalSettings,
-                    qualitySettings::setUseGlobalSettings,
-                    true
-                ));
+                useGlobalCheckbox.set(addCheckBox(itemPanel, CheckBoxBuilder.builder()
+                    .background(resolveColor(itemPanel))
+                    .labelKey("settings.use_global_settings")
+                    .getter(qualitySettings::isUseGlobalSettings)
+                    .setter(qualitySettings::setUseGlobalSettings)
+                    .requiresRestart(true)
+                    .onSet((value) -> enableComponentsAndLabels(toggleableComponents, !value))
+                    .build()));
             }
 
-            toggleableComponents.add(addComboBox(itemPanel, gbcItem,
-                "settings.quality_selector",
-                QualitySelectorEnum.class,
-                qualitySettings::getSelector,
-                qualitySettings::setSelector,
-                false
+            toggleableComponents.add(addComboBox(itemPanel, ComboBoxBuilder.<QualitySelectorEnum>builder()
+                .background(resolveColor(itemPanel))
+                .labelKey("settings.quality_selector")
+                .values(QualitySelectorEnum.values())
+                .getter(qualitySettings::getSelector)
+                .setter(qualitySettings::setSelector)
+                .onSet((selected) -> {
+                    FFmpegConfig oldConfig = qualitySettings.getTranscodingSettings();
+                    FFmpegConfig newConfig = null;
+
+                    if (selected == QualitySelectorEnum.BEST && oldConfig.equals(FFmpegConfig.DEFAULT)) {
+                        newConfig = FFmpegConfig.getCompatiblePreset();
+                    } else if (selected != QualitySelectorEnum.BEST && oldConfig.equals(FFmpegConfig.COMPATIBLE_PRESET)) {
+                        newConfig = FFmpegConfig.getDefault();
+                    }
+
+                    if (newConfig != null) {
+                        currentFFmpegConfig.set(newConfig);
+                        qualitySettings.setTranscodingSettings(newConfig);
+
+                        toggleableComponents.remove(transcodePanel.get());
+                        itemPanel.remove(transcodePanel.get());
+
+                        CustomTranscodePanel panel = new CustomTranscodePanel(
+                            currentFFmpegConfig.get(), main.getFfmpegTranscoder(),
+                            SETTINGS_ROW_BACKGROUND_LIGHT);
+
+                        itemPanel.add(panel);
+
+                        toggleableComponents.add(panel);
+                        transcodePanel.set(panel);
+
+                        itemPanel.revalidate();
+                        itemPanel.repaint();
+                    }
+                })
+                .build()
             ));
 
-            JComboBox<String> minHeightComboBox = addComboBox(itemPanel, gbcItem,
-                "settings.minimum_quality",
-                ResolutionEnum.class,
-                qualitySettings::getMinHeight,
-                qualitySettings::setMinHeight,
-                false
-            );
-            toggleableComponents.add(minHeightComboBox);
+            AtomicReference<JComboBox<ResolutionEnum>> minHeightComboBoxRef = new AtomicReference<>();
+            AtomicReference<JComboBox<ResolutionEnum>> maxHeightComboBoxRef = new AtomicReference<>();
 
-            JComboBox<String> maxHeightComboBox = addComboBox(itemPanel, gbcItem,
-                "settings.maximum_quality",
-                ResolutionEnum.class,
-                qualitySettings::getMaxHeight,
-                qualitySettings::setMaxHeight,
-                false
-            );
-            toggleableComponents.add(maxHeightComboBox);
-
-            {
-                Arrays.stream(minHeightComboBox.getActionListeners())
-                    .forEach(minHeightComboBox::removeActionListener);
-
-                minHeightComboBox.addActionListener((ActionEvent e) -> {
-                    ResolutionEnum minResolution = ISettingsEnum.getEnumByIndex(ResolutionEnum.class, minHeightComboBox.getSelectedIndex());
-                    ResolutionEnum maxResolution = minResolution.getValidMax(qualitySettings.getMaxHeight());
-
-                    qualitySettings.setMinHeight(minResolution);
+            minHeightComboBoxRef.set(addComboBox(itemPanel, ComboBoxBuilder.<ResolutionEnum>builder()
+                .background(resolveColor(itemPanel))
+                .labelKey("settings.minimum_quality")
+                .values(ResolutionEnum.values())
+                .getter(qualitySettings::getMinHeight)
+                .setter(qualitySettings::setMinHeight)
+                .onSet((selected) -> {
+                    ResolutionEnum maxResolution = selected.getValidMax(qualitySettings.getMaxHeight());
                     qualitySettings.setMaxHeight(maxResolution);
 
-                    maxHeightComboBox.setSelectedIndex(ISettingsEnum.getEnumIndex(ResolutionEnum.class, maxResolution));
-                });
+                    maxHeightComboBoxRef.get().setSelectedItem(maxResolution);
+                })
+                .build()));
+            toggleableComponents.add(minHeightComboBoxRef.get());
 
-                Arrays.stream(maxHeightComboBox.getActionListeners())
-                    .forEach(maxHeightComboBox::removeActionListener);
-
-                maxHeightComboBox.addActionListener((ActionEvent e) -> {
-                    ResolutionEnum maxResolution = ISettingsEnum.getEnumByIndex(ResolutionEnum.class, maxHeightComboBox.getSelectedIndex());
-                    ResolutionEnum minResolution = maxResolution.getValidMin(qualitySettings.getMinHeight());
-
+            maxHeightComboBoxRef.set(addComboBox(itemPanel, ComboBoxBuilder.<ResolutionEnum>builder()
+                .background(resolveColor(itemPanel))
+                .labelKey("settings.maximum_quality")
+                .values(ResolutionEnum.values())
+                .getter(qualitySettings::getMaxHeight)
+                .setter(qualitySettings::setMaxHeight)
+                .onSet((selected) -> {
+                    ResolutionEnum minResolution = selected.getValidMin(qualitySettings.getMinHeight());
                     qualitySettings.setMinHeight(minResolution);
-                    qualitySettings.setMaxHeight(maxResolution);
 
-                    minHeightComboBox.setSelectedIndex(ISettingsEnum.getEnumIndex(ResolutionEnum.class, minResolution));
-                });
-            }
+                    minHeightComboBoxRef.get().setSelectedItem(minResolution);
+                })
+                .build()));
+            toggleableComponents.add(maxHeightComboBoxRef.get());
 
-            toggleableComponents.add(addComboBox(itemPanel, gbcItem,
-                "settings.video_container",
-                VideoContainerEnum.class,
-                qualitySettings::getVideoContainer,
-                qualitySettings::setVideoContainer,
-                false
-            ));
+            toggleableComponents.add(addComboBox(itemPanel, ComboBoxBuilder.<VideoContainerEnum>builder()
+                .background(resolveColor(itemPanel))
+                .labelKey("settings.video_container")
+                .values(VideoContainerEnum.allExceptDefault())
+                .getter(qualitySettings::getVideoContainer)
+                .setter(qualitySettings::setVideoContainer)
+                .build()));
 
-            toggleableComponents.add(addComboBox(itemPanel, gbcItem,
-                "settings.fps",
-                FPSEnum.class,
-                qualitySettings::getFps,
-                qualitySettings::setFps,
-                false
-            ));
+            toggleableComponents.add(addComboBox(itemPanel, ComboBoxBuilder.<FPSEnum>builder()
+                .background(resolveColor(itemPanel))
+                .labelKey("settings.fps")
+                .values(FPSEnum.values())
+                .getter(qualitySettings::getFps)
+                .setter(qualitySettings::setFps)
+                .build()));
 
-            toggleableComponents.add(addComboBox(itemPanel, gbcItem,
-                "settings.subtitle_container",
-                SubtitleContainerEnum.class,
-                qualitySettings::getSubtitleContainer,
-                qualitySettings::setSubtitleContainer,
-                false
-            ));
+            toggleableComponents.add(addComboBox(itemPanel, ComboBoxBuilder.<SubtitleContainerEnum>builder()
+                .background(resolveColor(itemPanel))
+                .labelKey("settings.subtitle_container")
+                .values(SubtitleContainerEnum.values())
+                .getter(qualitySettings::getSubtitleContainer)
+                .setter(qualitySettings::setSubtitleContainer)
+                .build()));
 
-            toggleableComponents.add(addComboBox(itemPanel, gbcItem,
-                "settings.thumbnail_container",
-                ThumbnailContainerEnum.class,
-                qualitySettings::getThumbnailContainer,
-                qualitySettings::setThumbnailContainer,
-                false
-            ));
+            toggleableComponents.add(addComboBox(itemPanel, ComboBoxBuilder.<ThumbnailContainerEnum>builder()
+                .background(resolveColor(itemPanel))
+                .labelKey("settings.thumbnail_container")
+                .values(ThumbnailContainerEnum.values())
+                .getter(qualitySettings::getThumbnailContainer)
+                .setter(qualitySettings::setThumbnailContainer)
+                .build()));
         }
 
         if (filter == null || !filter.isVideoOnly()) {
-            toggleableComponents.add(addComboBox(itemPanel, gbcItem,
-                "settings.audio_container",
-                AudioContainerEnum.class,
-                qualitySettings::getAudioContainer,
-                qualitySettings::setAudioContainer,
-                false
-            ));
+            toggleableComponents.add(addComboBox(itemPanel, ComboBoxBuilder.<AudioContainerEnum>builder()
+                .background(resolveColor(itemPanel))
+                .labelKey("settings.audio_container")
+                .values(AudioContainerEnum.values())
+                .getter(qualitySettings::getAudioContainer)
+                .setter(qualitySettings::setAudioContainer)
+                .build()));
 
-            toggleableComponents.add(addComboBox(itemPanel, gbcItem,
-                "settings.audio_bitrate",
-                AudioBitrateEnum.class,
-                qualitySettings::getAudioBitrate,
-                qualitySettings::setAudioBitrate,
-                false
-            ));
+            toggleableComponents.add(addComboBox(itemPanel, ComboBoxBuilder.<AudioBitrateEnum>builder()
+                .background(resolveColor(itemPanel))
+                .labelKey("settings.audio_bitrate")
+                .values(AudioBitrateEnum.values())
+                .getter(qualitySettings::getAudioBitrate)
+                .setter(qualitySettings::setAudioBitrate)
+                .build()));
+        }
 
-            // TODO: remove
-            toggleableComponents.add(addComboBox(itemPanel, gbcItem,
-                "settings.audio_codec",
-                AudioCodecEnum.class,
-                qualitySettings::getAudioCodec,
-                qualitySettings::setAudioCodec,
-                false
-            ));
+        {
+            CustomTranscodePanel panel = new CustomTranscodePanel(
+                currentFFmpegConfig.get(), main.getFfmpegTranscoder(),
+                SETTINGS_ROW_BACKGROUND_LIGHT);
+
+            itemPanel.add(panel);
+
+            toggleableComponents.add(panel);
+            transcodePanel.set(panel);
         }
 
         JCheckBox globalCheckbox;
         if ((globalCheckbox = useGlobalCheckbox.get()) != null) {
             enableComponentsAndLabels(toggleableComponents, !globalCheckbox.isSelected());
-
-            globalCheckbox.addActionListener(e -> {
-                enableComponentsAndLabels(toggleableComponents, !globalCheckbox.isSelected());
-            });
         }
 
         MouseAdapter cardListener = new MouseAdapter() {
@@ -1188,7 +1202,7 @@ public class SettingsPanel {
                     expandLabel.setText(isExpanded ? "▲" : "▼");
 
                     card.setBackground(isExpanded
-                        ? color(MEDIA_CARD_HOVER) : color(MEDIA_CARD));
+                        ? color(SETTINGS_ROW_BACKGROUND_LIGHT) : color(MEDIA_CARD));
 
                     card.revalidate();
                 }
@@ -1197,7 +1211,7 @@ public class SettingsPanel {
             @Override
             public void mouseEntered(MouseEvent e) {
                 if (!isExpanded) {
-                    card.setBackground(color(MEDIA_CARD_HOVER));
+                    card.setBackground(color(SETTINGS_ROW_BACKGROUND_LIGHT));
                 }
             }
 
@@ -1217,124 +1231,171 @@ public class SettingsPanel {
         return card;
     }
 
-    public static <T extends Enum<T> & ISettingsEnum> JComboBox<String> addComboBox(JPanel panel,
-        GridBagConstraints gbcPanel, String labelString, Class<T> enumClass,
-        Supplier<T> getter, Consumer<T> setter, boolean requiresRestart) {
+    private JPanel getFillerPanel() {
+        JPanel fillerPanel = new JPanel(new GridBagLayout());
+        fillerPanel.setBackground(color(BACKGROUND));
+        GridBagConstraints fillerGbc = new GridBagConstraints();
+        fillerGbc.weightx = 1;
+        fillerGbc.weightx = 1;
+        fillerGbc.weighty = 1;
+        fillerGbc.gridwidth = GridBagConstraints.REMAINDER;
+        fillerGbc.fill = GridBagConstraints.BOTH;
+        JPanel filler = new JPanel();
+        filler.setBackground(color(BACKGROUND));
+        fillerPanel.add(filler, fillerGbc);
 
-        JLabel label = createLabel(labelString, LIGHT_TEXT);
+        return fillerPanel;
+    }
 
-        gbcPanel.gridx = 0;
-        gbcPanel.gridy++;
-        gbcPanel.weightx = 0.5;
-        gbcPanel.gridwidth = 1;
-        panel.add(label, gbcPanel);
+    public static UIColors resolveColor(JPanel panel) {
+        return panel.getComponentCount() % 2 == 0
+            ? SETTINGS_ROW_BACKGROUND_DARK : SETTINGS_ROW_BACKGROUND_LIGHT;
+    }
 
-        JComboBox<String> comboBox = new JComboBox<>(ISettingsEnum.getDisplayNames(enumClass));
-        if (requiresRestart) {
+    public static void wrapComponentRow(JPanel panel, JLabel label,
+        @NonNull JComponent component, UIColors background) {
+        Color rowColor = color(background);
+        JPanel rowPanel = new JPanel(new GridLayout(1, 2, 0, 0));
+        rowPanel.setBackground(rowColor);
+
+        label.setHorizontalAlignment(SwingConstants.LEFT);
+        label.setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 5));
+
+        JPanel labelPanel = new JPanel(new BorderLayout());
+        labelPanel.setBackground(rowColor);
+        labelPanel.add(label, BorderLayout.CENTER);
+
+        JPanel componentPanel = new JPanel(new BorderLayout());
+        componentPanel.setBackground(rowColor);
+        componentPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+        componentPanel.add(component, BorderLayout.CENTER);
+
+        rowPanel.add(labelPanel);
+        rowPanel.add(componentPanel);
+        panel.add(rowPanel);
+
+        component.putClientProperty("associated-label", label);
+    }
+
+    public static <T extends ITranslatable> JComboBox<T> addComboBox(JPanel panel, ComboBoxBuilder<T> builder) {
+        JLabel label = createLabel(builder.getLabelKey(), LIGHT_TEXT);
+
+        JComboBox<T> comboBox = new JComboBox<>(builder.getValues());
+        if (builder.isRequiresRestart()) {
             comboBox.setToolTipText(l10n("settings.requires_restart.tooltip"));
         }
 
-        comboBox.setSelectedIndex(getter.get().ordinal());
+        if (builder.getGetter() != null) {
+            comboBox.setSelectedItem(builder.getGetter().get());
+        }
 
         comboBox.addActionListener((ActionEvent e) -> {
-            setter.accept(ISettingsEnum.getEnumByIndex(enumClass, comboBox.getSelectedIndex()));
+            @SuppressWarnings("unchecked")
+            T selected = (T)comboBox.getSelectedItem();
+            if (builder.getSetter() != null) {
+                builder.getSetter().accept(selected);
+            }
+
+            if (builder.getOnSet() != null) {
+                builder.getOnSet().accept(selected);
+            }
         });
 
         customizeComboBox(comboBox);
-        comboBox.putClientProperty("associated-label", label);
-
-        gbcPanel.gridx = 1;
-        gbcPanel.weightx = 0.5;
-        gbcPanel.gridwidth = GridBagConstraints.REMAINDER;
-        panel.add(comboBox, gbcPanel);
+        wrapComponentRow(panel, label, comboBox, builder.getBackground());
+        enableComponentAndLabel(comboBox, builder.isEnabled());
 
         return comboBox;
     }
 
-    public static JCheckBox addCheckBox(JPanel panel, GridBagConstraints gbcPanel, String labelString,
-        Supplier<Boolean> getter, Consumer<Boolean> setter, boolean requiresRestart) {
-
-        JLabel label = createLabel(labelString, LIGHT_TEXT);
-
-        gbcPanel.gridx = 0;
-        gbcPanel.gridy++;
-        gbcPanel.weightx = 0.5;
-        gbcPanel.gridwidth = 1;
-        panel.add(label, gbcPanel);
+    public static JCheckBox addCheckBox(JPanel panel, CheckBoxBuilder builder) {
+        JLabel label = createLabel(builder.getLabelKey(), LIGHT_TEXT);
 
         JCheckBox checkBox = new JCheckBox();
-        checkBox.setSelected(getter.get());
-        if (requiresRestart) {
+        if (builder.isRequiresRestart()) {
             checkBox.setToolTipText(l10n("settings.requires_restart.tooltip"));
         }
 
+        if (builder.getGetter() != null) {
+            checkBox.setSelected(builder.getGetter().get());
+        }
+
         checkBox.addActionListener((ActionEvent e) -> {
-            setter.accept(checkBox.isSelected());
+            if (builder.getSetter() != null) {
+                builder.getSetter().accept(checkBox.isSelected());
+            }
+
+            if (builder.getOnSet() != null) {
+                builder.getOnSet().accept(checkBox.isSelected());
+            }
         });
 
-        customizeComponent(checkBox, BACKGROUND, LIGHT_TEXT);
-        checkBox.putClientProperty("associated-label", label);
-
-        gbcPanel.gridx = 1;
-        gbcPanel.weightx = 0.5;
-        gbcPanel.gridwidth = GridBagConstraints.REMAINDER;
-        panel.add(checkBox, gbcPanel);
+        customizeComponent(checkBox, builder.getBackground(), LIGHT_TEXT);
+        wrapComponentRow(panel, label, checkBox, builder.getBackground());
+        enableComponentAndLabel(checkBox, builder.isEnabled());
 
         return checkBox;
     }
 
-    public static JLabel addLabel(JPanel panel, GridBagConstraints gbcPanel, String labelString) {
-        JLabel label = createLabel(labelString, FOREGROUND);
+    public static JSlider addSlider(JPanel panel, SliderBuilder builder) {
+        JLabel label = createLabel(builder.getLabelKey(), LIGHT_TEXT);
 
-        gbcPanel.gridx = 0;
-        gbcPanel.gridy++;
-        gbcPanel.weightx = 0.5;
-        gbcPanel.gridwidth = 1;
-        gbcPanel.insets = new Insets(20, 5, 10, 5);
+        JSlider slider = new JSlider(builder.getMin(), builder.getMax(), builder.getGetter().get());
+        if (builder.isRequiresRestart()) {
+            slider.setToolTipText(l10n("settings.requires_restart.tooltip"));
+        }
 
-        panel.add(label, gbcPanel);
-
-        gbcPanel.insets = new Insets(5, 5, 5, 5);
-
-        return label;
-    }
-
-    public static JSlider addSlider(JPanel panel, GridBagConstraints gbcPanel, String labelString,
-        int min, int max, Supplier<Integer> getter, Consumer<Integer> setter) {
-
-        JLabel label = createLabel(labelString, LIGHT_TEXT);
-
-        gbcPanel.gridx = 0;
-        gbcPanel.gridy++;
-        gbcPanel.weightx = 0.5;
-        gbcPanel.gridwidth = 1;
-        panel.add(label, gbcPanel);
-
-        JSlider slider = new JSlider(min, max, getter.get());
-        int tickSpacing = max <= 20 ? 1
-            : Math.min(100, Math.max(5, (int)(5 * Math.pow(2, Math.floor(Math.log10(max / 50))))));
-        slider.setMajorTickSpacing(tickSpacing);
-        slider.setSnapToTicks(tickSpacing == 1);
-        slider.setPaintTicks(true);
-        slider.setPaintLabels(true);
+        slider.setMinorTickSpacing(builder.getMinorTickSpacing());
+        slider.setMajorTickSpacing(builder.getMajorTickSpacing());
+        slider.setSnapToTicks(builder.isSnapToTicks());
+        slider.setPaintTicks(builder.isPaintTicks());
+        slider.setPaintLabels(builder.isPaintLabels());
 
         slider.addChangeListener((ChangeEvent e) -> {
             JSlider source = (JSlider)e.getSource();
+            int sliderValue = source.getValue();
+
+            if (builder.getOnAdjust() != null) {
+                builder.getOnAdjust().accept(sliderValue);
+            }
+
             if (!source.getValueIsAdjusting()) {
-                int sliderValue = source.getValue();
-                setter.accept(sliderValue);
+                builder.getSetter().accept(sliderValue);
+
+                if (builder.getOnSet() != null) {
+                    builder.getOnSet().accept(sliderValue);
+                }
             }
         });
 
-        customizeSlider(slider, BACKGROUND, SLIDER_FOREGROUND);
-        slider.putClientProperty("associated-label", label);
-
-        gbcPanel.gridx = 1;
-        gbcPanel.weightx = 0.5;
-        gbcPanel.gridwidth = GridBagConstraints.REMAINDER;
-        panel.add(slider, gbcPanel);
+        customizeSlider(slider, builder.getBackground(), SLIDER_FOREGROUND);
+        wrapComponentRow(panel, label, slider, builder.getBackground());
+        enableComponentAndLabel(slider, builder.isEnabled());
 
         return slider;
+    }
+
+    public static JLabel addLabel(JPanel panel, String labelKey) {
+        return addLabel(panel, labelKey, resolveColor(panel));
+    }
+
+    public static JLabel addLabel(JPanel panel, String labelKey, UIColors background) {
+        Color rowColor = color(background);
+        JPanel rowPanel = new JPanel(new GridLayout(1, 1, 0, 0));
+        rowPanel.setBackground(rowColor);
+
+        JLabel label = createLabel(labelKey, FOREGROUND);
+        label.setHorizontalAlignment(SwingConstants.LEFT);
+        label.setBorder(BorderFactory.createEmptyBorder(25, 15, 25, 5));
+
+        JPanel labelPanel = new JPanel(new BorderLayout());
+        labelPanel.setBackground(rowColor);
+        labelPanel.add(label, BorderLayout.CENTER);
+
+        rowPanel.add(labelPanel);
+        panel.add(rowPanel);
+
+        return label;
     }
 
     @Data
