@@ -668,6 +668,7 @@ public final class FFmpegTranscoder {
     @Nullable
     private MediaStreamData getMediaStreams(File inputFile) {
         ProcessArguments args = new ProcessArguments(
+            "-hide_banner",
             "-v", "error",
             "-show_entries", "stream",
             "-of", "json",

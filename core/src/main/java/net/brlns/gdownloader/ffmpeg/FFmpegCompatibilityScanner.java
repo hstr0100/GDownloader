@@ -154,7 +154,7 @@ public class FFmpegCompatibilityScanner {
 
             FFmpegProcessRunner.runFFmpeg(
                 transcoder,
-                new ProcessArguments("-h", "encoder=" + encoder.getFfmpegCodecName()),
+                new ProcessArguments("-hide_banner", "-h", "encoder=" + encoder.getFfmpegCodecName()),
                 FFmpegProcessOptions.builder()
                     .listener((output, hasTaskStarted, progress) -> {
                         lines.add(output);

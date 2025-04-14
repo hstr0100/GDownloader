@@ -643,7 +643,7 @@ public class DownloadManager implements IEvent {
                 PopupMessenger.show(
                     l10n("gui.downloads_complete.notification_title"),
                     l10n("gui.downloads_complete.complete"),
-                    4000,
+                    5000,
                     MessageTypeEnum.INFO,
                     true, true);
             }
