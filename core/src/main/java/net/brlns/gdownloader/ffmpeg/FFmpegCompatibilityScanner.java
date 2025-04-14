@@ -76,7 +76,7 @@ public class FFmpegCompatibilityScanner {
     public Set<String> getAvailableFFmpegEncoders() {
         encodersLock.lock();
         try {
-            if (encodersScanned.get()) {
+            if (!transcoder.hasFFmpeg() || encodersScanned.get()) {
                 return availableEncoders;
             }
 
@@ -117,7 +117,7 @@ public class FFmpegCompatibilityScanner {
     private Map<EncoderEnum, EncoderCapability> getEncoderCapabilities() {
         capabilitiesLock.lock();
         try {
-            if (capabilitiesScanned.get()) {
+            if (!transcoder.hasFFmpeg() || capabilitiesScanned.get()) {
                 return encoderCapabilities;
             }
 

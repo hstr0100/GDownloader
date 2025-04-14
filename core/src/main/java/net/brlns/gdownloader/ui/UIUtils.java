@@ -64,7 +64,8 @@ public final class UIUtils {
     public static void enableComponents(Component component, boolean enable) {
         component.setEnabled(enable);
 
-        if (component instanceof Container container) {
+        if (component instanceof Container container
+            && !(component instanceof CustomTranscodePanel)) {
             for (Component c : container.getComponents()) {
                 enableComponents(c, enable);
             }

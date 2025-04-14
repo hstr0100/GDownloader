@@ -1360,7 +1360,9 @@ public class SettingsPanel {
             }
 
             if (!source.getValueIsAdjusting()) {
-                builder.getSetter().accept(sliderValue);
+                if (builder.getSetter() != null) {
+                    builder.getSetter().accept(sliderValue);
+                }
 
                 if (builder.getOnSet() != null) {
                     builder.getOnSet().accept(sliderValue);

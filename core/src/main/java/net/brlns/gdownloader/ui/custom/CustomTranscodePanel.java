@@ -48,7 +48,6 @@ import static net.brlns.gdownloader.util.StringUtils.formatBitrate;
  * @author Gabriel / hstr0100 / vertx010
  */
 // TODO: investigate erratic behavior of CRF value when selecting VBR
-// TODO: disable all fields if ffmpeg is missing, add l10n
 @Slf4j
 public final class CustomTranscodePanel extends JPanel {
 
@@ -120,7 +119,16 @@ public final class CustomTranscodePanel extends JPanel {
             @Override
             protected void done() {
                 runOnEDT(() -> {
-                    loadingPanel.setVisible(false);
+                    if (transcoder.hasFFmpeg()) {
+                        loadingPanel.setVisible(false);
+                    } else {
+                        JLabel statusLabel = createLabel("gui.ffmpeg.not_found", UIColors.ICON_INACTIVE);
+                        loadingPanel.removeAll();
+                        loadingPanel.add(statusLabel);
+                        loadingPanel.revalidate();
+                        loadingPanel.repaint();
+                    }
+
                     initialized.set(true);
 
                     videoEncoderCombo.setSelectedItem(config.getVideoEncoder());
@@ -128,7 +136,7 @@ public final class CustomTranscodePanel extends JPanel {
                     updatePresetAndProfileDropdowns(config.getVideoEncoder());
                     updatePresetDropdownBasedOnConfig();
 
-                    enableComponents(controlsPanel, enabled);
+                    enableComponents(controlsPanel, enabled && transcoder.hasFFmpeg());
                     updateControlVisibility();
                     updateVideoControls();
                     updateAudioControls();
@@ -313,6 +321,10 @@ public final class CustomTranscodePanel extends JPanel {
 
             int value = rateControlSlider.getValue();
             config.setRateControlValue(value);
+            if (value == 0) {
+                new Throwable().printStackTrace();
+            }
+
             rateControlValueLabel.setText(l10n("settings.transcode.rate_control.value", value));
 
             if (!rateControlSlider.getValueIsAdjusting()) {
@@ -556,7 +568,7 @@ public final class CustomTranscodePanel extends JPanel {
         assert SwingUtilities.isEventDispatchThread();
 
         // This will be hard-locked if ffmpeg is not found
-        enabled = enabledIn;
+        enabled = enabledIn && transcoder.hasFFmpeg();
         enableComponents(controlsPanel, enabled);
 
         if (initialized.get()) {

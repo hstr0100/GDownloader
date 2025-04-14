@@ -21,6 +21,7 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NonNull;
 import net.brlns.gdownloader.ui.themes.UIColors;
 
 /**
@@ -44,6 +45,7 @@ public class SliderBuilder {
     private boolean paintTicks = true;
     @Builder.Default
     private boolean paintLabels = true;
+    @NonNull
     private Supplier<Integer> getter;
     private Consumer<Integer> setter;
     @Nullable

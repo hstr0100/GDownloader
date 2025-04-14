@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
 import lombok.Getter;
@@ -50,6 +51,8 @@ import static net.brlns.gdownloader.util.StringUtils.notNullOrEmpty;
  */
 @Slf4j
 public final class FFmpegTranscoder {
+
+    private final Map<VideoCodecEnum, EncoderEnum> autoEncoderCache = new ConcurrentHashMap<>();
 
     @Setter
     private Optional<File> ffmpegPath = Optional.empty();
@@ -106,31 +109,33 @@ public final class FFmpegTranscoder {
     }
 
     protected EncoderEnum resolveEncoder(VideoCodecEnum targetCodec) {
-        // Try each encoder type in the fallback order for the target codec
-        for (EncoderTypeEnum type : EncoderTypeEnum.values()) {
-            if (type == EncoderTypeEnum.AUTO) {
-                continue;
-            }
+        return autoEncoderCache.computeIfAbsent(targetCodec, (key) -> {
+            // Try each encoder type in the fallback order for the target codec
+            for (EncoderTypeEnum type : EncoderTypeEnum.values()) {
+                if (type == EncoderTypeEnum.AUTO) {
+                    continue;
+                }
 
-            EncoderEnum candidate = findEncoderByTypeAndCodec(type, targetCodec);
-            if (candidate != null) {
-                if (getCompatScanner().isEncoderAvailable(candidate)) {
-                    return candidate;
+                EncoderEnum candidate = findEncoderByTypeAndCodec(type, targetCodec);
+                if (candidate != null) {
+                    if (getCompatScanner().isEncoderAvailable(candidate)) {
+                        return candidate;
+                    }
                 }
             }
-        }
 
-        // If all hardware encoders fail, fallback to software
-        EncoderEnum softwareEncoder = findEncoderByTypeAndCodec(EncoderTypeEnum.SOFTWARE, targetCodec);
-        if (softwareEncoder != null) {
-            log.info("Falling back to software encoder: {}", softwareEncoder);
-            return softwareEncoder;
-        }
+            // If all hardware encoders fail, fallback to software
+            EncoderEnum softwareEncoder = findEncoderByTypeAndCodec(EncoderTypeEnum.SOFTWARE, targetCodec);
+            if (softwareEncoder != null) {
+                log.info("Falling back to software encoder: {}", softwareEncoder);
+                return softwareEncoder;
+            }
 
-        // Last resort: use the default H264 software encoder
-        // If this computer was manufactured in this century, it should always be available.
-        log.warn("No suitable encoders found for {}, using H.264 software", targetCodec);
-        return EncoderEnum.H264_SOFTWARE;
+            // Last resort: use the default H264 software encoder
+            // If this computer was manufactured in this century, it should always be available.
+            log.warn("No suitable encoders found for {}, using H.264 software", targetCodec);
+            return EncoderEnum.H264_SOFTWARE;
+        });
     }
 
     private EncoderEnum findEncoderByTypeAndCodec(EncoderTypeEnum type, VideoCodecEnum codec) {
@@ -158,6 +163,10 @@ public final class FFmpegTranscoder {
         if (!inputFile.exists()) {
             log.error("Input file does not exist, returning -4");
             return -4;
+        }
+
+        if (!hasFFmpeg()) {
+            return -5;
         }
 
         if (log.isDebugEnabled()) {
