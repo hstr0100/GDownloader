@@ -65,6 +65,7 @@ import net.brlns.gdownloader.ui.menu.RunnableMenuEntry;
 import net.brlns.gdownloader.ui.menu.SingleActionMenuEntry;
 import net.brlns.gdownloader.ui.message.MessageTypeEnum;
 import net.brlns.gdownloader.ui.message.ToastMessenger;
+import net.brlns.gdownloader.util.CancelHook;
 import net.brlns.gdownloader.util.DirectoryUtils;
 import net.brlns.gdownloader.util.ImageUtils;
 import net.brlns.gdownloader.util.StringUtils;
@@ -113,7 +114,7 @@ public class QueueEntry {
     private String lastStatusMessage;
 
     private final AtomicBoolean downloadStarted = new AtomicBoolean(false);
-    private final AtomicBoolean cancelHook = new AtomicBoolean(false);
+    private final CancelHook cancelHook = new CancelHook();
     private final AtomicBoolean running = new AtomicBoolean(false);
     private final AtomicBoolean queried = new AtomicBoolean(false);
     private final AtomicInteger retryCounter = new AtomicInteger();
@@ -157,6 +158,12 @@ public class QueueEntry {
         }
 
         main.openDownloadsDirectory();
+    }
+
+    public void recreateQueueEntry() {
+        main.getGuiManager().removeMediaCard(
+            mediaCard.getId(), CloseReasonEnum.MANUAL);
+        main.getDownloadManager().captureUrl(url, true);
     }
 
     @Nullable
@@ -432,7 +439,7 @@ public class QueueEntry {
                     mediaCard.setPercentage(100);
                     mediaCard.setProgressBarTextAndColors(status.getDisplayName(), Color.GRAY);
                 }
-                case DOWNLOADING -> {
+                case DOWNLOADING, TRANSCODING -> {
                     if (mediaCard.getPercentage() >= 0) {
                         mediaCard.setPercentage(0);
                     }
@@ -455,7 +462,7 @@ public class QueueEntry {
                 default ->
                     throw new RuntimeException("Unhandled status: " + status);
             }
-        } else if (status == DownloadStatusEnum.DOWNLOADING) {
+        } else if (status == DownloadStatusEnum.DOWNLOADING || status == DownloadStatusEnum.TRANSCODING) {
             mediaCard.setProgressBarText(status.getDisplayName() + ": " + mediaCard.getPercentage() + "%");
         }
     }
@@ -485,10 +492,7 @@ public class QueueEntry {
             }
         }
 
-        if (main.getConfig().isDebugMode()) {
-            addRightClick(l10n("gui.copy_command_line"),
-                constructCommandLineMenu(lastCommandLine));
-        }
+        updateExtraRightClickOptions();
     }
 
     public void logError(String output) {
@@ -497,8 +501,7 @@ public class QueueEntry {
         }
 
         if (!errorLog.isEmpty()) {
-            addRightClick(l10n("gui.copy_error_log"),
-                constructLogMenu(errorLog));
+            updateExtraRightClickOptions();
         }
 
         errorLog.remove(output);
@@ -511,8 +514,7 @@ public class QueueEntry {
         }
 
         if (!downloadLog.isEmpty()) {
-            addRightClick(l10n("gui.copy_download_log"),
-                constructLogMenu(downloadLog));
+            updateExtraRightClickOptions();
         }
 
         downloadLog.remove(output);
@@ -580,22 +582,35 @@ public class QueueEntry {
 
         addRightClick(menu);
 
+        updateMediaRightClickOptions();
+        updateExtraRightClickOptions();
+    }
+
+    public void updateExtraRightClickOptions() {
+        NestedMenuEntry extrasSubmenu = new NestedMenuEntry();
+
         if (main.getConfig().isDebugMode() && !lastCommandLine.isEmpty()) {
-            addRightClick(l10n("gui.copy_command_line"),
+            extrasSubmenu.put(l10n("gui.copy_command_line"),
                 constructCommandLineMenu(lastCommandLine));
         }
 
         if (!errorLog.isEmpty()) {
-            addRightClick(l10n("gui.copy_error_log"),
+            extrasSubmenu.put(l10n("gui.copy_error_log"),
                 constructLogMenu(errorLog));
         }
 
         if (!downloadLog.isEmpty()) {
-            addRightClick(l10n("gui.copy_download_log"),
+            extrasSubmenu.put(l10n("gui.copy_download_log"),
                 constructLogMenu(downloadLog));
         }
 
-        updateMediaRightClickOptions();
+        extrasSubmenu.put(l10n("gui.recreate_entry"),
+            new RunnableMenuEntry(() -> recreateQueueEntry()));
+
+        if (!extrasSubmenu.isEmpty()) {
+            addRightClick(l10n("gui.more_options"),
+                extrasSubmenu);
+        }
     }
 
     public void updateMediaRightClickOptions() {

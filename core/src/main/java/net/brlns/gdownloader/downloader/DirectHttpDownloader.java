@@ -81,10 +81,6 @@ public class DirectHttpDownloader extends AbstractDownloader {
     @Setter
     private Optional<File> executablePath = Optional.empty();
 
-    @Getter
-    @Setter
-    private Optional<File> ffmpegPath = Optional.empty();
-
     public DirectHttpDownloader(DownloadManager managerIn) {
         super(managerIn);
     }
@@ -198,6 +194,12 @@ public class DirectHttpDownloader extends AbstractDownloader {
         }
 
         return new DownloadResult(success ? FLAG_SUCCESS : FLAG_UNSUPPORTED, lastOutput);
+    }
+
+    @Override
+    protected DownloadResult transcodeMediaFiles(QueueEntry entry) {
+        // TODO
+        return null;
     }
 
     @Override

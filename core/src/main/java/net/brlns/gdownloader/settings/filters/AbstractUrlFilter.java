@@ -35,7 +35,10 @@ import net.brlns.gdownloader.downloader.AbstractDownloader;
 import net.brlns.gdownloader.downloader.DownloadManager;
 import net.brlns.gdownloader.downloader.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
+import net.brlns.gdownloader.lang.ITranslatable;
+import net.brlns.gdownloader.process.ProcessArguments;
 import net.brlns.gdownloader.settings.QualitySettings;
+import net.brlns.gdownloader.settings.Settings;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -69,7 +72,7 @@ import net.brlns.gdownloader.settings.QualitySettings;
 
     @JsonSubTypes.Type(value = GenericFilter.class, name = GenericFilter.ID)
 })
-public abstract class AbstractUrlFilter {
+public abstract class AbstractUrlFilter implements ITranslatable {
 
     @JsonIgnore
     private static final List<Class<?>> DEFAULTS = new ArrayList<>();
@@ -126,6 +129,9 @@ public abstract class AbstractUrlFilter {
 
     @JsonProperty("EmbedThumbnailAndMetadata")
     private boolean embedThumbnailAndMetadata = false;
+
+    @JsonProperty("CanTranscodeVideo")
+    private boolean canTranscodeVideo = true;
 
     /**
      * Represents a set of extra arguments for yt-dlp.
@@ -202,6 +208,15 @@ public abstract class AbstractUrlFilter {
     @JsonProperty("QualitySettings")
     private QualitySettings qualitySettings = QualitySettings.builder().build();
 
+    @JsonIgnore
+    public QualitySettings getActiveQualitySettings(Settings config) {
+        if (qualitySettings.isUseGlobalSettings()) {
+            return config.getGlobalQualitySettings();
+        }
+
+        return qualitySettings;
+    }
+
     public AbstractUrlFilter() {
         extraYtDlpArguments.put(DownloadTypeEnum.ALL, new ArrayList<>());
         for (DownloadTypeEnum downloadType : DownloadTypeEnum.getForDownloaderId(DownloaderIdEnum.YT_DLP)) {
@@ -220,6 +235,7 @@ public abstract class AbstractUrlFilter {
     }
 
     @JsonIgnore
+    @Override
     public String getDisplayName() {
         String name = getFilterName();
         if (name.isEmpty()) {
@@ -246,10 +262,9 @@ public abstract class AbstractUrlFilter {
     }
 
     @JsonIgnore
-    public List<String> getArguments(AbstractDownloader downloader, DownloadTypeEnum typeEnum, DownloadManager manager, File savePath, String inputUrl) {
-        List<String> arguments = new ArrayList<>();
-
-        arguments.addAll(buildArguments(downloader, typeEnum, manager, savePath, inputUrl));
+    public ProcessArguments getArguments(AbstractDownloader downloader, DownloadTypeEnum typeEnum, DownloadManager manager, File savePath, String inputUrl) {
+        ProcessArguments arguments = new ProcessArguments(
+            buildArguments(downloader, typeEnum, manager, savePath, inputUrl));
 
         // TODO: Map<DonwloaderIdEnum, Map<DownloadTypeEnum, List<String>>> or a struct extending that.
         switch (downloader.getDownloaderId()) {
@@ -277,7 +292,7 @@ public abstract class AbstractUrlFilter {
     }
 
     @JsonIgnore
-    protected abstract List<String> buildArguments(AbstractDownloader downloader, DownloadTypeEnum typeEnum, DownloadManager manager, File savePath, String inputUrl);
+    protected abstract ProcessArguments buildArguments(AbstractDownloader downloader, DownloadTypeEnum typeEnum, DownloadManager manager, File savePath, String inputUrl);
 
     @JsonIgnore
     public abstract boolean areCookiesRequired();

@@ -48,8 +48,12 @@ public enum ProxyTypeEnum implements ISettingsEnum {
         return "";
     }
 
+    public boolean isDefault() {
+        return this == NO_PROXY;
+    }
+
     @Override
     public String getDisplayName() {
-        return this == NO_PROXY ? l10n("settings.proxy.no_proxy") : protocol.toLowerCase();
+        return isDefault() ? l10n("settings.proxy.no_proxy") : protocol.toLowerCase();
     }
 }

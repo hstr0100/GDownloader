@@ -69,6 +69,8 @@ public class DarkTheme extends AbstractTheme {
         put(TOAST_ERROR, Color.RED);
         put(TOAST_WARNING, new Color(255, 214, 0));
         put(TOAST_INFO, new Color(30, 136, 229));
+        put(SETTINGS_ROW_BACKGROUND_LIGHT, new Color(68, 68, 68));
+        put(SETTINGS_ROW_BACKGROUND_DARK, new Color(64, 64, 64));
     }
 
     @Override

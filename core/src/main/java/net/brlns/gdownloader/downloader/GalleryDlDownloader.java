@@ -37,7 +37,9 @@ import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.downloader.structs.DownloadResult;
 import net.brlns.gdownloader.downloader.structs.MediaInfo;
 import net.brlns.gdownloader.persistence.PersistenceManager;
+import net.brlns.gdownloader.process.ProcessArguments;
 import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
+import net.brlns.gdownloader.util.CancelHook;
 import net.brlns.gdownloader.util.DirectoryDeduplicator;
 import net.brlns.gdownloader.util.DirectoryUtils;
 import net.brlns.gdownloader.util.FileUtils;
@@ -58,10 +60,6 @@ public class GalleryDlDownloader extends AbstractDownloader {
     @Getter
     @Setter
     private Optional<File> executablePath = Optional.empty();
-
-    @Getter
-    @Setter
-    private Optional<File> ffmpegPath = Optional.empty();
 
     public GalleryDlDownloader(DownloadManager managerIn) {
         super(managerIn);
@@ -144,25 +142,23 @@ public class GalleryDlDownloader extends AbstractDownloader {
         File tmpPath = DirectoryUtils.getOrCreate(finalPath, GDownloader.CACHE_DIRETORY_NAME, String.valueOf(entry.getDownloadId()));
         entry.setTmpDirectory(tmpPath);
 
-        List<String> genericArguments = new ArrayList<>();
-
-        genericArguments.addAll(List.of(
+        ProcessArguments genericArguments = new ProcessArguments(
             executablePath.get().getAbsolutePath(),
-            "--no-colors"
-        ));
+            "--no-colors");
 
         if (!main.getConfig().isRespectGalleryDlConfigFile()) {
             genericArguments.add("--config-ignore");
         }
 
+        Optional<File> ffmpegPath = main.getFfmpegTranscoder().getFfmpegPath();
         if (ffmpegPath.isPresent()) {// TODO: test
-            genericArguments.addAll(List.of(
+            genericArguments.add(
                 "-o",
                 "downloader.ytdl.raw-options=['"
                 + "--ffmpeg-location" + "', '"
                 + ffmpegPath.get().getAbsolutePath()
                 + "']"
-            ));
+            );
         }
 
         genericArguments.addAll(filter.getArguments(this, ALL, manager, tmpPath, entry.getUrl()));
@@ -180,10 +176,9 @@ public class GalleryDlDownloader extends AbstractDownloader {
 
             entry.setCurrentDownloadType(type);
 
-            List<String> arguments = new ArrayList<>(genericArguments);
-
-            List<String> downloadArguments = filter.getArguments(this, type, manager, tmpPath, entry.getUrl());
-            arguments.addAll(downloadArguments);
+            ProcessArguments arguments = new ProcessArguments(
+                genericArguments,
+                filter.getArguments(this, type, manager, tmpPath, entry.getUrl()));
 
             Pair<Integer, String> result = processDownload(entry, arguments);
 
@@ -205,6 +200,12 @@ public class GalleryDlDownloader extends AbstractDownloader {
         }
 
         return new DownloadResult(success ? FLAG_SUCCESS : FLAG_UNSUPPORTED, lastOutput);
+    }
+
+    @Override
+    protected DownloadResult transcodeMediaFiles(QueueEntry entry) {
+        // TODO
+        return null;
     }
 
     @Override
@@ -272,17 +273,15 @@ public class GalleryDlDownloader extends AbstractDownloader {
     }
 
     @Nullable
-    private Pair<Integer, String> processDownload(QueueEntry entry, List<String> arguments) throws Exception {
+    private Pair<Integer, String> processDownload(QueueEntry entry, ProcessArguments arguments) throws Exception {
         long start = System.currentTimeMillis();
 
-        List<String> finalArgs = new ArrayList<>(arguments);
-        finalArgs.add(entry.getUrl());
+        ProcessArguments finalArgs = new ProcessArguments(arguments, entry.getUrl());
 
         entry.setLastCommandLine(finalArgs, true);
 
-        ProcessBuilder processBuilder = new ProcessBuilder(finalArgs);
-        processBuilder.redirectErrorStream(true);
-        Process process = processBuilder.start();
+        CancelHook cancelHook = entry.getCancelHook().derive(manager::isRunning, true);
+        Process process = main.getProcessMonitor().startProcess(finalArgs, cancelHook);
         entry.setProcess(process);
 
         String lastOutput = "";
@@ -290,7 +289,7 @@ public class GalleryDlDownloader extends AbstractDownloader {
         try (
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
             String line;
-            while (manager.isRunning() && !entry.getCancelHook().get() && process.isAlive()) {
+            while (!cancelHook.get() && process.isAlive()) {
                 if (Thread.currentThread().isInterrupted()) {
                     process.destroyForcibly();
                     throw new InterruptedException("Download interrupted");
@@ -314,7 +313,7 @@ public class GalleryDlDownloader extends AbstractDownloader {
 
             long stopped = System.currentTimeMillis() - start;
 
-            if (!manager.isRunning() || entry.getCancelHook().get()) {
+            if (cancelHook.get()) {
                 if (main.getConfig().isDebugMode()) {
                     log.debug("Download process halted after {}ms.", stopped);
                 }

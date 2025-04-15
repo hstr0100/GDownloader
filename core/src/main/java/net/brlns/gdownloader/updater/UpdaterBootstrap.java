@@ -25,10 +25,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.util.ArrayList;
-import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
+import net.brlns.gdownloader.process.ProcessArguments;
 import net.brlns.gdownloader.util.ArchiveUtils;
 import net.brlns.gdownloader.util.LockUtils;
 
@@ -100,13 +99,12 @@ public class UpdaterBootstrap {
                 return;
             }
 
-            List<String> arguments = new ArrayList<>();
-            arguments.add(binary.getAbsolutePath());
-            arguments.add("--from-ota");
+            ProcessArguments arguments = new ProcessArguments(
+                binary.getAbsolutePath(),
+                "--from-ota");
 
             if (launchCommand != null) {
-                arguments.add("--launcher");
-                arguments.add(launchCommand);
+                arguments.add("--launcher", launchCommand);
             }
 
             // Older portable versions already have a broken updater,
@@ -115,7 +113,7 @@ public class UpdaterBootstrap {
                 arguments.add("--portable");
             }
 
-            arguments.addAll(List.of(args));
+            arguments.addAll(args);
             log.info("Launching {}", arguments);
 
             try {// Attempt to hand it off to the new version

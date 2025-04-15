@@ -38,7 +38,9 @@ import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.downloader.structs.DownloadResult;
 import net.brlns.gdownloader.downloader.structs.MediaInfo;
 import net.brlns.gdownloader.persistence.PersistenceManager;
+import net.brlns.gdownloader.process.ProcessArguments;
 import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
+import net.brlns.gdownloader.util.CancelHook;
 import net.brlns.gdownloader.util.DirectoryUtils;
 import net.brlns.gdownloader.util.FileUtils;
 import net.brlns.gdownloader.util.FlagUtil;
@@ -62,10 +64,6 @@ public class SpotDLDownloader extends AbstractDownloader {
     @Getter
     @Setter
     private Optional<File> executablePath = Optional.empty();
-
-    @Getter
-    @Setter
-    private Optional<File> ffmpegPath = Optional.empty();
 
     public SpotDLDownloader(DownloadManager managerIn) {
         super(managerIn);
@@ -172,24 +170,20 @@ public class SpotDLDownloader extends AbstractDownloader {
         File tmpPath = DirectoryUtils.getOrCreate(finalPath, GDownloader.CACHE_DIRETORY_NAME, String.valueOf(entry.getDownloadId()));
         entry.setTmpDirectory(tmpPath);
 
-        List<String> genericArguments = new ArrayList<>();
-
-        genericArguments.addAll(List.of(
+        ProcessArguments genericArguments = new ProcessArguments(
             executablePath.get().getAbsolutePath(),
             "--simple-tui"//As far as I can tell, these change nothing. The way it's displayed now, Java cannot read SpotDL's progress bar.
         //, "--log-level", "DEBUG"
-        ));
+        );
 
         if (main.getConfig().isRespectSpotDLConfigFile()) {
             // We can't specify config location for spotDL, our only choice is to copy or symlink it.
             genericArguments.add("--config");
         }
 
-        if (ffmpegPath.isPresent()) {
-            genericArguments.addAll(List.of(
-                "--ffmpeg",
-                ffmpegPath.get().getAbsolutePath() + File.separator + "ffmpeg.exe"
-            ));
+        Optional<String> ffmpegExecutable = main.getFfmpegTranscoder().getFFmpegExecutable();
+        if (ffmpegExecutable.isPresent()) {
+            genericArguments.add("--ffmpeg", ffmpegExecutable.get());
         }
 
         genericArguments.addAll(filter.getArguments(this, ALL, manager, tmpPath, entry.getUrl()));
@@ -209,10 +203,9 @@ public class SpotDLDownloader extends AbstractDownloader {
 
             entry.setCurrentDownloadType(type);
 
-            List<String> arguments = new ArrayList<>(genericArguments);
-
-            List<String> downloadArguments = filter.getArguments(this, type, manager, tmpPath, entry.getUrl());
-            arguments.addAll(downloadArguments);
+            ProcessArguments arguments = new ProcessArguments(
+                genericArguments,
+                filter.getArguments(this, type, manager, tmpPath, entry.getUrl()));
 
             Pair<Integer, String> result = processDownload(entry, arguments);
 
@@ -237,6 +230,12 @@ public class SpotDLDownloader extends AbstractDownloader {
         }
 
         return new DownloadResult(success ? FLAG_SUCCESS : FLAG_UNSUPPORTED, lastOutput);
+    }
+
+    @Override
+    protected DownloadResult transcodeMediaFiles(QueueEntry entry) {
+        // TODO
+        return null;
     }
 
     @Override
@@ -321,9 +320,8 @@ public class SpotDLDownloader extends AbstractDownloader {
 
         entry.setLastCommandLine(finalArgs, true);
 
-        ProcessBuilder processBuilder = new ProcessBuilder(finalArgs);
-        processBuilder.redirectErrorStream(true);
-        Process process = processBuilder.start();
+        CancelHook cancelHook = entry.getCancelHook().derive(manager::isRunning, true);
+        Process process = main.getProcessMonitor().startProcess(finalArgs, cancelHook);
         entry.setProcess(process);
 
         String lastOutput = "";
@@ -333,7 +331,7 @@ public class SpotDLDownloader extends AbstractDownloader {
         try (
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
             String line;
-            while (manager.isRunning() && !entry.getCancelHook().get() && process.isAlive()) {
+            while (!cancelHook.get() && process.isAlive()) {
                 if (Thread.currentThread().isInterrupted()) {
                     process.destroyForcibly();
                     throw new InterruptedException("Download interrupted");
@@ -361,7 +359,7 @@ public class SpotDLDownloader extends AbstractDownloader {
 
             long stopped = System.currentTimeMillis() - start;
 
-            if (!manager.isRunning() || entry.getCancelHook().get()) {
+            if (cancelHook.get()) {
                 if (main.getConfig().isDebugMode()) {
                     log.debug("Download process halted after {}ms.", stopped);
                 }

@@ -48,6 +48,7 @@ dependencies {
     implementation("jakarta.persistence:jakarta.persistence-api:$jakartaPersistenceVersion")
     implementation("org.eclipse.persistence:eclipselink:$eclipselinkVersion")
     implementation("org.hsqldb:hsqldb:$hsqldbVersion")
+    implementation("com.adonax:audiocue:$adonaxVersion")
 
     compileOnly("org.projectlombok:lombok:$lombokVersion")
     annotationProcessor("org.projectlombok:lombok:$lombokVersion")

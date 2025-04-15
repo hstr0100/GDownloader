@@ -18,10 +18,16 @@ package net.brlns.gdownloader.updater;
 
 import jakarta.annotation.Nullable;
 import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
+import net.brlns.gdownloader.util.FileUtils;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -44,6 +50,10 @@ public final class SystemExecutableLocator {
         String pathEnv = System.getenv("PATH");
         if (pathEnv != null) {
             for (String path : pathEnv.split(File.pathSeparator)) {
+                if (path == null || path.trim().isEmpty()) {
+                    continue;
+                }
+
                 File file = new File(path, executable);
                 if (file.exists() && file.canExecute()) {
                     log.info("Found {} executable at PATH: {}", executableName, file);
@@ -53,20 +63,28 @@ public final class SystemExecutableLocator {
         }
 
         // Check common installation directories as fallback
-        List<String> commonPaths = Arrays.asList(
-            "/usr/local/bin", // Linux/macOS
-            "/usr/bin", // Linux/macOS
-            System.getProperty("user.home") + "/.local/bin", // Linux/macOS user-specific
-            System.getProperty("user.home") + "/bin", // Linux/macOS user-specific
-            "C:\\Program Files\\yt-dlp", // Windows
-            "C:\\Program Files\\gallery-dl" // Windows
+        List<Path> commonPaths = Arrays.asList(
+            Paths.get(GDownloader.getWorkDirectory().getPath(), "ffmpeg"),
+            Paths.get("/usr/local/bin"), // Linux/macOS
+            Paths.get("/usr/bin"), // Linux/macOS
+            Paths.get(System.getProperty("user.home"), ".local", "bin"), // Linux/macOS user-specific
+            Paths.get(System.getProperty("user.home"), "bin"), // Linux/macOS user-specific
+            Paths.get("C:\\Program Files\\yt-dlp"), // Windows
+            Paths.get("C:\\Program Files\\gallery-dl"), // Windows
+            Paths.get("C:\\ffmpeg\\bin") // Windows
         );
 
-        for (String path : commonPaths) {
-            File file = new File(path, executable);
-            if (file.exists() && file.canExecute()) {
-                log.info("Found {} executable at common directory: {}", executableName, file);
-                return file;
+        Set<String> executableNames = new HashSet<>();
+        executableNames.add(FileUtils.getBinaryName(executable));
+        executableNames.add(executable);
+
+        for (Path path : commonPaths) {
+            for (String name : executableNames) {
+                Path file = path.resolve(name);
+                if (Files.exists(file) && Files.isExecutable(file)) {
+                    log.info("Found {} executable at: {}", executableName, file);
+                    return file.toFile();
+                }
             }
         }
 

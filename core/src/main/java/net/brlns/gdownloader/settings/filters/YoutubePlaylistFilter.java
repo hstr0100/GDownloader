@@ -19,12 +19,12 @@ package net.brlns.gdownloader.settings.filters;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.io.File;
-import java.util.List;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import net.brlns.gdownloader.downloader.AbstractDownloader;
 import net.brlns.gdownloader.downloader.DownloadManager;
 import net.brlns.gdownloader.downloader.enums.DownloadTypeEnum;
+import net.brlns.gdownloader.process.ProcessArguments;
 
 import static net.brlns.gdownloader.downloader.enums.DownloadTypeEnum.*;
 
@@ -50,17 +50,17 @@ public class YoutubePlaylistFilter extends YoutubeFilter {
 
     @JsonIgnore
     @Override
-    protected List<String> buildArguments(AbstractDownloader downloader, DownloadTypeEnum typeEnum, DownloadManager manager, File savePath, String inputUrl) {
-        List<String> arguments = super.buildArguments(downloader, typeEnum, manager, savePath, inputUrl);
+    protected ProcessArguments buildArguments(AbstractDownloader downloader, DownloadTypeEnum typeEnum, DownloadManager manager, File savePath, String inputUrl) {
+        ProcessArguments arguments = super.buildArguments(downloader, typeEnum, manager, savePath, inputUrl);
 
         switch (downloader.getDownloaderId()) {
             case YT_DLP -> {
                 switch (typeEnum) {
                     case ALL -> {
-                        arguments.addAll(List.of(
+                        arguments.add(
                             "--yes-playlist",
                             "--ignore-errors"
-                        ));
+                        );
                     }
                 }
             }

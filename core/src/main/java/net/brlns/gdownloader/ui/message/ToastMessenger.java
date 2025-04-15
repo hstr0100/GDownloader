@@ -29,6 +29,7 @@ import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.ui.GUIManager;
 import net.brlns.gdownloader.ui.custom.CustomProgressBar;
 import net.brlns.gdownloader.ui.themes.UIColors;
+import net.brlns.gdownloader.util.CancelHook;
 
 import static net.brlns.gdownloader.ui.GUIManager.*;
 import static net.brlns.gdownloader.ui.message.MessageTypeEnum.WARNING;
@@ -44,7 +45,7 @@ public class ToastMessenger extends AbstractMessenger {
     private static final int ARC_SIZE = 20;
     private static final int MARGIN = 10;
 
-    private final AtomicBoolean cancelHook = new AtomicBoolean(false);
+    private final CancelHook cancelHook = new CancelHook();
     private final AtomicBoolean windowVisible = new AtomicBoolean(true);
 
     private final JFrame targetWindow;

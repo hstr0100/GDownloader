@@ -36,6 +36,7 @@ public enum DownloadStatusEnum implements ISettingsEnum {
     DOWNLOADING("enums.download_status.downloading"),
     WAITING("enums.download_status.waiting"),
     COMPLETE("enums.download_status.complete"),
+    TRANSCODING("enums.download_status.transcoding"),
     FAILED("enums.download_status.failed"),
     NO_METHOD("enums.download_status.no_method");
 

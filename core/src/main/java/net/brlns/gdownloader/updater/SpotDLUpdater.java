@@ -59,7 +59,7 @@ public class SpotDLUpdater extends AbstractGitUpdater {
     @Nullable
     @Override
     protected String getRuntimeBinaryName() {
-        return GDownloader.isWindows() ? "spotdl.exe" : "spotdl";
+        return FileUtils.getBinaryName("spotdl");
     }
 
     @Override

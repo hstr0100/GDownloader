@@ -39,7 +39,6 @@ import java.util.function.Supplier;
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.Timer;
-import javax.swing.plaf.ColorUIResource;
 import javax.swing.plaf.basic.BasicButtonUI;
 import lombok.Data;
 import lombok.Getter;
@@ -116,15 +115,6 @@ public final class GUIManager {
 
         //uiScale = Math.clamp(mainIn.getConfig().getUiScale(), 0.5, 3.0);
         settingsPanel = new SettingsPanel(main, this);
-
-        UIManager.put("ToolTip.background", color(TOOLTIP_BACKGROUND));
-        UIManager.put("ToolTip.foreground", color(TOOLTIP_FOREGROUND));
-        UIManager.put("ToolTip.border", BorderFactory.createEmptyBorder(5, 5, 5, 5));
-
-        UIManager.put("ComboBox.background", new ColorUIResource(color(COMBO_BOX_BACKGROUND)));
-        UIManager.put("ComboBox.selectionBackground", new ColorUIResource(color(COMBO_BOX_SELECTION_BACKGROUND)));
-        UIManager.put("ComboBox.selectionForeground", new ColorUIResource(color(COMBO_BOX_SELECTION_FOREGROUND)));
-        UIManager.put("ComboBox.borderPaintsFocus", Boolean.FALSE);
 
         Timer mediaCardQueueTimer = new Timer(50, e -> processMediaCardQueue());
         mediaCardQueueTimer.start();
@@ -256,12 +246,14 @@ public final class GUIManager {
             adjustWindowSize();
 
             JPanel mainPanel = new JPanel(new BorderLayout());
-            mainPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+            mainPanel.setBorder(BorderFactory.createLineBorder(color(BACKGROUND), 5));
             mainPanel.setBackground(color(BACKGROUND));
+            mainPanel.setOpaque(true);
 
             JPanel headerPanel = new JPanel(new BorderLayout());
             headerPanel.setBackground(color(BACKGROUND));
             headerPanel.add(createToolbar(), BorderLayout.SOUTH);
+            headerPanel.setOpaque(true);
             mainPanel.add(headerPanel, BorderLayout.NORTH);
 
             queuePanel = new JPanel();
@@ -355,6 +347,7 @@ public final class GUIManager {
         JPanel topPanel = new JPanel(new GridBagLayout());
         topPanel.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0));
         topPanel.setBackground(color(BACKGROUND));
+        topPanel.setOpaque(true);
 
         JPanel leftButtonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         leftButtonPanel.setOpaque(false);

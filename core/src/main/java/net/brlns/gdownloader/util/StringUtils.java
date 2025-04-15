@@ -50,6 +50,21 @@ public final class StringUtils {
         return String.format("%.1f%s", size, units[unitIndex]);
     }
 
+    public static String formatBitrate(int kbps) {
+        if (kbps < 1000) {
+            return kbps + " Kbps";
+        } else {
+            double mbps = kbps / 1000.0;
+            if (mbps < 10) {
+                return String.format("%.2f Mbps", mbps);
+            } else if (mbps < 100) {
+                return String.format("%.1f Mbps", mbps);
+            } else {
+                return String.format("%d Mbps", (int)mbps);
+            }
+        }
+    }
+
     public static String convertTime(long timeInMillis) {
         // If the time exceeds 24 hours, return "n/a". Tough luck buddy
         if (timeInMillis >= Duration.ofDays(1).toMillis()) {

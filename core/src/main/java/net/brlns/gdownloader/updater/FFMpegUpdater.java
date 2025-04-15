@@ -22,6 +22,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.util.ArchiveUtils;
@@ -82,7 +83,7 @@ public class FFMpegUpdater extends AbstractGitUpdater {
 
     @Override
     protected void setExecutablePath(File executablePath) {
-        main.getDownloadManager().setFfmpegPath(executablePath);
+        main.getFfmpegTranscoder().setFfmpegPath(Optional.of(executablePath));
     }
 
     @Override

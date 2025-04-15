@@ -50,16 +50,23 @@ module net.brlns.gdownloader {
     exports net.brlns.gdownloader.downloader.structs;
     exports net.brlns.gdownloader.event;
     exports net.brlns.gdownloader.event.impl;
+    exports net.brlns.gdownloader.ffmpeg;
+    exports net.brlns.gdownloader.ffmpeg.enums;
+    exports net.brlns.gdownloader.ffmpeg.streams;
+    exports net.brlns.gdownloader.ffmpeg.structs;
+    exports net.brlns.gdownloader.lang;
     exports net.brlns.gdownloader.persistence;
     exports net.brlns.gdownloader.persistence.converter;
     exports net.brlns.gdownloader.persistence.entity;
     exports net.brlns.gdownloader.persistence.repository;
+    exports net.brlns.gdownloader.process;
     exports net.brlns.gdownloader.server;
     exports net.brlns.gdownloader.server.result;
     exports net.brlns.gdownloader.settings;
     exports net.brlns.gdownloader.settings.enums;
     exports net.brlns.gdownloader.settings.filters;
     exports net.brlns.gdownloader.ui;
+    exports net.brlns.gdownloader.ui.builder;
     exports net.brlns.gdownloader.ui.custom;
     exports net.brlns.gdownloader.ui.dnd;
     exports net.brlns.gdownloader.ui.menu;
@@ -74,7 +81,9 @@ module net.brlns.gdownloader {
     uses javax.imageio.spi.ImageWriterSpi;
     uses javax.imageio.spi.ImageReaderSpi;
 
+    opens net.brlns.gdownloader.ffmpeg.streams;
     opens net.brlns.gdownloader.persistence.converter;
     opens net.brlns.gdownloader.persistence.entity;
     opens net.brlns.gdownloader.server.result;
+    opens net.brlns.gdownloader.settings.filters;
 }

@@ -24,8 +24,9 @@ import lombok.Getter;
 @Getter
 public enum QualitySelectorEnum implements ISettingsEnum {
     BEST_VIDEO("bestvideo", "enums.quality_selector.bestvideo"),
-    BEST("best", "enums.quality_selector.best"),
-    WORST("worst", "enums.quality_selector.worst");
+    BEST("best*", "enums.quality_selector.best"),
+    WORST_VIDEO("worstvideo", "enums.quality_selector.worstvideo"),
+    WORST("worst*", "enums.quality_selector.worst");
 
     private final String value;
     private final String translationKey;

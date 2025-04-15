@@ -55,17 +55,17 @@ import net.brlns.gdownloader.settings.filters.YoutubePlaylistFilter;
 import net.brlns.gdownloader.ui.GUIManager;
 import net.brlns.gdownloader.ui.MediaCard;
 import net.brlns.gdownloader.ui.message.MessageTypeEnum;
+import net.brlns.gdownloader.ui.message.PopupMessenger;
 import net.brlns.gdownloader.ui.message.ToastMessenger;
+import net.brlns.gdownloader.util.CancelHook;
+import net.brlns.gdownloader.util.DownloadIntervalometer;
 import net.brlns.gdownloader.util.collection.ConcurrentRearrangeableDeque;
 import net.brlns.gdownloader.util.collection.ExpiringSet;
-import net.brlns.gdownloader.util.collection.LinkedIterableBlockingQueue;
 
 import static net.brlns.gdownloader.downloader.enums.DownloadFlagsEnum.*;
 import static net.brlns.gdownloader.downloader.enums.QueueCategoryEnum.*;
 import static net.brlns.gdownloader.lang.Language.*;
-import static net.brlns.gdownloader.settings.enums.PlayListOptionEnum.ALWAYS_ASK;
-import static net.brlns.gdownloader.settings.enums.PlayListOptionEnum.DOWNLOAD_PLAYLIST;
-import static net.brlns.gdownloader.settings.enums.PlayListOptionEnum.DOWNLOAD_SINGLE;
+import static net.brlns.gdownloader.settings.enums.PlayListOptionEnum.*;
 import static net.brlns.gdownloader.util.URLUtils.*;
 
 /**
@@ -78,8 +78,6 @@ public class DownloadManager implements IEvent {
     private final GDownloader main;
 
     private final PersistenceManager persistence;
-
-    private final ExecutorService processMonitor;
 
     @Getter
     private final MetadataManager metadataManager;
@@ -96,15 +94,14 @@ public class DownloadManager implements IEvent {
     private final ConcurrentRearrangeableDeque<QueueEntry> downloadDeque
         = new ConcurrentRearrangeableDeque<>();
 
-    // This queue has a blocking iterator, it's exclusive for the process monitor
-    private final Queue<QueueEntry> inProgressDownloads = new LinkedIterableBlockingQueue<>();
-
     private final Queue<QueueEntry> runningDownloads = new ConcurrentLinkedQueue<>();
     private final Queue<QueueEntry> completedDownloads = new ConcurrentLinkedQueue<>();
     private final Queue<QueueEntry> failedDownloads = new ConcurrentLinkedQueue<>();
 
     @Getter
     private final AtomicLong downloadCounter = new AtomicLong();
+
+    private final AtomicInteger completeCounter = new AtomicInteger();
 
     private final AtomicBoolean downloadsBlocked = new AtomicBoolean(true);
     private final AtomicBoolean downloadsRunning = new AtomicBoolean(false);
@@ -118,44 +115,14 @@ public class DownloadManager implements IEvent {
     private final String _forceStartKey = l10n("gui.force_download_start");
     private final String _restartKey = l10n("gui.restart_download");
 
+    private final DownloadIntervalometer intervalometer = new DownloadIntervalometer(5, 15);
+
     @SuppressWarnings("this-escape")
     public DownloadManager(GDownloader mainIn) {
         main = mainIn;
 
         persistence = main.getPersistenceManager();
         metadataManager = new MetadataManager();
-
-        processMonitor = Executors.newSingleThreadExecutor();
-        processMonitor.submit(() -> {
-            while (!Thread.currentThread().isInterrupted()) {
-                for (QueueEntry entry : inProgressDownloads) {
-                    if (!downloadsRunning.get() || entry.getCancelHook().get()) {
-                        Process process = entry.getProcess();
-
-                        if (process != null && process.isAlive()) {
-                            if (main.getConfig().isDebugMode()) {
-                                log.debug("Process Monitor is stopping {}", entry.getUrl());
-                            }
-
-                            try {
-                                tryStopProcess(process);
-                            } catch (InterruptedException e) {
-                                log.error("Interrupted", e);
-                            } catch (Exception e) {
-                                log.error("Failed to stop process", e);
-                            }
-                        }
-                    }
-                }
-
-                try {
-                    Thread.sleep(300);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    break;
-                }
-            }
-        });
 
         downloaders.add(new YtDlpDownloader(this));
         downloaders.add(new GalleryDlDownloader(this));
@@ -175,7 +142,7 @@ public class DownloadManager implements IEvent {
 
                 if (nextId > 0 && main.getConfig().isRestoreSessionAfterRestart()) {
                     ToastMessenger.show(
-                        l10n("gui.restoring-session.toast"),
+                        l10n("gui.restoring_session.toast"),
                         5000,
                         MessageTypeEnum.INFO,
                         false, true);
@@ -245,11 +212,6 @@ public class DownloadManager implements IEvent {
             -> downloader.isMainDownloader()
             && downloader.getExecutablePath().isPresent()
             && downloader.getExecutablePath().get().exists());
-    }
-
-    public void setFfmpegPath(File path) {
-        downloaders.stream()
-            .forEach(downloader -> downloader.setFfmpegPath(Optional.of(path)));
     }
 
     public void setExecutablePath(DownloaderIdEnum downloaderId, File path) {
@@ -622,6 +584,7 @@ public class DownloadManager implements IEvent {
         downloadsRunning.set(false);
         downloadsManuallyStarted.set(false);
         suggestedDownloaderId.set(null);
+        completeCounter.set(0);
 
         fireListeners();
     }
@@ -676,6 +639,16 @@ public class DownloadManager implements IEvent {
         }
 
         if (downloadsRunning.get() && runningDownloads.isEmpty()) {
+            if (main.getConfig().isDisplayDownloadsCompleteNotification()
+                && completeCounter.get() > 0) {
+                PopupMessenger.show(
+                    l10n("gui.downloads_complete.notification_title"),
+                    l10n("gui.downloads_complete.complete"),
+                    5000,
+                    MessageTypeEnum.INFO,
+                    true, true);
+            }
+
             stopDownloads();
         }
     }
@@ -960,158 +933,170 @@ public class DownloadManager implements IEvent {
 
                 entry.getRunning().set(true);
 
-                try {
-                    inProgressDownloads.offer(entry);
-
-                    DownloaderIdEnum forcedDownloader = entry.getForcedDownloader();
-                    if (forcedDownloader == null) {
-                        forcedDownloader = suggestedDownloaderId.get();
-                    }
-
-                    int maxRetries = main.getConfig().isAutoDownloadRetry() ? main.getConfig().getMaxDownloadRetries() : 1;
-                    String lastOutput = "";
-
-                    boolean notifiedCookies = false;
-
-                    while (entry.getRetryCounter().get() <= maxRetries) {
-                        boolean downloadAttempted = false;
-
-                        entry.resetForRestart();
-
-                        for (AbstractDownloader downloader : entry.getDownloaders()) {
-                            DownloaderIdEnum downloaderId = downloader.getDownloaderId();
-                            if (log.isDebugEnabled()) {
-                                log.info("Trying to download with {}", downloaderId);
-                            }
-
-                            if (forcedDownloader != null && forcedDownloader != downloaderId) {
-                                continue;
-                            }
-
-                            if (entry.isDownloaderBlacklisted(downloaderId) && downloaderId != forcedDownloader) {
-                                continue;
-                            }
-
-                            entry.setCurrentDownloader(downloaderId);
-
-                            AbstractUrlFilter filter = entry.getFilter();
-
-                            if (!notifiedCookies && filter.areCookiesRequired()
-                                && (!main.getConfig().isReadCookiesFromBrowser() && downloader.getCookieJarFile() == null)) {
-                                ToastMessenger.show(
-                                    l10n("gui.cookies_required_for_website", filter.getFilterName()),
-                                    3000,
-                                    MessageTypeEnum.ERROR,
-                                    false, true);
-
-                                log.warn("Cookies are required for this website {}", entry.getOriginalUrl());
-                                notifiedCookies = true;
-                            }
-
-                            if (entry.getRetryCounter().get() > 0) {
-                                entry.updateStatus(DownloadStatusEnum.RETRYING, l10n("gui.download_status.retrying",
-                                    String.format("%d/%d", entry.getRetryCounter().get(), maxRetries)) + ": " + lastOutput);
-                            } else {
-                                entry.updateStatus(DownloadStatusEnum.STARTING, l10n("gui.download_status.starting"));
-                            }
-
-                            DownloadResult result = downloader.tryDownload(entry);
-
-                            BitSet flags = result.getFlags();
-                            lastOutput = result.getLastOutput();
-
-                            boolean unsupported = FLAG_UNSUPPORTED.isSet(flags);
-                            boolean disabled = FLAG_DOWNLOADER_DISABLED.isSet(flags);
-
-                            if (FLAG_MAIN_CATEGORY_FAILED.isSet(flags) || unsupported || disabled) {
-                                entry.logError(lastOutput);
-
-                                if (disabled || unsupported || entry.getRetryCounter().get() >= maxRetries) {
-                                    entry.updateStatus(DownloadStatusEnum.FAILED, lastOutput);
-                                    log.error("Download of {} failed on {}: {} supported downloader: {}",
-                                        entry.getUrl(), downloaderId, lastOutput, !unsupported);
-
-                                    entry.blackListDownloader(downloaderId);
-                                } else {
-                                    entry.updateStatus(DownloadStatusEnum.RETRYING, lastOutput);
-                                    log.warn("Download of {} failed with {}, retrying ({}/{}): {}",
-                                        entry.getUrl(),
-                                        downloaderId,
-                                        entry.getRetryCounter().get() + 1,
-                                        maxRetries,
-                                        lastOutput);
-
-                                    downloadAttempted = true;
-                                }
-
-                                continue;
-                            }
-
-                            if (FLAG_NO_METHOD.isSet(flags)) {
-                                entry.logError(lastOutput);
-
-                                if (FLAG_NO_METHOD_VIDEO.isSet(flags)) {
-                                    log.error("{} - No option to download.", filter);
-                                    entry.updateStatus(DownloadStatusEnum.NO_METHOD, l10n("enums.download_status.no_method.video_tip"));
-                                } else if (FLAG_NO_METHOD_AUDIO.isSet(flags)) {
-                                    log.error("{} - No audio quality selected, but was set to download audio only.", filter);
-                                    entry.updateStatus(DownloadStatusEnum.NO_METHOD, l10n("enums.download_status.no_method.audio_tip"));
-                                } else {
-                                    throw new IllegalStateException("Unhandled NO_METHOD");
-                                }
-
-                                offerTo(FAILED, entry);
-                                return;
-                            }
-
-                            if (!downloadsRunning.get() || FLAG_STOPPED.isSet(flags)) {
-                                entry.updateStatus(DownloadStatusEnum.STOPPED, l10n("gui.download_status.not_started"));
-                                enqueueFirst(entry);
-                                return;
-                            } else if (!entry.getCancelHook().get() && FLAG_SUCCESS.isSet(flags)) {
-                                entry.updateStatus(DownloadStatusEnum.POST_PROCESSING, l10n("gui.download_status.processing_media_files"));
-
-                                downloader.processMediaFiles(entry);
-                                entry.updateMediaRightClickOptions();
-
-                                entry.updateStatus(DownloadStatusEnum.COMPLETE, l10n("gui.download_status.finished"));
-                                entry.cleanDirectories();
-
-                                offerTo(COMPLETED, entry);
-
-                                if (main.getConfig().isRemoveSuccessfulDownloads()) {
-                                    main.getGuiManager().removeMediaCard(mediaCard.getId(), CloseReasonEnum.SUCCEEDED);
-                                }
-
-                                return;
-                            } else {
-                                log.error("Unexpected download state");
-                            }
-                        }
-
-                        if (!downloadAttempted) {
-                            break; // No more downloaders to try.
-                        }
-
-                        entry.getRetryCounter().incrementAndGet();
-                    }
-
-                    if (!lastOutput.isEmpty()) {
-                        entry.logError(lastOutput);
-
-                        entry.updateStatus(DownloadStatusEnum.FAILED, lastOutput);
-                    } else {
-                        entry.updateStatus(DownloadStatusEnum.FAILED);
-                    }
-
-                    if (log.isDebugEnabled()) {
-                        log.error("All downloaders failed for {}", entry.getUrl());
-                    }
-
-                    offerTo(FAILED, entry);
-                } finally {
-                    inProgressDownloads.remove(entry);
+                DownloaderIdEnum forcedDownloader = entry.getForcedDownloader();
+                if (forcedDownloader == null) {
+                    forcedDownloader = suggestedDownloaderId.get();
                 }
+
+                int maxRetries = main.getConfig().isAutoDownloadRetry() ? main.getConfig().getMaxDownloadRetries() : 1;
+                String lastOutput = "";
+
+                boolean notifiedCookies = false;
+
+                while (entry.getRetryCounter().get() <= maxRetries) {
+                    boolean downloadAttempted = false;
+
+                    entry.resetForRestart();
+
+                    for (AbstractDownloader downloader : entry.getDownloaders()) {
+                        DownloaderIdEnum downloaderId = downloader.getDownloaderId();
+                        if (log.isDebugEnabled()) {
+                            log.info("Trying to download with {}", downloaderId);
+                        }
+
+                        if (forcedDownloader != null && forcedDownloader != downloaderId) {
+                            continue;
+                        }
+
+                        if (entry.isDownloaderBlacklisted(downloaderId) && downloaderId != forcedDownloader) {
+                            continue;
+                        }
+
+                        entry.setCurrentDownloader(downloaderId);
+
+                        AbstractUrlFilter filter = entry.getFilter();
+
+                        if (!notifiedCookies && filter.areCookiesRequired()
+                            && (!main.getConfig().isReadCookiesFromBrowser() && downloader.getCookieJarFile() == null)) {
+                            ToastMessenger.show(
+                                l10n("gui.cookies_required_for_website", filter.getFilterName()),
+                                3000,
+                                MessageTypeEnum.ERROR,
+                                false, true);
+
+                            log.warn("Cookies are required for this website {}", entry.getOriginalUrl());
+                            notifiedCookies = true;
+                        }
+
+                        if (entry.getRetryCounter().get() > 0) {
+                            entry.updateStatus(DownloadStatusEnum.RETRYING, l10n("gui.download_status.retrying",
+                                String.format("%d/%d", entry.getRetryCounter().get(), maxRetries)) + ": " + lastOutput);
+                        } else {
+                            if (main.getConfig().isRandomIntervalBetweenDownloads()) {
+                                int currentWaitTime = intervalometer.getAndCompute(entry.getUrl());
+                                if (currentWaitTime > 0) {
+                                    entry.updateStatus(DownloadStatusEnum.WAITING, l10n("gui.intervalometer.waiting", currentWaitTime));
+
+                                    try {
+                                        CancelHook cancelHook = entry.getCancelHook().derive(this::isRunning, true);
+                                        intervalometer.park(currentWaitTime, cancelHook);
+                                    } catch (InterruptedException e) {
+                                        log.warn("Interrupted");
+                                    }
+                                }
+                            }
+
+                            entry.updateStatus(DownloadStatusEnum.STARTING, l10n("gui.download_status.starting"));
+                        }
+
+                        DownloadResult result = downloader.tryDownload(entry);
+
+                        BitSet flags = result.getFlags();
+                        lastOutput = result.getLastOutput();
+
+                        boolean unsupported = FLAG_UNSUPPORTED.isSet(flags);
+                        boolean disabled = FLAG_DOWNLOADER_DISABLED.isSet(flags);
+                        boolean transcodingFailed = FLAG_TRANSCODING_FAILED.isSet(flags);
+
+                        if (FLAG_MAIN_CATEGORY_FAILED.isSet(flags) || unsupported || disabled || transcodingFailed) {
+                            entry.logError(lastOutput);
+
+                            if (transcodingFailed || disabled || unsupported
+                                || entry.getRetryCounter().get() >= maxRetries) {
+                                entry.updateStatus(DownloadStatusEnum.FAILED, lastOutput);
+                                log.error("Download of {} failed on {}: {} supported downloader: {}",
+                                    entry.getUrl(), downloaderId, lastOutput, !unsupported);
+
+                                if (!transcodingFailed) {
+                                    entry.blackListDownloader(downloaderId);
+                                }
+                            } else {
+                                entry.updateStatus(DownloadStatusEnum.RETRYING, lastOutput);
+                                log.warn("Download of {} failed with {}, retrying ({}/{}): {}",
+                                    entry.getUrl(),
+                                    downloaderId,
+                                    entry.getRetryCounter().get() + 1,
+                                    maxRetries,
+                                    lastOutput);
+
+                                downloadAttempted = true;
+                            }
+
+                            continue;
+                        }
+
+                        if (FLAG_NO_METHOD.isSet(flags)) {
+                            entry.logError(lastOutput);
+
+                            if (FLAG_NO_METHOD_VIDEO.isSet(flags)) {
+                                log.error("{} - No option to download.", filter);
+                                entry.updateStatus(DownloadStatusEnum.NO_METHOD, l10n("enums.download_status.no_method.video_tip"));
+                            } else if (FLAG_NO_METHOD_AUDIO.isSet(flags)) {
+                                log.error("{} - No audio quality selected, but was set to download audio only.", filter);
+                                entry.updateStatus(DownloadStatusEnum.NO_METHOD, l10n("enums.download_status.no_method.audio_tip"));
+                            } else {
+                                throw new IllegalStateException("Unhandled NO_METHOD");
+                            }
+
+                            offerTo(FAILED, entry);
+                            return;
+                        }
+
+                        if (!downloadsRunning.get() || FLAG_STOPPED.isSet(flags)) {
+                            entry.updateStatus(DownloadStatusEnum.STOPPED, l10n("gui.download_status.not_started"));
+                            enqueueFirst(entry);
+                            return;
+                        } else if (!entry.getCancelHook().get() && FLAG_SUCCESS.isSet(flags)) {
+                            entry.updateStatus(DownloadStatusEnum.POST_PROCESSING, l10n("gui.download_status.processing_media_files"));
+
+                            downloader.processMediaFiles(entry);
+                            entry.updateMediaRightClickOptions();
+
+                            entry.updateStatus(DownloadStatusEnum.COMPLETE, l10n("gui.download_status.finished"));
+                            entry.cleanDirectories();
+
+                            offerTo(COMPLETED, entry);
+
+                            if (main.getConfig().isRemoveSuccessfulDownloads()) {
+                                main.getGuiManager().removeMediaCard(mediaCard.getId(), CloseReasonEnum.SUCCEEDED);
+                            }
+
+                            return;
+                        } else {
+                            log.error("Unexpected download state");
+                        }
+                    }
+
+                    if (!downloadAttempted) {
+                        break; // No more downloaders to try.
+                    }
+
+                    entry.getRetryCounter().incrementAndGet();
+                }
+
+                if (!lastOutput.isEmpty()) {
+                    entry.logError(lastOutput);
+
+                    entry.updateStatus(DownloadStatusEnum.FAILED, lastOutput);
+                } else {
+                    entry.updateStatus(DownloadStatusEnum.FAILED);
+                }
+
+                if (log.isDebugEnabled()) {
+                    log.error("All downloaders failed for {}", entry.getUrl());
+                }
+
+                offerTo(FAILED, entry);
             } catch (Exception e) {
                 log.error("Failed to download", e);
 
@@ -1124,6 +1109,7 @@ public class DownloadManager implements IEvent {
                 entry.getRunning().set(false);
 
                 dequeue(RUNNING, entry);
+                completeCounter.incrementAndGet();
             }
         };
 
@@ -1131,24 +1117,6 @@ public class DownloadManager implements IEvent {
             forcefulExecutor.execute(downloadTask);
         } else {
             GDownloader.GLOBAL_THREAD_POOL.submitWithPriority(downloadTask, 10);
-        }
-    }
-
-    private void tryStopProcess(Process process) throws InterruptedException {
-        if (process.isAlive()) {
-            long quitTimer = System.currentTimeMillis();
-
-            // First try to politely ask the process to excuse itself.
-            process.destroy();
-
-            if (!process.waitFor(5, TimeUnit.SECONDS)) {
-                log.warn("Process did not terminate in time, forcefully stopping it.");
-                // Time's up. I guess asking nicely wasn't in the cards.
-                process.destroyForcibly();
-            }
-
-            log.info("Took {}ms to stop the process.",
-                (System.currentTimeMillis() - quitTimer));
         }
     }
 
@@ -1163,7 +1131,6 @@ public class DownloadManager implements IEvent {
             downloader.close();
         }
 
-        processMonitor.shutdownNow();
         forcefulExecutor.shutdownNow();
     }
 }

@@ -74,7 +74,7 @@ public abstract class AbstractMessenger {
 
             if (nextMessage.isPlayTone()
                 && GDownloader.getInstance().getConfig().isPlaySounds()) {
-                AudioEngine.playNotificationTone();
+                AudioEngine.playNotificationTone(nextMessage.getMessageType());
             }
         });
     }

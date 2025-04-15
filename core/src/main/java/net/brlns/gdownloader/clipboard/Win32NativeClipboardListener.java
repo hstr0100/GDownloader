@@ -32,16 +32,22 @@ public class Win32NativeClipboardListener extends AbstractClipboardListener {
 
     @Override
     protected boolean detectClipboardChange() {
-        int currentSequenceNumber = User32.INSTANCE.GetClipboardSequenceNumber();
+        try {
+            int currentSequenceNumber = User32.INSTANCE.GetClipboardSequenceNumber();
 
-        int previousValue = lastClipboardSequenceNumber.get();
-        if (currentSequenceNumber != 0 && (previousValue == -1 || currentSequenceNumber != previousValue)) {
-            if (log.isDebugEnabled()) {
-                log.debug("Detected Win32 clipboard change, seq {}", currentSequenceNumber);
+            int previousValue = lastClipboardSequenceNumber.get();
+            if (currentSequenceNumber != 0 && (previousValue == -1 || currentSequenceNumber != previousValue)) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Detected Win32 clipboard change, seq {}", currentSequenceNumber);
+                }
+
+                lastClipboardSequenceNumber.set(currentSequenceNumber);
+                return true;
             }
-
-            lastClipboardSequenceNumber.set(currentSequenceNumber);
-            return true;
+        } catch (Exception e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Std call has failed: ", e);
+            }
         }
 
         return false;

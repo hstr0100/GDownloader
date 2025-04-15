@@ -56,8 +56,11 @@ import net.brlns.gdownloader.clipboard.ClipboardManager;
 import net.brlns.gdownloader.downloader.DownloadManager;
 import net.brlns.gdownloader.event.EventDispatcher;
 import net.brlns.gdownloader.event.impl.NativeMouseClickEvent;
+import net.brlns.gdownloader.ffmpeg.FFmpegSelfTester;
+import net.brlns.gdownloader.ffmpeg.FFmpegTranscoder;
 import net.brlns.gdownloader.lang.Language;
 import net.brlns.gdownloader.persistence.PersistenceManager;
+import net.brlns.gdownloader.process.ProcessMonitor;
 import net.brlns.gdownloader.server.AppClient;
 import net.brlns.gdownloader.server.AppServer;
 import net.brlns.gdownloader.settings.Settings;
@@ -122,7 +125,7 @@ import static net.brlns.gdownloader.util.StringUtils.nullOrEmpty;
 // TODO Move config files, downloaders and their respective data to subfolders
 // TODO ctrl+z to undo removals
 // prio
-// TODO ffmpeg transcoding settings
+// TODO reseting download links should also refresh filter references
 // TODO right click > sort by
 // TODO display number in download queue
 /**
@@ -181,6 +184,12 @@ public final class GDownloader {
 
     @Getter
     private GUIManager guiManager;
+
+    @Getter
+    private FFmpegTranscoder ffmpegTranscoder;
+
+    @Getter
+    private ProcessMonitor processMonitor;
 
     @Getter
     private boolean initialized = false;
@@ -245,7 +254,7 @@ public final class GDownloader {
         Language.initLanguage(config);
         updateConfig();
 
-        log.info(l10n("startup"));
+        log.info(l10n("_startup"));
 
         ThemeProvider.setTheme(config.getTheme());
 
@@ -258,8 +267,12 @@ public final class GDownloader {
         try {
             setupAppServer();
 
+            processMonitor = new ProcessMonitor();
+
             persistenceManager = new PersistenceManager(this);
             persistenceManager.init();
+
+            ffmpegTranscoder = new FFmpegTranscoder(processMonitor);
 
             clipboardManager = new ClipboardManager(this);
             downloadManager = new DownloadManager(this);
@@ -315,10 +328,27 @@ public final class GDownloader {
 
             updateStartupStatus();
 
-            mainTicker.scheduleAtFixedRate(() -> {
-                clipboardManager.tickClipboard();
+            AtomicBoolean failedOnce = new AtomicBoolean();
+            mainTicker.scheduleAtFixedRate(new Runnable() {
+                @Override
+                public void run() {
+                    loop(clipboardManager::tickClipboard);
+                    loop(downloadManager::processQueue);
+                }
 
-                downloadManager.processQueue();
+                private void loop(Runnable action) {
+                    try {
+                        action.run();
+                    } catch (Exception e) {
+                        if (failedOnce.compareAndSet(false, true)) {
+                            log.error("Looper task has failed at least once: {}", e.getMessage());
+
+                            if (log.isDebugEnabled()) {
+                                log.error("Exception: ", e);
+                            }
+                        }
+                    }
+                }
             }, 0, 50, TimeUnit.MILLISECONDS);
 
             // Java doesn't natively support detecting a click outside of the program window,
@@ -458,6 +488,8 @@ public final class GDownloader {
             if (!userInitiated) {
                 downloadManager.init();
             }
+
+            ffmpegTranscoder.init();
         }, 5);
 
         return true;
@@ -1114,14 +1146,19 @@ public final class GDownloader {
         }
     }
 
-    public static List<String> readOutput(String... command) throws IOException, InterruptedException {
-        ProcessBuilder processBuilder = new ProcessBuilder(command);
-        processBuilder.redirectErrorStream(true);
-        Process process = processBuilder.start();
+    public List<String> readOutput(String... command)
+        throws IOException, InterruptedException {
+        return readOutput(Arrays.asList(command));
+    }
+
+    public List<String> readOutput(List<String> command)
+        throws IOException, InterruptedException {
+        Process process = processMonitor.startProcess(command);
 
         List<String> list = new ArrayList<>();
         try (
-            BufferedReader in = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+            BufferedReader in = new BufferedReader(
+                new InputStreamReader(process.getInputStream()))) {
             String line;
             while ((line = in.readLine()) != null) {
                 list.add(line);
@@ -1130,7 +1167,8 @@ public final class GDownloader {
 
         int exitCode = process.waitFor();
         if (exitCode != 0) {
-            log.warn("Failed command for {}", Arrays.toString(command));
+            log.warn("Failed command for {}",
+                StringUtils.escapeAndBuildCommandLine(command));
         }
 
         return Collections.unmodifiableList(list);
@@ -1256,6 +1294,15 @@ public final class GDownloader {
         boolean disableHWAccel = false;
 
         for (int i = 0; i < args.length; i++) {
+            if (args[i].equalsIgnoreCase("--debug")) {
+                LoggerUtils.setForcedDebugMode();
+            }
+
+            if (args[i].equalsIgnoreCase("--run-ffmpeg-selftest")) {
+                FFmpegSelfTester.runSelfTest();
+                System.exit(0);
+            }
+
             if (args[i].equalsIgnoreCase("--no-gui")) {
                 noGui = true;
             }
@@ -1365,6 +1412,18 @@ public final class GDownloader {
                 instance.getDownloadManager().close();
             } catch (Exception e) {
                 log.error("There was a problem closing the download manager", e);
+            }
+
+            try {
+                instance.getFfmpegTranscoder().close();
+            } catch (Exception e) {
+                log.error("There was a problem closing the ffmpeg transcoder", e);
+            }
+
+            try {
+                instance.getProcessMonitor().close();
+            } catch (Exception e) {
+                log.error("There was a problem closing the process monitor", e);
             }
 
             try {

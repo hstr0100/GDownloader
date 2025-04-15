@@ -41,11 +41,17 @@ public final class DirectoryUtils {
         try (Stream<Path> dirStream = Files.walk(directory)) {
             boolean success = dirStream
                 .sorted(Comparator.reverseOrder()) // Ensure deeper directories are deleted first
-                .allMatch(file -> {
+                .allMatch(path -> {
                     try {
-                        return Files.deleteIfExists(file);
+                        return Files.deleteIfExists(path);
                     } catch (IOException e) {
-                        log.error("Failed to delete: {}", file, e);
+                        log.error("Failed to delete: {}", path, e);
+
+                        // Windows shenanigans
+                        if (e.getMessage().contains("used by another process")) {
+                            path.toFile().deleteOnExit();
+                        }
+
                         return false;
                     }
                 });

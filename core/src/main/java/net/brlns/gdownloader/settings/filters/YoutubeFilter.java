@@ -19,13 +19,13 @@ package net.brlns.gdownloader.settings.filters;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.io.File;
-import java.util.List;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.downloader.AbstractDownloader;
 import net.brlns.gdownloader.downloader.DownloadManager;
 import net.brlns.gdownloader.downloader.enums.DownloadTypeEnum;
+import net.brlns.gdownloader.process.ProcessArguments;
 import net.brlns.gdownloader.settings.Settings;
 
 import static net.brlns.gdownloader.downloader.enums.DownloadTypeEnum.*;
@@ -52,28 +52,28 @@ public class YoutubeFilter extends GenericFilter {
 
     @JsonIgnore
     @Override
-    protected List<String> buildArguments(AbstractDownloader downloader, DownloadTypeEnum typeEnum, DownloadManager manager, File savePath, String inputUrl) {
+    protected ProcessArguments buildArguments(AbstractDownloader downloader, DownloadTypeEnum typeEnum, DownloadManager manager, File savePath, String inputUrl) {
         Settings config = manager.getMain().getConfig();
 
-        List<String> arguments = super.buildArguments(downloader, typeEnum, manager, savePath, inputUrl);
+        ProcessArguments arguments = super.buildArguments(downloader, typeEnum, manager, savePath, inputUrl);
 
         switch (downloader.getDownloaderId()) {
             case YT_DLP -> {
                 switch (typeEnum) {
                     case ALL -> {
                         if (config.isUseSponsorBlock()) {
-                            arguments.addAll(List.of(
+                            arguments.add(
                                 "--sponsorblock-mark",
                                 "sponsor,intro,outro,selfpromo,interaction,music_offtopic"
-                            ));
+                            );
                         }
                     }
                     case VIDEO, AUDIO -> {
                         if (isEmbedThumbnailAndMetadata()) {
-                            arguments.addAll(List.of(
+                            arguments.add(
                                 "--parse-metadata",
                                 "description:(?s)(?P<meta_comment>.+)"
-                            ));
+                            );
                         }
                     }
                     case SUBTITLES -> {

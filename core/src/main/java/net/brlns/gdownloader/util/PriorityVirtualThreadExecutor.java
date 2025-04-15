@@ -41,7 +41,10 @@ public class PriorityVirtualThreadExecutor {
         while (true) {
             try {
                 PriorityTask<?> task = taskQueue.take();
-                virtualThreadExecutor.execute(task);
+
+                if (!virtualThreadExecutor.isShutdown()) {
+                    virtualThreadExecutor.execute(task);
+                }
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 break;

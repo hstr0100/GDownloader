@@ -28,6 +28,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.Setter;
@@ -38,10 +39,15 @@ import net.brlns.gdownloader.downloader.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.downloader.structs.DownloadResult;
 import net.brlns.gdownloader.downloader.structs.MediaInfo;
+import net.brlns.gdownloader.ffmpeg.enums.AudioBitrateEnum;
+import net.brlns.gdownloader.ffmpeg.enums.AudioCodecEnum;
+import net.brlns.gdownloader.ffmpeg.structs.FFmpegConfig;
 import net.brlns.gdownloader.persistence.PersistenceManager;
+import net.brlns.gdownloader.process.ProcessArguments;
 import net.brlns.gdownloader.settings.QualitySettings;
-import net.brlns.gdownloader.settings.enums.AudioBitrateEnum;
+import net.brlns.gdownloader.settings.enums.VideoContainerEnum;
 import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
+import net.brlns.gdownloader.util.CancelHook;
 import net.brlns.gdownloader.util.DirectoryUtils;
 import net.brlns.gdownloader.util.FileUtils;
 import net.brlns.gdownloader.util.Pair;
@@ -61,10 +67,6 @@ public class YtDlpDownloader extends AbstractDownloader {
     @Getter
     @Setter
     private Optional<File> executablePath = Optional.empty();
-
-    @Getter
-    @Setter
-    private Optional<File> ffmpegPath = Optional.empty();
 
     public YtDlpDownloader(DownloadManager managerIn) {
         super(managerIn);
@@ -130,34 +132,31 @@ public class YtDlpDownloader extends AbstractDownloader {
 
             long start = System.currentTimeMillis();
 
-            List<String> arguments = new ArrayList<>();
-            arguments.addAll(List.of(
+            ProcessArguments arguments = new ProcessArguments(
                 executablePath.get().getAbsolutePath(),
                 "--dump-json",
                 "--flat-playlist",
                 "--playlist-items", "1",
                 //"--extractor-args",// TODO: Sometimes complains about missing PO token, unreproducible. Investigate.
                 //"youtube:player_skip=webpage,configs,js;player_client=android,web",
-                queueEntry.getUrl()
-            ));
+                queueEntry.getUrl());
 
             if (main.getConfig().isReadCookiesFromBrowser()) {
-                arguments.addAll(List.of(
+                arguments.add(
                     "--cookies-from-browser",
                     main.getBrowserForCookies().getName()
-                ));
+                );
             } else {
                 File cookieJar = getCookieJarFile();
                 if (cookieJar != null) {
-                    arguments.addAll(List.of(
+                    arguments.add(
                         "--cookies",
                         cookieJar.getAbsolutePath()
-                    ));
+                    );
                 }
             }
 
-            List<String> list = GDownloader.readOutput(
-                arguments.stream().toArray(String[]::new));
+            List<String> list = main.readOutput(arguments);
 
             if (main.getConfig().isDebugMode()) {
                 long what = System.currentTimeMillis() - start;
@@ -202,7 +201,7 @@ public class YtDlpDownloader extends AbstractDownloader {
             return new DownloadResult(combineFlags(FLAG_NO_METHOD, FLAG_NO_METHOD_VIDEO));
         }
 
-        QualitySettings quality = filter.getQualitySettings();
+        QualitySettings quality = filter.getActiveQualitySettings(main.getConfig());
         AudioBitrateEnum audioBitrate = quality.getAudioBitrate();
 
         if (!downloadVideo && downloadAudio && audioBitrate == AudioBitrateEnum.NO_AUDIO) {
@@ -214,18 +213,16 @@ public class YtDlpDownloader extends AbstractDownloader {
         File tmpPath = DirectoryUtils.getOrCreate(finalPath, GDownloader.CACHE_DIRETORY_NAME, String.valueOf(entry.getDownloadId()));
         entry.setTmpDirectory(tmpPath);
 
-        List<String> genericArguments = new ArrayList<>();
-
-        genericArguments.addAll(List.of(
+        ProcessArguments genericArguments = new ProcessArguments(
             executablePath.get().getAbsolutePath(),
-            "-i"
-        ));
+            "-i");
 
+        Optional<File> ffmpegPath = main.getFfmpegTranscoder().getFfmpegPath();
         if (ffmpegPath.isPresent()) {
-            genericArguments.addAll(List.of(
+            genericArguments.add(
                 "--ffmpeg-location",
                 ffmpegPath.get().getAbsolutePath()
-            ));
+            );
         }
 
         if (!main.getConfig().isRespectYtDlpConfigFile()) {
@@ -252,10 +249,9 @@ public class YtDlpDownloader extends AbstractDownloader {
 
             entry.setCurrentDownloadType(type);
 
-            List<String> arguments = new ArrayList<>(genericArguments);
-
-            List<String> downloadArguments = filter.getArguments(this, type, manager, tmpPath, entry.getUrl());
-            arguments.addAll(downloadArguments);
+            ProcessArguments arguments = new ProcessArguments(
+                genericArguments,
+                filter.getArguments(this, type, manager, tmpPath, entry.getUrl()));
 
             Pair<Integer, String> result = processDownload(entry, arguments);
 
@@ -285,6 +281,15 @@ public class YtDlpDownloader extends AbstractDownloader {
                     log.error("Failed to download {}: {}", type, lastOutput);
                 }
             } else {
+                if (type == VIDEO) {
+                    DownloadResult transcodeResult = transcodeMediaFiles(entry);
+
+                    if (main.getConfig().isFailDownloadsOnTranscodingFailures()
+                        && !FLAG_SUCCESS.isSet(transcodeResult.getFlags())) {
+                        return transcodeResult;
+                    }
+                }
+
                 if (lastOutput.contains("recorded in the archive")) {
                     alreadyDownloaded = true;
                 }
@@ -297,6 +302,112 @@ public class YtDlpDownloader extends AbstractDownloader {
     }
 
     @Override
+    protected DownloadResult transcodeMediaFiles(QueueEntry entry) {
+        if (!main.getFfmpegTranscoder().hasFFmpeg()) {
+            // FFmpeg not found, nothing we can do.
+            log.error("FFmpeg not found, unable to transcode media files");
+            return new DownloadResult(FLAG_SUCCESS);
+        }
+
+        QualitySettings quality = entry.getFilter().getActiveQualitySettings(main.getConfig());
+        if (quality.getVideoContainer() == VideoContainerEnum.GIF) {
+            // Not implemented, not supported. Just give up and smile.
+            return new DownloadResult(FLAG_SUCCESS);
+        }
+
+        try {
+            File tmpPath = entry.getTmpDirectory();
+            List<Path> paths = Files.walk(tmpPath.toPath())
+                .filter(path -> !path.equals(tmpPath.toPath()))
+                .filter(path -> !Files.isDirectory(path))
+                .filter(path -> isFileType(path, quality.getVideoContainer().getValue()))
+                .collect(Collectors.toList());
+
+            AtomicReference<String> lastOutput = new AtomicReference<>();
+
+            FFmpegConfig config;
+            if (!quality.isEnableTranscoding() && main.getConfig().isTranscodeAudioToAAC()) {
+                config = FFmpegConfig.builder()
+                    .audioCodec(AudioCodecEnum.AAC)
+                    .audioBitrate(AudioBitrateEnum.BITRATE_256).build();
+            } else if (quality.isEnableTranscoding()) {
+                // Copy the config, so we can make changes to the selected container
+                config = GDownloader.OBJECT_MAPPER.convertValue(
+                    quality.getTranscodingSettings(), FFmpegConfig.class);
+            } else {
+                return new DownloadResult(FLAG_SUCCESS);
+            }
+
+            if (config.getVideoContainer().isDefault()) {
+                config.setVideoContainer(quality.getVideoContainer());
+            }
+
+            for (Path path : paths) {
+                File inputFile = path.toFile();
+                File tmpFile = FileUtils.deriveTempFile(inputFile, config.getVideoContainer().getValue());
+
+                try {
+                    entry.updateStatus(DownloadStatusEnum.TRANSCODING, l10n("gui.transcode.starting"));
+
+                    CancelHook cancelHook = entry.getCancelHook().derive(manager::isRunning, true);
+                    int exitCode = manager.getMain().getFfmpegTranscoder().startTranscode(
+                        config, inputFile, tmpFile, cancelHook,
+                        (output, hasTaskStarted, progress) -> {
+                            lastOutput.set(output);
+
+                            if (hasTaskStarted) {
+                                entry.getMediaCard().setPercentage(progress);
+
+                                entry.updateStatus(DownloadStatusEnum.TRANSCODING, output, false);
+                            }
+                        }
+                    );
+
+                    if (cancelHook.get()) {
+                        return new DownloadResult(FLAG_STOPPED);
+                    }
+
+                    if (exitCode == 0) {
+                        if (!tmpFile.exists()) {
+                            log.error("Transcoding error, output file is missing - exit code: {}", exitCode);
+
+                            return new DownloadResult(FLAG_TRANSCODING_FAILED, lastOutput.get());
+                        }
+
+                        log.info("Transcoding successful - exit code: {}", exitCode);
+
+                        String prefix = "";
+                        if (!main.getConfig().isKeepRawMediaFilesAfterTranscode()) {
+                            Files.deleteIfExists(inputFile.toPath());
+                        } else {
+                            prefix = config.getFileSuffix();
+                        }
+
+                        File finalFile = FileUtils.deriveFile(
+                            inputFile, prefix, config.getVideoContainer().getValue());
+                        tmpFile.renameTo(finalFile);
+
+                        return new DownloadResult(FLAG_SUCCESS);
+                    } else if (exitCode > 0) {
+                        log.error("FFmpeg transcoding error - exit code: {}", exitCode);
+                        return new DownloadResult(FLAG_TRANSCODING_FAILED, lastOutput.get());
+                    } else if (exitCode < 0) {
+                        log.info("Transcoding not required - exit code: {}", exitCode);
+                    }
+                } catch (Exception e) {
+                    log.error("Failed to transcode media file: {}", path, e);
+                    return new DownloadResult(FLAG_TRANSCODING_FAILED, e.getMessage());
+                }
+            }
+
+            return new DownloadResult(FLAG_SUCCESS);
+        } catch (IOException e) {
+            log.error("Failed to scan media files", e);
+            return new DownloadResult(FLAG_TRANSCODING_FAILED, e.getMessage());
+        }
+    }
+
+    @Override
     protected void processMediaFiles(QueueEntry entry) {
         File finalPath = main.getOrCreateDownloadsDirectory();
         File tmpPath = entry.getTmpDirectory();
@@ -304,11 +415,12 @@ public class YtDlpDownloader extends AbstractDownloader {
         Path deepestDir = null;
         int maxDepth = -1;
 
-        QualitySettings quality = entry.getFilter().getQualitySettings();
+        QualitySettings quality = entry.getFilter().getActiveQualitySettings(main.getConfig());
 
         try {
             List<Path> paths = Files.walk(tmpPath.toPath())
                 .filter(path -> !path.equals(tmpPath.toPath()))
+                .filter(path -> !path.toString().contains(FileUtils.TMP_FILE_IDENTIFIER))
                 .collect(Collectors.toList());
 
             for (Path path : paths) {
@@ -353,7 +465,8 @@ public class YtDlpDownloader extends AbstractDownloader {
 
     private Path determineTargetPath(File tmpPath, File finalPath, Path path, QualitySettings quality) {
         boolean isAudio = isFileType(path, quality.getAudioContainer().getValue());
-        boolean isVideo = isFileType(path, quality.getVideoContainer().getValue());
+        boolean isVideo = isFileType(path, quality.getVideoContainer().getValue())
+            || isFileType(path, quality.getTranscodingSettings().getVideoContainer().getValue());
         boolean isSubtitle = isFileType(path, quality.getSubtitleContainer().getValue());
         boolean isThumbnail = isFileType(path, quality.getThumbnailContainer().getValue());
 
@@ -375,9 +488,8 @@ public class YtDlpDownloader extends AbstractDownloader {
 
         entry.setLastCommandLine(finalArgs, true);
 
-        ProcessBuilder processBuilder = new ProcessBuilder(finalArgs);
-        processBuilder.redirectErrorStream(true);
-        Process process = processBuilder.start();
+        CancelHook cancelHook = entry.getCancelHook().derive(manager::isRunning, true);
+        Process process = main.getProcessMonitor().startProcess(finalArgs, cancelHook);
         entry.setProcess(process);
 
         String lastOutput = "";
@@ -388,7 +500,7 @@ public class YtDlpDownloader extends AbstractDownloader {
             StringBuilder output = new StringBuilder();
             char prevChar = '\0';
 
-            while (manager.isRunning() && !entry.getCancelHook().get() && process.isAlive()) {
+            while (!cancelHook.get() && process.isAlive()) {
                 if (Thread.currentThread().isInterrupted()) {
                     log.debug("Process is closing");
                     process.destroyForcibly();
@@ -425,7 +537,7 @@ public class YtDlpDownloader extends AbstractDownloader {
 
             long stopped = System.currentTimeMillis() - start;
 
-            if (!manager.isRunning() || entry.getCancelHook().get()) {
+            if (cancelHook.get()) {
                 if (main.getConfig().isDebugMode()) {
                     log.debug("Download process halted after {}ms.", stopped);
                 }

@@ -24,6 +24,9 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import net.brlns.gdownloader.ffmpeg.enums.AudioBitrateEnum;
+import net.brlns.gdownloader.ffmpeg.enums.AudioCodecEnum;
+import net.brlns.gdownloader.ffmpeg.structs.FFmpegConfig;
 import net.brlns.gdownloader.settings.enums.*;
 
 /**
@@ -77,12 +80,29 @@ public class QualitySettings {
     @JsonProperty("ThumbnailContainer")
     private ThumbnailContainerEnum thumbnailContainer = ThumbnailContainerEnum.PNG;
 
+    @Builder.Default
+    @JsonProperty("UseGlobalSettings")
+    private boolean useGlobalSettings = false;
+
+    @Builder.Default
+    @JsonProperty("EnableTranscoding")
+    private boolean enableTranscoding = true;
+
+    @Builder.Default
+    @JsonProperty("TranscodingSettings")
+    private FFmpegConfig transcodingSettings = FFmpegConfig.builder().build();
+
     // TODO this needs some work
     @JsonIgnore
     public String buildQualitySelector() {
-        return "(" + selector.getValue() + "[height>=" + minHeight.getValue() + "][height<=" + maxHeight.getValue() + "][ext=" + videoContainer.getValue() + "][fps=" + fps.getValue() + "]+bestaudio/"
+        return "("
+            + selector.getValue() + "[height>=" + minHeight.getValue() + "][height<=" + maxHeight.getValue() + "][ext=" + videoContainer.getValue() + "][fps=" + fps.getValue() + "]+bestaudio/"
             + selector.getValue() + "[height>=" + minHeight.getValue() + "][height<=" + maxHeight.getValue() + "][ext=" + videoContainer.getValue() + "]+bestaudio/"
             + selector.getValue() + "[ext=" + videoContainer.getValue() + "]+bestaudio/"
-            + selector.getValue() + "+bestaudio/best)";
+            + selector.getValue() + "[height>=" + minHeight.getValue() + "][height<=" + maxHeight.getValue() + "][fps=" + fps.getValue() + "]+bestaudio/"
+            + selector.getValue() + "[height>=" + minHeight.getValue() + "][height<=" + maxHeight.getValue() + "]+bestaudio/"
+            + selector.getValue() + "+bestaudio/"
+            + "best"
+            + ")";
     }
 }

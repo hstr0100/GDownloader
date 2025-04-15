@@ -69,6 +69,16 @@ public class Settings {
     @JsonProperty("MissingFormatsWorkaround")
     private boolean missingFormatsWorkaround = false;
 
+    @JsonProperty("MergeAllAudioTracks")
+    private boolean mergeAllAudioTracks = false;
+
+    @JsonProperty("KeepRawMediaFilesAfterTranscode")
+    private boolean keepRawMediaFilesAfterTranscode = false;
+
+    // Disable by default until NVENC is properly tested
+    @JsonProperty("FailDownloadsOnTranscodingFailures")
+    private boolean failDownloadsOnTranscodingFailures = false;
+
     @Deprecated
     @JsonProperty("ReadCookies")
     private boolean readCookies = false;
@@ -209,6 +219,9 @@ public class Settings {
     @JsonProperty("PlaySounds")
     private boolean playSounds = false;
 
+    @JsonProperty("DisplayDownloadsCompleteNotification")
+    private boolean displayDownloadsCompleteNotification = true;
+
     @JsonProperty("AutoDownloadRetry")
     private boolean autoDownloadRetry = true;
 
@@ -221,6 +234,9 @@ public class Settings {
 
     @JsonProperty("UrlFilters")
     private List<AbstractUrlFilter> urlFilters = new ArrayList<>();
+
+    @JsonProperty("GlobalQualitySettings")
+    private QualitySettings globalQualitySettings = QualitySettings.builder().build();
 
     public Settings() {
         urlFilters.addAll(AbstractUrlFilter.getDefaultUrlFilters());

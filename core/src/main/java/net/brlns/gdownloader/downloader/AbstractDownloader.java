@@ -51,15 +51,13 @@ public abstract class AbstractDownloader {
 
     protected abstract DownloadResult tryDownload(QueueEntry entry) throws Exception;
 
+    protected abstract DownloadResult transcodeMediaFiles(QueueEntry entry);
+
     protected abstract void processMediaFiles(QueueEntry entry);
 
     public abstract Optional<File> getExecutablePath();
 
     public abstract void setExecutablePath(Optional<File> file);
-
-    public abstract Optional<File> getFfmpegPath();
-
-    public abstract void setFfmpegPath(Optional<File> file);
 
     public abstract boolean isMainDownloader();
 

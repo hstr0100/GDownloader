@@ -23,7 +23,10 @@ import java.awt.Rectangle;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
 import javax.swing.*;
+import javax.swing.plaf.ColorUIResource;
 import javax.swing.plaf.basic.BasicComboBoxUI;
+import javax.swing.plaf.basic.BasicComboPopup;
+import javax.swing.plaf.basic.ComboPopup;
 
 import static net.brlns.gdownloader.ui.themes.ThemeProvider.*;
 import static net.brlns.gdownloader.ui.themes.UIColors.*;
@@ -33,13 +36,61 @@ import static net.brlns.gdownloader.ui.themes.UIColors.*;
  */
 public class CustomComboBoxUI extends BasicComboBoxUI {
 
+    static {
+        UIManager.put("ComboBox.background", new ColorUIResource(color(COMBO_BOX_BACKGROUND)));
+        UIManager.put("ComboBox.selectionBackground", new ColorUIResource(color(COMBO_BOX_SELECTION_BACKGROUND)));
+        UIManager.put("ComboBox.selectionForeground", new ColorUIResource(color(COMBO_BOX_SELECTION_FOREGROUND)));
+        UIManager.put("ComboBox.borderPaintsFocus", Boolean.FALSE);
+    }
+
+    @Override
+    public void installUI(JComponent c) {
+        super.installUI(c);
+
+        comboBox.setBorder(BorderFactory.createLineBorder(color(COMBO_BOX_BACKGROUND)));
+    }
+
+    @Override
+    protected ComboPopup createPopup() {
+        BasicComboPopup popup = (BasicComboPopup)super.createPopup();
+
+        JScrollPane scrollPane = (JScrollPane)popup.getList().getParent().getParent();
+
+        JScrollBar verticalScrollBar = scrollPane.getVerticalScrollBar();
+        if (verticalScrollBar != null) {
+            verticalScrollBar.setUI(new CustomScrollBarUI());
+        }
+
+        return popup;
+    }
+
     @Override
     protected JButton createArrowButton() {
-        JButton button = new JButton();
-        button.setText("▼");
-        button.setBackground(color(COMBO_BOX_BUTTON_FOREGROUND));
+        JButton button = new JButton() {
+            @Override
+            public void paintComponent(Graphics g) {
+                if (getModel().isPressed()) {
+                    g.setColor(Color.LIGHT_GRAY);// TODO
+                } else {
+                    g.setColor(color(COMBO_BOX_BUTTON_FOREGROUND));
+                }
+
+                g.fillRect(0, 0, getWidth(), getHeight());
+
+                g.setColor(color(COMBO_BOX_BUTTON_BACKGROUND));
+                String text = "▼";
+                int textWidth = g.getFontMetrics().stringWidth(text);
+                int textHeight = g.getFontMetrics().getHeight();
+                int x = (getWidth() - textWidth) / 2;
+                int y = (getHeight() + textHeight) / 2 - g.getFontMetrics().getDescent();
+                g.drawString(text, x, y);
+            }
+        };
+
+        button.setFocusPainted(false);
+        button.setBorderPainted(false);
+        button.setContentAreaFilled(false);
         button.setBorder(BorderFactory.createLineBorder(Color.WHITE));
-        button.setForeground(color(COMBO_BOX_BUTTON_BACKGROUND));
 
         return button;
     }
