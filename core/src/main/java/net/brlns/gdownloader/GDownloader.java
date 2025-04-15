@@ -1356,7 +1356,9 @@ public final class GDownloader {
         UpdaterBootstrap.tryOta(args, fromOta);
 
         System.setProperty("sun.java2d.uiScale", String.valueOf(uiScale));// Does not accept double
-        System.setProperty("sun.java2d.opengl", !disableHWAccel && !isLinuxAndAmdGpu() ? "true" : "false");
+        // TODO: there seems to be artifacting issues on fluxbox and sometimes Windows 11
+        //System.setProperty("sun.java2d.opengl", !disableHWAccel && !isLinuxAndAmdGpu() ? "true" : "false");
+        //System.setProperty("sun.java2d.d3d", "true");
 
         log.info("Starting...");
 

@@ -35,13 +35,6 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class DownloadIntervalometer {
 
-    @Data
-    private static class HostData {
-
-        private final long lastAccessTime;
-        private final int interval;
-    }
-
     private final ConcurrentHashMap<String, AtomicReference<HostData>> hostMap = new ConcurrentHashMap<>();
 
     private final int minValue;
@@ -129,5 +122,12 @@ public class DownloadIntervalometer {
         }
 
         return 0;
+    }
+
+    @Data
+    private static class HostData {
+
+        private final long lastAccessTime;
+        private final int interval;
     }
 }

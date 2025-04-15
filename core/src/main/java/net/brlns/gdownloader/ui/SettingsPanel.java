@@ -924,14 +924,6 @@ public class SettingsPanel {
 
         addSlider(panel, SliderBuilder.builder()
             .background(resolveColor(panel))
-            .labelKey("settings.downloader.direct_http.max_download_chunks")
-            .min(0).max(15).majorTickSpacing(1)
-            .getter(settings::getDirectHttpMaxDownloadChunks)
-            .setter(settings::setDirectHttpMaxDownloadChunks)
-            .build());
-
-        addSlider(panel, SliderBuilder.builder()
-            .background(resolveColor(panel))
             .labelKey("settings.maximum_download_retries")
             .min(0).max(50).majorTickSpacing(5)
             .getter(settings::getMaxDownloadRetries)
@@ -1068,7 +1060,6 @@ public class SettingsPanel {
                     .labelKey("settings.use_global_settings")
                     .getter(qualitySettings::isUseGlobalSettings)
                     .setter(qualitySettings::setUseGlobalSettings)
-                    .requiresRestart(true)
                     .onSet((value) -> enableComponentsAndLabels(toggleableComponents, !value))
                     .build()));
             }
@@ -1375,6 +1366,8 @@ public class SettingsPanel {
         return addLabel(panel, labelKey, resolveColor(panel));
     }
 
+    private static Font _cachedLabelFont = null;
+
     public static JLabel addLabel(JPanel panel, String labelKey, UIColors background) {
         Color rowColor = color(background);
         JPanel rowPanel = new JPanel(new GridLayout(1, 1, 0, 0));
@@ -1382,7 +1375,15 @@ public class SettingsPanel {
 
         JLabel label = createLabel(labelKey, FOREGROUND);
         label.setHorizontalAlignment(SwingConstants.LEFT);
-        label.setBorder(BorderFactory.createEmptyBorder(25, 15, 25, 5));
+        label.setBorder(BorderFactory.createEmptyBorder(17, 15, 17, 5));
+
+        if (_cachedLabelFont == null) {
+            Font currentFont = label.getFont();
+            _cachedLabelFont = currentFont.deriveFont(currentFont.getSize() + 1.2f);
+            label.setFont(_cachedLabelFont);
+        } else {
+            label.setFont(_cachedLabelFont);
+        }
 
         JPanel labelPanel = new JPanel(new BorderLayout());
         labelPanel.setBackground(rowColor);

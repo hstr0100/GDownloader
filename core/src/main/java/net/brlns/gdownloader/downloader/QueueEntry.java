@@ -599,7 +599,7 @@ public class QueueEntry {
     public void updateExtraRightClickOptions() {
         NestedMenuEntry extrasSubmenu = new NestedMenuEntry();
 
-        if (main.getConfig().isDebugMode() && !lastCommandLine.isEmpty()) {
+        if (!lastCommandLine.isEmpty()) {
             extrasSubmenu.put(l10n("gui.copy_command_line"),
                 constructCommandLineMenu(lastCommandLine));
         }
