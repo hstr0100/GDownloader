@@ -98,6 +98,7 @@ public class QueueEntryEntity implements Serializable {
     private String tmpDirectoryPath;
 
     @ElementCollection(fetch = FetchType.EAGER)
+    @Lob
     @CollectionTable(name = "final_media_files", joinColumns = @JoinColumn(name = "download_id"))
     private ArrayList<String> finalMediaFilePaths = new ArrayList<>();
 

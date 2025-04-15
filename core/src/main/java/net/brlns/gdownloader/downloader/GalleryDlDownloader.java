@@ -202,6 +202,7 @@ public class GalleryDlDownloader extends AbstractDownloader {
 
                 return new DownloadResult(FLAG_MAIN_CATEGORY_FAILED, lastOutput);
             } else {
+                // TODO: consider moving after the deduplicator
                 if (main.getConfig().isGalleryDlTranscoding()) {
                     DownloadResult transcodeResult = transcodeMediaFiles(entry);
 

@@ -878,6 +878,13 @@ public class SettingsPanel {
             .setter(settings::setGalleryDlDeduplication)
             .build());
 
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.downloader.gallery_dl.enable_transcoding")
+            .getter(settings::isGalleryDlTranscoding)
+            .setter(settings::setGalleryDlTranscoding)
+            .build());
+
         addLabel(panel, "settings.downloader.spotdl");
 
         addCheckBox(panel, CheckBoxBuilder.builder()
@@ -1144,7 +1151,7 @@ public class SettingsPanel {
             toggleableComponents.add(addComboBox(itemPanel, ComboBoxBuilder.<VideoContainerEnum>builder()
                 .background(resolveColor(itemPanel))
                 .labelKey("settings.video_container")
-                .values(VideoContainerEnum.allExceptDefault())
+                .values(VideoContainerEnum.getYtDlpContainers())
                 .getter(qualitySettings::getVideoContainer)
                 .setter(qualitySettings::setVideoContainer)
                 .build()));

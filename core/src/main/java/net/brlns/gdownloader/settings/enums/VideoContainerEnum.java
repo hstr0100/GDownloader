@@ -30,6 +30,7 @@ public enum VideoContainerEnum implements ISettingsEnum, IContainerEnum {
     DEFAULT,
     MP4,
     MKV,
+    M4V,
     WEBM,
     AVI,
     FLV,
@@ -74,15 +75,15 @@ public enum VideoContainerEnum implements ISettingsEnum, IContainerEnum {
             .endsWith("." + container.getValue()));
     }
 
-    public static VideoContainerEnum[] CONTAINERS;
+    public static VideoContainerEnum[] YT_DLP_CONTAINERS;
 
-    public static VideoContainerEnum[] allExceptDefault() {
-        if (CONTAINERS != null) {
-            return CONTAINERS;
+    public static VideoContainerEnum[] getYtDlpContainers() {
+        if (YT_DLP_CONTAINERS != null) {
+            return YT_DLP_CONTAINERS;
         }
 
-        return CONTAINERS = Arrays.stream(values())
-            .filter(c -> !c.isDefault())
+        return YT_DLP_CONTAINERS = Arrays.stream(values())
+            .filter(c -> !c.isDefault() && c != M4V)
             .toArray(VideoContainerEnum[]::new);
     }
 }
