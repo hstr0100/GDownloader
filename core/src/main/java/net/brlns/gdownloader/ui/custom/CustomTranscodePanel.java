@@ -587,7 +587,6 @@ public final class CustomTranscodePanel extends JPanel {
         boolean hasVideoEncoder = !selectedEncoder.isDefault();
 
         enableComponentAndLabel(videoContainerCombo, (hasAudioCodec || hasVideoEncoder) && enabled);
-
     }
 
     private void updateAudioControls() {

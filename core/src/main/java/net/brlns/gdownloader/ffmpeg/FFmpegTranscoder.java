@@ -747,7 +747,6 @@ public final class FFmpegTranscoder {
         };
     }
 
-    @Nullable
     private Settings getMainSettings() {
         return GDownloader.getInstance().getConfig();
     }

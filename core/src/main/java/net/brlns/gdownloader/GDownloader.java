@@ -127,6 +127,9 @@ import static net.brlns.gdownloader.util.StringUtils.nullOrEmpty;
 // prio
 // TODO right click > sort by
 // TODO display number in download queue
+// TODO implement remuxing to mkv
+// TODO fix files sometimes being retranscoded after resuming from pause
+// TODO the above happens because after we process the files, yt-dlp will attempt to download the original files back.
 /**
  * GDownloader - GUI wrapper for yt-dlp
  *

@@ -117,7 +117,7 @@ public class Settings {
     private boolean galleryDlDeduplication = true;
 
     @JsonProperty("GalleryDlTranscoding")
-    private boolean galleryDlTranscoding = true;
+    private boolean galleryDlTranscoding = false;
 
     @JsonProperty("GalleryDlEnabled")
     // gallery-dl appears to be unsigned

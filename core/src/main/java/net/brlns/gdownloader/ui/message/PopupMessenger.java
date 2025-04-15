@@ -234,9 +234,7 @@ public class PopupMessenger extends AbstractMessenger {
                     TrayIcon.MessageType.INFO;
             };
 
-            main.getTrayIcon().displayMessage(
-                GDownloader.REGISTRY_APP_NAME + " - " + title,
-                message, nativeType);
+            main.getTrayIcon().displayMessage(title, message, nativeType);
             return;
         }
 
