@@ -1053,8 +1053,11 @@ public class DownloadManager implements IEvent {
                         }
 
                         if (!downloadsRunning.get() || FLAG_STOPPED.isSet(flags)) {
-                            entry.updateStatus(DownloadStatusEnum.STOPPED, l10n("gui.download_status.not_started"));
-                            enqueueFirst(entry);
+                            if (!entry.getCancelHook().get()) {
+                                entry.updateStatus(DownloadStatusEnum.STOPPED, l10n("gui.download_status.not_started"));
+                                enqueueFirst(entry);
+                            }
+
                             return;
                         } else if (!entry.getCancelHook().get() && FLAG_SUCCESS.isSet(flags)) {
                             entry.updateStatus(DownloadStatusEnum.POST_PROCESSING, l10n("gui.download_status.processing_media_files"));

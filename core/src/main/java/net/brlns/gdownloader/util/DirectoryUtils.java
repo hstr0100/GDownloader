@@ -24,6 +24,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 
@@ -39,24 +40,26 @@ public final class DirectoryUtils {
         }
 
         try (Stream<Path> dirStream = Files.walk(directory)) {
-            boolean success = dirStream
+            AtomicBoolean allSucceeded = new AtomicBoolean(true);
+            dirStream
                 .sorted(Comparator.reverseOrder()) // Ensure deeper directories are deleted first
-                .allMatch(path -> {
+                .forEach(path -> {
                     try {
-                        return Files.deleteIfExists(path);
+                        if (!Files.deleteIfExists(path)) {
+                            allSucceeded.set(false);
+                        }
                     } catch (IOException e) {
                         log.error("Failed to delete: {}", path, e);
-
                         // Windows shenanigans
                         if (e.getMessage().contains("used by another process")) {
                             path.toFile().deleteOnExit();
                         }
 
-                        return false;
+                        allSucceeded.set(false);
                     }
                 });
 
-            return success;
+            return allSucceeded.get();
         } catch (IOException e) {
             log.error("Failed to delete: {}", directory, e);
             return false;

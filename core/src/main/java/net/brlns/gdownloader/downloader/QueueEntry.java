@@ -337,11 +337,11 @@ public class QueueEntry {
 
     private Optional<BufferedImage> tryLoadThumbnail(String url) {
         try {
+            String urlWithoutQuery = URLUtils.removeQueryParameters(url);
             if (main.getConfig().isDebugMode()) {
-                log.debug("Trying to load thumbnail {}", url);
+                log.debug("Trying to load thumbnail {}", urlWithoutQuery);
             }
 
-            String urlWithoutQuery = URLUtils.removeQueryParameters(url);
             BufferedImage img = ImageIO.read(new URI(urlWithoutQuery).toURL());
             if (img != null) {
                 return Optional.of(img);
