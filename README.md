@@ -14,6 +14,7 @@ It supports various platforms such as Crunchyroll, Twitch, X/Twitter, Spotify, a
 - Seamlessly switch between the supported downloaders
 - Embeds thumbnails and subtitles in the resulting media files, when available
 - Automatic FFMPEG setup for Windows upon first boot
+- Hardware-accelerated automatic video transcoding
 - Keeps yt-dlp, spotDL and gallery-dl always updated and ready go
 - Multiple customizable settings to best suit your usage style
 

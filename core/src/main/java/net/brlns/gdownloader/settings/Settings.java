@@ -26,6 +26,8 @@ import java.util.TreeMap;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
+import net.brlns.gdownloader.ffmpeg.enums.AudioCodecEnum;
+import net.brlns.gdownloader.ffmpeg.structs.FFmpegConfig;
 import net.brlns.gdownloader.settings.enums.BrowserEnum;
 import net.brlns.gdownloader.settings.enums.LanguageEnum;
 import net.brlns.gdownloader.settings.enums.PlayListOptionEnum;
@@ -282,6 +284,18 @@ public class Settings {
         if (isReadCookies() && getBrowser() == BrowserEnum.FIREFOX) {
             setReadCookiesFromBrowser(true);
             setReadCookies(false);
+        }
+
+        for (AbstractUrlFilter filter : urlFilters) {
+            QualitySettings qSettings = filter.getQualitySettings();
+            FFmpegConfig ffmpegConfig = qSettings.getTranscodingSettings();
+            if (qSettings.getAudioCodec() != AudioCodecEnum.NO_CODEC) {
+                ffmpegConfig.setAudioCodec(qSettings.getAudioCodec());
+                ffmpegConfig.setAudioBitrate(qSettings.getAudioBitrate());
+
+                qSettings.setEnableTranscoding(true);
+                qSettings.setAudioCodec(AudioCodecEnum.NO_CODEC);
+            }
         }
     }
 }

@@ -60,6 +60,7 @@ public class QualitySettings {
     @JsonProperty("FPS")
     private FPSEnum fps = FPSEnum.FPS_60;
 
+    @Deprecated
     @Builder.Default
     @JsonProperty("AudioCodec")
     private AudioCodecEnum audioCodec = AudioCodecEnum.NO_CODEC;
