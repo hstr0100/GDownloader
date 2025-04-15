@@ -20,6 +20,7 @@ import java.awt.*;
 import java.awt.event.*;
 import javax.swing.*;
 import lombok.extern.slf4j.Slf4j;
+import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.ui.custom.CustomDynamicLabel;
 import net.brlns.gdownloader.ui.custom.CustomProgressBar;
 import net.brlns.gdownloader.util.CancelHook;
@@ -220,6 +221,25 @@ public class PopupMessenger extends AbstractMessenger {
 
     public static void show(String title, String message, int durationMillis,
         MessageTypeEnum messageType, boolean playTone, boolean discardDuplicates) {
+        GDownloader main = GDownloader.getInstance();
+
+        if (main.getConfig().isUseNativeSystemNotifications()
+            && main.isSystemTrayInitialized()) {
+            TrayIcon.MessageType nativeType = switch (messageType) {
+                case ERROR ->
+                    TrayIcon.MessageType.ERROR;
+                case WARNING ->
+                    TrayIcon.MessageType.WARNING;
+                default ->
+                    TrayIcon.MessageType.INFO;
+            };
+
+            main.getTrayIcon().displayMessage(
+                GDownloader.REGISTRY_APP_NAME + " - " + title,
+                message, nativeType);
+            return;
+        }
+
         instance.display(Message.builder()
             .title(title)
             .message(message)

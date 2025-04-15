@@ -163,6 +163,7 @@ public final class GDownloader {
     private boolean systemTrayInitialized;
 
     private SystemTray tray;
+    @Getter
     private TrayIcon trayIcon = null;
 
     private File configFile;

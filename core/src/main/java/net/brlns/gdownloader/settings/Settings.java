@@ -224,6 +224,9 @@ public class Settings {
     @JsonProperty("DisplayDownloadsCompleteNotification")
     private boolean displayDownloadsCompleteNotification = true;
 
+    @JsonProperty("UseNativeSystemNotifications")
+    private boolean useNativeSystemNotifications = false;
+
     @JsonProperty("AutoDownloadRetry")
     private boolean autoDownloadRetry = true;
 

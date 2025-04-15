@@ -510,9 +510,9 @@ public class SettingsPanel {
 
         addCheckBox(panel, CheckBoxBuilder.builder()
             .background(resolveColor(panel))
-            .labelKey("settings.auto_scroll_to_bottom")
-            .getter(settings::isAutoScrollToBottom)
-            .setter(settings::setAutoScrollToBottom)
+            .labelKey("settings.use_native_system_notifications")
+            .getter(settings::isUseNativeSystemNotifications)
+            .setter(settings::setUseNativeSystemNotifications)
             .build());
 
         addCheckBox(panel, CheckBoxBuilder.builder()
@@ -555,6 +555,13 @@ public class SettingsPanel {
             customizeSlider(slider, background, SLIDER_FOREGROUND);
             wrapComponentRow(panel, label, slider, background);
         }
+
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.auto_scroll_to_bottom")
+            .getter(settings::isAutoScrollToBottom)
+            .setter(settings::setAutoScrollToBottom)
+            .build());
 
         panel.add(getFillerPanel());
 
