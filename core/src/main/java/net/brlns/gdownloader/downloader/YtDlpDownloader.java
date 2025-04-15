@@ -272,6 +272,15 @@ public class YtDlpDownloader extends AbstractDownloader {
                 if (type == VIDEO || type == AUDIO) {
                     // Non-zero output for a playlist likely means one or more items were unavailable.
                     if (lastOutput.contains("Finished downloading playlist")) {
+                        if (type == VIDEO) {
+                            DownloadResult transcodeResult = transcodeMediaFiles(entry);
+
+                            if (main.getConfig().isFailDownloadsOnTranscodingFailures()
+                                && !FLAG_SUCCESS.isSet(transcodeResult.getFlags())) {
+                                return transcodeResult;
+                            }
+                        }
+
                         success = true;
                         continue;
                     }
@@ -345,13 +354,24 @@ public class YtDlpDownloader extends AbstractDownloader {
                 config.setVideoContainer(quality.getVideoContainer());
             }
 
+            Set<File> toDelete = new HashSet<>();
             AtomicInteger successCount = new AtomicInteger();
             AtomicInteger failureCount = new AtomicInteger();
             for (Path path : paths) {
                 File inputFile = path.toFile();
-                File tmpFile = FileUtils.deriveTempFile(inputFile, config.getVideoContainer().getValue());
+                String expectedExtension = config.getVideoContainer().getValue();
+                File tmpFile = FileUtils.deriveTempFile(inputFile, expectedExtension);
+                File lockFile = FileUtils.deriveFile(inputFile, "", "lock");
 
                 try {
+                    if (lockFile.exists()) {
+                        log.info("Skipping {} as it's already been transcoded", path);
+                        if (!inputFile.getName().endsWith(expectedExtension)) {
+                            toDelete.add(inputFile);
+                        }
+                        continue;
+                    }
+
                     entry.updateStatus(DownloadStatusEnum.TRANSCODING, l10n("gui.transcode.starting"));
 
                     CancelHook cancelHook = entry.getCancelHook().derive(manager::isRunning, true);
@@ -388,9 +408,19 @@ public class YtDlpDownloader extends AbstractDownloader {
                             prefix = config.getFileSuffix();
                         }
 
-                        File finalFile = FileUtils.deriveFile(
-                            inputFile, prefix, config.getVideoContainer().getValue());
+                        File finalFile = FileUtils.deriveFile(inputFile, prefix, expectedExtension);
                         tmpFile.renameTo(finalFile);
+
+                        lockFile.createNewFile();
+                        toDelete.add(lockFile);
+
+                        if (!finalFile.equals(inputFile) && !inputFile.exists()) {
+                            // Create a placeholder to prevent yt-dlp from downloading the file again
+                            int exCode = main.getFfmpegTranscoder().generateEmptyContainer(inputFile);
+                            if (exCode == 0) {
+                                toDelete.add(inputFile);
+                            }
+                        }
 
                         successCount.incrementAndGet();
                     } else if (exitCode > 0) {
@@ -403,6 +433,15 @@ public class YtDlpDownloader extends AbstractDownloader {
                     log.error("Failed to transcode media file: {}", path, e);
                     failureCount.incrementAndGet();
                     lastOutput.set(e.getMessage());
+                }
+            }
+
+            // We're now past all cancel hooks, we're safe to discard temporary files
+            for (File file : toDelete) {
+                try {
+                    Files.deleteIfExists(file.toPath());
+                } catch (IOException e) {
+                    log.error("Failed to delete temporary file {}: {}", file, e.getMessage());
                 }
             }
 
@@ -434,7 +473,8 @@ public class YtDlpDownloader extends AbstractDownloader {
         try {
             List<Path> paths = Files.walk(tmpPath.toPath())
                 .filter(path -> !path.equals(tmpPath.toPath())
-                && !path.toString().contains(FileUtils.TMP_FILE_IDENTIFIER))
+                && !path.toString().contains(FileUtils.TMP_FILE_IDENTIFIER)
+                && !path.toString().endsWith(".lock"))
                 .collect(Collectors.toList());
 
             for (Path path : paths) {

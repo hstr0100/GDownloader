@@ -1380,10 +1380,9 @@ public class SettingsPanel {
         if (_cachedLabelFont == null) {
             Font currentFont = label.getFont();
             _cachedLabelFont = currentFont.deriveFont(currentFont.getSize() + 1.2f);
-            label.setFont(_cachedLabelFont);
-        } else {
-            label.setFont(_cachedLabelFont);
         }
+
+        label.setFont(_cachedLabelFont);
 
         JPanel labelPanel = new JPanel(new BorderLayout());
         labelPanel.setBackground(rowColor);

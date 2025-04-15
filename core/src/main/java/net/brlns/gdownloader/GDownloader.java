@@ -124,12 +124,10 @@ import static net.brlns.gdownloader.util.StringUtils.nullOrEmpty;
 // TODO Confirm dialog before clearing DL queue
 // TODO Move config files, downloaders and their respective data to subfolders
 // TODO ctrl+z to undo removals
+// TODO implement remuxing to mkv
 // prio
 // TODO right click > sort by
 // TODO display number in download queue
-// TODO implement remuxing to mkv
-// TODO fix files sometimes being retranscoded after resuming from pause
-// TODO the above happens because after we process the files, yt-dlp will attempt to download the original files back.
 /**
  * GDownloader - GUI wrapper for yt-dlp
  *

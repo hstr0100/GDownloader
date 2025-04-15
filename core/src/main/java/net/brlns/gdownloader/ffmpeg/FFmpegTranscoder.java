@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 import lombok.Getter;
 import lombok.Setter;
@@ -146,6 +147,26 @@ public final class FFmpegTranscoder {
         }
 
         return null;
+    }
+
+    public int generateEmptyContainer(File outputFile) {
+        String encoder = outputFile.getName().endsWith(".webm") ? "libvpx" : "libx264";
+        ProcessArguments args = new ProcessArguments(
+            "-hide_banner",
+            "-y",
+            "-loglevel", (log.isDebugEnabled() ? "error" : "panic"),
+            "-f", "lavfi",
+            "-i", "nullsrc=s=16x16:d=0.1:r=1",
+            "-frames:v", "1",
+            "-c:v", encoder,
+            outputFile.getAbsolutePath());
+
+        return FFmpegProcessRunner.runFFmpeg(this, args,
+            FFmpegProcessOptions.builder()
+                .timeoutUnit(TimeUnit.SECONDS)
+                .timeoutValue(5l)
+                .discardOutput(!log.isDebugEnabled())
+                .build());
     }
 
     // TODO abstraction

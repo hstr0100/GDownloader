@@ -263,13 +263,24 @@ public class GalleryDlDownloader extends AbstractDownloader {
                 config.setVideoContainer(quality.getVideoContainer());
             }
 
+            Set<File> toDelete = new HashSet<>();
             AtomicInteger successCount = new AtomicInteger();
             AtomicInteger failureCount = new AtomicInteger();
             for (Path path : paths) {
                 File inputFile = path.toFile();
-                File tmpFile = FileUtils.deriveTempFile(inputFile, config.getVideoContainer().getValue());
+                String expectedExtension = config.getVideoContainer().getValue();
+                File tmpFile = FileUtils.deriveTempFile(inputFile, expectedExtension);
+                File lockFile = FileUtils.deriveFile(inputFile, "", "lock");
 
                 try {
+                    if (lockFile.exists()) {
+                        log.info("Skipping {} as it's already been transcoded", path);
+                        if (!inputFile.getName().endsWith(expectedExtension)) {
+                            toDelete.add(inputFile);// This is a placeholder file from a previous session
+                        }
+                        continue;
+                    }
+
                     entry.updateStatus(DownloadStatusEnum.TRANSCODING, l10n("gui.transcode.starting"));
 
                     CancelHook cancelHook = entry.getCancelHook().derive(manager::isRunning, true);
@@ -306,9 +317,18 @@ public class GalleryDlDownloader extends AbstractDownloader {
                             prefix = config.getFileSuffix();
                         }
 
-                        File finalFile = FileUtils.deriveFile(
-                            inputFile, prefix, config.getVideoContainer().getValue());
+                        File finalFile = FileUtils.deriveFile(inputFile, prefix, expectedExtension);
                         tmpFile.renameTo(finalFile);
+
+                        lockFile.createNewFile();
+                        toDelete.add(lockFile);
+
+                        if (!finalFile.equals(inputFile) && !inputFile.exists()) {
+                            int exCode = main.getFfmpegTranscoder().generateEmptyContainer(inputFile);
+                            if (exCode == 0) {
+                                toDelete.add(inputFile);
+                            }
+                        }
 
                         successCount.incrementAndGet();
                     } else if (exitCode > 0) {
@@ -321,6 +341,15 @@ public class GalleryDlDownloader extends AbstractDownloader {
                     log.error("Failed to transcode media file: {}", path, e);
                     failureCount.incrementAndGet();
                     lastOutput.set(e.getMessage());
+                }
+            }
+
+            // We're now past all cancel hooks, we're safe to discard temporary files
+            for (File file : toDelete) {
+                try {
+                    Files.deleteIfExists(file.toPath());
+                } catch (IOException e) {
+                    log.error("Failed to delete temporary file {}: {}", file, e.getMessage());
                 }
             }
 
@@ -351,7 +380,8 @@ public class GalleryDlDownloader extends AbstractDownloader {
         try {
             List<Path> paths = Files.walk(tmpPath.toPath())
                 .filter(path -> !path.equals(tmpPath.toPath())
-                && !path.toString().contains(FileUtils.TMP_FILE_IDENTIFIER))
+                && !path.toString().contains(FileUtils.TMP_FILE_IDENTIFIER)
+                && !path.toString().endsWith(".lock"))
                 .collect(Collectors.toList());
 
             for (Path path : paths) {

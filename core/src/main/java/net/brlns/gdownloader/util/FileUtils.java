@@ -253,4 +253,16 @@ public final class FileUtils {
                 + (extension.isEmpty() ? "" : "." + extension));
         }
     }
+
+    public static boolean isLargerThan(Path path, int bytes) {
+        return isLargerThan(path.toFile(), bytes);
+    }
+
+    public static boolean isLargerThan(File file, int bytes) {
+        if (!file.exists() || !file.isFile()) {
+            return false;
+        }
+
+        return file.length() > bytes;
+    }
 }
