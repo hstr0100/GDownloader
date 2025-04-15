@@ -1066,33 +1066,36 @@ public class SettingsPanel {
                 .getter(qualitySettings::getSelector)
                 .setter(qualitySettings::setSelector)
                 .onSet((selected) -> {
-                    FFmpegConfig oldConfig = qualitySettings.getTranscodingSettings();
-                    FFmpegConfig newConfig = null;
+                    if (filter == null || filter.isCanTranscodeVideo()) {
+                        FFmpegConfig oldConfig = qualitySettings.getTranscodingSettings();
+                        FFmpegConfig newConfig = null;
 
-                    if (selected == QualitySelectorEnum.BEST/* && oldConfig.equals(FFmpegConfig.DEFAULT)*/) {
-                        newConfig = FFmpegConfig.getCompatiblePreset();
-                    } else if (selected != QualitySelectorEnum.BEST && oldConfig.equals(FFmpegConfig.COMPATIBLE_PRESET)) {
-                        newConfig = FFmpegConfig.getDefault();
-                    }
+                        if (selected == QualitySelectorEnum.BEST/* && oldConfig.equals(FFmpegConfig.DEFAULT)*/) {
+                            newConfig = FFmpegConfig.getCompatiblePreset();
+                            qualitySettings.setEnableTranscoding(true);
+                        } else if (selected != QualitySelectorEnum.BEST && oldConfig.equals(FFmpegConfig.COMPATIBLE_PRESET)) {
+                            newConfig = FFmpegConfig.getDefault();
+                        }
 
-                    if (newConfig != null) {
-                        currentFFmpegConfig.set(newConfig);
-                        qualitySettings.setTranscodingSettings(newConfig);
+                        if (newConfig != null) {
+                            currentFFmpegConfig.set(newConfig);
+                            qualitySettings.setTranscodingSettings(newConfig);
 
-                        toggleableComponents.remove(transcodePanel.get());
-                        itemPanel.remove(transcodePanel.get());
+                            toggleableComponents.remove(transcodePanel.get());
+                            itemPanel.remove(transcodePanel.get());
 
-                        CustomTranscodePanel panel = new CustomTranscodePanel(
-                            currentFFmpegConfig.get(), main.getFfmpegTranscoder(),
-                            SETTINGS_ROW_BACKGROUND_LIGHT);
+                            CustomTranscodePanel panel = new CustomTranscodePanel(
+                                currentFFmpegConfig.get(), main.getFfmpegTranscoder(),
+                                SETTINGS_ROW_BACKGROUND_LIGHT);
 
-                        itemPanel.add(panel);
+                            itemPanel.add(panel);
 
-                        toggleableComponents.add(panel);
-                        transcodePanel.set(panel);
+                            toggleableComponents.add(panel);
+                            transcodePanel.set(panel);
 
-                        itemPanel.revalidate();
-                        itemPanel.repaint();
+                            itemPanel.revalidate();
+                            itemPanel.repaint();
+                        }
                     }
                 })
                 .build()
@@ -1182,7 +1185,7 @@ public class SettingsPanel {
                 .build()));
         }
 
-        {
+        if (filter == null || filter.isCanTranscodeVideo() && !filter.isAudioOnly()) {
             CustomTranscodePanel panel = new CustomTranscodePanel(
                 currentFFmpegConfig.get(), main.getFfmpegTranscoder(),
                 SETTINGS_ROW_BACKGROUND_LIGHT);
@@ -1196,6 +1199,8 @@ public class SettingsPanel {
         JCheckBox globalCheckbox;
         if ((globalCheckbox = useGlobalCheckbox.get()) != null) {
             enableComponentsAndLabels(toggleableComponents, !globalCheckbox.isSelected());
+        } else if (filter == null) {
+            enableComponentsAndLabels(toggleableComponents, true);
         }
 
         MouseAdapter cardListener = new MouseAdapter() {

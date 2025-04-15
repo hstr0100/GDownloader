@@ -40,6 +40,7 @@ import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.downloader.structs.DownloadResult;
 import net.brlns.gdownloader.downloader.structs.MediaInfo;
 import net.brlns.gdownloader.ffmpeg.enums.AudioBitrateEnum;
+import net.brlns.gdownloader.ffmpeg.enums.AudioCodecEnum;
 import net.brlns.gdownloader.ffmpeg.structs.FFmpegConfig;
 import net.brlns.gdownloader.persistence.PersistenceManager;
 import net.brlns.gdownloader.process.ProcessArguments;
@@ -324,9 +325,19 @@ public class YtDlpDownloader extends AbstractDownloader {
 
             AtomicReference<String> lastOutput = new AtomicReference<>();
 
-            // Copy the config, so we can make changes to the selected container
-            FFmpegConfig config = GDownloader.OBJECT_MAPPER.convertValue(
-                quality.getTranscodingSettings(), FFmpegConfig.class);
+            FFmpegConfig config;
+            if (!quality.isEnableTranscoding() && main.getConfig().isTranscodeAudioToAAC()) {
+                config = FFmpegConfig.builder()
+                    .audioCodec(AudioCodecEnum.AAC)
+                    .audioBitrate(AudioBitrateEnum.BITRATE_256).build();
+            } else if (quality.isEnableTranscoding()) {
+                // Copy the config, so we can make changes to the selected container
+                config = GDownloader.OBJECT_MAPPER.convertValue(
+                    quality.getTranscodingSettings(), FFmpegConfig.class);
+            } else {
+                return new DownloadResult(FLAG_SUCCESS);
+            }
+
             if (config.getVideoContainer().isDefault()) {
                 config.setVideoContainer(quality.getVideoContainer());
             }
@@ -364,13 +375,17 @@ public class YtDlpDownloader extends AbstractDownloader {
                         }
 
                         log.info("Transcoding successful - exit code: {}", exitCode);
+
+                        String prefix = "";
                         if (!main.getConfig().isKeepRawMediaFilesAfterTranscode()) {
                             Files.deleteIfExists(inputFile.toPath());
-                            tmpFile.renameTo(inputFile);
                         } else {
-                            File finalFile = FileUtils.deriveFile(inputFile, config.getFileSuffix());
-                            tmpFile.renameTo(finalFile);
+                            prefix = config.getFileSuffix();
                         }
+
+                        File finalFile = FileUtils.deriveFile(
+                            inputFile, prefix, config.getVideoContainer().getValue());
+                        tmpFile.renameTo(finalFile);
 
                         return new DownloadResult(FLAG_SUCCESS);
                     } else if (exitCode > 0) {
@@ -450,7 +465,8 @@ public class YtDlpDownloader extends AbstractDownloader {
 
     private Path determineTargetPath(File tmpPath, File finalPath, Path path, QualitySettings quality) {
         boolean isAudio = isFileType(path, quality.getAudioContainer().getValue());
-        boolean isVideo = isFileType(path, quality.getVideoContainer().getValue());
+        boolean isVideo = isFileType(path, quality.getVideoContainer().getValue())
+            || isFileType(path, quality.getTranscodingSettings().getVideoContainer().getValue());
         boolean isSubtitle = isFileType(path, quality.getSubtitleContainer().getValue());
         boolean isThumbnail = isFileType(path, quality.getThumbnailContainer().getValue());
 

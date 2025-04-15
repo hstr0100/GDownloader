@@ -41,5 +41,6 @@ public class SpotifyFilter extends GenericFilter {
         setAudioNamePattern("%(artist)s/%(album)s/%(title)s.%(ext)s");// Both yt-dlp and spotDL templates are supported here.
         setEmbedThumbnailAndMetadata(true);
         setAudioOnly(true);
+        setCanTranscodeVideo(false);
     }
 }

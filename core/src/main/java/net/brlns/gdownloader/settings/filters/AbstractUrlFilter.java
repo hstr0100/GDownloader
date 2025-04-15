@@ -130,6 +130,9 @@ public abstract class AbstractUrlFilter implements ITranslatable {
     @JsonProperty("EmbedThumbnailAndMetadata")
     private boolean embedThumbnailAndMetadata = false;
 
+    @JsonProperty("CanTranscodeVideo")
+    private boolean canTranscodeVideo = true;
+
     /**
      * Represents a set of extra arguments for yt-dlp.
      * These arguments are categorized based on the type of download (e.g., VIDEO, AUDIO, SUBTITLES, etc.).

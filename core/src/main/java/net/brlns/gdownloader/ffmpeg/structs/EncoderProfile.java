@@ -49,6 +49,7 @@ public class EncoderProfile implements ITranslatable {
         ffmpegProfileName = profileEnum.getProfileName();
     }
 
+    @JsonIgnore
     public boolean isDefault() {
         return this.equals(NO_PROFILE);
     }

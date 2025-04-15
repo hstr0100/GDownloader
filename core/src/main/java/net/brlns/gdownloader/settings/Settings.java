@@ -75,8 +75,9 @@ public class Settings {
     @JsonProperty("KeepRawMediaFilesAfterTranscode")
     private boolean keepRawMediaFilesAfterTranscode = false;
 
+    // Disable by default until NVENC is properly tested
     @JsonProperty("FailDownloadsOnTranscodingFailures")
-    private boolean failDownloadsOnTranscodingFailures = true;
+    private boolean failDownloadsOnTranscodingFailures = false;
 
     @Deprecated
     @JsonProperty("ReadCookies")

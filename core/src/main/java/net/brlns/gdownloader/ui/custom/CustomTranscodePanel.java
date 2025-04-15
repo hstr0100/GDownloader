@@ -48,6 +48,7 @@ import static net.brlns.gdownloader.util.StringUtils.formatBitrate;
  * @author Gabriel / hstr0100 / vertx010
  */
 // TODO: investigate erratic behavior of CRF value when selecting VBR
+// TODO: enable transcoding checkbox
 @Slf4j
 public final class CustomTranscodePanel extends JPanel {
 
@@ -58,7 +59,7 @@ public final class CustomTranscodePanel extends JPanel {
     private static final int MAX_QP = 51;
 
     private final AtomicBoolean initialized = new AtomicBoolean(false);
-    private boolean enabled = true;
+    private boolean enabled = false;
     private boolean updatingFromPreset = false;
     private boolean ignoreSettingChanges = false;
 
@@ -136,7 +137,7 @@ public final class CustomTranscodePanel extends JPanel {
                     updatePresetAndProfileDropdowns(config.getVideoEncoder());
                     updatePresetDropdownBasedOnConfig();
 
-                    enableComponents(controlsPanel, enabled && transcoder.hasFFmpeg());
+                    enableComponents(controlsPanel, enabled);
                     updateControlVisibility();
                     updateVideoControls();
                     updateAudioControls();
@@ -565,7 +566,7 @@ public final class CustomTranscodePanel extends JPanel {
         assert SwingUtilities.isEventDispatchThread();
 
         // This will be hard-locked if ffmpeg is not found
-        enabled = enabledIn && transcoder.hasFFmpeg();
+        enabled = enabledIn && transcoder.hasFFmpeg();// && qualitySettings.isEnableTranscoding();
         enableComponents(controlsPanel, enabled);
 
         if (initialized.get()) {

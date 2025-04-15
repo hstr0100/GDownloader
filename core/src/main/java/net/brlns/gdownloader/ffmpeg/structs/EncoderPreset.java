@@ -54,6 +54,7 @@ public class EncoderPreset implements ITranslatable {
         ffmpegPresetName = presetEnumIn.getPresetName();
     }
 
+    @JsonIgnore
     public boolean isDefault() {
         return this.equals(NO_PRESET);
     }

@@ -85,6 +85,10 @@ public class QualitySettings {
     private boolean useGlobalSettings = false;
 
     @Builder.Default
+    @JsonProperty("EnableTranscoding")
+    private boolean enableTranscoding = true;
+
+    @Builder.Default
     @JsonProperty("TranscodingSettings")
     private FFmpegConfig transcodingSettings = FFmpegConfig.builder().build();
 

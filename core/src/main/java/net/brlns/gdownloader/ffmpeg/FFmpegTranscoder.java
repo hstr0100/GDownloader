@@ -151,8 +151,10 @@ public final class FFmpegTranscoder {
     // TODO abstraction
     public int startTranscode(FFmpegConfig config, File inputFile,
         File outputFile, CancelHook cancelHook, FFmpegProgressListener listener) throws Exception {
+        Settings mainSettings = getMainSettings();
+        boolean transcodeToAAC = mainSettings.isTranscodeAudioToAAC();
         if (config.getVideoEncoder() == EncoderEnum.NO_ENCODER
-            && config.getAudioCodec() == AudioCodecEnum.NO_CODEC) {
+            && config.getAudioCodec() == AudioCodecEnum.NO_CODEC && !transcodeToAAC) {
             if (log.isDebugEnabled()) {
                 log.debug("Transcoding not configured, returning -3");
             }
@@ -509,9 +511,7 @@ public final class FFmpegTranscoder {
         for (AudioStream stream : streamData.getAudioStreams()) {
             AudioCodecEnum audioCodec = config.getAudioCodec();
             AudioBitrateEnum audioBitrate = config.getAudioBitrate();
-            Settings mainSettings = getMainSettings();
-            if (audioCodec == AudioCodecEnum.NO_CODEC
-                && mainSettings != null && mainSettings.isTranscodeAudioToAAC()) {
+            if (audioCodec == AudioCodecEnum.NO_CODEC && transcodeToAAC) {
                 // If no custom codec is set, check if "Convert audio to a widely supported codec" is enabled.
                 // If enabled, default to "aac".
                 audioCodec = AudioCodecEnum.AAC; // Opus is not supported by some native video players
@@ -749,12 +749,7 @@ public final class FFmpegTranscoder {
 
     @Nullable
     private Settings getMainSettings() {
-        GDownloader instance = GDownloader.getInstance();
-        if (instance != null) {
-            return instance.getConfig();
-        }
-
-        return null;
+        return GDownloader.getInstance().getConfig();
     }
 
     @PreDestroy
