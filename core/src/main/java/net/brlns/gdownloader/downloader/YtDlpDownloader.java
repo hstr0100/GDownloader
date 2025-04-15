@@ -382,7 +382,6 @@ public class YtDlpDownloader extends AbstractDownloader {
 
                             if (hasTaskStarted) {
                                 entry.getMediaCard().setPercentage(progress);
-
                                 entry.updateStatus(DownloadStatusEnum.TRANSCODING, output, false);
                             }
                         }
@@ -644,7 +643,6 @@ public class YtDlpDownloader extends AbstractDownloader {
 
             if ((lastOutput.contains("time=") && lastOutput.contains("bitrate=")) || lastOutput.contains(" Opening '")) {
                 entry.getMediaCard().setPercentage(-1);
-
                 entry.updateStatus(DownloadStatusEnum.DOWNLOADING, lastOutput, false);
             } else {
                 if (lastOutput.contains("Downloading webpage")) {// Reset when looping through a playlist

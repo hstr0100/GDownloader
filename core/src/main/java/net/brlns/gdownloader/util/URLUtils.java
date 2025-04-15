@@ -148,6 +148,23 @@ public final class URLUtils {
         return queryParams;
     }
 
+    public static String removeQueryParameters(String urlString) throws URISyntaxException {
+        if (urlString == null || urlString.isEmpty()) {
+            return urlString;
+        }
+
+        URI uri = new URI(urlString);
+        URI uriWithoutQuery = new URI(
+            uri.getScheme(),
+            uri.getAuthority(),
+            uri.getPath(),
+            null, // remove query
+            uri.getFragment()
+        );
+
+        return uriWithoutQuery.toString();
+    }
+
     @Nullable
     public static String getSpotifyTrackId(@NonNull String spotifyUrl) {
         Pattern pattern = Pattern.compile(

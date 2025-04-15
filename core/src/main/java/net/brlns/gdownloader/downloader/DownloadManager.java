@@ -174,7 +174,6 @@ public class DownloadManager implements IEvent {
                             }
 
                             initializeAndEnqueueEntry(queueEntry);
-
                             count++;
                         }
 

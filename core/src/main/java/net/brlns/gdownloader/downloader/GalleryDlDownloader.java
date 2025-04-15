@@ -291,7 +291,6 @@ public class GalleryDlDownloader extends AbstractDownloader {
 
                             if (hasTaskStarted) {
                                 entry.getMediaCard().setPercentage(progress);
-
                                 entry.updateStatus(DownloadStatusEnum.TRANSCODING, output, false);
                             }
                         }
@@ -505,7 +504,6 @@ public class GalleryDlDownloader extends AbstractDownloader {
 
         if (lastOutput.startsWith("#") || lastOutput.startsWith(entry.getTmpDirectory().getAbsolutePath())) {
             entry.getMediaCard().setPercentage(-1);
-
             entry.updateStatus(DownloadStatusEnum.DOWNLOADING,
                 StringUtils.getStringAfterLastSeparator(lastOutput
                     .replace(entry.getTmpDirectory().getAbsolutePath() + File.separator, ""))/*, false*/);

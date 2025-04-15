@@ -341,8 +341,8 @@ public class QueueEntry {
                 log.debug("Trying to load thumbnail {}", url);
             }
 
-            BufferedImage img = ImageIO.read(new URI(url).toURL());
-
+            String urlWithoutQuery = URLUtils.removeQueryParameters(url);
+            BufferedImage img = ImageIO.read(new URI(urlWithoutQuery).toURL());
             if (img != null) {
                 return Optional.of(img);
             } else if (main.getConfig().isDebugMode()) {
