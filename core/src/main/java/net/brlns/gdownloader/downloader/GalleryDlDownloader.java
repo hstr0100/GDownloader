@@ -26,6 +26,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.Setter;
@@ -36,8 +38,13 @@ import net.brlns.gdownloader.downloader.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.downloader.structs.DownloadResult;
 import net.brlns.gdownloader.downloader.structs.MediaInfo;
+import net.brlns.gdownloader.ffmpeg.enums.AudioBitrateEnum;
+import net.brlns.gdownloader.ffmpeg.enums.AudioCodecEnum;
+import net.brlns.gdownloader.ffmpeg.structs.FFmpegConfig;
 import net.brlns.gdownloader.persistence.PersistenceManager;
 import net.brlns.gdownloader.process.ProcessArguments;
+import net.brlns.gdownloader.settings.QualitySettings;
+import net.brlns.gdownloader.settings.enums.VideoContainerEnum;
 import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
 import net.brlns.gdownloader.util.CancelHook;
 import net.brlns.gdownloader.util.DirectoryDeduplicator;
@@ -195,6 +202,15 @@ public class GalleryDlDownloader extends AbstractDownloader {
 
                 return new DownloadResult(FLAG_MAIN_CATEGORY_FAILED, lastOutput);
             } else {
+                if (main.getConfig().isGalleryDlTranscoding()) {
+                    DownloadResult transcodeResult = transcodeMediaFiles(entry);
+
+                    if (main.getConfig().isFailDownloadsOnTranscodingFailures()
+                        && !FLAG_SUCCESS.isSet(transcodeResult.getFlags())) {
+                        return transcodeResult;
+                    }
+                }
+
                 success = true;
             }
         }
@@ -202,10 +218,122 @@ public class GalleryDlDownloader extends AbstractDownloader {
         return new DownloadResult(success ? FLAG_SUCCESS : FLAG_UNSUPPORTED, lastOutput);
     }
 
+    // This is essentially a copy and paste from YtDlpDownloader for now. However, in the
+    // future, we might need a more nuanced approach for gallery-dl
+    // which is why this wasn't moved to the super class.
     @Override
     protected DownloadResult transcodeMediaFiles(QueueEntry entry) {
-        // TODO
-        return null;
+        if (!main.getFfmpegTranscoder().hasFFmpeg()) {
+            // FFmpeg not found, nothing we can do.
+            log.error("FFmpeg not found, unable to transcode media files");
+            return new DownloadResult(FLAG_SUCCESS);
+        }
+
+        QualitySettings quality = entry.getFilter().getActiveQualitySettings(main.getConfig());
+        if (quality.getVideoContainer() == VideoContainerEnum.GIF) {
+            // Not implemented, not supported. Just give up and smile.
+            return new DownloadResult(FLAG_SUCCESS);
+        }
+
+        try {
+            File tmpPath = entry.getTmpDirectory();
+            List<Path> paths = Files.walk(tmpPath.toPath())
+                .filter(path -> !path.equals(tmpPath.toPath())
+                && !Files.isDirectory(path)
+                && VideoContainerEnum.isFileType(path.toFile()))
+                .collect(Collectors.toList());
+
+            AtomicReference<String> lastOutput = new AtomicReference<>();
+
+            FFmpegConfig config;
+            if (!quality.isEnableTranscoding() && main.getConfig().isTranscodeAudioToAAC()) {
+                config = FFmpegConfig.builder()
+                    .audioCodec(AudioCodecEnum.AAC)
+                    .audioBitrate(AudioBitrateEnum.BITRATE_256).build();
+            } else if (quality.isEnableTranscoding()) {
+                // Copy the config, so we can make changes to the selected container
+                config = GDownloader.OBJECT_MAPPER.convertValue(
+                    quality.getTranscodingSettings(), FFmpegConfig.class);
+            } else {
+                return new DownloadResult(FLAG_SUCCESS);
+            }
+
+            if (config.getVideoContainer().isDefault()) {
+                config.setVideoContainer(quality.getVideoContainer());
+            }
+
+            AtomicInteger successCount = new AtomicInteger();
+            AtomicInteger failureCount = new AtomicInteger();
+            for (Path path : paths) {
+                File inputFile = path.toFile();
+                File tmpFile = FileUtils.deriveTempFile(inputFile, config.getVideoContainer().getValue());
+
+                try {
+                    entry.updateStatus(DownloadStatusEnum.TRANSCODING, l10n("gui.transcode.starting"));
+
+                    CancelHook cancelHook = entry.getCancelHook().derive(manager::isRunning, true);
+                    int exitCode = manager.getMain().getFfmpegTranscoder().startTranscode(
+                        config, inputFile, tmpFile, cancelHook,
+                        (output, hasTaskStarted, progress) -> {
+                            lastOutput.set(output);
+
+                            if (hasTaskStarted) {
+                                entry.getMediaCard().setPercentage(progress);
+
+                                entry.updateStatus(DownloadStatusEnum.TRANSCODING, output, false);
+                            }
+                        }
+                    );
+
+                    if (cancelHook.get()) {
+                        return new DownloadResult(FLAG_STOPPED);
+                    }
+
+                    if (exitCode == 0) {
+                        if (!tmpFile.exists()) {
+                            log.error("Transcoding error, output file is missing - exit code: {}", exitCode);
+
+                            return new DownloadResult(FLAG_TRANSCODING_FAILED, lastOutput.get());
+                        }
+
+                        log.info("Transcoding successful - exit code: {}", exitCode);
+
+                        String prefix = "";
+                        if (!main.getConfig().isKeepRawMediaFilesAfterTranscode()) {
+                            Files.deleteIfExists(inputFile.toPath());
+                        } else {
+                            prefix = config.getFileSuffix();
+                        }
+
+                        File finalFile = FileUtils.deriveFile(
+                            inputFile, prefix, config.getVideoContainer().getValue());
+                        tmpFile.renameTo(finalFile);
+
+                        successCount.incrementAndGet();
+                    } else if (exitCode > 0) {
+                        log.error("FFmpeg transcoding error - exit code: {}", exitCode);
+                        failureCount.incrementAndGet();
+                    } else if (exitCode < 0) {
+                        log.info("Transcoding not required - exit code: {}", exitCode);
+                    }
+                } catch (Exception e) {
+                    log.error("Failed to transcode media file: {}", path, e);
+                    failureCount.incrementAndGet();
+                    lastOutput.set(e.getMessage());
+                }
+            }
+
+            if (successCount.get() > 0) {
+                return new DownloadResult(FLAG_SUCCESS);
+            } else if (failureCount.get() > 0) {
+                return new DownloadResult(FLAG_TRANSCODING_FAILED, lastOutput.get());
+            }
+
+            return new DownloadResult(FLAG_SUCCESS);
+        } catch (IOException e) {
+            log.error("Failed to scan media files", e);
+            return new DownloadResult(FLAG_TRANSCODING_FAILED, e.getMessage());
+        }
     }
 
     @Override
@@ -221,7 +349,8 @@ public class GalleryDlDownloader extends AbstractDownloader {
 
         try {
             List<Path> paths = Files.walk(tmpPath.toPath())
-                .filter(path -> !path.equals(tmpPath.toPath()))
+                .filter(path -> !path.equals(tmpPath.toPath())
+                && !path.toString().contains(FileUtils.TMP_FILE_IDENTIFIER))
                 .collect(Collectors.toList());
 
             for (Path path : paths) {

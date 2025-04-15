@@ -91,7 +91,8 @@ public class QueueEntry {
     private final GDownloader main;
 
     private final MediaCard mediaCard;
-    private final AbstractUrlFilter filter;
+    private final String filterId;
+    private final AbstractUrlFilter originalFilter;
     private final String originalUrl;
     private final String url;
     private final long downloadId;
@@ -132,6 +133,15 @@ public class QueueEntry {
 
     @Setter
     private Process process;
+
+    public AbstractUrlFilter getFilter() {
+        Optional<AbstractUrlFilter> filter = main.getConfig().getUrlFilterById(filterId);
+        if (filter.isPresent()) {
+            return filter.get();
+        }
+
+        return originalFilter;
+    }
 
     public void openUrl() {
         main.openUrlInBrowser(originalUrl);
@@ -278,9 +288,9 @@ public class QueueEntry {
 
         if (nullOrEmpty(mediaInfo.getHostDisplayName())) {
             String displayName = Optional.ofNullable(
-                filter.getClass() == GenericFilter.class
+                originalFilter.getClass() == GenericFilter.class
                 ? URLUtils.getHostName(url)
-                : filter.getDisplayName()
+                : originalFilter.getDisplayName()
             ).map(host -> notNullOrEmpty(mediaInfo.getExtractorKey())
                 ? host + " [" + mediaInfo.getExtractorKey() + "]"
                 : host
@@ -379,7 +389,7 @@ public class QueueEntry {
         if (mediaInfo != null && notNullOrEmpty(mediaInfo.getHostDisplayName())) {
             return mediaInfo.getHostDisplayName();
         } else {
-            return filter.getDisplayName();
+            return originalFilter.getDisplayName();
         }
     }
 
@@ -487,7 +497,7 @@ public class QueueEntry {
                 log.debug("[Dispatch {}]: Type: {} Filter: {} CLI: {}",
                     downloadId,
                     currentDownloadType,
-                    filter.getDisplayName(),
+                    originalFilter.getDisplayName(),
                     builtCommandLine);
             }
         }
@@ -739,7 +749,8 @@ public class QueueEntry {
         entity.setOriginalUrl(getOriginalUrl());
         entity.setUrl(getUrl());
         entity.setDownloadId(getDownloadId());
-        entity.setFilter(getFilter());
+        entity.setFilterId(getFilterId());
+        entity.setFilter(getOriginalFilter());
 
         entity.getDownloaderBlacklist().addAll(getDownloaderBlacklist());
 
@@ -783,6 +794,7 @@ public class QueueEntry {
         QueueEntry queueEntry = new QueueEntry(
             GDownloader.getInstance(),
             mediaCard,
+            entity.getFilterId(),
             entity.getFilter(),
             entity.getOriginalUrl(),
             entity.getUrl(),

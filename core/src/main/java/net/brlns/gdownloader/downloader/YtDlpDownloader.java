@@ -28,6 +28,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import lombok.Getter;
@@ -45,6 +46,9 @@ import net.brlns.gdownloader.ffmpeg.structs.FFmpegConfig;
 import net.brlns.gdownloader.persistence.PersistenceManager;
 import net.brlns.gdownloader.process.ProcessArguments;
 import net.brlns.gdownloader.settings.QualitySettings;
+import net.brlns.gdownloader.settings.enums.AudioContainerEnum;
+import net.brlns.gdownloader.settings.enums.SubtitleContainerEnum;
+import net.brlns.gdownloader.settings.enums.ThumbnailContainerEnum;
 import net.brlns.gdownloader.settings.enums.VideoContainerEnum;
 import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
 import net.brlns.gdownloader.util.CancelHook;
@@ -55,7 +59,6 @@ import net.brlns.gdownloader.util.Pair;
 import static net.brlns.gdownloader.downloader.enums.DownloadFlagsEnum.*;
 import static net.brlns.gdownloader.downloader.enums.DownloadTypeEnum.*;
 import static net.brlns.gdownloader.lang.Language.*;
-import static net.brlns.gdownloader.util.FileUtils.isFileType;
 import static net.brlns.gdownloader.util.FileUtils.relativize;
 
 /**
@@ -318,9 +321,9 @@ public class YtDlpDownloader extends AbstractDownloader {
         try {
             File tmpPath = entry.getTmpDirectory();
             List<Path> paths = Files.walk(tmpPath.toPath())
-                .filter(path -> !path.equals(tmpPath.toPath()))
-                .filter(path -> !Files.isDirectory(path))
-                .filter(path -> isFileType(path, quality.getVideoContainer().getValue()))
+                .filter(path -> !path.equals(tmpPath.toPath())
+                && !Files.isDirectory(path)
+                && VideoContainerEnum.isFileType(path.toFile()))
                 .collect(Collectors.toList());
 
             AtomicReference<String> lastOutput = new AtomicReference<>();
@@ -342,6 +345,8 @@ public class YtDlpDownloader extends AbstractDownloader {
                 config.setVideoContainer(quality.getVideoContainer());
             }
 
+            AtomicInteger successCount = new AtomicInteger();
+            AtomicInteger failureCount = new AtomicInteger();
             for (Path path : paths) {
                 File inputFile = path.toFile();
                 File tmpFile = FileUtils.deriveTempFile(inputFile, config.getVideoContainer().getValue());
@@ -387,17 +392,26 @@ public class YtDlpDownloader extends AbstractDownloader {
                             inputFile, prefix, config.getVideoContainer().getValue());
                         tmpFile.renameTo(finalFile);
 
-                        return new DownloadResult(FLAG_SUCCESS);
+                        successCount.incrementAndGet();
                     } else if (exitCode > 0) {
                         log.error("FFmpeg transcoding error - exit code: {}", exitCode);
-                        return new DownloadResult(FLAG_TRANSCODING_FAILED, lastOutput.get());
+                        failureCount.incrementAndGet();
                     } else if (exitCode < 0) {
                         log.info("Transcoding not required - exit code: {}", exitCode);
                     }
                 } catch (Exception e) {
                     log.error("Failed to transcode media file: {}", path, e);
-                    return new DownloadResult(FLAG_TRANSCODING_FAILED, e.getMessage());
+                    failureCount.incrementAndGet();
+                    lastOutput.set(e.getMessage());
                 }
+            }
+
+            if (successCount.get() > 0) {
+                // Consider it a success if at least one transcode suceeded
+                // lets not discard an entire playlist because of one broken file
+                return new DownloadResult(FLAG_SUCCESS);
+            } else if (failureCount.get() > 0) {
+                return new DownloadResult(FLAG_TRANSCODING_FAILED, lastOutput.get());
             }
 
             return new DownloadResult(FLAG_SUCCESS);
@@ -419,8 +433,8 @@ public class YtDlpDownloader extends AbstractDownloader {
 
         try {
             List<Path> paths = Files.walk(tmpPath.toPath())
-                .filter(path -> !path.equals(tmpPath.toPath()))
-                .filter(path -> !path.toString().contains(FileUtils.TMP_FILE_IDENTIFIER))
+                .filter(path -> !path.equals(tmpPath.toPath())
+                && !path.toString().contains(FileUtils.TMP_FILE_IDENTIFIER))
                 .collect(Collectors.toList());
 
             for (Path path : paths) {
@@ -464,11 +478,10 @@ public class YtDlpDownloader extends AbstractDownloader {
     }
 
     private Path determineTargetPath(File tmpPath, File finalPath, Path path, QualitySettings quality) {
-        boolean isAudio = isFileType(path, quality.getAudioContainer().getValue());
-        boolean isVideo = isFileType(path, quality.getVideoContainer().getValue())
-            || isFileType(path, quality.getTranscodingSettings().getVideoContainer().getValue());
-        boolean isSubtitle = isFileType(path, quality.getSubtitleContainer().getValue());
-        boolean isThumbnail = isFileType(path, quality.getThumbnailContainer().getValue());
+        boolean isAudio = AudioContainerEnum.isFileType(path);
+        boolean isVideo = VideoContainerEnum.isFileType(path);
+        boolean isSubtitle = SubtitleContainerEnum.isFileType(path);
+        boolean isThumbnail = ThumbnailContainerEnum.isFileType(path);
 
         if (isAudio || isVideo
             || (isSubtitle && main.getConfig().isDownloadSubtitles())

@@ -16,6 +16,11 @@
  */
 package net.brlns.gdownloader.settings.enums;
 
+import java.io.File;
+import java.nio.file.Path;
+import java.util.Arrays;
+import lombok.NonNull;
+
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
@@ -42,5 +47,15 @@ public enum AudioContainerEnum implements ISettingsEnum, IContainerEnum {
     @Override
     public String getDisplayName() {
         return name().toLowerCase();
+    }
+
+    public static boolean isFileType(@NonNull Path path) {
+        return isFileType(path.toFile());
+    }
+
+    public static boolean isFileType(@NonNull File file) {
+        return Arrays.stream(values())
+            .anyMatch((container) -> file.getName()
+            .endsWith("." + container.getValue()));
     }
 }

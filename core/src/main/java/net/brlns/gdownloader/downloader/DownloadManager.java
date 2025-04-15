@@ -433,6 +433,7 @@ public class DownloadManager implements IEvent {
                 QueueEntry queueEntry = new QueueEntry(
                     main,
                     mediaCard,
+                    filter.getId(),
                     filter,
                     inputUrl,
                     filteredUrl,

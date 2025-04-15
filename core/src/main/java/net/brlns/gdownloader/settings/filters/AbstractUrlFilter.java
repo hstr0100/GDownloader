@@ -51,7 +51,8 @@ import net.brlns.gdownloader.settings.Settings;
     use = JsonTypeInfo.Id.NAME,
     include = JsonTypeInfo.As.EXISTING_PROPERTY,
     property = "Id",
-    defaultImpl = GenericFilter.class
+    defaultImpl = GenericFilter.class,
+    visible = true
 )
 @JsonSubTypes({
     @JsonSubTypes.Type(value = YoutubeFilter.class, name = YoutubeFilter.ID),

@@ -57,6 +57,9 @@ public class QueueEntryEntity implements Serializable {
     @Column(name = "url_filter")
     private AbstractUrlFilter filter;
 
+    @Column(name = "filter_id", length = 128)
+    private String filterId;
+
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "downloader_blacklist", joinColumns = @JoinColumn(name = "download_id"))
     @Enumerated(EnumType.STRING)

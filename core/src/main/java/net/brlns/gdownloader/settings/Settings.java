@@ -22,6 +22,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.TreeMap;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -114,6 +115,9 @@ public class Settings {
 
     @JsonProperty("GalleryDlDeduplication")
     private boolean galleryDlDeduplication = true;
+
+    @JsonProperty("GalleryDlTranscoding")
+    private boolean galleryDlTranscoding = true;
 
     @JsonProperty("GalleryDlEnabled")
     // gallery-dl appears to be unsigned
@@ -245,6 +249,13 @@ public class Settings {
 
     public Settings() {
         urlFilters.addAll(AbstractUrlFilter.getDefaultUrlFilters());
+    }
+
+    @JsonIgnore
+    public Optional<AbstractUrlFilter> getUrlFilterById(String filterId) {
+        return urlFilters.stream()
+            .filter(savedFilter -> savedFilter.getId().equals(filterId))
+            .findFirst();
     }
 
     @JsonIgnore

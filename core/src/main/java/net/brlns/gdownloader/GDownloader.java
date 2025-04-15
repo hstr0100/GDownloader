@@ -125,7 +125,6 @@ import static net.brlns.gdownloader.util.StringUtils.nullOrEmpty;
 // TODO Move config files, downloaders and their respective data to subfolders
 // TODO ctrl+z to undo removals
 // prio
-// TODO reseting download links should also refresh filter references
 // TODO right click > sort by
 // TODO display number in download queue
 /**

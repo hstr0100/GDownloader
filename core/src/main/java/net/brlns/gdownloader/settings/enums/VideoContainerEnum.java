@@ -16,7 +16,10 @@
  */
 package net.brlns.gdownloader.settings.enums;
 
+import java.io.File;
+import java.nio.file.Path;
 import java.util.Arrays;
+import lombok.NonNull;
 
 import static net.brlns.gdownloader.lang.Language.l10n;
 
@@ -58,6 +61,17 @@ public enum VideoContainerEnum implements ISettingsEnum, IContainerEnum {
 
     public boolean isDefault() {
         return this == DEFAULT;
+    }
+
+    public static boolean isFileType(@NonNull Path path) {
+        return isFileType(path.toFile());
+    }
+
+    public static boolean isFileType(@NonNull File file) {
+        return Arrays.stream(values())
+            .filter((container) -> !container.isDefault() && container != GIF)
+            .anyMatch((container) -> file.getName()
+            .endsWith("." + container.getValue()));
     }
 
     public static VideoContainerEnum[] CONTAINERS;
