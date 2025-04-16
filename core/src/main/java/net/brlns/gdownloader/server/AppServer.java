@@ -29,7 +29,6 @@ import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
@@ -60,7 +59,7 @@ public final class AppServer {
     private final AtomicBoolean running = new AtomicBoolean();
 
     private ServerSocket serverSocket;
-    private final ExecutorService executor;
+    private final ExecutorService executor = GDownloader.GLOBAL_THREAD_POOL;
 
     private final Map<String, Function<String, AbstractResult>> commandHandlers = new HashMap<>();
 
@@ -69,8 +68,6 @@ public final class AppServer {
 
         registerCommand("wake-up", this::handleWakeUp);
         registerCommand("shutdown", this::handleShutdown);
-
-        executor = Executors.newVirtualThreadPerTaskExecutor();
     }
 
     public void registerCommand(String command, Function<String, AbstractResult> handler) {

@@ -248,7 +248,7 @@ public class ClipboardManager {
     }
 
     private void triggerRevalidation() {
-        GDownloader.GLOBAL_THREAD_POOL.submitWithPriority(() -> {
+        GDownloader.GLOBAL_THREAD_POOL.execute(() -> {
             //Wait a bit for data to propagate.
             try {
                 Thread.sleep(200);
@@ -258,11 +258,11 @@ public class ClipboardManager {
 
             revalidateClipboard();
             updateClipboard();
-        }, 100);
+        });
     }
 
     private void handleClipboardInput(String data, boolean force) {
-        GDownloader.GLOBAL_THREAD_POOL.submitWithPriority(() -> {
+        GDownloader.GLOBAL_THREAD_POOL.execute(() -> {
             List<CompletableFuture<Boolean>> list = new ArrayList<>();
 
             for (String url : extractUrlsFromString(data)) {
@@ -322,7 +322,7 @@ public class ClipboardManager {
             } catch (TimeoutException e) {
                 log.warn("Timed out waiting for futures");
             }
-        }, 20);
+        });
     }
 
     private void processClipboardData(FlavorType flavorType, String data) {

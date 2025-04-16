@@ -39,6 +39,7 @@ import java.nio.file.attribute.PosixFilePermission;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -148,8 +149,10 @@ public final class GDownloader {
 
     public static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
-    public final static PriorityVirtualThreadExecutor GLOBAL_THREAD_POOL
-        = new PriorityVirtualThreadExecutor();
+    // Virtual threads remove the limitations of a small thread pool.
+    // Task prioritization is no longer necessary.
+    public final static ExecutorService GLOBAL_THREAD_POOL
+        = Executors.newVirtualThreadPerTaskExecutor();
 
     @Getter
     private static GDownloader instance;
@@ -419,7 +422,7 @@ public final class GDownloader {
 
         for (AbstractGitUpdater updater : updaters) {
             if (updater.isSupported()) {
-                GLOBAL_THREAD_POOL.submitWithPriority(() -> {
+                GLOBAL_THREAD_POOL.execute(() -> {
                     try {
                         log.error("Starting updater " + updater.getClass().getName());
                         updater.check(userInitiated);
@@ -431,14 +434,14 @@ public final class GDownloader {
                     } finally {
                         latch.countDown();
                     }
-                }, 5);
+                });
             } else {
                 log.info("Updater " + updater.getClass().getName() + " is not supported on this platform or runtime method.");
                 latch.countDown();
             }
         }
 
-        GLOBAL_THREAD_POOL.submitWithPriority(() -> {
+        GLOBAL_THREAD_POOL.execute(() -> {
             try {
                 latch.await();
             } catch (InterruptedException e) {
@@ -487,7 +490,7 @@ public final class GDownloader {
             }
 
             ffmpegTranscoder.init();
-        }, 5);
+        });
 
         return true;
     }
@@ -1012,7 +1015,7 @@ public final class GDownloader {
             MessageTypeEnum.INFO,
             false, false);
 
-        GLOBAL_THREAD_POOL.submitWithPriority(() -> {
+        GLOBAL_THREAD_POOL.execute(() -> {
             File directory = getDownloadsDirectory();
             if (directory.exists()) {
                 DirectoryDeduplicator.deduplicateDirectory(directory);
@@ -1024,7 +1027,7 @@ public final class GDownloader {
                 2000,
                 MessageTypeEnum.INFO,
                 false, false);
-        }, 0);
+        });
     }
 
     public File getOrCreateDownloadsDirectory() {

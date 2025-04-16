@@ -22,6 +22,7 @@ import net.brlns.gdownloader.GDownloader;
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
+@Deprecated
 public class PriorityVirtualThreadExecutor {
 
     private final ExecutorService virtualThreadExecutor;

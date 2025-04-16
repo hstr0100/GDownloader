@@ -24,8 +24,6 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -111,7 +109,6 @@ public class DownloadManager implements IEvent {
 
     private final ExpiringSet<String> urlIgnoreSet = new ExpiringSet<>(TimeUnit.SECONDS, 20);
 
-    private final ExecutorService forcefulExecutor = Executors.newVirtualThreadPerTaskExecutor();// No limits, power to ya
     private final String _forceStartKey = l10n("gui.force_download_start");
     private final String _restartKey = l10n("gui.restart_download");
 
@@ -148,7 +145,7 @@ public class DownloadManager implements IEvent {
                         false, true);
                 }
 
-                GDownloader.GLOBAL_THREAD_POOL.submitWithPriority(() -> {
+                GDownloader.GLOBAL_THREAD_POOL.execute(() -> {
                     linkCaptureLock.lock();// Intentionally block url capture during the entire restoring proccess
                     try {
                         int count = 0;
@@ -185,7 +182,7 @@ public class DownloadManager implements IEvent {
                     } finally {
                         linkCaptureLock.unlock();
                     }
-                }, 30);
+                });
             }
         } catch (Exception e) {
             GDownloader.handleException(e);
@@ -818,7 +815,7 @@ public class DownloadManager implements IEvent {
     private void submitQueryMetadataTask(QueueEntry queueEntry) {
         currentlyQueryingCount.incrementAndGet();
 
-        GDownloader.GLOBAL_THREAD_POOL.submitWithPriority(() -> {
+        GDownloader.GLOBAL_THREAD_POOL.execute(() -> {
             try {
                 if (queueEntry.getCancelHook().get()) {
                     return;
@@ -839,7 +836,7 @@ public class DownloadManager implements IEvent {
             } finally {
                 currentlyQueryingCount.decrementAndGet();
             }
-        }, 1);
+        });
     }
 
     protected void resetDownload(QueueEntry queueEntry) {
@@ -919,7 +916,7 @@ public class DownloadManager implements IEvent {
 
         offerTo(RUNNING, entry);
 
-        Runnable downloadTask = () -> {
+        GDownloader.GLOBAL_THREAD_POOL.execute(() -> {
             try {
                 if (!downloadsRunning.get()) {
                     if (force) {
@@ -1114,13 +1111,7 @@ public class DownloadManager implements IEvent {
                 dequeue(RUNNING, entry);
                 completeCounter.incrementAndGet();
             }
-        };
-
-        if (force) {
-            forcefulExecutor.execute(downloadTask);
-        } else {
-            GDownloader.GLOBAL_THREAD_POOL.submitWithPriority(downloadTask, 10);
-        }
+        });
     }
 
     @PreDestroy
@@ -1133,7 +1124,5 @@ public class DownloadManager implements IEvent {
         for (AbstractDownloader downloader : downloaders) {
             downloader.close();
         }
-
-        forcefulExecutor.shutdownNow();
     }
 }

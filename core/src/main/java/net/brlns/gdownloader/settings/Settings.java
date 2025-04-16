@@ -169,7 +169,7 @@ public class Settings {
     /**
      * These arguments are intended for quick, ad-hoc flags.
      * For more granular control and per-download-type arguments,
-     * see @link net.brlns.gdownloader.settings.filters.AbstractUrlFilter
+     * see {@link net.brlns.gdownloader.settings.filters.AbstractUrlFilter}
      */
     @JsonProperty("ExtraYtDlpArguments")
     private String extraYtDlpArguments = "";

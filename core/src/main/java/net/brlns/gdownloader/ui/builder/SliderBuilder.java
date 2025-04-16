@@ -31,6 +31,7 @@ import net.brlns.gdownloader.ui.themes.UIColors;
 @Builder
 public class SliderBuilder {
 
+    @NonNull
     private String labelKey;
     private int min;
     private int max;
@@ -52,5 +53,6 @@ public class SliderBuilder {
     private Consumer<Integer> onSet;
     @Nullable
     private Consumer<Integer> onAdjust;
+    @NonNull
     private UIColors background;
 }

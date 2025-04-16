@@ -21,6 +21,7 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NonNull;
 import net.brlns.gdownloader.lang.ITranslatable;
 import net.brlns.gdownloader.ui.themes.UIColors;
 
@@ -31,6 +32,7 @@ import net.brlns.gdownloader.ui.themes.UIColors;
 @Builder
 public class ComboBoxBuilder<T extends ITranslatable> {
 
+    @NonNull
     private String labelKey;
     private T[] values;
     private Supplier<T> getter;
@@ -40,6 +42,7 @@ public class ComboBoxBuilder<T extends ITranslatable> {
     private boolean enabled = true;
     @Nullable
     private Consumer<T> onSet;
+    @NonNull
     private UIColors background;
 
 }

@@ -31,6 +31,7 @@ import net.brlns.gdownloader.ui.themes.UIColors;
 @Builder
 public class TextFieldBuilder {
 
+    @NonNull
     private String labelKey;
     private String placeholderText;
     @Builder.Default
@@ -43,5 +44,6 @@ public class TextFieldBuilder {
     private Consumer<String> setter;
     @Nullable
     private Consumer<String> onSet;
+    @NonNull
     private UIColors background;
 }

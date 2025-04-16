@@ -21,6 +21,7 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NonNull;
 import net.brlns.gdownloader.ui.themes.UIColors;
 
 /**
@@ -30,6 +31,7 @@ import net.brlns.gdownloader.ui.themes.UIColors;
 @Builder
 public class CheckBoxBuilder {
 
+    @NonNull
     private String labelKey;
     private Supplier<Boolean> getter;
     private Consumer<Boolean> setter;
@@ -38,5 +40,6 @@ public class CheckBoxBuilder {
     private boolean enabled = true;
     @Nullable
     private Consumer<Boolean> onSet;
+    @NonNull
     private UIColors background;
 }

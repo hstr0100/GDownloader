@@ -62,7 +62,7 @@ public class OEmbedProviders {
     }
 
     private void loadProviders() {
-        GDownloader.GLOBAL_THREAD_POOL.submitWithPriority(() -> {
+        GDownloader.GLOBAL_THREAD_POOL.execute(() -> {
             try {
                 HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(PROVIDERS_URL))
@@ -90,7 +90,7 @@ public class OEmbedProviders {
             }
 
             loadProvidersFromCache();
-        }, 100);
+        });
     }
 
     private void saveProvidersToCache(String providersJson) {

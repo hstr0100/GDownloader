@@ -1337,9 +1337,12 @@ public class SettingsPanel {
     public static JTextField addTextField(JPanel panel, TextFieldBuilder builder) {
         JLabel label = createLabel(builder.getLabelKey(), LIGHT_TEXT);
 
-        JTextField textField = new JTextField(20);
+        JTextField textField = new JTextField(builder.getColumns());
         textField.setBackground(color(TEXT_AREA_BACKGROUND));
         textField.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+        if (builder.isRequiresRestart()) {
+            textField.setToolTipText(l10n("settings.requires_restart.tooltip"));
+        }
 
         String placeholder = builder.getPlaceholderText();
 
