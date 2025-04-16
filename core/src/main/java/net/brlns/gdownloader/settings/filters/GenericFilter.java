@@ -89,10 +89,11 @@ public class GenericFilter extends AbstractUrlFilter {
 
                 switch (typeEnum) {
                     case ALL -> {
-                        // For backwards compatibility. This should have been a list.
-                        for (String arg : config.getExtraYtDlpArguments().split(" ")) {
-                            if (!arg.isEmpty()) {
-                                arguments.add(arg);
+                        if (config.isEnableExtraArguments()) {
+                            for (String arg : config.getExtraYtDlpArguments().split(" ")) {
+                                if (!arg.trim().isEmpty()) {
+                                    arguments.add(arg);
+                                }
                             }
                         }
 
@@ -261,6 +262,14 @@ public class GenericFilter extends AbstractUrlFilter {
 
                 switch (typeEnum) {
                     case ALL -> {
+                        if (config.isEnableExtraArguments()) {
+                            for (String arg : config.getExtraGalleryDlArguments().split(" ")) {
+                                if (!arg.trim().isEmpty()) {
+                                    arguments.add(arg);
+                                }
+                            }
+                        }
+
                         arguments.add(
                             "--retries", config.getMaxDownloadRetries());
 
@@ -317,6 +326,14 @@ public class GenericFilter extends AbstractUrlFilter {
 
                 switch (typeEnum) {
                     case ALL -> {
+                        if (config.isEnableExtraArguments()) {
+                            for (String arg : config.getExtraSpotDLArguments().split(" ")) {
+                                if (!arg.trim().isEmpty()) {
+                                    arguments.add(arg);
+                                }
+                            }
+                        }
+
                         arguments.add(
                             "--max-retries", config.getMaxDownloadRetries());
 

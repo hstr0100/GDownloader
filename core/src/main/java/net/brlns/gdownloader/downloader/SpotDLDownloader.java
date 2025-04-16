@@ -408,7 +408,6 @@ public class SpotDLDownloader extends AbstractDownloader {
         if (lastOutput.contains("Go to the following URL: ")) {
             if (!FlagUtil.isSet(notificationFlags, NOTIFY_USER_AUTH)) {
                 int httpIndex = lastOutput.indexOf("https://");
-
                 if (httpIndex != -1) {
                     String url = lastOutput.substring(httpIndex).trim();
                     main.openUrlInBrowser(url);

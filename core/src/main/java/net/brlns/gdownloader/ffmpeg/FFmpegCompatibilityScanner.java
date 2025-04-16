@@ -384,22 +384,23 @@ public class FFmpegCompatibilityScanner {
                 if (renderDevices != null && renderDevices.length > 0) {
                     for (File device : renderDevices) {
                         String devicePath = device.getAbsolutePath();
+                        if (!checkVaapiDeviceSupport(encoder, devicePath)) {
+                            continue;
+                        }
 
-                        if (checkVaapiDeviceSupport(encoder, devicePath)) {
-                            if (renderDevices.length == 1) {
-                                // Only one device found, we can skip the benchmark.
-                                return devicePath;
-                            }
+                        if (renderDevices.length == 1) {
+                            // Only one device found, we can skip the benchmark.
+                            return devicePath;
+                        }
 
-                            // Test encoding speed, pick the fastest encoder.
-                            long encodeTime = testVaapiEncodeSpeed(encoder, devicePath);
-                            if (encodeTime > 0 && encodeTime < fastestTime) {
-                                fastestTime = encodeTime;
-                                fastestDevice = devicePath;
+                        // Test encoding speed, pick the fastest encoder.
+                        long encodeTime = testVaapiEncodeSpeed(encoder, devicePath);
+                        if (encodeTime > 0 && encodeTime < fastestTime) {
+                            fastestTime = encodeTime;
+                            fastestDevice = devicePath;
 
-                                if (log.isDebugEnabled()) {
-                                    log.debug("Device: {} encode time: {}ms", devicePath, encodeTime);
-                                }
+                            if (log.isDebugEnabled()) {
+                                log.debug("Device: {} encode time: {}ms", devicePath, encodeTime);
                             }
                         }
                     }

@@ -19,6 +19,8 @@ package net.brlns.gdownloader.ui;
 import jakarta.annotation.Nullable;
 import java.awt.*;
 import java.awt.event.ActionEvent;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.File;
@@ -45,6 +47,7 @@ import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
 import net.brlns.gdownloader.ui.builder.CheckBoxBuilder;
 import net.brlns.gdownloader.ui.builder.ComboBoxBuilder;
 import net.brlns.gdownloader.ui.builder.SliderBuilder;
+import net.brlns.gdownloader.ui.builder.TextFieldBuilder;
 import net.brlns.gdownloader.ui.custom.CustomScrollBarUI;
 import net.brlns.gdownloader.ui.custom.CustomTranscodePanel;
 import net.brlns.gdownloader.ui.message.MessageTypeEnum;
@@ -952,6 +955,44 @@ public class SettingsPanel {
             .setter(settings::setFailDownloadsOnTranscodingFailures)
             .build());
 
+        List<JComponent> extraArgumentFields = new ArrayList<>();
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.enable_extra_arguments")
+            .getter(settings::isEnableExtraArguments)
+            .setter(settings::setEnableExtraArguments)
+            .onSet((selected) -> {
+                enableComponentsAndLabels(extraArgumentFields, selected);
+            })
+            .build());
+
+        extraArgumentFields.add(addTextField(panel, TextFieldBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.extra_yt_dlp_arguments")
+            .getter(settings::getExtraYtDlpArguments)
+            .setter(settings::setExtraYtDlpArguments)
+            .enabled(settings.isEnableExtraArguments())
+            .placeholderText("E.g: --ignore-config --proxy http://example.com:1234")
+            .build()));
+
+        extraArgumentFields.add(addTextField(panel, TextFieldBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.extra_gallery_dl_arguments")
+            .getter(settings::getExtraGalleryDlArguments)
+            .setter(settings::setExtraGalleryDlArguments)
+            .enabled(settings.isEnableExtraArguments())
+            .placeholderText("E.g: --config-ignore --proxy http://example.com:1234")
+            .build()));
+
+        extraArgumentFields.add(addTextField(panel, TextFieldBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.extra_spotdl_arguments")
+            .getter(settings::getExtraSpotDLArguments)
+            .setter(settings::setExtraSpotDLArguments)
+            .enabled(settings.isEnableExtraArguments())
+            .placeholderText("E.g: --proxy http://example.com:1234")
+            .build()));
+
         panel.add(getFillerPanel());
 
         JScrollPane scrollPane = new JScrollPane(panel);
@@ -1291,6 +1332,79 @@ public class SettingsPanel {
         enableComponentAndLabel(comboBox, builder.isEnabled());
 
         return comboBox;
+    }
+
+    public static JTextField addTextField(JPanel panel, TextFieldBuilder builder) {
+        JLabel label = createLabel(builder.getLabelKey(), LIGHT_TEXT);
+
+        JTextField textField = new JTextField(20);
+        textField.setBackground(color(TEXT_AREA_BACKGROUND));
+        textField.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+
+        String placeholder = builder.getPlaceholderText();
+
+        String value = builder.getGetter().get();
+        if (value.isEmpty() && placeholder != null) {
+            textField.setText(placeholder);
+            textField.setForeground(Color.GRAY);
+        } else {
+            textField.setText(value);
+            textField.setForeground(color(TEXT_AREA_FOREGROUND));
+        }
+
+        if (placeholder != null) {
+            textField.addFocusListener(new FocusAdapter() {
+                @Override
+                public void focusGained(FocusEvent e) {
+                    if (textField.getText().equals(placeholder)) {
+                        textField.setForeground(color(TEXT_AREA_FOREGROUND));
+                        textField.setText("");
+                    }
+                }
+
+                @Override
+                public void focusLost(FocusEvent e) {
+                    if (textField.getText().isEmpty()) {
+                        textField.setForeground(Color.GRAY);
+                        textField.setText(placeholder);
+                    }
+                }
+            });
+        }
+
+        textField.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                handleNewText(textField.getText());
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                handleNewText(textField.getText());
+            }
+
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                handleNewText(textField.getText());
+            }
+
+            private void handleNewText(String text) {
+                if (placeholder == null || !text.equals(placeholder)) {
+                    if (builder.getSetter() != null) {
+                        builder.getSetter().accept(text);
+                    }
+
+                    if (builder.getOnSet() != null) {
+                        builder.getOnSet().accept(text);
+                    }
+                }
+            }
+        });
+
+        wrapComponentRow(panel, label, textField, builder.getBackground());
+        enableComponentAndLabel(textField, builder.isEnabled());
+
+        return textField;
     }
 
     public static JCheckBox addCheckBox(JPanel panel, CheckBoxBuilder builder) {

@@ -98,7 +98,6 @@ public class PersistenceManager {
             File databaseFile = new File(databaseDirectory, getDbFileName());
 
             Map<String, String> properties = new HashMap<>();
-
             if (main.getConfig().isRestoreSessionAfterRestart()) {
                 properties.put(PersistenceUnitProperties.DDL_GENERATION,
                     PersistenceUnitProperties.CREATE_OR_EXTEND);

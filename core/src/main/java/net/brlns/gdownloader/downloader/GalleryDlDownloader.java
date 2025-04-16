@@ -138,11 +138,11 @@ public class GalleryDlDownloader extends AbstractDownloader {
 
     @Override
     protected DownloadResult tryDownload(QueueEntry entry) throws Exception {
-        AbstractUrlFilter filter = entry.getFilter();
-
         if (!main.getConfig().isGalleryDlEnabled()) {
             return new DownloadResult(FLAG_DOWNLOADER_DISABLED);
         }
+
+        AbstractUrlFilter filter = entry.getFilter();
 
         File finalPath = main.getOrCreateDownloadsDirectory();
 

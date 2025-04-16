@@ -269,8 +269,8 @@ public class DirectHttpDownloader extends AbstractDownloader {
         try {
             connection = (HttpURLConnection)fileUrl.openConnection();
             connection.setRequestMethod(requestType);
-            int responseCode = connection.getResponseCode();
 
+            int responseCode = connection.getResponseCode();
             if (responseCode != HttpURLConnection.HTTP_OK) {
                 throw new IOException("Server returned HTTP error code: " + responseCode);
             }
@@ -288,8 +288,8 @@ public class DirectHttpDownloader extends AbstractDownloader {
 
     private boolean downloadFile(QueueEntry queueEntry, ProgressUpdater progressCallback) throws Exception {
         URL fileUrl = new URI(queueEntry.getUrl()).toURL();
-        Pair<HttpURLConnection, Integer> connectionPair = openConnection(fileUrl, "HEAD");
 
+        Pair<HttpURLConnection, Integer> connectionPair = openConnection(fileUrl, "HEAD");
         if (connectionPair == null) {
             connectionPair = openConnection(fileUrl, "GET");
         }
@@ -329,7 +329,6 @@ public class DirectHttpDownloader extends AbstractDownloader {
         Path targetPath = basePath.resolve(urlPath);
 
         int pathLength = targetPath.resolve(detectedFileName).toString().length();
-
         if (pathLength > 260 && GDownloader.isWindows()) { // Microsoft shenanigans
             log.info("Long path detected, trimming {}", targetPath);
             targetPath = DirectoryUtils.trimPathToFit(basePath, urlPath, detectedFileName, 260);

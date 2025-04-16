@@ -30,7 +30,6 @@ import lombok.extern.slf4j.Slf4j;
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-// TODO
 @Slf4j
 @RequiredArgsConstructor
 public class DownloadIntervalometer {
@@ -67,7 +66,6 @@ public class DownloadIntervalometer {
                 } else {
                     int remainingTime = currentData.getInterval() - (int)elapsedSeconds;
                     resultInterval.set(remainingTime);
-
                     return new AtomicReference<>(new HostData(currentTime, currentData.getInterval()));
                 }
             });

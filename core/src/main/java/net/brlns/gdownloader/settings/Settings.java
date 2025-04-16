@@ -45,8 +45,10 @@ import net.brlns.gdownloader.settings.filters.GenericFilter;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class Settings {
 
+    public static final int CONFIG_VERSION = 33;
+
     @JsonProperty("ConfigVersion")
-    private int configVersion = 32;
+    private int configVersion = CONFIG_VERSION;
 
     @JsonProperty("MonitorClipboardForLinks")
     private boolean monitorClipboardForLinks = true;
@@ -161,8 +163,22 @@ public class Settings {
     @JsonProperty("CaptureAnyLinks")
     private boolean captureAnyLinks = false;
 
+    @JsonProperty("EnableExtraArguments")
+    private boolean enableExtraArguments = false;
+
+    /**
+     * These arguments are intended for quick, ad-hoc flags.
+     * For more granular control and per-download-type arguments,
+     * see @link net.brlns.gdownloader.settings.filters.AbstractUrlFilter
+     */
     @JsonProperty("ExtraYtDlpArguments")
     private String extraYtDlpArguments = "";
+
+    @JsonProperty("ExtraGalleryDlArguments")
+    private String extraGalleryDlArguments = "";
+
+    @JsonProperty("ExtraSpotDLArguments")
+    private String extraSpotDLArguments = "";
 
     @JsonProperty("ImpersonateBrowser")
     private boolean impersonateBrowser = false;
@@ -311,5 +327,11 @@ public class Settings {
                 qSettings.setAudioCodec(AudioCodecEnum.NO_CODEC);
             }
         }
+
+        if (!getExtraYtDlpArguments().isEmpty() && getConfigVersion() < 33) {
+            setEnableExtraArguments(true);
+        }
+
+        setConfigVersion(CONFIG_VERSION);
     }
 }

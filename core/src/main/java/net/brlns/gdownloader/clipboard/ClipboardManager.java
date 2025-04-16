@@ -175,8 +175,6 @@ public class ClipboardManager {
 
         clipboardLock.lock();
         try {
-            boolean success = false;
-
             if (transferable == null) {
                 transferable = clipboard.getContents(null);
             }
@@ -185,6 +183,7 @@ public class ClipboardManager {
                 return false;
             }
 
+            boolean success = false;
             for (FlavorType flavorType : FlavorType.values()) {
                 if (transferable.isDataFlavorSupported(flavorType.getFlavor())) {
                     try {
@@ -282,8 +281,6 @@ public class ClipboardManager {
             CompletableFuture<Void> futures = CompletableFuture.allOf(list.toArray(CompletableFuture[]::new));
 
             futures.thenRun(() -> {
-                int captured = 0;
-
                 List<Boolean> results = list.stream()
                     .map(future -> {
                         try {
@@ -295,6 +292,7 @@ public class ClipboardManager {
                     })
                     .collect(Collectors.toList());
 
+                int captured = 0;
                 for (boolean result : results) {
                     if (result) {
                         captured++;
@@ -333,7 +331,6 @@ public class ClipboardManager {
         }
 
         String last = lastClipboardState.get(flavorType);
-
         if (!last.equals(data)) {
             lastClipboardState.put(flavorType, data);
 

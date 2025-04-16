@@ -269,15 +269,12 @@ public final class GDownloader {
             setupAppServer();
 
             processMonitor = new ProcessMonitor();
-
             persistenceManager = new PersistenceManager(this);
             persistenceManager.init();
 
             ffmpegTranscoder = new FFmpegTranscoder(processMonitor);
-
             clipboardManager = new ClipboardManager(this);
             downloadManager = new DownloadManager(this);
-
             guiManager = new GUIManager(this);
 
             // Register to the system tray
@@ -290,7 +287,6 @@ public final class GDownloader {
 
                     trayIcon = new TrayIcon(image, REGISTRY_APP_NAME, buildPopupMenu());
                     trayIcon.setImageAutoSize(true);
-
                     trayIcon.addActionListener((ActionEvent e) -> {
                         initUi();
                     });
@@ -1279,8 +1275,8 @@ public final class GDownloader {
 
     public static boolean isFlaggedAsPortable() {
         String appPath = System.getProperty("jpackage.app-path");
-
-        // Updates are portable versions, but we don't want those to run in portable mode unless explicity determined by the --portable flag.
+        // Updates are portable versions, but we don't want those to run in portable
+        // mode unless explicity determined by the --portable flag.
         if (appPath != null && appPath.contains(UpdaterBootstrap.PREFIX)) {
             return false;
         }
@@ -1457,12 +1453,11 @@ public final class GDownloader {
     public static void setUIFont(FontUIResource fontResource) {
         UIManager.getDefaults().keys().asIterator()
             .forEachRemaining(key -> {
-                Object value = UIManager.get(key);
-
                 if (key.toString().contains("FileChooser")) {
                     return;
                 }
 
+                Object value = UIManager.get(key);
                 if (value instanceof FontUIResource) {
                     UIManager.put(key, fontResource);
                 }
@@ -1473,56 +1468,11 @@ public final class GDownloader {
         UIManager.getDefaults().keys().asIterator()
             .forEachRemaining(key -> {
                 Object value = UIManager.get(key);
-
                 if (value instanceof FontUIResource resource) {
                     Font newFont = resource.deriveFont((float)size);
 
                     UIManager.put(key, new FontUIResource(newFont));
                 }
             });
-    }
-
-    // [xcb] Unknown sequence number while processing queue
-    // [xcb] You called XInitThreads, this is not your fault
-    // [xcb] Aborting, sorry about that.
-    // java: ../../src/xcb_io.c:278: poll_for_event: Assertion `!xcb_xlib_threads_sequence_lost' failed.
-    // Aborted (core dumped)
-    private static boolean isLinuxAndAmdGpu() {
-        if (!isLinux()) {
-            return false;
-        }
-
-        try {
-            Process process = Runtime.getRuntime().exec(new String[] {"/bin/bash", "-c", "lspci | grep VGA"});
-            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-
-            boolean isAMD = false;
-
-            String line;
-            while ((line = reader.readLine()) != null) {
-                String lower = line.toLowerCase();
-                if (lower.contains("amd")
-                    || lower.contains("radeon")
-                    || lower.contains("advanced micro devices")) {
-                    isAMD = true;
-                    break;
-                }
-            }
-
-            process.waitFor();
-
-            if (isAMD) {
-                log.error("Detected AMD Graphics, disabling HW acceleration due to a known issue.");
-                return true;
-            }
-        } catch (Exception e) {
-            log.error("Unable to query for GPU info.");
-
-            if (log.isDebugEnabled()) {
-                log.error("Exception: ", e);
-            }
-        }
-
-        return false;
     }
 }
