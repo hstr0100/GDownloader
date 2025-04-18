@@ -706,6 +706,7 @@ public class DownloadManager implements IEvent {
 
     public List<Integer> getSortedMediaCardIds() {
         return sequencer.getSnapshot().stream()
+            .filter(e -> !e.getCancelHook().get())
             .map(e -> e.getMediaCard().getId())
             .collect(Collectors.toList());
     }

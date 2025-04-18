@@ -114,13 +114,6 @@ public class DownloadSequencer {
             entry.setCurrentQueueCategory(category);
             categorySets.get(category).add(downloadId);
 
-            log.debug("Added id: {}, prevSeq: {}, seq: {}, prio: {}, category: {}",
-                downloadId,
-                previousSequence,
-                entry.getCurrentSequence(),
-                entry.getDownloadPriority(),
-                category);
-
             return entry;
         } finally {
             sequencerLock.unlock();
@@ -202,11 +195,6 @@ public class DownloadSequencer {
 
                     updateEntryCategory(queueEntry, RUNNING);
 
-                    log.debug("Fetched next entry id: {}, prio: {}, seq: {}",
-                        downloadId,
-                        queueEntry.getDownloadPriority(),
-                        queueEntry.getCurrentSequence());
-
                     return queueEntry;
                 }
             }
@@ -240,8 +228,6 @@ public class DownloadSequencer {
                 EntryKey key = createEntryKey(entry);
                 priorityQueue.remove(key);
                 priorityQueue.put(key, entry);
-
-                log.debug("Requeued failed entry id: {}", id);
             }
         } finally {
             sequencerLock.unlock();
@@ -306,9 +292,6 @@ public class DownloadSequencer {
 
             priorityQueue.put(createEntryKey(entryToMove), entryToMove);
 
-            log.debug("Swapped: id1: {}, id2: {}, seq1: {}. seq2: {}",
-                id1, id2, seq1, seq2);
-
             return true;
         } finally {
             sequencerLock.unlock();
@@ -350,9 +333,6 @@ public class DownloadSequencer {
                 storedEntry.setDownloadPriority(priority);
 
                 priorityQueue.put(createEntryKey(storedEntry), storedEntry);
-
-                log.debug("Updated priority for entry id: {}, new prio: {}",
-                    downloadId, priority);
             } else if (storedEntry == null) {
                 log.warn("Couldn't update priority, entry not found in entriesById: {}", downloadId);
             }
@@ -416,9 +396,6 @@ public class DownloadSequencer {
     private boolean updateEntryCategory(QueueEntry entry, QueueCategoryEnum newCategory) {
         long downloadId = entry.getDownloadId();
         QueueCategoryEnum currentCategory = entry.getCurrentQueueCategory();
-
-        log.debug("Changing category for id: {} from {} to {}",
-            downloadId, currentCategory, newCategory);
 
         if (!categorySets.get(currentCategory).remove(downloadId)) {
             log.warn("Entry was not in its category set: {} should be in {}",

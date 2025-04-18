@@ -1536,7 +1536,9 @@ public final class GUIManager {
                     Integer cardId = newOrderIds.get(i);
 
                     if (!idToComponentMap.containsKey(cardId)) {
+                        // The UI is not kept in perfect sync with the sequencer.
                         log.warn("Media card with ID {} not found for reordering", cardId);
+                        return;
                     }
                 }
 
