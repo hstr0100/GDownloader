@@ -144,13 +144,13 @@ public class DownloadSequencer {
                     for (QueueCategoryEnum category : QueueCategoryEnum.values()) {
                         categorySets.get(category).remove(downloadId);
                     }
-
-                    return true;
                 } else {
-                    log.error("Key: {} was missing, cannot remove entry", key);
+                    log.error("Key: {} was missing from priorityQueue, cannot fully remove entry", key);
                 }
+
+                return true;
             } else {
-                log.error("Download id: {} was missing, cannot remove entry", downloadId);
+                log.error("Download id {} was missing from entriesById, cannot remove entry", downloadId);
             }
 
             return false;

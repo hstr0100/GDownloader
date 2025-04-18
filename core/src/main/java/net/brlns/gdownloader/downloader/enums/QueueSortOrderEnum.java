@@ -19,7 +19,10 @@ package net.brlns.gdownloader.downloader.enums;
 import java.util.Comparator;
 import lombok.Getter;
 import net.brlns.gdownloader.downloader.QueueEntry;
+import net.brlns.gdownloader.downloader.structs.MediaInfo;
 import net.brlns.gdownloader.settings.enums.ISettingsEnum;
+
+import static net.brlns.gdownloader.util.StringUtils.nullOrEmpty;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -29,14 +32,28 @@ public enum QueueSortOrderEnum implements ISettingsEnum {
     URL("enums.sort_order.url", (e1, e2) -> {
         return e1.getUrl().compareTo(e2.getUrl());
     }),
-    ADDED("enums.sort_order.added", (e1, e2) -> {
-        return Long.compare(e1.getDownloadId(), e2.getDownloadId());
+    TITLE("enums.sort_order.title", (e1, e2) -> {
+        MediaInfo info1 = e1.getMediaInfo();
+        MediaInfo info2 = e2.getMediaInfo();
+
+        if (info1 == null && info2 == null) {
+            return 0;
+        } else if (info1 == null || nullOrEmpty(info1.getTitle())) {
+            return 1;
+        } else if (info2 == null || nullOrEmpty(info2.getTitle())) {
+            return -1;
+        } else {
+            return info1.getTitle().compareTo(info2.getTitle());
+        }
     }),
     STATUS("enums.sort_order.status", (e1, e2) -> {
         return Integer.compare(
             e1.getCurrentQueueCategory().getComparatorOrder(),
             e2.getCurrentQueueCategory().getComparatorOrder()
         );
+    }),
+    ADDED("enums.sort_order.added", (e1, e2) -> {
+        return Long.compare(e1.getDownloadId(), e2.getDownloadId());
     }),
     SEQUENCE("enums.sort_order.sequence", (e1, e2) -> {
         if (e1.getCurrentSequence() == null || e2.getCurrentSequence() == null) {
