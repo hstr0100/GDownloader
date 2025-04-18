@@ -1087,7 +1087,7 @@ public final class GUIManager {
                         card.setBackground(color(MEDIA_CARD));
 
                         int fontSize = main.getConfig().getFontSize();
-                        Dimension cardDimension = new Dimension(Integer.MAX_VALUE, fontSize >= 15 ? 150 + (fontSize - 15) * 3 : 135);
+                        Dimension cardDimension = new Dimension(0, fontSize >= 15 ? 150 + (fontSize - 15) * 3 : 135);
                         card.setMaximumSize(cardDimension);
 
                         GridBagConstraints gbc = new GridBagConstraints();
@@ -1684,19 +1684,21 @@ public final class GUIManager {
 
     // https://stackoverflow.com/questions/5147768/scroll-jscrollpane-to-bottom
     private static void scrollToBottom(JScrollPane scrollPane) {
-        JScrollBar verticalBar = scrollPane.getVerticalScrollBar();
+        SwingUtilities.invokeLater(() -> {
+            JScrollBar verticalBar = scrollPane.getVerticalScrollBar();
+            verticalBar.setValue(verticalBar.getMaximum());
 
-        verticalBar.addAdjustmentListener(new AdjustmentListener() {
-            @Override
-            public void adjustmentValueChanged(AdjustmentEvent e) {
-                Adjustable adjustable = e.getAdjustable();
-                if (adjustable.getValue() + adjustable.getVisibleAmount() >= adjustable.getMaximum()) {
-                    return;
+            verticalBar.addAdjustmentListener(new AdjustmentListener() {
+                boolean firstTime = true;
+
+                @Override
+                public void adjustmentValueChanged(AdjustmentEvent e) {
+                    if (firstTime) {
+                        verticalBar.setValue(verticalBar.getMaximum());
+                        firstTime = false;
+                    }
                 }
-
-                adjustable.setValue(adjustable.getMaximum());
-                verticalBar.removeAdjustmentListener(this);
-            }
+            });
         });
     }
 

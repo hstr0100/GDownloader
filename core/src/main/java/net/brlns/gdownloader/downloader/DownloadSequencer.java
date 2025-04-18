@@ -28,6 +28,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NonNull;
+import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.downloader.enums.DownloadPriorityEnum;
 import net.brlns.gdownloader.downloader.enums.QueueCategoryEnum;
@@ -140,12 +141,13 @@ public class DownloadSequencer {
                 EntryKey key = createEntryKey(removed);
 
                 QueueEntry removedEntry = priorityQueue.remove(key);
-                if (removedEntry != null) {
-                    for (QueueCategoryEnum category : QueueCategoryEnum.values()) {
-                        categorySets.get(category).remove(downloadId);
-                    }
-                } else {
-                    log.error("Key: {} was missing from priorityQueue, cannot fully remove entry", key);
+                if (removedEntry == null) {
+                    log.error("Key: {} was missing from priorityQueue, cannot remove entry by key match", key);
+                    priorityQueue.keySet().removeIf(k -> k.getDownloadId() == key.getDownloadId());
+                }
+
+                for (QueueCategoryEnum category : QueueCategoryEnum.values()) {
+                    categorySets.get(category).remove(downloadId);
                 }
 
                 return true;
@@ -532,6 +534,7 @@ public class DownloadSequencer {
         private final long downloadId;
         private final QueueSortOrderEnum sortOrder;
 
+        @ToString.Exclude
         @EqualsAndHashCode.Exclude
         private final QueueEntry entryReference;
 
