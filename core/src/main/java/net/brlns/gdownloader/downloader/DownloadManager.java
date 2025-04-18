@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 hstr0100
+ * Copyright (C) 2025 hstr0100
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -65,7 +65,6 @@ import static net.brlns.gdownloader.util.URLUtils.*;
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-// TODO contention and stress tests
 @Slf4j
 public class DownloadManager implements IEvent {
 
@@ -684,6 +683,7 @@ public class DownloadManager implements IEvent {
     }
 
     public void clearQueue(QueueCategoryEnum category, CloseReasonEnum reason, boolean fireListeners) {
+        // TODO: maybe race condition here
         List<QueueEntry> entries = sequencer.getEntries(category);
         for (QueueEntry entry : entries) {
             if (reason == CloseReasonEnum.SHUTDOWN && !entry.getCancelHook().get()) {
@@ -716,6 +716,10 @@ public class DownloadManager implements IEvent {
 
     private void updateRightClick(QueueEntry entry, QueueCategoryEnum category) {
         if (category == COMPLETED || category == FAILED) {
+            if (category == COMPLETED) {
+                entry.removeRightClick(_downloadPriorityKey);
+            }
+
             entry.addRightClick(_restartKey, () -> stopDownload(entry, () -> {
                 resetDownload(entry);
                 submitDownloadTask(entry, true);
@@ -996,7 +1000,6 @@ public class DownloadManager implements IEvent {
                             entry.updateMediaRightClickOptions();
 
                             entry.setDownloadPriority(DownloadPriorityEnum.NORMAL);
-                            entry.removeRightClick(_downloadPriorityKey);
 
                             entry.updateStatus(DownloadStatusEnum.COMPLETE, l10n("gui.download_status.finished"));
                             entry.cleanDirectories();
