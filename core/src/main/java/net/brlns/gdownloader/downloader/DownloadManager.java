@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 hstr0100
+ * Copyright (C) 2024 hstr0100
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -477,7 +477,12 @@ public class DownloadManager implements IEvent {
                 linkCaptureLock.unlock();
             }
 
-            sequencer.removeEntry(queueEntry);
+            if (sequencer.removeEntry(queueEntry)) {
+                fireListeners();
+            } else {
+                log.error("Failed to remove entry id {} from sequencer",
+                    queueEntry.getDownloadId());
+            }
 
             if (reason != CloseReasonEnum.SHUTDOWN) {
                 deleteCheckpoint(queueEntry);
@@ -643,7 +648,9 @@ public class DownloadManager implements IEvent {
             if (currentlyQueryingCount.get() < 2) {
                 QueueEntry entry = metadataQueryQueue.poll();
 
-                submitQueryMetadataTask(entry);
+                if (!entry.getCancelHook().get()) {
+                    submitQueryMetadataTask(entry);
+                }
             }
         }
 
@@ -683,17 +690,13 @@ public class DownloadManager implements IEvent {
     }
 
     public void clearQueue(QueueCategoryEnum category, CloseReasonEnum reason, boolean fireListeners) {
-        // TODO: maybe race condition here
-        List<QueueEntry> entries = sequencer.getEntries(category);
-        for (QueueEntry entry : entries) {
+        sequencer.removeAll(category, (entry) -> {
             if (reason == CloseReasonEnum.SHUTDOWN && !entry.getCancelHook().get()) {
                 saveCheckpoint(entry);
             }
 
-            sequencer.removeEntry(entry);
-
             main.getGuiManager().removeMediaCard(entry.getMediaCard().getId(), reason);
-        }
+        });
 
         if (fireListeners) {
             fireListeners();
@@ -704,14 +707,21 @@ public class DownloadManager implements IEvent {
         sequencer.updatePriority(entry, priority);
     }
 
+    public List<Integer> getSortedMediaCardIds() {
+        return sequencer.getSnapshot().stream()
+            .map(e -> e.getMediaCard().getId())
+            .collect(Collectors.toList());
+    }
+
     public void setSortOrder(QueueSortOrderEnum sortOrder) {
         sequencer.setSortOrder(sortOrder);
 
-        List<MediaCard> list = sequencer.getSnapshot().stream()
-            .map(e -> e.getMediaCard())
-            .collect(Collectors.toList());
+        main.getGuiManager().reorderMediaCards(
+            getSortedMediaCardIds());
+    }
 
-        main.getGuiManager().reorderMediaCards(list);
+    public QueueSortOrderEnum getSortOrder() {
+        return sequencer.getCurrentSortOrder();
     }
 
     private void updateRightClick(QueueEntry entry, QueueCategoryEnum category) {
@@ -999,7 +1009,7 @@ public class DownloadManager implements IEvent {
                             downloader.processMediaFiles(entry);
                             entry.updateMediaRightClickOptions();
 
-                            entry.setDownloadPriority(DownloadPriorityEnum.NORMAL);
+                            updatePriority(entry, DownloadPriorityEnum.NORMAL);
 
                             entry.updateStatus(DownloadStatusEnum.COMPLETE, l10n("gui.download_status.finished"));
                             entry.cleanDirectories();
@@ -1048,6 +1058,7 @@ public class DownloadManager implements IEvent {
                 entry.getRunning().set(false);
 
                 if (entry.getCurrentQueueCategory() == RUNNING) {
+                    log.error("Unexpected RUNNING download state, switching to QUEUED");
                     offerTo(QUEUED, entry);
                 }
 

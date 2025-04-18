@@ -37,7 +37,7 @@ public class MultiActionMenuEntry<T> implements IMenuEntry {
 
     private final Consumer<Collection<T>> action;
 
-    private String iconAsset;
+    private Supplier<String> iconAsset;
 
     @SuppressWarnings("unchecked")
     public void processActions(List<IMenuEntry> entries) {

@@ -21,12 +21,12 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import lombok.Getter;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.downloader.enums.DownloadPriorityEnum;
@@ -50,7 +50,8 @@ public class DownloadSequencer {
     private final ConcurrentSkipListMap<EntryKey, QueueEntry> priorityQueue = new ConcurrentSkipListMap<>();
     private final EnumMap<QueueCategoryEnum, Set<Long>> categorySets = new EnumMap<>(QueueCategoryEnum.class);
 
-    private final AtomicReference<Comparator<QueueEntry>> sortOrderComparator = new AtomicReference<>();
+    @Getter
+    private QueueSortOrderEnum currentSortOrder = QueueSortOrderEnum.SEQUENCE;
 
     private final ReentrantLock sequencerLock = new ReentrantLock();
 
@@ -63,31 +64,11 @@ public class DownloadSequencer {
     public void setSortOrder(QueueSortOrderEnum sortOrder) {
         sequencerLock.lock();
         try {
-            sortOrderComparator.set(sortOrder.getComparator());
+            currentSortOrder = sortOrder;
             recreateAllKeys();
         } finally {
             sequencerLock.unlock();
         }
-    }
-
-    private int compareSortOrder(long firstId, long secondId) {
-        sequencerLock.lock();
-        try {
-            QueueEntry thisEntry = entriesById.get(firstId);
-            QueueEntry otherEntry = entriesById.get(secondId);
-
-            Comparator<QueueEntry> comparator = sortOrderComparator.get();
-            if (comparator != null && thisEntry != null && otherEntry != null) {
-                int secondaryCmp = comparator.compare(thisEntry, otherEntry);
-                if (secondaryCmp != 0) {
-                    return secondaryCmp;
-                }
-            }
-        } finally {
-            sequencerLock.unlock();
-        }
-
-        return 0;
     }
 
     public boolean contains(QueueEntry entry) {
@@ -106,7 +87,7 @@ public class DownloadSequencer {
     public QueueEntry addNewEntry(QueueEntry entry) {
         sequencerLock.lock();
         try {
-            entryTarget();
+            checkSequenceOverflow();
 
             long downloadId = entry.getDownloadId();
 
@@ -156,15 +137,22 @@ public class DownloadSequencer {
             QueueEntry removed = entriesById.remove(downloadId);
 
             if (removed != null) {
-                priorityQueue.remove(createEntryKey(removed));
+                EntryKey key = createEntryKey(removed);
 
-                for (QueueCategoryEnum category : QueueCategoryEnum.values()) {
-                    categorySets.get(category).remove(downloadId);
+                QueueEntry removedEntry = priorityQueue.remove(key);
+                if (removedEntry != null) {
+                    for (QueueCategoryEnum category : QueueCategoryEnum.values()) {
+                        categorySets.get(category).remove(downloadId);
+                    }
+
+                    return true;
+                } else {
+                    log.error("Key: {} was missing, cannot remove entry", key);
                 }
-
-                log.debug("Removed entry id: {}", downloadId);
-                return true;
+            } else {
+                log.error("Download id: {} was missing, cannot remove entry", downloadId);
             }
+
             return false;
         } finally {
             sequencerLock.unlock();
@@ -254,6 +242,29 @@ public class DownloadSequencer {
                 priorityQueue.put(key, entry);
 
                 log.debug("Requeued failed entry id: {}", id);
+            }
+        } finally {
+            sequencerLock.unlock();
+        }
+    }
+
+    public void removeAll(QueueCategoryEnum category, @NonNull Consumer<QueueEntry> removeAction) {
+        sequencerLock.lock();
+        try {
+            Set<Long> toRemoveIds = new HashSet<>(categorySets.get(category));
+
+            for (Long id : toRemoveIds) {
+                QueueEntry entry = entriesById.get(id);
+                if (entry == null) {
+                    log.warn("Entry for removal was not found in entriesById: {}", id);
+                    continue;
+                }
+
+                if (removeEntry(entry)) {
+                    removeAction.accept(entry);
+                } else {
+                    log.warn("Failed to remove entry id: {}", id);
+                }
             }
         } finally {
             sequencerLock.unlock();
@@ -454,11 +465,10 @@ public class DownloadSequencer {
 
         for (QueueEntry entry : entries.values()) {
             entry.setCurrentSequence(entry.getCurrentSequence() + shift);
-
         }
     }
 
-    private void entryTarget() {
+    private void checkSequenceOverflow() {
         if (sequenceGenerator.get() >= SEQUENCE_RESET_THRESHOLD) {
             log.info("Sequence generator approaching a overflow, recomputing sequences");
             recomputeSequences();
@@ -494,6 +504,7 @@ public class DownloadSequencer {
 
             for (Map.Entry<EntryKey, QueueEntry> entry : priorityQueue.entrySet()) {
                 QueueEntry queueEntry = entry.getValue();
+                queueEntry.setTemporarySortOrder(currentSortOrder);
                 EntryKey newKey = createEntryKey(queueEntry);
                 newPriorityQueue.put(newKey, queueEntry);
             }
@@ -510,7 +521,8 @@ public class DownloadSequencer {
             entry.getDownloadPriority().getWeight(),
             entry.getCurrentSequence(),
             entry.getDownloadId(),
-            this
+            entry.getTemporarySortOrder(),
+            entry
         );
     }
 
@@ -520,9 +532,10 @@ public class DownloadSequencer {
         private final int weight;
         private final long sequence;
         private final long downloadId;
+        private final QueueSortOrderEnum sortOrder;
 
         @EqualsAndHashCode.Exclude
-        private final DownloadSequencer sequencer;
+        private final QueueEntry entryReference;
 
         @Override
         public int compareTo(EntryKey other) {
@@ -531,7 +544,8 @@ public class DownloadSequencer {
                 return priorityCmp;
             }
 
-            int sortOrderCmp = sequencer.compareSortOrder(getDownloadId(), other.getDownloadId());
+            int sortOrderCmp = sortOrder.getComparator()
+                .compare(getEntryReference(), other.getEntryReference());
             if (sortOrderCmp != 0) {
                 return sortOrderCmp;
             }

@@ -16,6 +16,7 @@
  */
 package net.brlns.gdownloader.ui.menu;
 
+import java.util.function.Supplier;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +30,6 @@ import lombok.RequiredArgsConstructor;
 public class RunnableMenuEntry implements IMenuEntry {
 
     private final Runnable runnable;
-    private String iconAsset;
+    private Supplier<String> iconAsset;
 
 }

@@ -50,6 +50,7 @@ import net.brlns.gdownloader.downloader.enums.DownloadStatusEnum;
 import net.brlns.gdownloader.downloader.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.downloader.enums.QueueCategoryEnum;
+import net.brlns.gdownloader.downloader.enums.QueueSortOrderEnum;
 import net.brlns.gdownloader.downloader.structs.MediaInfo;
 import net.brlns.gdownloader.persistence.entity.QueueEntryEntity;
 import net.brlns.gdownloader.settings.enums.AudioContainerEnum;
@@ -103,6 +104,9 @@ public class QueueEntry {
 
     private final AtomicReference<DownloaderIdEnum> forcedDownloader
         = new AtomicReference<>(null);
+
+    @Setter
+    private QueueSortOrderEnum temporarySortOrder = QueueSortOrderEnum.SEQUENCE;
 
     @Setter
     private Long currentSequence;
@@ -646,7 +650,7 @@ public class QueueEntry {
             submenu.put(priority.getDisplayName(),
                 new RunnableMenuEntry(() -> {
                     manager.updatePriority(this, priority);
-                }, priority.getIconAsset()));
+                }, () -> priority.getIconAsset()));
         }
 
         return submenu;

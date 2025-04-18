@@ -99,7 +99,13 @@ public class RightClickMenu {
         for (Map.Entry<String, IMenuEntry> entry : actions.entrySet()) {
             String key = entry.getKey();
             IMenuEntry value = entry.getValue();
-            JButton button = new CustomMenuButton(key, value.getIconAsset());
+
+            String iconAsset = null;
+            if (value.getIconAsset() != null) {
+                iconAsset = value.getIconAsset().get();
+            }
+
+            JButton button = new CustomMenuButton(key, iconAsset);
 
             button.addActionListener(e -> {
                 switch (value) {

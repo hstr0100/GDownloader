@@ -1445,61 +1445,6 @@ public final class GUIManager {
         });
     }
 
-    public void reorderMediaCards(@NonNull List<MediaCard> newOrder) {
-        if (newOrder.isEmpty()) {
-            return;
-        }
-
-        for (MediaCard card : newOrder) {
-            if (!mediaCards.containsKey(card.getId())) {
-                log.error("Cannot reorder: Media card with ID {} not found", card.getId());
-                return;
-            }
-        }
-
-        runOnEDT(() -> {
-            try {
-                queuePanel.setIgnoreRepaint(true);
-
-                List<Component> existingComponents = new ArrayList<>();
-                for (Component component : queuePanel.getComponents()) {
-                    if (component instanceof JPanel
-                        && ((JPanel)component).getClientProperty("MEDIA_CARD") != null) {
-                        existingComponents.add(component);
-                    }
-                }
-
-                for (Component component : existingComponents) {
-                    queuePanel.remove(component);
-                }
-
-                for (MediaCard card : newOrder) {
-                    CustomMediaCardUI ui = card.getUi();
-                    if (ui != null && ui.getCard() != null) {
-                        queuePanel.add(ui.getCard());
-                    } else {
-                        log.warn("UI for media card {} is not initialized", card.getId());
-                    }
-                }
-
-                queuePanel.revalidate();
-                queuePanel.repaint();
-
-                if (queueScrollPane.getViewport().getScrollMode()
-                    == JViewport.BACKINGSTORE_SCROLL_MODE) {
-                    queueScrollPane.getViewport().revalidate();
-                    queueScrollPane.getViewport().repaint();
-                }
-
-                if (!selectedMediaCards.isEmpty()) {
-                    updateMediaCardSelectionState();
-                }
-            } finally {
-                queuePanel.setIgnoreRepaint(false);
-            }
-        });
-    }
-
     public boolean handleMediaCardDnD(MediaCard mediaCard, Component dropTarget) {
         CustomMediaCardUI ui = mediaCard.getUi();
 
@@ -1553,6 +1498,132 @@ public final class GUIManager {
         Component component = queuePanel.getComponents()[index];
 
         return (MediaCard)((JPanel)component).getClientProperty("MEDIA_CARD");
+    }
+
+    public void reorderMediaCards(@NonNull List<Integer> newOrderIds) {
+        if (newOrderIds.isEmpty()) {
+            return;
+        }
+
+        runOnEDT(() -> {
+            try {
+                queuePanel.setIgnoreRepaint(true);
+
+                List<Component> components = new ArrayList<>();
+                Map<Integer, Component> idToComponentMap = new HashMap<>();
+                Map<Integer, Integer> currentOrderMap = new HashMap<>();
+
+                int index = 0;
+                for (Component component : queuePanel.getComponents()) {
+                    if (component instanceof JPanel panel) {
+                        MediaCard card = (MediaCard)panel.getClientProperty("MEDIA_CARD");
+                        if (card != null) {
+                            components.add(component);
+                            idToComponentMap.put(card.getId(), component);
+                            currentOrderMap.put(card.getId(), index++);
+                        } else {
+                            log.warn("A panel did not contain a media card reference");
+                        }
+                    }
+                }
+
+                if (log.isDebugEnabled()) {
+                    log.debug("Found {} existing media card components, size reported by reorderer list: {}",
+                        components.size(), newOrderIds.size());
+                }
+
+                for (int i = 0; i < newOrderIds.size(); i++) {
+                    Integer cardId = newOrderIds.get(i);
+
+                    if (!idToComponentMap.containsKey(cardId)) {
+                        log.warn("Media card with ID {} not found for reordering", cardId);
+                    }
+                }
+
+                List<Range> rangesToReorder = findOutOfOrderRanges(newOrderIds, currentOrderMap);
+                if (log.isDebugEnabled()) {
+                    log.debug("Found {} ranges that need reordering", rangesToReorder.size());
+                }
+
+                if (!rangesToReorder.isEmpty()) {
+                    for (Range range : rangesToReorder) {
+                        for (int i = range.getStart(); i <= range.getEnd(); i++) {
+                            Integer cardId = newOrderIds.get(i);
+                            Component component = idToComponentMap.get(cardId);
+                            if (component != null) {
+                                queuePanel.remove(component);
+                            } else {
+                                log.warn("Component for media card ID {} not found", cardId);
+                            }
+                        }
+                    }
+
+                    int componentIndex = 0;
+                    for (int i = 0; i < newOrderIds.size(); i++) {
+                        Integer cardId = newOrderIds.get(i);
+                        Component component = idToComponentMap.get(cardId);
+
+                        if (isInAnyRange(i, rangesToReorder)) {
+                            if (component != null) {
+                                queuePanel.add(component, componentIndex);
+                            } else {
+                                log.warn("Component for media card ID {} not found", cardId);
+                            }
+                        }
+
+                        componentIndex++;
+                    }
+
+                    queuePanel.revalidate();
+                    queuePanel.repaint();
+
+                    if (queueScrollPane.getViewport().getScrollMode()
+                        == JViewport.BACKINGSTORE_SCROLL_MODE) {
+                        queueScrollPane.getViewport().revalidate();
+                        queueScrollPane.getViewport().repaint();
+                    }
+
+                    if (!selectedMediaCards.isEmpty()) {
+                        updateMediaCardSelectionState();
+                    }
+                }
+            } catch (Exception e) {
+                GDownloader.handleException(e, "Failed to reorder UI cards", false);
+            } finally {
+                queuePanel.setIgnoreRepaint(false);
+            }
+        });
+    }
+
+    private List<Range> findOutOfOrderRanges(List<Integer> newOrderIds, Map<Integer, Integer> currentOrderMap) {
+        List<Range> ranges = new ArrayList<>();
+        int rangeStart = -1;
+        boolean inRange = false;
+
+        for (int i = 0; i < newOrderIds.size(); i++) {
+            Integer cardId = newOrderIds.get(i);
+            Integer currentIndex = currentOrderMap.get(cardId);
+
+            if (currentIndex == null || currentIndex != i) {
+                if (!inRange) {
+                    rangeStart = i;
+                    inRange = true;
+                }
+            } else if (inRange) {
+                ranges.add(new Range(rangeStart, i - 1));
+                inRange = false;
+            }
+        }
+
+        if (inRange) {
+            ranges.add(new Range(rangeStart, newOrderIds.size() - 1));
+        }
+
+        return ranges;
+    }
+
+    private boolean isInAnyRange(int index, List<Range> ranges) {
+        return ranges.stream().anyMatch(range -> range.inRange(index));
     }
 
     @Data
@@ -1722,9 +1793,15 @@ public final class GUIManager {
             NestedMenuEntry sortSubmenu = new NestedMenuEntry();
             for (QueueSortOrderEnum sortOrder : QueueSortOrderEnum.values()) {
                 sortSubmenu.put(sortOrder.getDisplayName(),
-                    new RunnableMenuEntry(() -> {
-                        main.getDownloadManager().setSortOrder(sortOrder);
-                    }));
+                    new RunnableMenuEntry(
+                        () -> main.getDownloadManager().setSortOrder(sortOrder),
+                        () -> {
+                            QueueSortOrderEnum current = main.getDownloadManager().getSortOrder();
+                            return current == sortOrder
+                                ? "/assets/selected.png"
+                                : "/assets/not-selected.png";
+                        }
+                    ));
             }
 
             rightClickMenu.putIfAbsent(l10n("gui.sort_by"), sortSubmenu);
@@ -1773,5 +1850,16 @@ public final class GUIManager {
         private final byte updateType;
         private final MediaCard mediaCard;
 
+    }
+
+    @Data
+    private static class Range {
+
+        private final int start;
+        private final int end;
+
+        public boolean inRange(int index) {
+            return index >= start && index <= end;
+        }
     }
 }

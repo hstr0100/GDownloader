@@ -16,6 +16,7 @@
  */
 package net.brlns.gdownloader.ui.menu;
 
+import java.util.function.Supplier;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -28,6 +29,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class NestedMenuEntry extends RightClickMenuEntries implements IMenuEntry {
 
-    private String iconAsset;
+    private Supplier<String> iconAsset;
 
 }
