@@ -149,8 +149,6 @@ public class DownloadSequencer {
                 }
 
                 return true;
-            } else {
-                log.error("Download id {} was missing from entriesById, cannot remove entry", downloadId);
             }
 
             return false;

@@ -127,9 +127,7 @@ import static net.brlns.gdownloader.util.StringUtils.nullOrEmpty;
 // TODO ctrl+z to undo removals
 // TODO implement remuxing to mkv
 // prio
-// TODO right click > sort by
 // TODO display number in download queue
-// TODO crop playlist thumbnails to proper aspect ratio
 // TODO automatic ui sorting
 /**
  * GDownloader - GUI wrapper for yt-dlp

@@ -479,9 +479,6 @@ public class DownloadManager implements IEvent {
 
             if (sequencer.removeEntry(queueEntry)) {
                 fireListeners();
-            } else {
-                log.error("Failed to remove entry id {} from sequencer",
-                    queueEntry.getDownloadId());
             }
 
             if (reason != CloseReasonEnum.SHUTDOWN) {

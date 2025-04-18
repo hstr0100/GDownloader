@@ -84,4 +84,28 @@ public final class ImageUtils {
 
         return resizedImage;
     }
+
+    public static BufferedImage cropToSixteenByNineIfHorizontal(BufferedImage originalImage) {
+        int originalWidth = originalImage.getWidth();
+        int originalHeight = originalImage.getHeight();
+
+        if (originalHeight >= originalWidth) {
+            return originalImage;
+        }
+
+        int targetHeight = originalWidth * 9 / 16;
+
+        if (originalHeight == targetHeight) {
+            return originalImage;
+        }
+
+        if (originalHeight > targetHeight) {
+            int y = (originalHeight - targetHeight) / 2;
+            return originalImage.getSubimage(0, y, originalWidth, targetHeight);
+        } else {
+            int targetWidth = originalHeight * 16 / 9;
+            int x = (originalWidth - targetWidth) / 2;
+            return originalImage.getSubimage(x, 0, targetWidth, originalHeight);
+        }
+    }
 }

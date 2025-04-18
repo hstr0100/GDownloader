@@ -335,7 +335,7 @@ public class QueueEntry {
         optional.ifPresentOrElse(
             img -> {
                 // Downscale thumbnails to save space and resources, we don't need the full resolution here.
-                BufferedImage downscaledImage = ImageUtils.downscaleImage(img, 240);
+                BufferedImage downscaledImage = ImageUtils.downscaleImage(img, 360);
 
                 if (base64encoded.isEmpty()) {
                     mediaInfo.setBase64EncodedThumbnail(
@@ -364,6 +364,8 @@ public class QueueEntry {
                 if (log.isDebugEnabled()) {
                     log.debug("Thumbnail Resolution: {}x{}", img.getWidth(), img.getHeight());
                 }
+
+                img = ImageUtils.cropToSixteenByNineIfHorizontal(img);
 
                 return Optional.of(img);
             } else if (log.isDebugEnabled()) {
