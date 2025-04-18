@@ -34,10 +34,7 @@ import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
-import net.brlns.gdownloader.downloader.enums.CloseReasonEnum;
-import net.brlns.gdownloader.downloader.enums.DownloadStatusEnum;
-import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
-import net.brlns.gdownloader.downloader.enums.QueueCategoryEnum;
+import net.brlns.gdownloader.downloader.enums.*;
 import net.brlns.gdownloader.downloader.extractors.MetadataManager;
 import net.brlns.gdownloader.downloader.structs.DownloadResult;
 import net.brlns.gdownloader.event.EventDispatcher;
@@ -57,7 +54,6 @@ import net.brlns.gdownloader.ui.message.PopupMessenger;
 import net.brlns.gdownloader.ui.message.ToastMessenger;
 import net.brlns.gdownloader.util.CancelHook;
 import net.brlns.gdownloader.util.DownloadIntervalometer;
-import net.brlns.gdownloader.util.collection.ConcurrentRearrangeableDeque;
 import net.brlns.gdownloader.util.collection.ExpiringSet;
 
 import static net.brlns.gdownloader.downloader.enums.DownloadFlagsEnum.*;
@@ -69,8 +65,11 @@ import static net.brlns.gdownloader.util.URLUtils.*;
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
+// TODO contention and stress tests
 @Slf4j
 public class DownloadManager implements IEvent {
+
+    private final AtomicLong downloadIdGenerator = new AtomicLong();
 
     @Getter
     private final GDownloader main;
@@ -89,17 +88,9 @@ public class DownloadManager implements IEvent {
     private final AtomicInteger currentlyQueryingCount = new AtomicInteger();
     private final Queue<QueueEntry> metadataQueryQueue = new ConcurrentLinkedQueue<>();
 
-    private final ConcurrentRearrangeableDeque<QueueEntry> downloadDeque
-        = new ConcurrentRearrangeableDeque<>();
+    private final DownloadSequencer sequencer = new DownloadSequencer();
 
-    private final Queue<QueueEntry> runningDownloads = new ConcurrentLinkedQueue<>();
-    private final Queue<QueueEntry> completedDownloads = new ConcurrentLinkedQueue<>();
-    private final Queue<QueueEntry> failedDownloads = new ConcurrentLinkedQueue<>();
-
-    @Getter
-    private final AtomicLong downloadCounter = new AtomicLong();
-
-    private final AtomicInteger completeCounter = new AtomicInteger();
+    private final AtomicBoolean completedAtLeastOne = new AtomicBoolean();
 
     private final AtomicBoolean downloadsBlocked = new AtomicBoolean(true);
     private final AtomicBoolean downloadsRunning = new AtomicBoolean(false);
@@ -109,6 +100,7 @@ public class DownloadManager implements IEvent {
 
     private final ExpiringSet<String> urlIgnoreSet = new ExpiringSet<>(TimeUnit.SECONDS, 20);
 
+    private final String _downloadPriorityKey = l10n("gui.download_priority");
     private final String _forceStartKey = l10n("gui.force_download_start");
     private final String _restartKey = l10n("gui.restart_download");
 
@@ -134,7 +126,7 @@ public class DownloadManager implements IEvent {
                 // Even if persistance is disabled, we still initialize the db so a restart is not
                 // needed and no data is lost if the user toggles persistence back on during runtime.
                 long nextId = persistence.getCounters().getCurrentValue(CounterTypeEnum.DOWNLOAD_ID);
-                main.getDownloadManager().getDownloadCounter().set(nextId);
+                downloadIdGenerator.set(nextId);
                 log.info("Current download id: {}", nextId);
 
                 if (nextId > 0 && main.getConfig().isRestoreSessionAfterRestart()) {
@@ -149,7 +141,27 @@ public class DownloadManager implements IEvent {
                     linkCaptureLock.lock();// Intentionally block url capture during the entire restoring proccess
                     try {
                         int count = 0;
-                        for (QueueEntryEntity entity : persistence.getQueueEntries().getAll()) {
+
+                        // We need an ugly comparator here because of null sequence numbers.
+                        // This way, we still preserve the original insertion order until a checkpoint updates the sequence.
+                        List<QueueEntryEntity> entities = persistence.getQueueEntries().getAll();
+                        List<QueueEntryEntity> originalOrder = new ArrayList<>(entities);
+                        entities.sort((e1, e2) -> {
+                            Long seq1 = e1.getCurrentDownloadSequence();
+                            Long seq2 = e2.getCurrentDownloadSequence();
+
+                            if (seq1 == null && seq2 == null) {
+                                return Integer.compare(originalOrder.indexOf(e1), originalOrder.indexOf(e2));
+                            } else if (seq1 == null) {
+                                return 1;
+                            } else if (seq2 == null) {
+                                return -1;
+                            } else {
+                                return seq1.compareTo(seq2);
+                            }
+                        });
+
+                        for (QueueEntryEntity entity : entities) {
                             String downloadUrl = entity.getUrl();
 
                             capturedLinks.add(downloadUrl);
@@ -420,7 +432,7 @@ public class DownloadManager implements IEvent {
 
                 MediaCard mediaCard = main.getGuiManager().addMediaCard(filteredUrl);
 
-                long downloadId = downloadCounter.incrementAndGet();
+                long downloadId = downloadIdGenerator.incrementAndGet();
 
                 if (persistence.isInitialized()) {
                     persistence.getCounters().setCurrentValue(CounterTypeEnum.DOWNLOAD_ID, downloadId);
@@ -466,7 +478,7 @@ public class DownloadManager implements IEvent {
                 linkCaptureLock.unlock();
             }
 
-            dequeueFromAll(queueEntry);
+            sequencer.removeEntry(queueEntry);
 
             if (reason != CloseReasonEnum.SHUTDOWN) {
                 deleteCheckpoint(queueEntry);
@@ -479,42 +491,37 @@ public class DownloadManager implements IEvent {
 
         queueEntry.createDefaultRightClick(this);
 
-        queueEntry.getMediaCard().setOnDrag((targetIndex) -> {
-            if (downloadDeque.contains(queueEntry)) {
-                try {
-                    downloadDeque.moveToPosition(queueEntry,
-                        Math.clamp(targetIndex, 0, downloadDeque.size() - 1));
-                } catch (Exception e) {
-                    GDownloader.handleException(e, false);
-                }
+        queueEntry.getMediaCard().setOnSwap((targetCard) -> {
+            Optional<QueueEntry> entryOptional = locateEntryByMediaCard(targetCard);
+
+            if (entryOptional.isPresent()) {
+                sequencer.reorderEntries(queueEntry, entryOptional.get());
             }
         });
 
         queueEntry.getMediaCard().setValidateDropTarget(() -> {
-            return downloadDeque.contains(queueEntry);
+            return sequencer.contains(queueEntry);
         });
 
         queryMetadata(queueEntry);
 
-        QueueCategoryEnum category = queueEntry.getCurrentQueueCategory();
-        if (category != null) {
-            switch (category) {
-                case FAILED ->
-                    offerTo(FAILED, queueEntry, false);
-                case COMPLETED ->
-                    offerTo(COMPLETED, queueEntry, false);
-                case RUNNING ->
-                    enqueueFirst(queueEntry);
-                default ->
-                    enqueueLast(queueEntry);
-            }
-        } else {
-            enqueueLast(queueEntry);
-        }
+        sequencer.addNewEntry(queueEntry);
+        fireListeners();
+
+        updateRightClick(queueEntry, queueEntry.getCurrentQueueCategory());
 
         if (main.getConfig().isAutoDownloadStart() && !downloadsRunning.get()) {
             startDownloads(suggestedDownloaderId.get());
         }
+    }
+
+    protected Optional<QueueEntry> locateEntryByMediaCard(MediaCard cardToSeach) {
+        QueueEntry found = sequencer.getEntry((entry) -> {
+            MediaCard mediaCard = entry.getMediaCard();
+            return mediaCard.getId() == cardToSeach.getId();
+        });
+
+        return Optional.ofNullable(found);
     }
 
     private void saveCheckpoint(QueueEntry queueEntry) {
@@ -581,7 +588,7 @@ public class DownloadManager implements IEvent {
         downloadsRunning.set(false);
         downloadsManuallyStarted.set(false);
         suggestedDownloaderId.set(null);
-        completeCounter.set(0);
+        completedAtLeastOne.set(false);
 
         fireListeners();
     }
@@ -591,38 +598,44 @@ public class DownloadManager implements IEvent {
     }
 
     public int getQueuedDownloads() {
-        return downloadDeque.size();
+        return sequencer.getCount(QUEUED);
     }
 
     public int getRunningDownloads() {
-        return runningDownloads.size();
+        return sequencer.getCount(RUNNING);
     }
 
     public int getFailedDownloads() {
-        return failedDownloads.size();
+        return sequencer.getCount(FAILED);
     }
 
     public int getCompletedDownloads() {
-        return completedDownloads.size();
+        return sequencer.getCount(COMPLETED);
     }
 
     public void retryFailedDownloads() {
-        QueueEntry entry;
-        while ((entry = failedDownloads.poll()) != null) {
-            resetDownload(entry, false);
-        }
+        sequencer.requeueFailed((entry) -> {
+            resetDownload(entry);
+            offerTo(QUEUED, entry);
+        });
 
         startDownloads(suggestedDownloaderId.get());
         fireListeners();
     }
 
     public void processQueue() {
-        while (downloadsRunning.get() && downloadsManuallyStarted.get() && !downloadDeque.isEmpty()) {
-            if (runningDownloads.size() >= main.getConfig().getMaxSimultaneousDownloads()) {
+        int maxDownloads = main.getConfig().getMaxSimultaneousDownloads();
+
+        while (downloadsRunning.get()
+            && downloadsManuallyStarted.get()
+            && !sequencer.isEmpty(QUEUED)
+            && sequencer.getCount(RUNNING) < maxDownloads) {
+
+            QueueEntry entry = sequencer.fetchNext();
+            if (entry == null) {
+                log.info("No more entries to fetch from queue");
                 break;
             }
-
-            QueueEntry entry = downloadDeque.peek();
 
             submitDownloadTask(entry, false);
         }
@@ -635,9 +648,9 @@ public class DownloadManager implements IEvent {
             }
         }
 
-        if (downloadsRunning.get() && runningDownloads.isEmpty()) {
+        if (downloadsRunning.get() && sequencer.isEmpty(RUNNING) && sequencer.isEmpty(QUEUED)) {
             if (main.getConfig().isDisplayDownloadsCompleteNotification()
-                && completeCounter.get() > 0) {
+                && completedAtLeastOne.get() && !sequencer.isEmpty()) {
                 PopupMessenger.show(
                     l10n("gui.downloads_complete.notification_title"),
                     l10n("gui.downloads_complete.complete"),
@@ -662,25 +675,8 @@ public class DownloadManager implements IEvent {
             clearQueue(category, reason, false);
         }
 
+        completedAtLeastOne.set(false);
         fireListeners();
-    }
-
-    private Queue<QueueEntry> getQueue(QueueCategoryEnum category) {
-        Queue<QueueEntry> queue;
-        switch (category) {
-            case FAILED ->
-                queue = failedDownloads;
-            case COMPLETED ->
-                queue = completedDownloads;
-            case QUEUED ->
-                queue = downloadDeque;
-            case RUNNING ->
-                queue = runningDownloads;
-            default ->
-                throw new IllegalArgumentException();
-        }
-
-        return queue;
     }
 
     public void clearQueue(QueueCategoryEnum category, CloseReasonEnum reason) {
@@ -688,14 +684,13 @@ public class DownloadManager implements IEvent {
     }
 
     public void clearQueue(QueueCategoryEnum category, CloseReasonEnum reason, boolean fireListeners) {
-        Queue<QueueEntry> queue = getQueue(category);
-
-        QueueEntry entry;
-        while ((entry = queue.poll()) != null) {
-            // TODO: more checkpoints
+        List<QueueEntry> entries = sequencer.getEntries(category);
+        for (QueueEntry entry : entries) {
             if (reason == CloseReasonEnum.SHUTDOWN && !entry.getCancelHook().get()) {
                 saveCheckpoint(entry);
             }
+
+            sequencer.removeEntry(entry);
 
             main.getGuiManager().removeMediaCard(entry.getMediaCard().getId(), reason);
         }
@@ -705,69 +700,33 @@ public class DownloadManager implements IEvent {
         }
     }
 
-    private void enqueueLast(QueueEntry entry) {
-        dequeueFromAll(entry, QUEUED);
-
-        entry.removeRightClick(_restartKey);
-        entry.addRightClick(_forceStartKey,
-            () -> submitDownloadTask(entry, true));
-
-        if (!downloadDeque.contains(entry)) {
-            entry.setCurrentQueueCategory(QUEUED);
-
-            downloadDeque.offerLast(entry);
-            fireListeners();
-        }
+    protected void updatePriority(QueueEntry entry, DownloadPriorityEnum priority) {
+        sequencer.updatePriority(entry, priority);
     }
 
-    private void enqueueFirst(QueueEntry entry) {
-        dequeueFromAll(entry, QUEUED);
+    public void setSortOrder(QueueSortOrderEnum sortOrder) {
+        sequencer.setSortOrder(sortOrder);
 
-        entry.removeRightClick(_restartKey);
-        entry.addRightClick(_forceStartKey,
-            () -> submitDownloadTask(entry, true));
+        List<MediaCard> list = sequencer.getSnapshot().stream()
+            .map(e -> e.getMediaCard())
+            .collect(Collectors.toList());
 
-        if (!downloadDeque.contains(entry)) {
-            entry.setCurrentQueueCategory(QUEUED);
-
-            downloadDeque.offerFirst(entry);
-            fireListeners();
-        }
+        main.getGuiManager().reorderMediaCards(list);
     }
 
-    private void dequeueFromAll(QueueEntry entry) {
-        dequeueFromAll(entry, null);
-    }
-
-    private void dequeueFromAll(QueueEntry entry, @Nullable QueueCategoryEnum except) {
-        boolean success = false;
-        for (QueueCategoryEnum category : QueueCategoryEnum.values()) {
-            if (category == except) {
-                continue;
-            }
-
-            if (dequeue(category, entry, false)) {
-                success = true;
-            }
+    private void updateRightClick(QueueEntry entry, QueueCategoryEnum category) {
+        if (category == COMPLETED || category == FAILED) {
+            entry.addRightClick(_restartKey, () -> stopDownload(entry, () -> {
+                resetDownload(entry);
+                submitDownloadTask(entry, true);
+            }));
+        } else {
+            entry.removeRightClick(_restartKey);
+            entry.addRightClick(_forceStartKey,
+                () -> submitDownloadTask(entry, true));
+            entry.addRightClick(_downloadPriorityKey,
+                entry.getDownloadPriorityMenu(this));
         }
-
-        if (success) {
-            fireListeners();
-        }
-    }
-
-    private boolean dequeue(QueueCategoryEnum category, QueueEntry entry) {
-        return dequeue(category, entry, true);
-    }
-
-    private boolean dequeue(QueueCategoryEnum category, QueueEntry entry, boolean fireListeners) {
-        boolean success = getQueue(category).remove(entry);
-
-        if (success && fireListeners) {
-            fireListeners();
-        }
-
-        return success;
     }
 
     private void offerTo(QueueCategoryEnum category, QueueEntry entry) {
@@ -775,28 +734,15 @@ public class DownloadManager implements IEvent {
     }
 
     private void offerTo(QueueCategoryEnum category, QueueEntry entry, boolean checkpoint) {
-        if (category == QUEUED) {
-            throw new IllegalArgumentException("Use enqueueFirst() or enqueueLast() to add to downloadDeque");
+        sequencer.changeCategory(entry, category);
+
+        updateRightClick(entry, category);
+
+        if (checkpoint) {
+            saveCheckpoint(entry);
         }
 
-        dequeueFromAll(entry);
-
-        Queue<QueueEntry> queue = getQueue(category);
-        if (!queue.contains(entry)) {
-            entry.setCurrentQueueCategory(category);
-
-            entry.addRightClick(_restartKey, () -> stopDownload(entry, () -> {
-                resetDownload(entry);
-                submitDownloadTask(entry, true);
-            }));
-
-            if (checkpoint) {
-                saveCheckpoint(entry);
-            }
-
-            queue.offer(entry);
-            fireListeners();
-        }
+        fireListeners();
     }
 
     private void queryMetadata(QueueEntry queueEntry) {
@@ -840,10 +786,6 @@ public class DownloadManager implements IEvent {
     }
 
     protected void resetDownload(QueueEntry queueEntry) {
-        resetDownload(queueEntry, true);
-    }
-
-    protected void resetDownload(QueueEntry queueEntry, boolean fireListeners) {
         queueEntry.createDefaultRightClick(this);
 
         queueEntry.cleanDirectories();
@@ -853,12 +795,6 @@ public class DownloadManager implements IEvent {
         queueEntry.resetRetryCounter();// Normaly we want the retry count to stick around, but not in this case.
 
         removeArchiveEntries(queueEntry);
-
-        enqueueLast(queueEntry);
-
-        if (fireListeners) {
-            fireListeners();
-        }
     }
 
     private void removeArchiveEntries(QueueEntry queueEntry) {
@@ -900,13 +836,6 @@ public class DownloadManager implements IEvent {
     }
 
     protected void submitDownloadTask(QueueEntry entry, boolean force) {
-        // Call to remove is needed when starting manually
-        boolean success = downloadDeque.remove(entry);
-        if (!success) {
-            log.error("Entry was not in the download deque, ignoring");
-            return;
-        }
-
         entry.removeRightClick(_forceStartKey);
 
         MediaCard mediaCard = entry.getMediaCard();
@@ -914,7 +843,11 @@ public class DownloadManager implements IEvent {
             return;
         }
 
-        offerTo(RUNNING, entry);
+        if (entry.getCurrentQueueCategory() != RUNNING) {
+            offerTo(RUNNING, entry, false);
+        }
+
+        fireListeners();
 
         GDownloader.GLOBAL_THREAD_POOL.execute(() -> {
             try {
@@ -923,7 +856,7 @@ public class DownloadManager implements IEvent {
                         downloadsRunning.set(true);
                         fireListeners();
                     } else {
-                        enqueueFirst(entry);
+                        offerTo(QUEUED, entry);
                         return;
                     }
                 }
@@ -1052,7 +985,7 @@ public class DownloadManager implements IEvent {
                         if (!downloadsRunning.get() || FLAG_STOPPED.isSet(flags)) {
                             if (!entry.getCancelHook().get()) {
                                 entry.updateStatus(DownloadStatusEnum.STOPPED, l10n("gui.download_status.not_started"));
-                                enqueueFirst(entry);
+                                offerTo(QUEUED, entry);
                             }
 
                             return;
@@ -1061,6 +994,9 @@ public class DownloadManager implements IEvent {
 
                             downloader.processMediaFiles(entry);
                             entry.updateMediaRightClickOptions();
+
+                            entry.setDownloadPriority(DownloadPriorityEnum.NORMAL);
+                            entry.removeRightClick(_downloadPriorityKey);
 
                             entry.updateStatus(DownloadStatusEnum.COMPLETE, l10n("gui.download_status.finished"));
                             entry.cleanDirectories();
@@ -1108,8 +1044,11 @@ public class DownloadManager implements IEvent {
             } finally {
                 entry.getRunning().set(false);
 
-                dequeue(RUNNING, entry);
-                completeCounter.incrementAndGet();
+                if (entry.getCurrentQueueCategory() == RUNNING) {
+                    offerTo(QUEUED, entry);
+                }
+
+                completedAtLeastOne.set(true);
             }
         });
     }

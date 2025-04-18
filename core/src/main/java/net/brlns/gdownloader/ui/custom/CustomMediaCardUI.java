@@ -22,6 +22,7 @@ import java.awt.image.BufferedImage;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 import lombok.Data;
+import net.brlns.gdownloader.downloader.enums.DownloadPriorityEnum;
 import net.brlns.gdownloader.downloader.enums.DownloadTypeEnum;
 
 /**
@@ -70,6 +71,11 @@ public class CustomMediaCardUI {
     public void updatePlaceholderIcon(DownloadTypeEnum downloadType) {
         assert SwingUtilities.isEventDispatchThread();
         thumbnailPanel.setPlaceholderIcon(downloadType);
+    }
+
+    public void updatePriorityIcon(DownloadPriorityEnum downloadPriority) {
+        assert SwingUtilities.isEventDispatchThread();
+        thumbnailPanel.setPriorityIcon(downloadPriority);
     }
 
     public void updateScale(double factor) {

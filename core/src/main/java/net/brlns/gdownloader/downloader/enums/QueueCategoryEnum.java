@@ -16,12 +16,21 @@
  */
 package net.brlns.gdownloader.downloader.enums;
 
+import lombok.Getter;
+
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
+@Getter
 public enum QueueCategoryEnum {
-    FAILED,
-    QUEUED,
-    COMPLETED,
-    RUNNING;
+    RUNNING(1),
+    QUEUED(2),
+    COMPLETED(3),
+    FAILED(4);
+
+    private final int comparatorOrder;
+
+    private QueueCategoryEnum(int comparatorOrderIn) {
+        comparatorOrder = comparatorOrderIn;
+    }
 }

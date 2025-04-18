@@ -17,7 +17,7 @@
 package net.brlns.gdownloader.downloader.enums;
 
 import java.util.Arrays;
-import java.util.HashMap;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -39,7 +39,8 @@ public enum DownloadTypeEnum implements ISettingsEnum {
     SPOTIFY(DownloaderIdEnum.SPOTDL),
     DIRECT(DownloaderIdEnum.DIRECT_HTTP);
 
-    private static final Map<DownloaderIdEnum, List<DownloadTypeEnum>> CACHE = new HashMap<>();
+    private static final Map<DownloaderIdEnum, List<DownloadTypeEnum>> CACHE
+        = new EnumMap<>(DownloaderIdEnum.class);
 
     private final DownloaderIdEnum[] downloaderIds;
 

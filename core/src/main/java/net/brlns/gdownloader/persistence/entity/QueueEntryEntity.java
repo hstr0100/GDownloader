@@ -85,6 +85,13 @@ public class QueueEntryEntity implements Serializable {
     @Column(name = "download_status")
     private DownloadStatusEnum downloadStatus;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "current_download_priority")
+    private DownloadPriorityEnum currentDownloadPriority;
+
+    @Column(name = "current_download_sequence")
+    private Long currentDownloadSequence;
+
     @Column(name = "download_stated")
     private boolean downloadStarted;
 

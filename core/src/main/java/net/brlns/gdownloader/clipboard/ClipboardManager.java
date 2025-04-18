@@ -64,7 +64,7 @@ public class ClipboardManager {
     private final AtomicBoolean clipboardBlocked = new AtomicBoolean(true);
 
     private final Clipboard clipboard;
-    private final Map<FlavorType, String> lastClipboardState = new HashMap<>();
+    private final Map<FlavorType, String> lastClipboardState = new EnumMap<>(FlavorType.class);
 
     private final ReentrantLock clipboardLock = new ReentrantLock();
 

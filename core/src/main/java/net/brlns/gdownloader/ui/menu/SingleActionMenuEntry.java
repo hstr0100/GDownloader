@@ -18,14 +18,17 @@ package net.brlns.gdownloader.ui.menu;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
 @Getter
 @AllArgsConstructor
+@RequiredArgsConstructor
 public class SingleActionMenuEntry implements IMenuEntry {
 
     private final Runnable runnable;
+    private String iconAsset;
 
 }

@@ -16,12 +16,18 @@
  */
 package net.brlns.gdownloader.ui.custom;
 
+import jakarta.annotation.Nullable;
+import java.awt.BorderLayout;
 import java.awt.Graphics;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import javax.swing.BorderFactory;
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
 import javax.swing.SwingConstants;
+import net.brlns.gdownloader.ui.GUIManager;
 
 import static net.brlns.gdownloader.ui.themes.ThemeProvider.*;
 import static net.brlns.gdownloader.ui.themes.UIColors.*;
@@ -32,15 +38,33 @@ import static net.brlns.gdownloader.ui.themes.UIColors.*;
 public class CustomMenuButton extends JButton {
 
     @SuppressWarnings("this-escape")
-    public CustomMenuButton(String text) {
-        super(text);
-
+    public CustomMenuButton(String text, @Nullable String iconAsset) {
         setForeground(color(FOREGROUND));
         setBackground(color(MEDIA_CARD));
         setFocusPainted(false);
         setOpaque(true);
+        setLayout(new BorderLayout());
         setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         setHorizontalAlignment(SwingConstants.LEFT);
+
+        JPanel contentPanel = new JPanel(new BorderLayout());
+        contentPanel.setOpaque(false);
+
+        JLabel textLabel = new JLabel(text);
+        textLabel.setForeground(color(FOREGROUND));
+        textLabel.setHorizontalAlignment(SwingConstants.LEFT);
+
+        if (iconAsset != null) {
+            ImageIcon icon = GUIManager.loadIcon(iconAsset, ICON, 16);
+            textLabel.setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 0));
+
+            JLabel iconLabel = new JLabel(icon);
+            contentPanel.add(iconLabel, BorderLayout.WEST);
+        }
+
+        contentPanel.add(textLabel, BorderLayout.CENTER);
+
+        add(contentPanel, BorderLayout.CENTER);
 
         addMouseListener(new MouseAdapter() {
             @Override

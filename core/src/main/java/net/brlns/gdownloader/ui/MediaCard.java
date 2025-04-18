@@ -28,6 +28,7 @@ import java.util.function.Supplier;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.downloader.enums.CloseReasonEnum;
+import net.brlns.gdownloader.downloader.enums.DownloadPriorityEnum;
 import net.brlns.gdownloader.downloader.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.ui.custom.CustomMediaCardUI;
 import net.brlns.gdownloader.ui.menu.IMenuEntry;
@@ -59,11 +60,12 @@ public class MediaCard {
     private BufferedImage thumbnailImage;
     private long thumbnailDuration;
     private DownloadTypeEnum placeholderIconType;
+    private DownloadPriorityEnum downloadPriorityIconType;
 
     private Runnable onLeftClick;
     private Map<String, IMenuEntry> rightClickMenu = new ConcurrentLinkedHashMap<>();
     private Consumer<CloseReasonEnum> onClose;
-    private Consumer<Integer> onDrag;
+    private Consumer<MediaCard> onSwap;
     private boolean closed;
 
     private Supplier<Boolean> validateDropTarget;
@@ -100,6 +102,11 @@ public class MediaCard {
     public void setPlaceholderIcon(DownloadTypeEnum downloadTypeIn) {
         placeholderIconType = downloadTypeIn;
         updateUI(PLACEHOLDER_ICON);
+    }
+
+    public void setPriorityIcon(DownloadPriorityEnum downloadPriorityIn) {
+        downloadPriorityIconType = downloadPriorityIn;
+        updateUI(PRIORITY_ICON);
     }
 
     public void setTooltip(String tooltipTextIn) {
@@ -152,26 +159,10 @@ public class MediaCard {
         runOnEDT(() -> {
             switch (updateType) {
                 case ALL -> {
-                    if (labelText != null) {
-                        ui.updateLabel(labelText);
-                    }
-                    if (scale != 0) {
-                        ui.updateScale(scale);
-                    }
-                    if (tooltipText != null) {
-                        ui.updateTooltip(tooltipText);
-                    }
-                    if (thumbnailTooltipText != null) {
-                        ui.updateThumbnailTooltip(thumbnailTooltipText);
-                    }
-                    if (progressBarText != null) {
-                        ui.updateProgressBar(percentage, progressBarText, progressBarBackgroundColor, progressBarTextColor);
-                    }
-                    if (thumbnailImage != null) {
-                        ui.updateThumbnail(thumbnailImage, thumbnailDuration);
-                    }
-                    if (placeholderIconType != null) {
-                        ui.updatePlaceholderIcon(placeholderIconType);
+                    for (UpdateType type : UpdateType.values()) {
+                        if (type != ALL) {
+                            updateUI(type);
+                        }
                     }
                 }
                 case LABEL_TEXT -> {
@@ -209,6 +200,11 @@ public class MediaCard {
                         ui.updatePlaceholderIcon(placeholderIconType);
                     }
                 }
+                case PRIORITY_ICON -> {
+                    if (downloadPriorityIconType != null) {
+                        ui.updatePriorityIcon(downloadPriorityIconType);
+                    }
+                }
             }
         });
     }
@@ -221,6 +217,7 @@ public class MediaCard {
         THUMBNAIL_TOOLTIP,
         PROGRESS_BAR,
         THUMBNAIL_IMAGE,
-        PLACEHOLDER_ICON
+        PLACEHOLDER_ICON,
+        PRIORITY_ICON
     }
 }

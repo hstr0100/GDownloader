@@ -16,9 +16,18 @@
  */
 package net.brlns.gdownloader.ui.menu;
 
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
+@Getter
+@AllArgsConstructor
+@NoArgsConstructor
 public class NestedMenuEntry extends RightClickMenuEntries implements IMenuEntry {
+
+    private String iconAsset;
 
 }

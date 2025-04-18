@@ -129,6 +129,8 @@ import static net.brlns.gdownloader.util.StringUtils.nullOrEmpty;
 // prio
 // TODO right click > sort by
 // TODO display number in download queue
+// TODO crop playlist thumbnails to proper aspect ratio
+// TODO automatic ui sorting
 /**
  * GDownloader - GUI wrapper for yt-dlp
  *
@@ -424,7 +426,7 @@ public final class GDownloader {
             if (updater.isSupported()) {
                 GLOBAL_THREAD_POOL.execute(() -> {
                     try {
-                        log.error("Starting updater " + updater.getClass().getName());
+                        log.info("Starting updater " + updater.getClass().getName());
                         updater.check(userInitiated);
                     } catch (NoFallbackAvailableException e) {
                         log.error("Updater for " + updater.getClass().getName()

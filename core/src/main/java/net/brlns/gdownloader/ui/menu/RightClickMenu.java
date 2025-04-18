@@ -99,7 +99,7 @@ public class RightClickMenu {
         for (Map.Entry<String, IMenuEntry> entry : actions.entrySet()) {
             String key = entry.getKey();
             IMenuEntry value = entry.getValue();
-            JButton button = new CustomMenuButton(key);
+            JButton button = new CustomMenuButton(key, value.getIconAsset());
 
             button.addActionListener(e -> {
                 switch (value) {
@@ -141,7 +141,10 @@ public class RightClickMenu {
                     case NestedMenuEntry nested -> {
                         List<RightClickMenuEntries> depNested = new ArrayList<>();
                         dependents.forEach(dependent -> {
-                            depNested.add((NestedMenuEntry)dependent.get(key));
+                            NestedMenuEntry nestedEntry = (NestedMenuEntry)dependent.get(key);
+                            if (nestedEntry != null) {
+                                depNested.add(nestedEntry);
+                            }
                         });
 
                         showMenu(button, nested, depNested, button.getWidth(),
@@ -160,7 +163,10 @@ public class RightClickMenu {
                     if (value instanceof NestedMenuEntry nested) {
                         List<RightClickMenuEntries> depNested = new ArrayList<>();
                         dependents.forEach(dependent -> {
-                            depNested.add((NestedMenuEntry)dependent.get(key));
+                            NestedMenuEntry nestedEntry = (NestedMenuEntry)dependent.get(key);
+                            if (nestedEntry != null) {
+                                depNested.add(nestedEntry);
+                            }
                         });
 
                         showMenu(button, nested, depNested, button.getWidth(),

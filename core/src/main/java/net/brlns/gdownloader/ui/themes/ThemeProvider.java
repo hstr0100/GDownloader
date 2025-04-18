@@ -17,7 +17,7 @@
 package net.brlns.gdownloader.ui.themes;
 
 import java.awt.Color;
-import java.util.HashMap;
+import java.util.EnumMap;
 import java.util.Map;
 import net.brlns.gdownloader.settings.enums.ThemeEnum;
 
@@ -26,7 +26,7 @@ import net.brlns.gdownloader.settings.enums.ThemeEnum;
  */
 public class ThemeProvider {
 
-    private static final Map<ThemeEnum, AbstractTheme> THEMES = new HashMap<>();
+    private static final Map<ThemeEnum, AbstractTheme> THEMES = new EnumMap<>(ThemeEnum.class);
 
     private static AbstractTheme CURRENT_THEME;
 

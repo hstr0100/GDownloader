@@ -23,17 +23,21 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
 @Getter
 @AllArgsConstructor
+@RequiredArgsConstructor
 public class MultiActionMenuEntry<T> implements IMenuEntry {
 
     private final Supplier<T> source;
 
     private final Consumer<Collection<T>> action;
+
+    private String iconAsset;
 
     @SuppressWarnings("unchecked")
     public void processActions(List<IMenuEntry> entries) {

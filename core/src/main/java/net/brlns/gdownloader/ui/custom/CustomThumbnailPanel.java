@@ -23,8 +23,10 @@ import javax.swing.ImageIcon;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import net.brlns.gdownloader.GDownloader;
+import net.brlns.gdownloader.downloader.enums.DownloadPriorityEnum;
 import net.brlns.gdownloader.downloader.enums.DownloadTypeEnum;
 
+import static net.brlns.gdownloader.downloader.enums.DownloadTypeEnum.*;
 import static net.brlns.gdownloader.ui.GUIManager.loadIcon;
 import static net.brlns.gdownloader.ui.themes.UIColors.ICON;
 
@@ -37,6 +39,7 @@ public class CustomThumbnailPanel extends JPanel {
 
     private BufferedImage image;
     private ImageIcon placeholderIcon;
+    private ImageIcon priorityIcon;
 
     private String durationText;
 
@@ -60,6 +63,17 @@ public class CustomThumbnailPanel extends JPanel {
                 loadIcon(GDownloader.getInstance().getConfig().isDownloadVideo()
                 ? "/assets/video.png" : "/assets/music.png", ICON, 78);
         };
+    }
+
+    private ImageIcon fetchPriorityIcon(DownloadPriorityEnum downloadPriority) {
+        return downloadPriority != DownloadPriorityEnum.NORMAL
+            ? loadIcon(downloadPriority.getIconAsset(), ICON, 18) : null;
+    }
+
+    public void setPriorityIcon(DownloadPriorityEnum downloadPriority) {
+        priorityIcon = fetchPriorityIcon(downloadPriority);
+
+        repaint();
     }
 
     public void setPlaceholderIcon(DownloadTypeEnum downloadType) {
@@ -137,9 +151,15 @@ public class CustomThumbnailPanel extends JPanel {
         g2d.fill(roundedRect);
 
         g2d.setClip(roundedRect);
+
+        int panelWidth = getWidth();
+        int panelHeight = getHeight();
+
+        if (image == null && priorityIcon != null) {
+            drawPriorityIcon(g2d, panelWidth, panelHeight);
+        }
+
         if (image != null) {
-            int panelWidth = getWidth();
-            int panelHeight = getHeight();
             int imageWidth = image.getWidth();
             int imageHeight = image.getHeight();
 
@@ -157,6 +177,10 @@ public class CustomThumbnailPanel extends JPanel {
             int y = (panelHeight - scaledHeight) / 2;
 
             g2d.drawImage(image, x, y, scaledWidth, scaledHeight, this);
+
+            if (priorityIcon != null) {
+                drawPriorityIcon(g2d, panelWidth, panelHeight);
+            }
 
             if (durationText != null) {
                 g2d.setFont(FONT);
@@ -194,5 +218,26 @@ public class CustomThumbnailPanel extends JPanel {
         }
 
         g2d.dispose();
+    }
+
+    private void drawPriorityIcon(Graphics2D g2d, int panelWidth, int panelHeight) {
+        int iconSize = 18;
+        int padding = 6;
+        int boxSize = iconSize + padding * 2;
+        int arcSize = 8;
+
+        int priorityX = panelWidth - boxSize - 5;
+        int priorityY = 5;
+
+        RoundRectangle2D priorityRect = new RoundRectangle2D.Float(
+            priorityX, priorityY, boxSize, boxSize, arcSize, arcSize);
+
+        g2d.setColor(new Color(0, 0, 0, 190));
+        g2d.fill(priorityRect);
+
+        Image img = priorityIcon.getImage();
+        int iconX = priorityX + (boxSize - iconSize) / 2;
+        int iconY = priorityY + (boxSize - iconSize) / 2;
+        g2d.drawImage(img, iconX, iconY, iconSize, iconSize, this);
     }
 }

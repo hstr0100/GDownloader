@@ -45,6 +45,7 @@ import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.downloader.enums.CloseReasonEnum;
+import net.brlns.gdownloader.downloader.enums.DownloadPriorityEnum;
 import net.brlns.gdownloader.downloader.enums.DownloadStatusEnum;
 import net.brlns.gdownloader.downloader.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
@@ -104,12 +105,18 @@ public class QueueEntry {
         = new AtomicReference<>(null);
 
     @Setter
+    private Long currentSequence;
+
+    @Setter
     private DownloaderIdEnum currentDownloader;
 
     private DownloadTypeEnum currentDownloadType;
 
     @Setter
     private QueueCategoryEnum currentQueueCategory;
+
+    private DownloadPriorityEnum downloadPriority
+        = DownloadPriorityEnum.NORMAL;
 
     private DownloadStatusEnum downloadStatus;
     private String lastStatusMessage;
@@ -273,6 +280,12 @@ public class QueueEntry {
         mediaCard.setPlaceholderIcon(typeIn);
     }
 
+    public void setDownloadPriority(DownloadPriorityEnum priorityIn) {
+        downloadPriority = priorityIn;
+
+        mediaCard.setPriorityIcon(priorityIn);
+    }
+
     public void setMediaInfo(MediaInfo mediaInfoIn) {
         mediaInfo = mediaInfoIn;
 
@@ -328,7 +341,7 @@ public class QueueEntry {
                 mediaCard.setThumbnailAndDuration(downscaledImage, mediaInfo.getDuration());
             },
             () -> {
-                if (main.getConfig().isDebugMode()) {
+                if (log.isDebugEnabled()) {
                     log.error("Failed to load a valid thumbnail");
                 }
             }
@@ -338,18 +351,22 @@ public class QueueEntry {
     private Optional<BufferedImage> tryLoadThumbnail(String url) {
         try {
             String urlWithoutQuery = URLUtils.removeQueryParameters(url);
-            if (main.getConfig().isDebugMode()) {
+            if (log.isDebugEnabled()) {
                 log.debug("Trying to load thumbnail {}", urlWithoutQuery);
             }
 
             BufferedImage img = ImageIO.read(new URI(urlWithoutQuery).toURL());
             if (img != null) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Thumbnail Resolution: {}x{}", img.getWidth(), img.getHeight());
+                }
+
                 return Optional.of(img);
-            } else if (main.getConfig().isDebugMode()) {
+            } else if (log.isDebugEnabled()) {
                 log.error("ImageIO.read returned null for {}", url);
             }
         } catch (IOException | URISyntaxException e) {
-            if (main.getConfig().isDebugMode()) {
+            if (log.isDebugEnabled()) {
                 log.error("ImageIO.read exception {}", url, e);
             }
         }
@@ -493,7 +510,7 @@ public class QueueEntry {
             String builtCommandLine = StringUtils.escapeAndBuildCommandLine(lastCommandLine);
             logOutput("Command line: " + builtCommandLine);
 
-            if (main.getConfig().isDebugMode()) {
+            if (log.isDebugEnabled()) {
                 log.debug("[Dispatch {}]: Type: {} Filter: {} CLI: {}",
                     downloadId,
                     currentDownloadType,
@@ -621,6 +638,18 @@ public class QueueEntry {
             addRightClick(l10n("gui.more_options"),
                 extrasSubmenu);
         }
+    }
+
+    public NestedMenuEntry getDownloadPriorityMenu(DownloadManager manager) {
+        NestedMenuEntry submenu = new NestedMenuEntry();
+        for (DownloadPriorityEnum priority : DownloadPriorityEnum.values()) {
+            submenu.put(priority.getDisplayName(),
+                new RunnableMenuEntry(() -> {
+                    manager.updatePriority(this, priority);
+                }, priority.getIconAsset()));
+        }
+
+        return submenu;
     }
 
     public void updateMediaRightClickOptions() {
@@ -763,6 +792,8 @@ public class QueueEntry {
         entity.setCurrentDownloader(getCurrentDownloader());
         entity.setCurrentDownloadType(getCurrentDownloadType());
         entity.setCurrentQueueCategory(getCurrentQueueCategory());
+        entity.setCurrentDownloadPriority(getDownloadPriority());
+        entity.setCurrentDownloadSequence(getCurrentSequence());
         entity.setDownloadStatus(getDownloadStatus());
         entity.setLastStatusMessage(getLastStatusMessage());
 
@@ -815,6 +846,10 @@ public class QueueEntry {
         queueEntry.setCurrentDownloader(entity.getCurrentDownloader());
         queueEntry.setCurrentDownloadType(entity.getCurrentDownloadType());
         queueEntry.setCurrentQueueCategory(entity.getCurrentQueueCategory());
+        // Null checks are needed here because these fields are new
+        queueEntry.setDownloadPriority(entity.getCurrentDownloadPriority() != null
+            ? entity.getCurrentDownloadPriority() : DownloadPriorityEnum.NORMAL);
+        queueEntry.setCurrentSequence(entity.getCurrentDownloadSequence());
 
         if (entity.getDownloadStatus() != null && entity.getLastStatusMessage() != null) {
             queueEntry.updateStatus(entity.getDownloadStatus(), entity.getLastStatusMessage(), false);

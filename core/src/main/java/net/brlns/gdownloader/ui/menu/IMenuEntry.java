@@ -16,9 +16,14 @@
  */
 package net.brlns.gdownloader.ui.menu;
 
+import jakarta.annotation.Nullable;
+
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
 public interface IMenuEntry {
+
+    @Nullable
+    String getIconAsset();
 
 }

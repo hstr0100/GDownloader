@@ -18,7 +18,7 @@ package net.brlns.gdownloader.ui.themes;
 
 import jakarta.annotation.PostConstruct;
 import java.awt.Color;
-import java.util.HashMap;
+import java.util.EnumMap;
 import java.util.Map;
 
 /**
@@ -26,7 +26,7 @@ import java.util.Map;
  */
 public abstract class AbstractTheme {
 
-    private final Map<UIColors, Color> colors = new HashMap<>();
+    private final Map<UIColors, Color> colors = new EnumMap<>(UIColors.class);
 
     @SuppressWarnings("this-escape")
     public AbstractTheme() {
