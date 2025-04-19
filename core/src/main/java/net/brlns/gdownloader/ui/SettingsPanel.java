@@ -1210,6 +1210,56 @@ public class SettingsPanel {
             transcodePanel.set(panel);
         }
 
+        if (filter != null) {
+            addLabel(itemPanel, "settings.advanced.panel.title");
+
+            List<JComponent> namePatternFields = new ArrayList<>();
+            addCheckBox(itemPanel, CheckBoxBuilder.builder()
+                .background(resolveColor(itemPanel))
+                .labelKey("settings.advanced.edit_name_patterns")
+                // Stateless checkbox
+                .onSet((selected) -> {
+                    enableComponentsAndLabels(namePatternFields, selected);
+                })
+                .build());
+
+            if (!filter.isAudioOnly()) {
+                AtomicReference<String> previousPattern = new AtomicReference<>(filter.getVideoNamePattern());
+                namePatternFields.add(addTextField(itemPanel, TextFieldBuilder.builder()
+                    .background(resolveColor(itemPanel))
+                    .labelKey("settings.advanced.video_name_pattern")
+                    .getter(filter::getVideoNamePattern)
+                    .setter(filter::setVideoNamePattern)
+                    .enabled(false)
+                    .placeholderText("E.g: %(title)s (%(uploader_id)s %(upload_date)s %(resolution)s).%(ext)s")
+                    .onSet(newText -> {
+                        if (newText.isEmpty()) {// Some hand-holding because this would break things.
+                            log.error("New video name pattern was empty, reverting...");
+                            filter.setVideoNamePattern(previousPattern.get());
+                        }
+                    })
+                    .build()));
+            }
+
+            if (!filter.isVideoOnly()) {
+                AtomicReference<String> previousPattern = new AtomicReference<>(filter.getAudioNamePattern());
+                namePatternFields.add(addTextField(itemPanel, TextFieldBuilder.builder()
+                    .background(resolveColor(itemPanel))
+                    .labelKey("settings.advanced.audio_name_pattern")
+                    .getter(filter::getAudioNamePattern)
+                    .setter(filter::setAudioNamePattern)
+                    .enabled(false)
+                    .placeholderText("E.g: %(title)s (%(audio_bitrate)s).%(ext)s")
+                    .onSet(newText -> {
+                        if (newText.isEmpty()) {
+                            log.error("New audio name pattern was empty, reverting...");
+                            filter.setAudioNamePattern(previousPattern.get());
+                        }
+                    })
+                    .build()));
+            }
+        }
+
         JCheckBox globalCheckbox;
         if ((globalCheckbox = useGlobalCheckbox.get()) != null) {
             enableComponentsAndLabels(toggleableComponents, !globalCheckbox.isSelected());
