@@ -32,6 +32,9 @@ public enum QueueSortOrderEnum implements ISettingsEnum {
     URL("enums.sort_order.url", (e1, e2) -> {
         return e1.getUrl().compareTo(e2.getUrl());
     }),
+    URL_REVERSE("enums.sort_order.url_reverse", (e1, e2) -> {
+        return e2.getUrl().compareTo(e1.getUrl());
+    }),
     TITLE("enums.sort_order.title", (e1, e2) -> {
         MediaInfo info1 = e1.getMediaInfo();
         MediaInfo info2 = e2.getMediaInfo();
@@ -44,6 +47,20 @@ public enum QueueSortOrderEnum implements ISettingsEnum {
             return -1;
         } else {
             return info1.getTitle().compareTo(info2.getTitle());
+        }
+    }),
+    TITLE_REVERSE("enums.sort_order.title_reverse", (e1, e2) -> {
+        MediaInfo info1 = e1.getMediaInfo();
+        MediaInfo info2 = e2.getMediaInfo();
+
+        if (info1 == null && info2 == null) {
+            return 0;
+        } else if (info1 == null || nullOrEmpty(info1.getTitle())) {
+            return -1;
+        } else if (info2 == null || nullOrEmpty(info2.getTitle())) {
+            return 1;
+        } else {
+            return info2.getTitle().compareTo(info1.getTitle());
         }
     }),
     STATUS("enums.sort_order.status", (e1, e2) -> {
