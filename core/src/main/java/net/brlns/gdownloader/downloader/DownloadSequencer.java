@@ -39,7 +39,6 @@ import static net.brlns.gdownloader.downloader.enums.QueueCategoryEnum.*;
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-// TODO contention and stress tests
 @Slf4j
 public class DownloadSequencer {
 
@@ -54,7 +53,7 @@ public class DownloadSequencer {
     @Getter
     private QueueSortOrderEnum currentSortOrder = QueueSortOrderEnum.SEQUENCE;
 
-    private final ReentrantLock sequencerLock = new ReentrantLock();
+    private final ReentrantLock sequencerLock = new ReentrantLock(true);
 
     public DownloadSequencer() {
         for (QueueCategoryEnum category : QueueCategoryEnum.values()) {
@@ -180,12 +179,12 @@ public class DownloadSequencer {
     }
 
     public QueueEntry fetchNext() {
+        if (categorySets.get(QUEUED).isEmpty()) {
+            return null;
+        }
+
         sequencerLock.lock();
         try {
-            if (categorySets.get(QUEUED).isEmpty()) {
-                return null;
-            }
-
             for (Map.Entry<EntryKey, QueueEntry> entry : priorityQueue.entrySet()) {
                 QueueEntry queueEntry = entry.getValue();
                 long downloadId = queueEntry.getDownloadId();
@@ -342,21 +341,11 @@ public class DownloadSequencer {
     }
 
     public int getCount(QueueCategoryEnum category) {
-        sequencerLock.lock();
-        try {
-            return categorySets.get(category).size();
-        } finally {
-            sequencerLock.unlock();
-        }
+        return categorySets.get(category).size();
     }
 
     public boolean isEmpty(QueueCategoryEnum category) {
-        sequencerLock.lock();
-        try {
-            return categorySets.get(category).isEmpty();
-        } finally {
-            sequencerLock.unlock();
-        }
+        return categorySets.get(category).isEmpty();
     }
 
     public boolean isEmpty() {// Locking this is overkill

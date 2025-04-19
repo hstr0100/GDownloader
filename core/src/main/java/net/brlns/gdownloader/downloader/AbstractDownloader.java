@@ -99,14 +99,18 @@ public abstract class AbstractDownloader {
         return null;
     }
 
+    protected File getCookieJarFileLocation() {
+        return new File(GDownloader.getWorkDirectory(),
+            getDownloaderId().getDisplayName() + "_cookies.txt");
+    }
+
     @Nullable
     public File getCookieJarFile() {
         if (!main.getConfig().isReadCookiesFromCookiesTxt()) {
             return null;
         }
 
-        File cookieJar = new File(GDownloader.getWorkDirectory(),
-            getDownloaderId().getDisplayName() + "_cookies.txt");
+        File cookieJar = getCookieJarFileLocation();
 
         try {
             if (cookieJar.exists() && cookieJar.isFile()) {

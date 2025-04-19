@@ -1005,11 +1005,11 @@ public final class GUIManager {
         return (appWindow.getExtendedState() & JFrame.MAXIMIZED_BOTH) == JFrame.MAXIMIZED_BOTH;
     }
 
-    private void showRightClickMenu(Component parentComponent, RightClickMenuEntries actions, int x, int y) {
+    public void showRightClickMenu(Component parentComponent, RightClickMenuEntries actions, int x, int y) {
         showRightClickMenu(parentComponent, actions, Collections.emptyList(), x, y);
     }
 
-    private void showRightClickMenu(Component parentComponent, RightClickMenuEntries actions,
+    public void showRightClickMenu(Component parentComponent, RightClickMenuEntries actions,
         Collection<RightClickMenuEntries> dependents, int x, int y) {
 
         RightClickMenu rightClickMenu = new RightClickMenu(main.getConfig().isKeepWindowAlwaysOnTop());

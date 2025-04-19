@@ -309,8 +309,8 @@ public class SettingsPanel {
                         leftPanel.add(createIconButton(
                             loadIcon("/assets/wrench.png", ICON, 24),
                             loadIcon("/assets/wrench.png", ICON_HOVER, 24),
-                            "gui.open_config.tooltip",
-                            e -> main.openConfigFile()
+                            "gui.open_work_directory.tooltip",
+                            e -> main.openWorkDirectory()
                         ));
 
                         leftPanel.add(createIconButton(

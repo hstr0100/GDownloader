@@ -553,6 +553,10 @@ public final class GDownloader {
         open(configFile);
     }
 
+    public void openWorkDirectory() {
+        open(getWorkDirectory());
+    }
+
     public void open(File file) {
         try {
             Desktop desktop = Desktop.getDesktop();

@@ -149,7 +149,7 @@ public class SpotDLDownloader extends AbstractDownloader {
                     {}
                 for better quality downloads (256kbps vs 128kbps). Please visit
                     https://github.com/spotDL/spotify-downloader/blob/master/docs/usage.md#youtube-music-premium
-                for more information""", cookieJar);
+                for more information""", getCookieJarFileLocation());
 
             FlagUtil.set(notificationFlags, NOTIFY_COOKIE_JAR);
         }
