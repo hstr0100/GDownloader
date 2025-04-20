@@ -14,6 +14,21 @@ def lowercaseName = 'gdownloader'
 
 def os = org.gradle.internal.os.OperatingSystem.current()
 
+def getArchitecture(def os) {
+    def arch = System.getProperty("os.arch").toLowerCase()
+    if (arch.contains("aarch64") || arch.contains("arm64")) {
+        return os.isWindows() ? "arm64" : "aarch64"
+    } else if (arch.contains("64")) {
+        return os.isWindows() ? "x64" : "amd64"
+    } else if (arch.contains("arm")) {
+        return "arm"
+    } else {
+        return os.isWindows() ? "x86" : "i386"
+    }
+}
+
+def architecture = getArchitecture(os)
+
 java {
     sourceCompatibility = JavaVersion.VERSION_21
     targetCompatibility = JavaVersion.VERSION_21
@@ -122,8 +137,6 @@ tasks.named('shadowJar') { shadowJar ->
 }
 
 task zipJpackageImage(type: Zip) {
-    def architecture = System.getProperty("os.arch").contains("64") ? (os.isWindows() ? "x64" : "amd64") : (os.isWindows() ? "x86" : "i386")
-
     def fileName = os.isWindows() ? "${lowercaseName}-${version}-windows_portable_${architecture}.zip" :
                    os.isLinux() ? "${lowercaseName}-${version}-linux_portable_${architecture}.zip" :
                    "${lowercaseName}-${version}-mac_portable.zip"
@@ -170,9 +183,6 @@ jlink {
             '--app-version', version
         ]
 
-        // For now lets just assume Windows for arm is not a thing yet
-        def architecture = System.getProperty("os.arch").contains("64") ? "x64" : "x86"
-
         if (os.isWindows()) {
             installerName = "${lowercaseName}-windows-${architecture}"
             installerType = 'msi'
@@ -217,7 +227,14 @@ tasks.jpackage.doFirst {
         include('GDownloader.ico')
         into("$buildDir/jpackage/$basePath/app")
     }
+
+    copy {
+        from("$buildDir/libs/${lowercaseName}-java-${version}-all.jar")
+        into("$buildDir/jpackage")
+    }
 }
+
+tasks.jpackage.dependsOn shadowJar
 
 configurations {
     resolvableImplementation { extendsFrom implementation }
@@ -245,5 +262,125 @@ tasks.jlink.doLast {
             mkdir(destFilePath.parent)
             java.nio.file.Files.copy(f.toPath(), destFilePath)
         }
+    }
+}
+
+task createAppImage(type: Exec, dependsOn: zipJpackageImage) {
+    group = 'distribution'
+    onlyIf { os.isLinux() }
+
+    def appImageArch
+    if (architecture == "aarch64" || architecture == "arm64") {
+        appImageArch = "aarch64"
+    } else if (architecture == "arm") {
+        appImageArch = "armhf"
+    } else if (architecture == "amd64" || architecture == "x64") {
+        appImageArch = "x86_64"
+    } else {
+        appImageArch = "i386"
+    }
+
+    def appDirBase = file("$buildDir/appimage")
+
+    doFirst {
+        def portableZip = file("$buildDir/jpackage/${lowercaseName}-${version}-linux_portable_${architecture}.zip")
+        def appDir = file("$appDirBase/AppDir")
+        def appUsrPath = "$appDir/usr"
+        def appLibPath = "$appUsrPath/lib/${lowercaseName}"
+
+        delete(appDirBase)
+        mkdir(appDirBase)
+
+        copy {
+            from zipTree(portableZip)
+            into appDirBase
+        }
+
+        file("$appUsrPath/bin").mkdirs()
+        file("$appUsrPath/share/applications").mkdirs()
+        file("$appUsrPath/share/icons/hicolor/256x256/apps").mkdirs()
+
+        copy {
+            from appDirBase
+            into "$appLibPath"
+            include "**"
+            exclude "AppDir/**"
+        }
+
+        delete("$appLibPath/lib/runtime/portable.lock")
+
+        def launcherScript = file("$appUsrPath/bin/${lowercaseName}")
+        launcherScript.text = [
+            "#!/bin/bash",
+            "cd \"\$(dirname \"\$(readlink -f \"\$0\")\")/../lib/${lowercaseName}\"",
+            "exec ./bin/GDownloader \"\$@\""
+        ].join("\n")
+        launcherScript.setExecutable(true, false)
+
+        def iconPath = "$appLibPath/lib/app/GDownloader.png"
+
+        [
+            "$appDir/${lowercaseName}.png",
+            "$appUsrPath/share/icons/hicolor/256x256/apps/${lowercaseName}.png",
+            "$appDir/.DirIcon"
+        ].each { destPath ->
+            copy {
+                from iconPath
+                into file(destPath).parent
+                rename { file(destPath).name }
+            }
+        }
+
+        def desktopFileContent = [
+            "[Desktop Entry]",
+            "Name=${rootProject.name}",
+            "Exec=${lowercaseName}",
+            "Icon=${lowercaseName}",
+            "Type=Application",
+            "Categories=Network;",
+            "Comment=Download Manager",
+            "Terminal=false"
+        ].join("\n")
+
+        [
+            file("$appUsrPath/share/applications/${lowercaseName}.desktop"),
+            file("$appDir/${lowercaseName}.desktop")
+        ].each {
+            it.text = desktopFileContent
+            it.setExecutable(true, false)
+        }
+
+        def appRun = file("$appDir/AppRun")
+        appRun.text = [
+            "#!/bin/bash",
+            "HERE=\"\$(dirname \"\$(readlink -f \"\${0}\")\")\"",
+            "NATIVES=\"\${HERE}/usr/lib/${lowercaseName}/lib/runtime/bin/native-libs/linux/${appImageArch}\"",
+            "export PATH=\"\${HERE}/usr/bin:\${PATH}\"",
+            "export LD_LIBRARY_PATH=\"\${HERE}/usr/lib/${lowercaseName}/lib:\${NATIVES}:\${LD_LIBRARY_PATH}\"",
+            "exec \"\${HERE}/usr/bin/${lowercaseName}\" \"\$@\""
+        ].join("\n")
+        appRun.setExecutable(true, false)
+    }
+
+    // Build image
+    def appImageName = "${rootProject.name}-${version}-${appImageArch}.AppImage"
+    workingDir "$buildDir/appimage"
+    environment "ARCH", appImageArch
+
+    // this requires appimagetool (without extension and version number) to be in your PATH
+    // https://github.com/AppImage/appimagetool/releases
+    commandLine "appimagetool", "--verbose", "-n", "AppDir", appImageName
+
+    doLast {
+        copy {
+            from "$buildDir/appimage/${appImageName}"
+            into "$buildDir/jpackage"
+        }
+
+        delete fileTree(appDirBase) {
+            exclude 'AppDir/**'
+        }
+
+        println "Created AppImage at: $buildDir/jpackage/${appImageName}"
     }
 }
