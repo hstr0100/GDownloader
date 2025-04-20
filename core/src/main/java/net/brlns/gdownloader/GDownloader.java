@@ -82,19 +82,16 @@ import static net.brlns.gdownloader.util.StringUtils.nullOrEmpty;
 // TODO d&d files for conversion to different formats, we already have ffmpeg anyway
 //
 // TODO max simultaneous downloads should be independent per website
-// TODO investigate adding AppImage build
 // TODO scale on resolution DPI
 // TODO save last window size in config
-// TODO Advanced users can edit the config.json directly to add extra yt-dlp arguments like proxy settings. but maybe expose those settings to the ui.
 // TODO verify checksums during updates, add bouncycastle, check signatures
 // TODO write a component factory for GUIManager
 // TODO git actions build for different platforms
 // FEEDBACK Should choose to download video and audio independently on each card
 // DROPPED check updates on a timer, but do not ever restart when anything is in the queue.
 // TODO --no-playlist when single video option is active
-// TODO Artifacting seems to be happening on the scroll pane with AMD video cards
+// TODO Artifacting seems to be happening on the scroll pane with any video card
 // TODO open a window asking which videos in a playlist to download or not
-// TODO RearrangeableDeque's offerLast should be linked to the cards in the UI
 // TODO Better visual eye candy for when dragging cards
 // TODO Javadoc, a whole lot of it.
 // TODO Twitch settings purposefully default to suboptimal quality due to huge file sizes. Maybe consider adding a warning about this in the GUI.
@@ -103,14 +100,12 @@ import static net.brlns.gdownloader.util.StringUtils.nullOrEmpty;
 // TODO Send notifications when a NO_METHOD is triggered, explaining why it was triggered.
 // TODO Test downloading sections of a livestream (currently it gets stuck on status PREPARING). Note: it also leaves a zombie ffmpeg process behind dealing with the hls stream.
 // TODO The issue above is a yt-dlp bug https:// github.com/yt-dlp/yt-dlp/issues/7927
-// TODO Implement rate-limiting options internally; the way it's currently implemented does not account for concurrent or non-playlist downloads.
 // TODO Notify the user whenever a setting that requires restart was changed.
 // TODO Add an url ignore list / Allow filters to be disabled
 // TODO Add option to clear all installed updates and start fresh. (Tackling certain issues where failed updates could break downloads)
 // TODO Wget integration
 // TODO NTFS File path length workaround for gallery-dl
 // TODO Split main window from GUIManager
-// TODO Debug no console output from gallery-dl on Windows when using channels
 // TODO gallery-dl does not accept an argument specifying yt-dlp/ffmpeg location, figure out a workaround to pass the correct path to it
 // TODO Fastutil collections
 // TODO Proxy settings should be add to the UI, fields should be validated on the fly
@@ -119,7 +114,6 @@ import static net.brlns.gdownloader.util.StringUtils.nullOrEmpty;
 // TODO Two column layout when in full screen
 // TODO Fix notification line wrapping
 // TODO Downloader priority settings
-// TODO Dynamically reorder downloads based on their status or order in queue -> RUNNING, QUEUED, <others>, FAILED
 // TODO Notifications are appearing below the main window when in fullscreen mode.
 // TODO About page
 // TODO Confirm dialog before clearing DL queue
@@ -1171,7 +1165,7 @@ public final class GDownloader {
 
         int exitCode = process.waitFor();
         if (exitCode != 0) {
-            log.warn("Failed command for {}",
+            log.warn("Command failed, exit code: {} args: {}", exitCode,
                 StringUtils.escapeAndBuildCommandLine(command));
         }
 

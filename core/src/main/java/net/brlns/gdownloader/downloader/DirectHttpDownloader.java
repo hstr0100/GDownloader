@@ -190,16 +190,19 @@ public class DirectHttpDownloader extends AbstractDownloader {
                 }
 
                 return new DownloadResult(FLAG_MAIN_CATEGORY_FAILED, lastOutput);
+            } else {
+                if (main.getConfig().isDirectHttpTranscoding()) {
+                    DownloadResult transcodeResult = transcodeMediaFiles(entry);
+
+                    if (main.getConfig().isFailDownloadsOnTranscodingFailures()
+                        && !FLAG_SUCCESS.isSet(transcodeResult.getFlags())) {
+                        return transcodeResult;
+                    }
+                }
             }
         }
 
         return new DownloadResult(success ? FLAG_SUCCESS : FLAG_UNSUPPORTED, lastOutput);
-    }
-
-    @Override
-    protected DownloadResult transcodeMediaFiles(QueueEntry entry) {
-        // TODO
-        return null;
     }
 
     @Override

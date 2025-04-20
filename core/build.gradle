@@ -17,13 +17,13 @@ def os = org.gradle.internal.os.OperatingSystem.current()
 def getArchitecture(def os) {
     def arch = System.getProperty("os.arch").toLowerCase()
     if (arch.contains("aarch64") || arch.contains("arm64")) {
-        return os.isWindows() ? "arm64" : "aarch64"
-    } else if (arch.contains("64")) {
-        return os.isWindows() ? "x64" : "amd64"
+        return os.isLinux() ? "aarch64" : "arm64"
     } else if (arch.contains("arm")) {
-        return "arm"
+        return os.isLinux() ? "armhf" : "arm"
+    } else if (arch.contains("64")) {
+        return os.isLinux() ? "amd64" : "x64"
     } else {
-        return os.isWindows() ? "x86" : "i386"
+        return os.isLinux() ? "i386" : "x86"
     }
 }
 
@@ -139,6 +139,7 @@ tasks.named('shadowJar') { shadowJar ->
 task zipJpackageImage(type: Zip) {
     def fileName = os.isWindows() ? "${lowercaseName}-${version}-windows_portable_${architecture}.zip" :
                    os.isLinux() ? "${lowercaseName}-${version}-linux_portable_${architecture}.zip" :
+                   architecture == "arm64" ? "${lowercaseName}-${version}-mac_portable_arm64.zip" :
                    "${lowercaseName}-${version}-mac_portable.zip"
 
     archiveFileName.set(fileName)
@@ -151,7 +152,10 @@ task zipJpackageImage(type: Zip) {
                        "$buildDir/jpackage/${rootProject.name}.app/Contents"
 
         def portableLockFile = file("$basePath/runtime/portable.lock")
-        portableLockFile.text = "This file ensures that the program will run in portable mode.\nDeleting it when the program is not installed is not recommended."
+        portableLockFile.text = [
+            "This file ensures that the program will run in portable mode.",
+            "Deleting it when the program is not installed is not recommended."
+        ].join("\n")
     }
 
     from("$buildDir/jpackage/${rootProject.name}")
@@ -176,9 +180,9 @@ jlink {
 
         installerOptions += [
             '--about-url', 'https://github.com/hstr0100/GDownloader',
-            '--description', 'Download Manager',
+            '--description', 'Graphical interface for yt-dlp, gallery-dl, and spotDL',
             '--vendor', author,
-            '--copyright', "2024 ${author}",
+            '--copyright', "2025 ${author}",
             '--license-file', "../LICENSE",
             '--app-version', version
         ]
@@ -270,14 +274,14 @@ task createAppImage(type: Exec, dependsOn: zipJpackageImage) {
     onlyIf { os.isLinux() }
 
     def appImageArch
-    if (architecture == "aarch64" || architecture == "arm64") {
+    if (architecture == "arm64" || architecture == "aarch64") {
         appImageArch = "aarch64"
-    } else if (architecture == "arm") {
+    } else if (architecture == "arm" || architecture == "armhf") {
         appImageArch = "armhf"
-    } else if (architecture == "amd64" || architecture == "x64") {
+    } else if (architecture == "x64" || architecture == "amd64") {
         appImageArch = "x86_64"
     } else {
-        appImageArch = "i386"
+        appImageArch = "i686"
     }
 
     def appDirBase = file("$buildDir/appimage")
@@ -338,7 +342,7 @@ task createAppImage(type: Exec, dependsOn: zipJpackageImage) {
             "Icon=${lowercaseName}",
             "Type=Application",
             "Categories=Network;",
-            "Comment=Download Manager",
+            "Comment=Graphical interface for yt-dlp, gallery-dl, and spotDL",
             "Terminal=false"
         ].join("\n")
 
@@ -363,7 +367,7 @@ task createAppImage(type: Exec, dependsOn: zipJpackageImage) {
     }
 
     // Build image
-    def appImageName = "${rootProject.name}-${version}-${appImageArch}.AppImage"
+    def appImageName = "${lowercaseName}-${version}-${appImageArch}.AppImage"
     workingDir "$buildDir/appimage"
     environment "ARCH", appImageArch
 

@@ -115,6 +115,10 @@ public class Settings {
     @JsonProperty("RespectYtDlpConfigFile")
     private boolean respectYtDlpConfigFile = false;
 
+    // TODO ui
+    @JsonProperty("YtDlpTranscoding")
+    private boolean ytDlpTranscoding = true;
+
     @JsonProperty("GalleryDlDeduplication")
     private boolean galleryDlDeduplication = true;
 
@@ -131,6 +135,10 @@ public class Settings {
 
     @JsonProperty("DirectHttpEnabled")
     private boolean directHttpEnabled = false;
+
+    // TODO ui
+    @JsonProperty("DirectHttpTranscoding")
+    private boolean directHttpTranscoding = true;
 
     @JsonProperty("DirectHttpMaxDownloadChunks")
     private int directHttpMaxDownloadChunks = 5;
