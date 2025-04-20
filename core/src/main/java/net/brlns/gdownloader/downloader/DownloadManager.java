@@ -651,7 +651,7 @@ public class DownloadManager implements IEvent {
             }
         }
 
-        if (downloadsRunning.get() && sequencer.isEmpty(RUNNING) && sequencer.isEmpty(QUEUED)) {
+        if (downloadsRunning.get() && sequencer.isEmpty(RUNNING)) {
             if (main.getConfig().isDisplayDownloadsCompleteNotification()
                 && completedAtLeastOne.get() && !sequencer.isEmpty()) {
                 PopupMessenger.show(
@@ -723,6 +723,11 @@ public class DownloadManager implements IEvent {
     }
 
     private void updateRightClick(QueueEntry entry, QueueCategoryEnum category) {
+        if (category == RUNNING) {
+            entry.removeRightClick(_forceStartKey);
+            return;
+        }
+
         if (category == COMPLETED || category == FAILED) {
             if (category == COMPLETED) {
                 entry.removeRightClick(_downloadPriorityKey);
@@ -848,8 +853,6 @@ public class DownloadManager implements IEvent {
     }
 
     protected void submitDownloadTask(QueueEntry entry, boolean force) {
-        entry.removeRightClick(_forceStartKey);
-
         MediaCard mediaCard = entry.getMediaCard();
         if (mediaCard.isClosed()) {
             return;
