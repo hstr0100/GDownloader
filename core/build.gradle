@@ -17,7 +17,7 @@ def os = org.gradle.internal.os.OperatingSystem.current()
 def getArchitecture(def os) {
     def arch = System.getProperty("os.arch").toLowerCase()
     if (arch.contains("aarch64") || arch.contains("arm64")) {
-        return os.isLinux() ? "aarch64" : "arm64"
+        return "arm64"
     } else if (arch.contains("arm")) {
         return os.isLinux() ? "armhf" : "arm"
     } else if (arch.contains("64")) {

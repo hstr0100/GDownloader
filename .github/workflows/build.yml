@@ -47,7 +47,6 @@ jobs:
             ${{ runner.os }}-gradle-
 
       - name: Build Shaded JAR
-        if: matrix.GRADLE_ARCH == 'amd64'
         run: ./gradlew clean build
 
       - name: Build JPackage Binary
