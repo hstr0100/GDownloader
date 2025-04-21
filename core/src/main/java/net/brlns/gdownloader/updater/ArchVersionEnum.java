@@ -36,7 +36,7 @@ public enum ArchVersionEnum {
     // TODO: https://aka.ms/vs/17/release/vc_redist.x86.exe
     LINUX_X64("yt-dlp_linux", "gallery-dl.bin", "-linux", null, "linux_portable_amd64.zip", OS.LINUX),
     LINUX_ARM("yt-dlp_linux_armv7l", null, null, null, null, OS.LINUX),
-    LINUX_ARM64("yt-dlp_linux_aarch64", null, null, null, null, OS.LINUX);
+    LINUX_ARM64("yt-dlp_linux_aarch64", null, null, null, "linux_portable_arm64.zip", OS.LINUX);
 
     private final String ytDlpBinary;
     private final String galleryDlBinary;
