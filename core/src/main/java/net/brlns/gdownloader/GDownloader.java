@@ -120,6 +120,7 @@ import static net.brlns.gdownloader.util.StringUtils.nullOrEmpty;
 // TODO Move config files, downloaders and their respective data to subfolders
 // TODO ctrl+z to undo removals
 // TODO implement remuxing to mkv
+// TODO System/provided binary selection should be individually configurable per downloader
 // prio
 // TODO display number in download queue
 // TODO automatic ui sorting

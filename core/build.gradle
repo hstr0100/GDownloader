@@ -211,9 +211,10 @@ jlink {
                 '--linux-shortcut'
             ]
         } else if (os.isMacOsX()) {
+            installerName = "${lowercaseName}-mac-${architecture}"
             installerType = 'dmg'
             installerOptions += [
-                '--mac-package-name', "${lowercaseName}-mac"
+                '--mac-package-name', "${rootProject.name}"
             ]
         }
     }
@@ -231,14 +232,7 @@ tasks.jpackage.doFirst {
         include('GDownloader.ico')
         into("$buildDir/jpackage/$basePath/app")
     }
-
-    copy {
-        from("$buildDir/libs/${lowercaseName}-java-${version}-all.jar")
-        into("$buildDir/jpackage")
-    }
 }
-
-tasks.jpackage.dependsOn shadowJar
 
 configurations {
     resolvableImplementation { extendsFrom implementation }
@@ -388,3 +382,23 @@ task createAppImage(type: Exec, dependsOn: zipJpackageImage) {
         println "Created AppImage at: $buildDir/jpackage/${appImageName}"
     }
 }
+
+task printJpackageContents {
+    doLast {
+        def jpackageDir = file("$buildDir/jpackage")
+        if (jpackageDir.exists() && jpackageDir.isDirectory()) {
+            println "Build complete, generated binaries:"
+
+            jpackageDir.eachFile { file ->
+                if (file.isFile()) {
+                    println "- ${file.absolutePath}"
+                }
+            }
+        } else {
+            println "jpackage directory is missing or not a directory: ${jpackageDir.path}"
+        }
+    }
+}
+
+tasks.zipJpackageImage.finalizedBy printJpackageContents
+tasks.createAppImage.finalizedBy printJpackageContents

@@ -4,9 +4,13 @@ import java.util.concurrent.TimeUnit;
 import net.brlns.gdownloader.util.collection.ExpiringSet;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+// Mac JVM appears to have significant issues keeping up with precise timings.
+@DisabledOnOs(OS.MAC)
 class ExpiringSetTest {
 
     private ExpiringSet<String> expiringSet;

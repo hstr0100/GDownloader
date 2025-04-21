@@ -26,8 +26,9 @@ import lombok.extern.slf4j.Slf4j;
 @Getter
 @Slf4j
 public enum ArchVersionEnum {
-    MAC_X86("yt-dlp_macos_legacy", null, null, null, null, OS.MAC),
+    MAC_LEGACY("yt-dlp_macos_legacy", null, null, null, null, OS.MAC),
     MAC_X64("yt-dlp_macos", null, "-darwin", null, null, OS.MAC),
+    MAC_ARM64("yt-dlp_macos", null, "-darwin", null, null, OS.MAC),
     WINDOWS_X86("yt-dlp_x86.exe", null, "-win32.exe", null, null, OS.WINDOWS),
     // Neither Apache Compress nor any java library that I know of supports the -mx=9 option used by FFmpeg's 7zs
     WINDOWS_X64("yt-dlp.exe", "gallery-dl.exe", "-win32.exe", "-full_build.zip", "windows_portable_x64.zip", OS.WINDOWS),
@@ -70,9 +71,7 @@ public enum ArchVersionEnum {
 
         switch (arch) {
             case "x86", "i386" -> {
-                if (os.contains("mac")) {
-                    archVersion = ArchVersionEnum.MAC_X86;
-                } else if (os.contains("win")) {
+                if (os.contains("win")) {
                     archVersion = ArchVersionEnum.WINDOWS_X86;
                 }
             }
@@ -81,7 +80,11 @@ public enum ArchVersionEnum {
                 if (os.contains("nux")) {
                     archVersion = ArchVersionEnum.LINUX_X64;
                 } else if (os.contains("mac")) {
-                    archVersion = ArchVersionEnum.MAC_X64;
+                    if (isMacOsOlderThanBigSur()) {
+                        archVersion = ArchVersionEnum.MAC_LEGACY;
+                    } else {
+                        archVersion = ArchVersionEnum.MAC_X64;
+                    }
                 } else if (os.contains("win")) {
                     archVersion = ArchVersionEnum.WINDOWS_X64;
                 }
@@ -94,7 +97,9 @@ public enum ArchVersionEnum {
             }
 
             case "arm64", "aarch64" -> {
-                if (os.contains("nux")) {
+                if (os.contains("mac")) {
+                    archVersion = ArchVersionEnum.MAC_ARM64;
+                } else if (os.contains("nux")) {
                     archVersion = ArchVersionEnum.LINUX_ARM64;
                 }
             }
@@ -115,5 +120,31 @@ public enum ArchVersionEnum {
         WINDOWS,
         LINUX,
         MAC;
+    }
+
+    private static boolean isMacOsOlderThanBigSur() {
+        String os = System.getProperty("os.name");
+        String version = System.getProperty("os.version");
+
+        if (!os.contains("mac")) {
+            return false;
+        }
+
+        try {
+            String[] versionParts = version.split("\\.");
+            if (versionParts.length > 0) {
+                int majorVersion = Integer.parseInt(versionParts[0]);
+
+                return majorVersion < 11;
+            } else {
+                log.error("Could not parse macOS version string: {}", version);
+
+                return false;
+            }
+        } catch (NumberFormatException e) {
+            log.error("Error parsing macOS major version from string: {}", version, e);
+
+            return false;
+        }
     }
 }
