@@ -139,8 +139,7 @@ tasks.named('shadowJar') { shadowJar ->
 task zipJpackageImage(type: Zip) {
     def fileName = os.isWindows() ? "${lowercaseName}-${version}-windows_portable_${architecture}.zip" :
                    os.isLinux() ? "${lowercaseName}-${version}-linux_portable_${architecture}.zip" :
-                   architecture == "arm64" ? "${lowercaseName}-${version}-mac_portable_arm64.zip" :
-                   "${lowercaseName}-${version}-mac_portable.zip"
+                   "${lowercaseName}-${version}-mac_portable_${architecture}.zip"
 
     archiveFileName.set(fileName)
     destinationDirectory.set(file("$buildDir/jpackage"))

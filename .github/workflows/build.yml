@@ -1,54 +1,298 @@
-name: Build and Package
+name: Build and Release
 
 on:
   push:
-    branches:
-      - main
   pull_request:
-    branches:
-      - main
+  workflow_dispatch:
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
+  test-linux:
+    name: Test Linux Build
+    if: ${{ !startsWith(github.ref, 'refs/tags/') }}
 
     strategy:
       matrix:
-        java-version: [21]
+        arch: [amd64]
+        include:
+          - GRADLE_ARCH: amd64
+            RUNS_ON: ubuntu-latest
+            JAVA_VERSION: 21
+
+    runs-on: ${{ matrix.RUNS_ON }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Set up JDK
-        uses: actions/setup-java@v3
         with:
-          java-version: ${{ matrix.java-version }}
+          fetch-depth: 0
+
+      - name: Set up JDK ${{ matrix.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ matrix.JAVA_VERSION }}
           distribution: 'temurin'
 
-      - name: Cache Gradle packages
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      - name: Setup Gradle cache
         uses: actions/cache@v3
         with:
-          path: ~/.gradle/caches
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            .gradle
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: ${{ runner.os }}-gradle
+          restore-keys: |
+            ${{ runner.os }}-gradle-
 
-      - name: Build with Gradle
+      - name: Build Shaded JAR
+        if: matrix.GRADLE_ARCH == 'amd64'
         run: ./gradlew clean build
 
-      - name: Create native image with jpackage
+      - name: Build JPackage Binary
         run: ./gradlew jpackage
 
-      - name: Upload Shaded JAR
-        uses: actions/upload-artifact@v4
-        with:
-          name: GDownloader.jar
-          path: core/build/libs/*.jar
-          overwrite: true
+  build-linux:
+    name: Build Linux
+    if: startsWith(github.ref, 'refs/tags/')
 
-      - name: Upload Native Image
+    strategy:
+      matrix:
+        arch: [amd64]
+        include:
+          - GRADLE_ARCH: amd64
+            APPIMAGE_ARCH: x86_64
+            RUNS_ON: ubuntu-24.04
+            JAVA_VERSION: 21
+
+    runs-on: ${{ matrix.RUNS_ON }}
+    env:
+      ARCH: ${{ matrix.APPIMAGE_ARCH }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK ${{ matrix.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ matrix.JAVA_VERSION }}
+          distribution: 'temurin'
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fakeroot file binutils
+
+      - name: Install AppImageTool
+        run: |
+          wget -q "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-${{ matrix.APPIMAGE_ARCH }}.AppImage" -O appimagetool
+          chmod +x appimagetool
+          sudo mv appimagetool /usr/local/bin/
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      - name: Setup Gradle cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            .gradle
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Build Shaded JAR
+        if: matrix.GRADLE_ARCH == 'amd64'
+        run: ./gradlew clean build
+
+      - name: Build JPackage Binary
+        run: ./gradlew jpackage
+
+      - name: Build AppImage
+        run: ./gradlew createAppImage
+
+      - name: Upload AppImage artifact
         uses: actions/upload-artifact@v4
         with:
-          name: GDownloader.deb
-          path: core/build/jpackage/*
-          overwrite: true
+          name: gdownloader-${{ matrix.APPIMAGE_ARCH }}-appimage
+          path: ./core/build/jpackage/gdownloader-*-${{ matrix.APPIMAGE_ARCH }}.AppImage
+          if-no-files-found: error
+
+      - name: Upload portable ZIP artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gdownloader-linux-portable-${{ matrix.GRADLE_ARCH }}
+          path: ./core/build/jpackage/gdownloader-*-linux_portable_${{ matrix.GRADLE_ARCH }}.zip
+          if-no-files-found: error
+
+      - name: Upload DEB package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gdownloader-linux-deb-${{ matrix.GRADLE_ARCH }}
+          path: ./core/build/jpackage/gdownloader-linux_*_${{ matrix.GRADLE_ARCH }}.deb
+          if-no-files-found: error
+
+      - name: Upload JAR artifact
+        if: matrix.GRADLE_ARCH == 'amd64'
+        uses: actions/upload-artifact@v4
+        with:
+          name: gdownloader-java-jar
+          path: ./core/build/libs/gdownloader-java-*-all.jar
+          if-no-files-found: error
+
+  build-windows:
+    name: Build Windows
+    strategy:
+      matrix:
+        include:
+          - JAVA_VERSION: 21
+            GRADLE_ARCH: x64
+
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK ${{ matrix.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ matrix.JAVA_VERSION }}
+          distribution: 'temurin'
+
+      - name: Cache WiX Toolset installation
+        id: wix-cache
+        uses: actions/cache@v4
+        with:
+          path: C:\Program Files (x86)\WiX Toolset v3.14
+          key: ${{ runner.os }}-wix-v3.14
+          restore-keys: |
+            ${{ runner.os }}-wix-
+
+      - name: Install WiX Toolset v3 if not cached
+        if: steps.wix-cache.outputs.cache-hit != 'true'
+        run: |
+          Invoke-WebRequest -Uri "https://github.com/wixtoolset/wix3/releases/download/wix3141rtm/wix314.exe" -OutFile wix314.exe
+          Start-Process -FilePath "wix314.exe" -ArgumentList "/quiet" -NoNewWindow -Wait
+        shell: powershell
+
+      - name: Add WiX to PATH
+        run: echo "C:\Program Files (x86)\WiX Toolset v3.14\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: Setup Gradle cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            .gradle
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Build JPackage Binary
+        run: .\gradlew clean jpackage
+
+      - name: Upload MSI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gdownloader-windows-msi
+          path: .\core\build\jpackage\gdownloader-windows-${{ matrix.GRADLE_ARCH }}-*.msi
+          if-no-files-found: error
+
+      - name: Upload portable ZIP artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gdownloader-windows-portable-${{ matrix.GRADLE_ARCH }}
+          path: .\core\build\jpackage\gdownloader-*-windows_portable_${{ matrix.GRADLE_ARCH }}.zip
+          if-no-files-found: error
+
+  build-macos:
+    name: Build macOS
+    strategy:
+      matrix:
+        include:
+          - JAVA_VERSION: 21
+            GRADLE_ARCH: arm64
+
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: macos-14
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK ${{ matrix.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ matrix.JAVA_VERSION }}
+          distribution: 'temurin'
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      - name: Setup Gradle cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            .gradle
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Build JPackage Binary
+        run: ./gradlew clean jpackage
+
+      - name: Upload DMG artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gdownloader-mac-${{ matrix.GRADLE_ARCH }}-dmg
+          path: ./core/build/jpackage/gdownloader-mac-${{ matrix.GRADLE_ARCH }}-*.dmg
+          if-no-files-found: error
+
+  release:
+    name: Create Release
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [build-linux, build-windows, build-macos]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: 'gdownloader-*'
+          merge-multiple: true
+
+      - name: Generate SHA256 checksums
+        working-directory: artifacts
+        run: |
+          sha256sum * > SHA256
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ steps.get_tag.outputs.tag }}
+          tag_name: ${{ steps.get_tag.outputs.tag }}
+          generate_release_notes: true
+          files: |
+            artifacts/*
+          token: ${{ secrets.GITHUB_TOKEN }}
