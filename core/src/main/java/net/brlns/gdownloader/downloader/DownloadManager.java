@@ -733,6 +733,7 @@ public class DownloadManager implements IEvent {
                 entry.removeRightClick(_downloadPriorityKey);
             }
 
+            entry.removeRightClick(_forceStartKey);
             entry.addRightClick(_restartKey, () -> stopDownload(entry, () -> {
                 resetDownload(entry);
                 submitDownloadTask(entry, true);
