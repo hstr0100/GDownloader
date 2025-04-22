@@ -696,7 +696,7 @@ public class DownloadManager implements IEvent {
                 saveCheckpoint(entry);
             }
 
-            main.getGuiManager().removeMediaCard(entry.getMediaCard().getId(), reason);
+            entry.dispose(reason);
         });
 
         if (fireListeners) {
@@ -1028,7 +1028,7 @@ public class DownloadManager implements IEvent {
                             offerTo(COMPLETED, entry);
 
                             if (main.getConfig().isRemoveSuccessfulDownloads()) {
-                                main.getGuiManager().removeMediaCard(mediaCard.getId(), CloseReasonEnum.SUCCEEDED);
+                                entry.dispose(CloseReasonEnum.SUCCEEDED);
                             }
 
                             return;

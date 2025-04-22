@@ -146,6 +146,11 @@ public class QueueEntry {
         main.openUrlInBrowser(originalUrl);
     }
 
+    public void dispose(CloseReasonEnum closeReason) {
+        main.getGuiManager().removeMediaCard(
+            mediaCard.getId(), closeReason);
+    }
+
     public void tryOpenMediaFiles() {
         if (play(VideoContainerEnum.class)
             || play(AudioContainerEnum.class)
@@ -201,8 +206,8 @@ public class QueueEntry {
     }
 
     public void recreateQueueEntry() {
-        main.getGuiManager().removeMediaCard(
-            mediaCard.getId(), CloseReasonEnum.MANUAL);
+        dispose(CloseReasonEnum.MANUAL);
+
         main.getDownloadManager().captureUrl(url, true);
     }
 
@@ -661,6 +666,18 @@ public class QueueEntry {
 
         extrasSubmenu.put(l10n("gui.recreate_entry"),
             new RunnableMenuEntry(() -> recreateQueueEntry()));
+
+        extrasSubmenu.put(l10n("gui.remove_entry"),
+            new RunnableMenuEntry(()
+                -> dispose(CloseReasonEnum.MANUAL)));
+
+        if (!finalMediaFiles.isEmpty()) {
+            extrasSubmenu.put(l10n("gui.delete_files_and_remove"),
+                new RunnableMenuEntry(() -> {
+                    deleteMediaFiles();
+                    dispose(CloseReasonEnum.MANUAL);
+                }));
+        }
 
         if (!extrasSubmenu.isEmpty()) {
             addRightClick(l10n("gui.more_options"),
