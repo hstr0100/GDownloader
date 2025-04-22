@@ -489,7 +489,7 @@ public class DownloadManager implements IEvent {
         });
 
         queueEntry.getMediaCard().setOnLeftClick(() -> {
-            main.openDownloadsDirectory();
+            queueEntry.tryOpenMediaFiles();
         });
 
         queueEntry.createDefaultRightClick(this);

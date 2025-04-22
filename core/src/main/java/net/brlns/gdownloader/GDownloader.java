@@ -125,6 +125,7 @@ import static net.brlns.gdownloader.util.StringUtils.nullOrEmpty;
 // prio
 // TODO display number in download queue
 // TODO automatic ui sorting
+// TODO welcome screen with some setting presets based on selected use case
 /**
  * GDownloader - GUI wrapper for yt-dlp
  *

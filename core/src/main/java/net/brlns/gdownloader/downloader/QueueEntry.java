@@ -146,27 +146,58 @@ public class QueueEntry {
         main.openUrlInBrowser(originalUrl);
     }
 
-    public <T extends Enum<T> & IContainerEnum> void play(Class<T> container) {
-        if (!finalMediaFiles.isEmpty()) {
-            for (File file : finalMediaFiles) {
-                if (!file.exists()) {
-                    continue;
-                }
+    public void tryOpenMediaFiles() {
+        if (play(VideoContainerEnum.class)
+            || play(AudioContainerEnum.class)
+            || play(ThumbnailContainerEnum.class)) {
+            return;
+        }
 
-                String fileName = file.getAbsolutePath().toLowerCase();
-
-                String[] values = IContainerEnum.getContainerValues(container);
-
-                for (String value : values) {
-                    if (fileName.endsWith("." + value)) {
-                        main.open(file);
-                        return;
-                    }
-                }
+        for (File file : finalMediaFiles) {
+            if (file.isDirectory()) {
+                main.open(file);
+                return;
             }
         }
 
         main.openDownloadsDirectory();
+    }
+
+    private <T extends Enum<T> & IContainerEnum> boolean play(Class<T> container) {
+        return play(container, true);
+    }
+
+    private <T extends Enum<T> & IContainerEnum> boolean play(
+        Class<T> container, boolean playlist) {
+        List<File> matchingFiles = new ArrayList<>();
+
+        for (File file : finalMediaFiles) {
+            if (file.isFile() && isMediaType(file, container)) {
+                matchingFiles.add(file);
+            }
+        }
+
+        if (!matchingFiles.isEmpty()) {
+            if (matchingFiles.size() > 1 && playlist) {
+                main.openPlaylist(matchingFiles);
+            } else {
+                main.open(matchingFiles.get(0));
+            }
+
+            return true;
+        }
+
+        return false;
+    }
+
+    private <T extends Enum<T> & IContainerEnum> boolean isMediaType(File file, Class<T> enumClass) {
+        for (T container : enumClass.getEnumConstants()) {
+            if (isFileType(file, ((IContainerEnum)container).getValue())) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public void recreateQueueEntry() {
@@ -713,19 +744,14 @@ public class QueueEntry {
         }
     }
 
-    private <T extends Enum<T> & IContainerEnum> boolean isMediaType(File file, Class<T> enumClass) {
-        for (T container : enumClass.getEnumConstants()) {
-            if (isFileType(file, ((IContainerEnum)container).getValue())) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
     private <T extends Enum<T> & IContainerEnum> boolean addMediaAction(File file, Class<T> enumClass, String actionKey) {
         if (isMediaType(file, enumClass)) {
-            addRightClick(l10n(actionKey), () -> play(enumClass));
+            addRightClick(l10n(actionKey), () -> {
+                if (!play(enumClass, false)) {
+                    main.openDownloadsDirectory();
+                }
+            });
+
             return true;
         }
 

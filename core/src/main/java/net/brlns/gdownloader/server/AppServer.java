@@ -149,7 +149,9 @@ public final class AppServer {
         } catch (SocketTimeoutException e) {
             log.warn("Client connection timed out");
         } catch (IOException e) {
-            log.warn("Error handling client", e);
+            log.warn("I/O error handling client", e);
+        } catch (Throwable t) {
+            log.warn("Error handling client", t);
         }
     }
 
