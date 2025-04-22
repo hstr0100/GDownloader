@@ -109,29 +109,26 @@ public class DirectoryDeduplicator {
     /**
      * Calculates the SHA-256 hash of a file.
      */
-    private static String getFileHash(File file) throws IOException, NoSuchAlgorithmException {
-        String result = HASH_CACHE.get(file);
+    private static String getFileHash(File file) throws RuntimeException {
+        return HASH_CACHE.computeIfAbsent(file, (key) -> {
+            try {
+                MessageDigest digest = MessageDigest.getInstance("SHA-256");
+                // Use a buffered reader with a generous buffer size to avoid some nasty I/O trashing here
+                try (BufferedInputStream bis
+                    = new BufferedInputStream(new FileInputStream(key))) {
+                    byte[] byteArray = new byte[BUFFER_SIZE];
+                    int bytesRead;
+                    while ((bytesRead = bis.read(byteArray)) != -1) {
+                        digest.update(byteArray, 0, bytesRead);
+                    }
+                }
 
-        if (result != null) {
-            return result;
-        }
-
-        MessageDigest digest = MessageDigest.getInstance("SHA-256");
-        // Use a buffered reader with a generous buffer size to avoid some nasty I/O trashing here
-        try (BufferedInputStream bis
-            = new BufferedInputStream(new FileInputStream(file))) {
-            byte[] byteArray = new byte[BUFFER_SIZE];
-            int bytesRead;
-            while ((bytesRead = bis.read(byteArray)) != -1) {
-                digest.update(byteArray, 0, bytesRead);
+                byte[] hashBytes = digest.digest();
+                return bytesToHex(hashBytes);
+            } catch (NoSuchAlgorithmException | IOException e) {
+                throw new RuntimeException(e);
             }
-        }
-
-        byte[] hashBytes = digest.digest();
-        result = bytesToHex(hashBytes);
-        HASH_CACHE.put(file, result);
-
-        return result;
+        });
     }
 
     private static String bytesToHex(byte[] hash) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 hstr0100
+ * Copyright (C) 2025 hstr0100
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,10 +24,16 @@ import lombok.NonNull;
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-public enum SubtitleContainerEnum implements ISettingsEnum, IContainerEnum {
-    SRT,
-    ASS,
-    VTT;
+public enum ImageContainerEnum implements ISettingsEnum, IContainerEnum {
+    JPG,
+    JPEG,
+    JP2,
+    PNG,
+    TIFF,
+    BMP,
+    GIF,
+    PSD,
+    WEBP;// TODO: add more
 
     @Override
     public String getValue() {
@@ -46,7 +52,7 @@ public enum SubtitleContainerEnum implements ISettingsEnum, IContainerEnum {
 
     @Override
     public String getMimeTypePrefix() {
-        throw new UnsupportedOperationException();
+        return "image";
     }
 
     public static boolean isFileType(@NonNull Path path) {

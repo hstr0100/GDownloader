@@ -32,6 +32,7 @@ import net.brlns.gdownloader.downloader.enums.DownloadPriorityEnum;
 import net.brlns.gdownloader.downloader.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.ui.custom.CustomMediaCardUI;
 import net.brlns.gdownloader.ui.menu.IMenuEntry;
+import net.brlns.gdownloader.util.ImageUtils;
 import net.brlns.gdownloader.util.collection.ConcurrentLinkedHashMap;
 
 import static net.brlns.gdownloader.ui.GUIManager.runOnEDT;
@@ -57,6 +58,7 @@ public class MediaCard {
     private String progressBarText;
     private Color progressBarBackgroundColor;
     private Color progressBarTextColor;
+    private BufferedImage fullResThumbnailImage;
     private BufferedImage thumbnailImage;
     private long thumbnailDuration;
     private DownloadTypeEnum placeholderIconType;
@@ -146,7 +148,11 @@ public class MediaCard {
     }
 
     public void setThumbnailAndDuration(BufferedImage imgIn, long durationIn) {
-        thumbnailImage = imgIn;
+        // Downscale thumbnails to save space and resources, we don't need the full resolution here.
+        BufferedImage downscaledImage = ImageUtils.downscaleImage(imgIn, 360);
+
+        thumbnailImage = downscaledImage;
+        fullResThumbnailImage = imgIn;
         thumbnailDuration = durationIn;
         updateUI(THUMBNAIL_IMAGE);
     }

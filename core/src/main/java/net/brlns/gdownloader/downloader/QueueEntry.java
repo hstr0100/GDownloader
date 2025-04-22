@@ -65,6 +65,7 @@ import net.brlns.gdownloader.util.collection.ConcurrentLinkedHashSet;
 import static net.brlns.gdownloader.downloader.enums.DownloadStatusEnum.*;
 import static net.brlns.gdownloader.lang.Language.*;
 import static net.brlns.gdownloader.util.FileUtils.isFileType;
+import static net.brlns.gdownloader.util.FileUtils.isMimeType;
 import static net.brlns.gdownloader.util.StringUtils.notNullOrEmpty;
 import static net.brlns.gdownloader.util.StringUtils.nullOrEmpty;
 
@@ -154,7 +155,7 @@ public class QueueEntry {
     public void tryOpenMediaFiles() {
         if (play(VideoContainerEnum.class)
             || play(AudioContainerEnum.class)
-            || play(ThumbnailContainerEnum.class)) {
+            || play(ImageContainerEnum.class)) {
             return;
         }
 
@@ -173,7 +174,7 @@ public class QueueEntry {
     }
 
     private <T extends Enum<T> & IContainerEnum> boolean play(
-        Class<T> container, boolean playlist) {
+        Class<T> container, boolean canOpenPlaylist) {
         List<File> matchingFiles = new ArrayList<>();
 
         for (File file : finalMediaFiles) {
@@ -183,7 +184,7 @@ public class QueueEntry {
         }
 
         if (!matchingFiles.isEmpty()) {
-            if (matchingFiles.size() > 1 && playlist) {
+            if (matchingFiles.size() > 1 && canOpenPlaylist) {
                 main.openPlaylist(matchingFiles);
             } else {
                 main.open(matchingFiles.get(0));
@@ -200,9 +201,20 @@ public class QueueEntry {
             if (isFileType(file, ((IContainerEnum)container).getValue())) {
                 return true;
             }
+
+            if (isMimeType(file, ((IContainerEnum)container).getMimeTypePrefix())) {
+                return true;
+            }
         }
 
         return false;
+    }
+
+    public void openThumbnail(BufferedImage image) {
+        File file = ImageUtils.writeImageToTempFile(image);
+        if (file != null) {
+            main.open(file);
+        }
     }
 
     public void recreateQueueEntry() {
@@ -361,15 +373,12 @@ public class QueueEntry {
 
         optional.ifPresentOrElse(
             img -> {
-                // Downscale thumbnails to save space and resources, we don't need the full resolution here.
-                BufferedImage downscaledImage = ImageUtils.downscaleImage(img, 360);
-
                 if (base64encoded.isEmpty()) {
                     mediaInfo.setBase64EncodedThumbnail(
-                        ImageUtils.bufferedImageToBase64(downscaledImage, "png"));
+                        ImageUtils.bufferedImageToBase64(img, "png"));
                 }
 
-                mediaCard.setThumbnailAndDuration(downscaledImage, mediaInfo.getDuration());
+                mediaCard.setThumbnailAndDuration(img, mediaInfo.getDuration());
             },
             () -> {
                 if (log.isDebugEnabled()) {
@@ -649,6 +658,13 @@ public class QueueEntry {
     public void updateExtraRightClickOptions() {
         NestedMenuEntry extrasSubmenu = new NestedMenuEntry();
 
+        BufferedImage thumbnailImage;
+        if ((thumbnailImage = mediaCard.getFullResThumbnailImage()) != null) {
+            extrasSubmenu.put(l10n("gui.view_thumbnail"),
+                new RunnableMenuEntry(
+                    () -> openThumbnail(thumbnailImage)));
+        }
+
         if (!lastCommandLine.isEmpty()) {
             extrasSubmenu.put(l10n("gui.copy_command_line"),
                 constructCommandLineMenu(lastCommandLine));
@@ -702,7 +718,7 @@ public class QueueEntry {
             "gui.delete_files",
             "gui.play_video",
             "gui.play_audio",
-            "gui.view_thumbnail",
+            "gui.view_image",
             "gui.open_downloaded_directory",
             "gui.open_as_audio_playlist",
             "gui.open_as_video_playlist"
@@ -728,7 +744,7 @@ public class QueueEntry {
                         audioMediaCount++;
                     }
 
-                    addMediaAction(file, ThumbnailContainerEnum.class, "gui.view_thumbnail");
+                    addMediaAction(file, ImageContainerEnum.class, "gui.view_image");
                 } else if (file.isDirectory()) {
                     addRightClick(l10n("gui.open_downloaded_directory"),
                         () -> main.open(file));

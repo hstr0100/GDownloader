@@ -25,6 +25,8 @@ public interface IContainerEnum {
 
     String getValue();
 
+    String getMimeTypePrefix();
+
     public static <T extends Enum<T> & IContainerEnum> String[] getContainerValues(Class<T> enumClass) {
         T[] values = enumClass.getEnumConstants();
 

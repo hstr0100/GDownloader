@@ -49,6 +49,11 @@ public enum AudioContainerEnum implements ISettingsEnum, IContainerEnum {
         return name().toLowerCase();
     }
 
+    @Override
+    public String getMimeTypePrefix() {
+        return "audio";
+    }
+
     public static boolean isFileType(@NonNull Path path) {
         return isFileType(path.toFile());
     }

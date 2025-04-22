@@ -22,14 +22,18 @@ import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.IOException;
 import java.util.Base64;
 import javax.imageio.ImageIO;
 import lombok.NonNull;
+import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
+@Slf4j
 public final class ImageUtils {
 
     @Nullable
@@ -107,5 +111,22 @@ public final class ImageUtils {
             int x = (originalWidth - targetWidth) / 2;
             return originalImage.getSubimage(x, 0, targetWidth, originalHeight);
         }
+    }
+
+    @Nullable
+    public static File writeImageToTempFile(BufferedImage image) {
+        try {
+            File tempFile = File.createTempFile("img-",
+                FileUtils.TMP_FILE_IDENTIFIER + ".png");
+            tempFile.deleteOnExit();
+
+            ImageIO.write(image, "png", tempFile);
+
+            return tempFile;
+        } catch (IOException e) {
+            log.error("Unable to create temporary image", e);
+        }
+
+        return null;
     }
 }

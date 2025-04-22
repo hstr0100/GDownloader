@@ -126,6 +126,7 @@ import static net.brlns.gdownloader.util.StringUtils.nullOrEmpty;
 // TODO display number in download queue
 // TODO automatic ui sorting
 // TODO welcome screen with some setting presets based on selected use case
+// TODO Manually mark downloads as complete, correctly move files to final directory
 /**
  * GDownloader - GUI wrapper for yt-dlp
  *

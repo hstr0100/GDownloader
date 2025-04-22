@@ -64,6 +64,11 @@ public enum VideoContainerEnum implements ISettingsEnum, IContainerEnum {
         return this == DEFAULT;
     }
 
+    @Override
+    public String getMimeTypePrefix() {
+        return "video";
+    }
+
     public static boolean isFileType(@NonNull Path path) {
         return isFileType(path.toFile());
     }

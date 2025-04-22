@@ -44,6 +44,11 @@ public enum ThumbnailContainerEnum implements ISettingsEnum, IContainerEnum {
         return name().toLowerCase();
     }
 
+    @Override
+    public String getMimeTypePrefix() {
+        return "image";
+    }
+
     public static boolean isFileType(@NonNull Path path) {
         return isFileType(path.toFile());
     }

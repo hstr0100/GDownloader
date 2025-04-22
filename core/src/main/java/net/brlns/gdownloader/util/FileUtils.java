@@ -23,10 +23,12 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.locks.ReentrantLock;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
+import net.brlns.gdownloader.util.collection.LRUCache;
 import org.slf4j.helpers.FormattingTuple;
 import org.slf4j.helpers.MessageFormatter;
 
@@ -35,6 +37,8 @@ import org.slf4j.helpers.MessageFormatter;
  */
 @Slf4j
 public final class FileUtils {
+
+    private static final LRUCache<File, Optional<String>> MIME_TYPE_CACHE = new LRUCache<>(2000);
 
     public static final String TMP_FILE_IDENTIFIER = ".gdtmp";
 
@@ -195,6 +199,19 @@ public final class FileUtils {
         return file.getName().toLowerCase().endsWith("." + extension.toLowerCase());
     }
 
+    public static boolean isMimeType(Path path, String mimeTypeOrFragment) {
+        return isMimeType(path.toFile(), mimeTypeOrFragment);
+    }
+
+    public static boolean isMimeType(File file, String mimeTypeOrFragment) {
+        Optional<String> probedMimeType = probeMimeType(file);
+        if (!probedMimeType.isEmpty()) {
+            return probedMimeType.get().contains(mimeTypeOrFragment);
+        }
+
+        return false;
+    }
+
     public static Path relativize(Path originalDirectory, Path targetDirectory, Path file) {
         Path relativePath = originalDirectory.relativize(file);
 
@@ -264,5 +281,18 @@ public final class FileUtils {
         }
 
         return file.length() > bytes;
+    }
+
+    public static Optional<String> probeMimeType(File file) {
+        return MIME_TYPE_CACHE.computeIfAbsent(file, (key) -> {
+            try {
+                return Optional.ofNullable(
+                    Files.probeContentType(file.toPath()));
+            } catch (IOException e) {
+                log.debug("Unable to probe for file mime type: {}", file, e);
+            }
+
+            return Optional.empty();
+        });
     }
 }
