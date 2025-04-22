@@ -1,6 +1,6 @@
 # GDownloader
 
-A user-friendly GUI wrapper for [yt-dlp](https://github.com/yt-dlp/yt-dlp), [gallery-dl](https://github.com/mikf/gallery-dl) and [spotDL](https://github.com/spotDL/spotify-downloader) written in Java.
+A user-friendly graphical user interface (GUI) for [yt-dlp](https://github.com/yt-dlp/yt-dlp), [gallery-dl](https://github.com/mikf/gallery-dl) and [spotDL](https://github.com/spotDL/spotify-downloader) written in Java.
 
 ## Overview
 
@@ -32,9 +32,13 @@ For platforms other than Windows, you need to download and install FFMPEG separa
 
 ### Download
 
-Download the latest version for your platform from the [releases page](https://github.com/hstr0100/GDownloader/releases).
+Download the latest version for your platform from the [releases page](https://github.com/hstr0100/GDownloader/releases/latest).
 
-### Build from Source
+#### Build from Source
+
+0. Ensure you have [JDK 21](https://adoptium.net/temurin/releases/) or a newer version installed.
+
+   **Windows Prerequisite:** On Windows, building requires the [WiX Toolset](https://github.com/wixtoolset/wix3/releases/latest) to be installed.
 
 1. Clone this repository:
    ```bash
@@ -49,6 +53,13 @@ Download the latest version for your platform from the [releases page](https://g
 3. Build the project using Gradle:
    ```bash
    ./gradlew clean build jpackage
+   ```
+
+4. Create AppImage (Linux Only):
+
+   Requires [appimagetool](https://github.com/AppImage/appimagetool/releases/latest) to be in your PATH variable.
+   ```bash
+   ./gradlew createAppImage
    ```
 
 ## Screenshots
@@ -99,9 +110,9 @@ To activate gallery-dl support, navigate to `Settings` > `Download Settings`, sc
 
 To activate spotDL support, navigate to `Settings` > `Download Settings`, scroll down to the bottom and check the option `Enable spotDL downloader.` then, restart the program.
 
-### My Downloads Are Stuck Processing
+### My Downloads Are Stuck Transcoding
 
-If you are using a supported media player such as VLC, disabling the option `Convert audio to a widely supported codec (AAC)` under `Download Settings` will result in significant improvements in speed during the final processing step.
+If you are using a supported media player such as VLC, disabling the option `Convert audio to a widely supported codec (Slow)` under `Download Settings` will result in significant improvements in speed during the final transcoding step.
 
 ### Why Can't I Download From A Particular Site?
 

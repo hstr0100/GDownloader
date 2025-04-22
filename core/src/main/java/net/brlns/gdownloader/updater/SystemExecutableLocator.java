@@ -40,7 +40,11 @@ import net.brlns.gdownloader.util.FileUtils;
 public final class SystemExecutableLocator {
 
     @Nullable
-    public static File locateExecutable(String executableName) {
+    public static File locateExecutable(@Nullable String executableName) {
+        if (executableName == null) {
+            return null;
+        }
+
         String executable = executableName;
         if (GDownloader.isWindows()) {
             executable += ".exe";

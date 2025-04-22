@@ -267,44 +267,41 @@ task createAppImage(type: Exec, dependsOn: zipJpackageImage) {
     onlyIf { os.isLinux() }
 
     def appImageArch
+    def nativeLibsArch
     if (architecture == "arm64" || architecture == "aarch64") {
         appImageArch = "aarch64"
+        nativeLibsArch = "arm64"
     } else if (architecture == "arm" || architecture == "armhf") {
         appImageArch = "armhf"
+        nativeLibsArch = "arm"
     } else if (architecture == "x64" || architecture == "amd64") {
         appImageArch = "x86_64"
+        nativeLibsArch = "x86_64"
     } else {
         appImageArch = "i686"
+        nativeLibsArch = "x86"
     }
 
     def appDirBase = file("$buildDir/appimage")
 
     doFirst {
-        def portableZip = file("$buildDir/jpackage/${lowercaseName}-${version}-linux_portable_${architecture}.zip")
         def appDir = file("$appDirBase/AppDir")
         def appUsrPath = "$appDir/usr"
         def appLibPath = "$appUsrPath/lib/${lowercaseName}"
 
         delete(appDirBase)
-        mkdir(appDirBase)
+        mkdir(appDir)
 
         copy {
-            from zipTree(portableZip)
-            into appDirBase
+            from file("$buildDir/jpackage/${rootProject.name}")
+            into appLibPath
         }
 
         file("$appUsrPath/bin").mkdirs()
         file("$appUsrPath/share/applications").mkdirs()
         file("$appUsrPath/share/icons/hicolor/256x256/apps").mkdirs()
 
-        copy {
-            from appDirBase
-            into "$appLibPath"
-            include "**"
-            exclude "AppDir/**"
-        }
-
-        delete("$appLibPath/lib/runtime/portable.lock")
+        delete file("$appLibPath/lib/runtime/portable.lock")
 
         def launcherScript = file("$appUsrPath/bin/${lowercaseName}")
         launcherScript.text = [
@@ -351,7 +348,7 @@ task createAppImage(type: Exec, dependsOn: zipJpackageImage) {
         appRun.text = [
             "#!/bin/bash",
             "HERE=\"\$(dirname \"\$(readlink -f \"\${0}\")\")\"",
-            "NATIVES=\"\${HERE}/usr/lib/${lowercaseName}/lib/runtime/bin/native-libs/linux/${appImageArch}\"",
+            "NATIVES=\"\${HERE}/usr/lib/${lowercaseName}/lib/runtime/bin/native-libs/linux/${nativeLibsArch}\"",
             "export PATH=\"\${HERE}/usr/bin:\${PATH}\"",
             "export LD_LIBRARY_PATH=\"\${HERE}/usr/lib/${lowercaseName}/lib:\${NATIVES}:\${LD_LIBRARY_PATH}\"",
             "exec \"\${HERE}/usr/bin/${lowercaseName}\" \"\$@\""
@@ -374,9 +371,7 @@ task createAppImage(type: Exec, dependsOn: zipJpackageImage) {
             into "$buildDir/jpackage"
         }
 
-        delete fileTree(appDirBase) {
-            exclude 'AppDir/**'
-        }
+        delete appDirBase
 
         println "Created AppImage at: $buildDir/jpackage/${appImageName}"
     }
