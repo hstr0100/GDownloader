@@ -52,6 +52,7 @@ import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
 import net.brlns.gdownloader.settings.filters.GenericFilter;
 import net.brlns.gdownloader.ui.MediaCard;
 import net.brlns.gdownloader.ui.menu.*;
+import net.brlns.gdownloader.ui.message.Message;
 import net.brlns.gdownloader.ui.message.MessageTypeEnum;
 import net.brlns.gdownloader.ui.message.ToastMessenger;
 import net.brlns.gdownloader.util.CancelHook;
@@ -222,11 +223,14 @@ public class QueueEntry {
 
         finalMediaFiles.clear();
 
-        ToastMessenger.show(
-            success ? l10n("gui.delete_files.deleted") : l10n("gui.delete_files.no_files"),
-            3000,
-            MessageTypeEnum.INFO,
-            false, true);
+        ToastMessenger.show(Message.builder()
+            .message(success
+                ? "gui.delete_files.deleted"
+                : "gui.delete_files.no_files")
+            .durationMillis(3000)
+            .messageType(MessageTypeEnum.INFO)
+            .discardDuplicates(true)
+            .build());
     }
 
     public boolean isRunning() {

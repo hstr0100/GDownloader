@@ -50,6 +50,7 @@ import net.brlns.gdownloader.ui.builder.SliderBuilder;
 import net.brlns.gdownloader.ui.builder.TextFieldBuilder;
 import net.brlns.gdownloader.ui.custom.CustomScrollBarUI;
 import net.brlns.gdownloader.ui.custom.CustomTranscodePanel;
+import net.brlns.gdownloader.ui.message.Message;
 import net.brlns.gdownloader.ui.message.MessageTypeEnum;
 import net.brlns.gdownloader.ui.message.PopupMessenger;
 import net.brlns.gdownloader.ui.themes.UIColors;
@@ -114,12 +115,13 @@ public class SettingsPanel {
             } else {
                 settings.setDownloadsPath("");
 
-                PopupMessenger.show(
-                    l10n("gui.error_popup_title"),
-                    l10n("gui.error_download_path_not_writable", file.getAbsolutePath()),
-                    4000,
-                    MessageTypeEnum.ERROR,
-                    true, false);
+                PopupMessenger.show(Message.builder()
+                    .title("gui.error_popup_title")
+                    .message("gui.error_download_path_not_writable", file.getAbsolutePath())
+                    .durationMillis(4000)
+                    .messageType(MessageTypeEnum.ERROR)
+                    .playTone(true)
+                    .build());
 
                 log.error("Selected path not writable {}", file);
             }

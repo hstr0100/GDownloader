@@ -38,6 +38,7 @@ import lombok.Getter;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
+import net.brlns.gdownloader.ui.message.Message;
 import net.brlns.gdownloader.ui.message.MessageTypeEnum;
 import net.brlns.gdownloader.ui.message.PopupMessenger;
 import net.brlns.gdownloader.ui.message.ToastMessenger;
@@ -125,12 +126,12 @@ public class ClipboardManager {
             String displayText = texts.size() == 1 ? texts.get(texts.size() - 1)
                 : l10n("gui.copied_to_clipboard.lines", texts.size());
 
-            PopupMessenger.show(
-                l10n("gui.copied_to_clipboard.notification_title"),
-                displayText,
-                2000,
-                MessageTypeEnum.INFO,
-                false, false);
+            PopupMessenger.show(Message.builder()
+                .title("gui.copied_to_clipboard.notification_title")
+                .messageRaw(displayText)
+                .durationMillis(2000)
+                .messageType(MessageTypeEnum.INFO)
+                .build());
         } finally {
             clipboardLock.unlock();
         }
@@ -145,17 +146,19 @@ public class ClipboardManager {
             updateClipboard(null, true);
 
             if (clipboardContainedURLs()) {
-                ToastMessenger.show(
-                    l10n("gui.add_from_clipboard.toast_empty"),
-                    3000,
-                    MessageTypeEnum.WARNING,
-                    false, true);
+                ToastMessenger.show(Message.builder()
+                    .message("gui.add_from_clipboard.toast_empty")
+                    .durationMillis(3000)
+                    .messageType(MessageTypeEnum.WARNING)
+                    .discardDuplicates(true)
+                    .build());
             } else {
-                ToastMessenger.show(
-                    l10n("gui.add_from_clipboard.toast_pasted"),
-                    3000,
-                    MessageTypeEnum.INFO,
-                    false, true);
+                ToastMessenger.show(Message.builder()
+                    .message("gui.add_from_clipboard.toast_pasted")
+                    .durationMillis(3000)
+                    .messageType(MessageTypeEnum.INFO)
+                    .discardDuplicates(true)
+                    .build());
             }
         }
     }
@@ -301,12 +304,12 @@ public class ClipboardManager {
 
                 if (captured > 0) {
                     if (main.getConfig().isDisplayLinkCaptureNotifications()) {
-                        PopupMessenger.show(
-                            l10n("gui.clipboard_monitor.captured_title"),
-                            l10n("gui.clipboard_monitor.captured", captured),
-                            1500,
-                            MessageTypeEnum.INFO,
-                            false, false);
+                        PopupMessenger.show(Message.builder()
+                            .title("gui.clipboard_monitor.captured_title")
+                            .message("gui.clipboard_monitor.captured", captured)
+                            .durationMillis(1500)
+                            .messageType(MessageTypeEnum.INFO)
+                            .build());
                     }
 
                     // If notications are off, requesting focus could probably also be an undesired behavior,

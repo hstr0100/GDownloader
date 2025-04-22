@@ -19,6 +19,8 @@ package net.brlns.gdownloader.ui.message;
 import lombok.Builder;
 import lombok.Data;
 
+import static net.brlns.gdownloader.lang.Language.l10n;
+
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
@@ -28,6 +30,7 @@ public class Message {
 
     private final String title;
     private final String message;
+
     private final int durationMillis;
     private final MessageTypeEnum messageType;
 
@@ -37,4 +40,26 @@ public class Message {
     @Builder.Default
     private final boolean discardDuplicates = false;
 
+    public static class MessageBuilder {
+
+        public MessageBuilder titleRaw(String titleIn) {
+            title = titleIn;
+            return this;
+        }
+
+        public MessageBuilder title(String titleKey, Object... arguments) {
+            title = l10n(titleKey, arguments);
+            return this;
+        }
+
+        public MessageBuilder messageRaw(String messageIn) {
+            message = messageIn;
+            return this;
+        }
+
+        public MessageBuilder message(String messageKey, Object... arguments) {
+            message = l10n(messageKey, arguments);
+            return this;
+        }
+    }
 }

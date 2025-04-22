@@ -49,6 +49,7 @@ import net.brlns.gdownloader.settings.filters.YoutubeFilter;
 import net.brlns.gdownloader.settings.filters.YoutubePlaylistFilter;
 import net.brlns.gdownloader.ui.GUIManager;
 import net.brlns.gdownloader.ui.MediaCard;
+import net.brlns.gdownloader.ui.message.Message;
 import net.brlns.gdownloader.ui.message.MessageTypeEnum;
 import net.brlns.gdownloader.ui.message.PopupMessenger;
 import net.brlns.gdownloader.ui.message.ToastMessenger;
@@ -89,7 +90,7 @@ public class DownloadManager implements IEvent {
 
     private final DownloadSequencer sequencer = new DownloadSequencer();
 
-    private final AtomicBoolean completedAtLeastOne = new AtomicBoolean();
+    private final AtomicBoolean shouldNotifyCompletion = new AtomicBoolean();
 
     private final AtomicBoolean downloadsBlocked = new AtomicBoolean(true);
     private final AtomicBoolean downloadsRunning = new AtomicBoolean(false);
@@ -129,11 +130,12 @@ public class DownloadManager implements IEvent {
                 log.info("Current download id: {}", nextId);
 
                 if (nextId > 0 && main.getConfig().isRestoreSessionAfterRestart()) {
-                    ToastMessenger.show(
-                        l10n("gui.restoring_session.toast"),
-                        5000,
-                        MessageTypeEnum.INFO,
-                        false, true);
+                    ToastMessenger.show(Message.builder()
+                        .message("gui.restoring_session.toast")
+                        .durationMillis(5000)
+                        .messageType(MessageTypeEnum.INFO)
+                        .discardDuplicates(true)
+                        .build());
                 }
 
                 GDownloader.GLOBAL_THREAD_POOL.execute(() -> {
@@ -589,7 +591,6 @@ public class DownloadManager implements IEvent {
         downloadsRunning.set(false);
         downloadsManuallyStarted.set(false);
         suggestedDownloaderId.set(null);
-        completedAtLeastOne.set(false);
 
         fireListeners();
     }
@@ -653,13 +654,17 @@ public class DownloadManager implements IEvent {
 
         if (downloadsRunning.get() && sequencer.isEmpty(RUNNING)) {
             if (main.getConfig().isDisplayDownloadsCompleteNotification()
-                && completedAtLeastOne.get() && !sequencer.isEmpty()) {
-                PopupMessenger.show(
-                    l10n("gui.downloads_complete.notification_title"),
-                    l10n("gui.downloads_complete.complete"),
-                    5000,
-                    MessageTypeEnum.INFO,
-                    true, true);
+                && shouldNotifyCompletion.get() && !sequencer.isEmpty()) {
+                PopupMessenger.show(Message.builder()
+                    .title("gui.downloads_complete.notification_title")
+                    .message("gui.downloads_complete.complete")
+                    .durationMillis(5000)
+                    .messageType(MessageTypeEnum.INFO)
+                    .playTone(true)
+                    .discardDuplicates(true)
+                    .build());
+
+                shouldNotifyCompletion.set(false);
             }
 
             stopDownloads();
@@ -678,7 +683,6 @@ public class DownloadManager implements IEvent {
             clearQueue(category, reason, false);
         }
 
-        completedAtLeastOne.set(false);
         fireListeners();
     }
 
@@ -752,6 +756,10 @@ public class DownloadManager implements IEvent {
     }
 
     private void offerTo(QueueCategoryEnum category, QueueEntry entry, boolean checkpoint) {
+        if (category == FAILED || category == COMPLETED) {
+            shouldNotifyCompletion.set(true);
+        }
+
         sequencer.changeCategory(entry, category);
 
         updateRightClick(entry, category);
@@ -914,11 +922,12 @@ public class DownloadManager implements IEvent {
 
                         if (!notifiedCookies && filter.areCookiesRequired()
                             && (!main.getConfig().isReadCookiesFromBrowser() && downloader.getCookieJarFile() == null)) {
-                            ToastMessenger.show(
-                                l10n("gui.cookies_required_for_website", filter.getFilterName()),
-                                3000,
-                                MessageTypeEnum.ERROR,
-                                false, true);
+                            ToastMessenger.show(Message.builder()
+                                .message("gui.cookies_required_for_website", filter.getFilterName())
+                                .durationMillis(3000)
+                                .messageType(MessageTypeEnum.ERROR)
+                                .discardDuplicates(true)
+                                .build());
 
                             log.warn("Cookies are required for this website {}", entry.getOriginalUrl());
                             notifiedCookies = true;
@@ -1059,12 +1068,11 @@ public class DownloadManager implements IEvent {
             } finally {
                 entry.getRunning().set(false);
 
-                if (entry.getCurrentQueueCategory() == RUNNING) {
+                if (entry.getCurrentQueueCategory() == RUNNING
+                    && !entry.getCancelHook().get()) {
                     log.error("Unexpected RUNNING download state, switching to QUEUED");
                     offerTo(QUEUED, entry);
                 }
-
-                completedAtLeastOne.set(true);
             }
         });
     }

@@ -71,7 +71,7 @@ public class DownloadSequencer {
         }
     }
 
-    public boolean contains(QueueEntry entry) {
+    public boolean contains(@Nullable QueueEntry entry) {
         if (entry == null) {
             return false;
         }
@@ -84,7 +84,7 @@ public class DownloadSequencer {
         }
     }
 
-    public QueueEntry addNewEntry(QueueEntry entry) {
+    public QueueEntry addNewEntry(@NonNull QueueEntry entry) {
         sequencerLock.lock();
         try {
             checkSequenceOverflow();
@@ -178,6 +178,7 @@ public class DownloadSequencer {
         }
     }
 
+    @Nullable
     public QueueEntry fetchNext() {
         if (categorySets.get(QUEUED).isEmpty()) {
             return null;

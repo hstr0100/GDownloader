@@ -247,27 +247,17 @@ public class ToastMessenger extends AbstractMessenger {
     private static final Map<JFrame, AbstractMessenger> _instances
         = Collections.synchronizedMap(new WeakHashMap<>());
 
-    public static void show(String message, int durationMillis,
-        MessageTypeEnum messageType, boolean playTone, boolean discardDuplicates) {
-        show(GDownloader.getInstance().getGuiManager().getAppWindow(),
-            message, durationMillis, messageType, playTone, discardDuplicates);
+    public static void show(Message message) {
+        show(GDownloader.getInstance().getGuiManager().getAppWindow(), message);
     }
 
-    public static void show(JFrame parent, String message, int durationMillis,
-        MessageTypeEnum messageType, boolean playTone, boolean discardDuplicates) {
+    public static void show(JFrame parent, Message message) {
         AbstractMessenger instance = _instances.get(parent);
         if (instance == null) {// This operation is quick, should be fine with virtual threads.
             AbstractMessenger newInstance = new ToastMessenger(parent);
             instance = _instances.computeIfAbsent(parent, key -> newInstance);
         }
 
-        instance.display(Message.builder()
-            .title("")
-            .message(message)
-            .durationMillis(durationMillis)
-            .messageType(messageType)
-            .playTone(playTone)
-            .discardDuplicates(discardDuplicates)
-            .build());
+        instance.display(message);
     }
 }

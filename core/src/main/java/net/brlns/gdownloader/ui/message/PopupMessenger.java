@@ -219,13 +219,12 @@ public class PopupMessenger extends AbstractMessenger {
 
     private static final AbstractMessenger instance = new PopupMessenger();
 
-    public static void show(String title, String message, int durationMillis,
-        MessageTypeEnum messageType, boolean playTone, boolean discardDuplicates) {
+    public static void show(Message message) {
         GDownloader main = GDownloader.getInstance();
 
         if (main.getConfig().isUseNativeSystemNotifications()
             && main.isSystemTrayInitialized()) {
-            TrayIcon.MessageType nativeType = switch (messageType) {
+            TrayIcon.MessageType nativeType = switch (message.getMessageType()) {
                 case ERROR ->
                     TrayIcon.MessageType.ERROR;
                 case WARNING ->
@@ -234,17 +233,11 @@ public class PopupMessenger extends AbstractMessenger {
                     TrayIcon.MessageType.INFO;
             };
 
-            main.getTrayIcon().displayMessage(title, message, nativeType);
+            main.getTrayIcon().displayMessage(
+                message.getTitle(), message.getMessage(), nativeType);
             return;
         }
 
-        instance.display(Message.builder()
-            .title(title)
-            .message(message)
-            .durationMillis(durationMillis)
-            .messageType(messageType)
-            .playTone(playTone)
-            .discardDuplicates(discardDuplicates)
-            .build());
+        instance.display(message);
     }
 }
