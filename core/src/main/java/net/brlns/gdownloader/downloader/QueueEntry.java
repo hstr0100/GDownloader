@@ -26,10 +26,12 @@ import java.net.URISyntaxException;
 import java.nio.file.DirectoryNotEmptyException;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -124,7 +126,7 @@ public class QueueEntry {
 
     @Setter
     private File tmpDirectory;
-    private final List<File> finalMediaFiles = new ArrayList<>();
+    private final Set<File> finalMediaFiles = new HashSet<>();
 
     private final List<String> lastCommandLine = new CopyOnWriteArrayList<>();
 
@@ -865,7 +867,7 @@ public class QueueEntry {
             entity.setTmpDirectoryPath(getTmpDirectory().getAbsolutePath());
         }
 
-        entity.setFinalMediaFilePaths(getFinalMediaFiles().stream()
+        entity.setMediaFilePaths(getFinalMediaFiles().stream()
             .map(File::getAbsolutePath)
             .collect(Collectors.toCollection(ArrayList::new)));
 
@@ -877,6 +879,7 @@ public class QueueEntry {
         return entity;
     }
 
+    @SuppressWarnings("deprecation")
     public static QueueEntry fromEntity(QueueEntryEntity entity, MediaCard mediaCard, List<AbstractDownloader> downloaders) {
         QueueEntry queueEntry = new QueueEntry(
             GDownloader.getInstance(),
@@ -921,7 +924,12 @@ public class QueueEntry {
             queueEntry.setTmpDirectory(new File(entity.getTmpDirectoryPath()));
         }
 
+        // Deprecated field, extract contents for migration.
         for (String path : entity.getFinalMediaFilePaths()) {
+            queueEntry.getFinalMediaFiles().add(new File(path));
+        }
+
+        for (String path : entity.getMediaFilePaths()) {
             queueEntry.getFinalMediaFiles().add(new File(path));
         }
 

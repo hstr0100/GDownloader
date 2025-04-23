@@ -241,11 +241,18 @@ public class DownloadManager implements IEvent {
             .collect(Collectors.toUnmodifiableList());
     }
 
+    public AbstractDownloader getDownloader(DownloaderIdEnum downloaderId) {
+        return downloaders.stream()
+            .filter(downloader -> downloader.getDownloaderId() == downloaderId)
+            .findFirst().get();
+    }
+
     public CompletableFuture<Boolean> captureUrl(@Nullable String inputUrl, boolean force) {
         return captureUrl(inputUrl, force, main.getConfig().getPlaylistDownloadOption());
     }
 
-    public CompletableFuture<Boolean> captureUrl(@Nullable String inputUrl, boolean force, PlayListOptionEnum playlistOption) {
+    public CompletableFuture<Boolean> captureUrl(@Nullable String inputUrl,
+        boolean force, PlayListOptionEnum playlistOption) {
         CompletableFuture<Boolean> future = new CompletableFuture<>();
 
         List<AbstractDownloader> compatibleDownloaders = getCompatibleDownloaders(inputUrl);
@@ -340,10 +347,12 @@ public class DownloadManager implements IEvent {
                         }
 
                         if (!capturedPlaylists.contains(playlist)) {
-                            GUIManager.DialogButton playlistDialogOption = new GUIManager.DialogButton(PlayListOptionEnum.DOWNLOAD_PLAYLIST.getDisplayName(),
+                            GUIManager.DialogButton playlistDialogOption = new GUIManager.DialogButton(
+                                PlayListOptionEnum.DOWNLOAD_PLAYLIST.getDisplayName(),
                                 (boolean setDefault) -> {
                                     if (setDefault) {
-                                        main.getConfig().setPlaylistDownloadOption(PlayListOptionEnum.DOWNLOAD_PLAYLIST);
+                                        main.getConfig().setPlaylistDownloadOption(
+                                            PlayListOptionEnum.DOWNLOAD_PLAYLIST);
                                         main.updateConfig();
                                     }
 
@@ -357,10 +366,12 @@ public class DownloadManager implements IEvent {
                                         });
                                 });
 
-                            GUIManager.DialogButton singleDialogOption = new GUIManager.DialogButton(PlayListOptionEnum.DOWNLOAD_SINGLE.getDisplayName(),
+                            GUIManager.DialogButton singleDialogOption = new GUIManager.DialogButton(
+                                PlayListOptionEnum.DOWNLOAD_SINGLE.getDisplayName(),
                                 (boolean setDefault) -> {
                                     if (setDefault) {
-                                        main.getConfig().setPlaylistDownloadOption(PlayListOptionEnum.DOWNLOAD_SINGLE);
+                                        main.getConfig().setPlaylistDownloadOption(
+                                            PlayListOptionEnum.DOWNLOAD_SINGLE);
                                         main.updateConfig();
                                     }
 
@@ -374,9 +385,10 @@ public class DownloadManager implements IEvent {
                                         });
                                 });
 
-                            GUIManager.DialogButton defaultOption = new GUIManager.DialogButton("", (boolean setDefault) -> {
-                                future.complete(false);
-                            });
+                            GUIManager.DialogButton defaultOption = new GUIManager.DialogButton(
+                                "", (boolean setDefault) -> {
+                                    future.complete(false);
+                                });
 
                             // TODO: This whole section needs to be refactored
                             if (urlIgnoreSet.contains(playlist) && !force) {// Temporary fix for double popups
@@ -892,7 +904,8 @@ public class DownloadManager implements IEvent {
                     forcedDownloader = suggestedDownloaderId.get();
                 }
 
-                int maxRetries = main.getConfig().isAutoDownloadRetry() ? main.getConfig().getMaxDownloadRetries() : 1;
+                int maxRetries = main.getConfig().isAutoDownloadRetry()
+                    ? main.getConfig().getMaxDownloadRetries() : 1;
                 String lastOutput = "";
 
                 boolean notifiedCookies = false;
@@ -912,7 +925,8 @@ public class DownloadManager implements IEvent {
                             continue;
                         }
 
-                        if (entry.isDownloaderBlacklisted(downloaderId) && downloaderId != forcedDownloader) {
+                        if (entry.isDownloaderBlacklisted(downloaderId)
+                            && downloaderId != forcedDownloader) {
                             continue;
                         }
 
@@ -921,7 +935,8 @@ public class DownloadManager implements IEvent {
                         AbstractUrlFilter filter = entry.getFilter();
 
                         if (!notifiedCookies && filter.areCookiesRequired()
-                            && (!main.getConfig().isReadCookiesFromBrowser() && downloader.getCookieJarFile() == null)) {
+                            && (!main.getConfig().isReadCookiesFromBrowser()
+                            && downloader.getCookieJarFile() == null)) {
                             ToastMessenger.show(Message.builder()
                                 .message("gui.cookies_required_for_website", filter.getFilterName())
                                 .durationMillis(3000)
@@ -940,7 +955,8 @@ public class DownloadManager implements IEvent {
                             if (main.getConfig().isRandomIntervalBetweenDownloads()) {
                                 int currentWaitTime = intervalometer.getAndCompute(entry.getUrl());
                                 if (currentWaitTime > 0) {
-                                    entry.updateStatus(DownloadStatusEnum.WAITING, l10n("gui.intervalometer.waiting", currentWaitTime));
+                                    entry.updateStatus(DownloadStatusEnum.WAITING,
+                                        l10n("gui.intervalometer.waiting", currentWaitTime));
 
                                     try {
                                         CancelHook cancelHook = entry.getCancelHook().derive(this::isRunning, true);
@@ -951,7 +967,8 @@ public class DownloadManager implements IEvent {
                                 }
                             }
 
-                            entry.updateStatus(DownloadStatusEnum.STARTING, l10n("gui.download_status.starting"));
+                            entry.updateStatus(DownloadStatusEnum.STARTING,
+                                l10n("gui.download_status.starting"));
                         }
 
                         DownloadResult result = downloader.tryDownload(entry);
@@ -963,7 +980,8 @@ public class DownloadManager implements IEvent {
                         boolean disabled = FLAG_DOWNLOADER_DISABLED.isSet(flags);
                         boolean transcodingFailed = FLAG_TRANSCODING_FAILED.isSet(flags);
 
-                        if (FLAG_MAIN_CATEGORY_FAILED.isSet(flags) || unsupported || disabled || transcodingFailed) {
+                        if (FLAG_MAIN_CATEGORY_FAILED.isSet(flags)
+                            || unsupported || disabled || transcodingFailed) {
                             entry.logError(lastOutput);
 
                             if (transcodingFailed || disabled || unsupported
@@ -995,10 +1013,12 @@ public class DownloadManager implements IEvent {
 
                             if (FLAG_NO_METHOD_VIDEO.isSet(flags)) {
                                 log.error("{} - No option to download.", filter);
-                                entry.updateStatus(DownloadStatusEnum.NO_METHOD, l10n("enums.download_status.no_method.video_tip"));
+                                entry.updateStatus(DownloadStatusEnum.NO_METHOD,
+                                    l10n("enums.download_status.no_method.video_tip"));
                             } else if (FLAG_NO_METHOD_AUDIO.isSet(flags)) {
                                 log.error("{} - No audio quality selected, but was set to download audio only.", filter);
-                                entry.updateStatus(DownloadStatusEnum.NO_METHOD, l10n("enums.download_status.no_method.audio_tip"));
+                                entry.updateStatus(DownloadStatusEnum.NO_METHOD,
+                                    l10n("enums.download_status.no_method.audio_tip"));
                             } else {
                                 throw new IllegalStateException("Unhandled NO_METHOD");
                             }
@@ -1009,20 +1029,23 @@ public class DownloadManager implements IEvent {
 
                         if (!downloadsRunning.get() || FLAG_STOPPED.isSet(flags)) {
                             if (!entry.getCancelHook().get()) {
-                                entry.updateStatus(DownloadStatusEnum.STOPPED, l10n("gui.download_status.not_started"));
+                                entry.updateStatus(DownloadStatusEnum.STOPPED,
+                                    l10n("gui.download_status.not_started"));
                                 offerTo(QUEUED, entry);
                             }
 
                             return;
                         } else if (!entry.getCancelHook().get() && FLAG_SUCCESS.isSet(flags)) {
-                            entry.updateStatus(DownloadStatusEnum.POST_PROCESSING, l10n("gui.download_status.processing_media_files"));
-
+                            entry.updateStatus(DownloadStatusEnum.POST_PROCESSING,
+                                l10n("gui.download_status.processing_media_files"));
                             downloader.processMediaFiles(entry);
+
                             entry.updateMediaRightClickOptions();
 
                             updatePriority(entry, DownloadPriorityEnum.NORMAL);
 
-                            entry.updateStatus(DownloadStatusEnum.COMPLETE, l10n("gui.download_status.finished"));
+                            entry.updateStatus(DownloadStatusEnum.COMPLETE,
+                                l10n("gui.download_status.finished"));
                             entry.cleanDirectories();
 
                             offerTo(COMPLETED, entry);

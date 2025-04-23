@@ -101,33 +101,41 @@ public class QueueEntryEntity implements Serializable {
     @Column(name = "is_queried")
     private boolean queried;
 
-    @Column(name = "tmp_directory_path", length = 2048)
+    @Column(name = "tmp_directory_path", length = 4096)
     private String tmpDirectoryPath;
 
     @ElementCollection(fetch = FetchType.EAGER)
     @Lob
     @CollectionTable(name = "final_media_files", joinColumns = @JoinColumn(name = "download_id"))
+    @Column(name = "FINALMEDIAFILEPATHS")
+    @Deprecated
     private ArrayList<String> finalMediaFilePaths = new ArrayList<>();
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "media_files", joinColumns = @JoinColumn(name = "download_id"))
+    @Lob
+    @Column(name = "media_file_paths", length = 4096)
+    private ArrayList<String> mediaFilePaths = new ArrayList<>();
 
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "command_lines", joinColumns = @JoinColumn(name = "download_id"))
     @Lob
     @OrderColumn
-    @Column(name = "last_command_line")
+    @Column(name = "last_command_line", length = 8192)
     private ArrayList<String> lastCommandLine = new ArrayList<>();
 
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "error_logs", joinColumns = @JoinColumn(name = "download_id"))
     @Lob
     @OrderColumn
-    @Column(name = "error_log")
+    @Column(name = "error_log", length = 8192)
     private ArrayList<String> errorLog = new ArrayList<>();
 
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "download_logs", joinColumns = @JoinColumn(name = "download_id"))
     @Lob
     @OrderColumn
-    @Column(name = "download_log")
+    @Column(name = "download_log", length = 8192)
     // TODO: check if this is really necessary
     private ArrayList<String> downloadLog = new ArrayList<>();
 }
