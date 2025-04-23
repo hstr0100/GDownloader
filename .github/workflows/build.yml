@@ -63,11 +63,11 @@ jobs:
         include:
           - GRADLE_ARCH: amd64
             APPIMAGE_ARCH: x86_64
-            RUNS_ON: ubuntu-24.04
+            RUNS_ON: ubuntu-22.04
             JAVA_VERSION: 21
           - GRADLE_ARCH: arm64
             APPIMAGE_ARCH: aarch64
-            RUNS_ON: ubuntu-24.04-arm
+            RUNS_ON: ubuntu-22.04-arm
             JAVA_VERSION: 21
 
     runs-on: ${{ matrix.RUNS_ON }}
