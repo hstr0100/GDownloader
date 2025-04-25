@@ -72,7 +72,7 @@ public class SelfUpdater extends AbstractGitUpdater {
     }
 
     @Override
-    public boolean isSupported() {
+    public boolean isEnabled() {
         return !GDownloader.isFromJar();
     }
 

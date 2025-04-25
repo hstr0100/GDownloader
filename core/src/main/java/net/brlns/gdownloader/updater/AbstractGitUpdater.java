@@ -62,6 +62,7 @@ public abstract class AbstractGitUpdater {
         .build();
 
     protected final GDownloader main;
+    protected final File workDir;
 
     private final List<ProgressListener> listeners = new CopyOnWriteArrayList<>();
 
@@ -70,6 +71,7 @@ public abstract class AbstractGitUpdater {
 
     public AbstractGitUpdater(GDownloader mainIn) {
         main = mainIn;
+        workDir = GDownloader.getWorkDirectory();
     }
 
     public void registerListener(ProgressListener listener) {
@@ -102,7 +104,7 @@ public abstract class AbstractGitUpdater {
     @Nullable
     protected abstract String getLockFileName();
 
-    public abstract boolean isSupported();
+    public abstract boolean isEnabled();
 
     public abstract String getName();
 
@@ -117,17 +119,11 @@ public abstract class AbstractGitUpdater {
     }
 
     protected void tryFallback(File workDir) throws NoFallbackAvailableException, Exception {
-        String fileName = getRuntimeBinaryName();
-
-        if (fileName != null) {
-            File lock = new File(workDir, getLockFileName());
-
-            File binaryFile = new File(workDir, fileName);
-            if (binaryFile.exists() && lockExists(lock)) {
-                finishUpdate(binaryFile);
-                log.info("Selected previous installation as fallback {}", getRepo());
-                return;
-            }
+        File binaryFile = getBinaryIfInstalled();
+        if (binaryFile != null) {
+            finishUpdate(binaryFile);
+            log.info("Selected previous installation as fallback {}", getRepo());
+            return;
         }
 
         File systemFallback = SystemExecutableLocator.locateExecutable(getSystemBinaryName());
@@ -140,6 +136,29 @@ public abstract class AbstractGitUpdater {
         notifyStatus(UpdateStatus.FAILED);
 
         throw new NoFallbackAvailableException();
+    }
+
+    public boolean isInstalled() {
+        return getBinaryIfInstalled() != null;
+    }
+
+    public File getBinaryIfInstalled() {
+        try {
+            String fileName = getRuntimeBinaryName();
+
+            if (fileName != null) {
+                File lock = new File(workDir, getLockFileName());
+
+                File binaryFile = new File(workDir, fileName);
+                if (binaryFile.exists() && lockExists(lock)) {
+                    return binaryFile;
+                }
+            }
+        } catch (IOException e) {
+            log.error("Failed to obtain binary file", e);
+        }
+
+        return null;
     }
 
     public final void check(boolean force) throws Exception {
@@ -156,8 +175,6 @@ public abstract class AbstractGitUpdater {
         updated = false;
 
         notifyProgress(UpdateStatus.CHECKING, 0);
-
-        File workDir = GDownloader.getWorkDirectory();
 
         if (main.getConfig().isPreferSystemExecutables()) {
             File systemFallback = SystemExecutableLocator.locateExecutable(getSystemBinaryName());
@@ -179,7 +196,7 @@ public abstract class AbstractGitUpdater {
             }
         }
 
-        if (!main.getConfig().isAutomaticUpdates() && !force) {
+        if (isEnabled() && isInstalled() && !main.getConfig().isAutomaticUpdates() && !force) {
             log.info("Automatic updates are disabled {}", getRepo());
 
             tryFallback(workDir);
@@ -228,6 +245,7 @@ public abstract class AbstractGitUpdater {
 
         if (!lock.exists() && this instanceof SelfUpdater) {
             String version = UpdaterBootstrap.getVersion();
+            log.info("Current version: {}", version);
 
             if (version != null) {
                 createLock(lock, getLockTag("v" + version));

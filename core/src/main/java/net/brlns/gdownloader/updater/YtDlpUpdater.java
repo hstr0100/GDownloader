@@ -72,7 +72,7 @@ public class YtDlpUpdater extends AbstractGitUpdater {
     }
 
     @Override
-    public boolean isSupported() {
+    public boolean isEnabled() {
         return true;
     }
 

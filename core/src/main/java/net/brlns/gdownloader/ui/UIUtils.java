@@ -17,8 +17,18 @@
 package net.brlns.gdownloader.ui;
 
 import java.awt.*;
+import java.awt.event.AdjustmentEvent;
+import java.awt.event.AdjustmentListener;
+import java.awt.image.BufferedImage;
+import java.awt.image.WritableRaster;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import javax.imageio.ImageIO;
 import javax.swing.*;
+import lombok.Data;
 import net.brlns.gdownloader.lang.ITranslatable;
 import net.brlns.gdownloader.ui.custom.*;
 import net.brlns.gdownloader.ui.themes.UIColors;
@@ -30,6 +40,8 @@ import static net.brlns.gdownloader.ui.themes.ThemeProvider.*;
  * @author Gabriel / hstr0100 / vertx010
  */
 public final class UIUtils {
+
+    private static final Map<ImageCacheKey, ImageIcon> IMAGE_CACHE = new ConcurrentHashMap<>();
 
     public static void setComponentAndLabelVisible(JComponent component, boolean visible) {
         JLabel label = (JLabel)component.getClientProperty("associated-label");
@@ -143,4 +155,157 @@ public final class UIUtils {
         });
     }
 
+    public static ImageIcon loadIcon(String path, UIColors color) {
+        return loadIcon(path, color, 36);
+    }
+
+    public static ImageIcon loadIcon(String path, UIColors color, int scale) {
+        Color themeColor = color(color);
+        ImageCacheKey key = new ImageCacheKey(path, themeColor, scale);
+
+        return IMAGE_CACHE.computeIfAbsent(key, (keyIn) -> {
+            try (
+                InputStream resourceStream = GUIManager.class.getResourceAsStream(path)) {
+                BufferedImage originalImage = ImageIO.read(resourceStream);
+                if (originalImage == null) {
+                    throw new IOException("Failed to load image: " + path);
+                }
+
+                WritableRaster raster = originalImage.getRaster();
+
+                for (int y = 0; y < originalImage.getHeight(); y++) {
+                    for (int x = 0; x < originalImage.getWidth(); x++) {
+                        int[] pixel = raster.getPixel(x, y, (int[])null);
+
+                        int alpha = pixel[3];
+
+                        if (alpha != 0) {
+                            pixel[0] = themeColor.getRed();
+                            pixel[1] = themeColor.getGreen();
+                            pixel[2] = themeColor.getBlue();
+                            pixel[3] = themeColor.getAlpha();
+
+                            raster.setPixel(x, y, pixel);
+                        }
+                    }
+                }
+
+                Image image = originalImage.getScaledInstance(scale, scale, Image.SCALE_SMOOTH);
+
+                ImageIcon icon = new ImageIcon(image);
+
+                return icon;
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
+    // https://stackoverflow.com/questions/5147768/scroll-jscrollpane-to-bottom
+    public static void scrollPaneToBottom(JScrollPane scrollPane) {
+        SwingUtilities.invokeLater(() -> {
+            JScrollBar verticalBar = scrollPane.getVerticalScrollBar();
+            verticalBar.setValue(verticalBar.getMaximum());
+
+            verticalBar.addAdjustmentListener(new AdjustmentListener() {
+                boolean firstTime = true;
+
+                @Override
+                public void adjustmentValueChanged(AdjustmentEvent e) {
+                    if (firstTime) {
+                        verticalBar.setValue(verticalBar.getMaximum());
+                        firstTime = false;
+                    }
+                }
+            });
+        });
+    }
+
+    public static String wrapTextInHtml(int maxLineLength, boolean centerText, String... lines) {
+        if (maxLineLength < 20) {
+            throw new IllegalArgumentException("Line length too short: " + maxLineLength);
+        }
+
+        StringBuilder wrappedText = new StringBuilder();
+
+        if (centerText) {
+            wrappedText.append("<center>");
+        }
+
+        for (String text : lines) {
+            text = text.replace(System.lineSeparator(), "<br>");
+
+            for (String line : text.split("<br>")) {
+                if (line.isEmpty()) {
+                    wrappedText.append("<br>");
+                    continue;
+                }
+
+                if (line.length() > maxLineLength) {
+                    int count = 0;
+
+                    for (int i = 0; i < line.length(); i++) {
+                        char c = line.charAt(i);
+                        wrappedText.append(c);
+
+                        if (++count == maxLineLength) {
+                            wrappedText.append("<br>");
+                            count = 0;
+                        }
+                    }
+                } else {
+                    String[] words = line.split(" ");
+                    int lineLength = 0;
+
+                    for (String word : words) {
+                        if (lineLength + word.length() > maxLineLength) {
+                            wrappedText.append("<br>").append(word).append(" ");
+                            lineLength = word.length() + 1; // reset lineLength
+                        } else {
+                            wrappedText.append(word).append(" ");
+                            lineLength += word.length() + 1;
+                        }
+                    }
+                }
+
+                if (!wrappedText.toString().trim().endsWith("<br>")) {
+                    wrappedText.append("<br>");
+                }
+            }
+        }
+
+        String result = wrappedText.toString().trim();
+        if (result.endsWith("<br>")) {
+            result = result.substring(0, result.length() - 4);
+        }
+
+        if (centerText) {
+            wrappedText.append("</center>");
+        }
+
+        return "<html>" + result + "</html>";
+    }
+
+    /**
+     * Executes the given {@link Runnable} on the Event Dispatch Thread (EDT).
+     * If the current thread is the EDT, the {@code runnable} will be executed immediately.
+     * Otherwise, it will be scheduled to run later on the EDT using {@link SwingUtilities#invokeLater}.
+     *
+     * @param runnable the {@link Runnable} to be executed on the Event Dispatch Thread
+     */
+    public static void runOnEDT(Runnable runnable) {
+        if (SwingUtilities.isEventDispatchThread()) {
+            runnable.run();
+        } else {
+            SwingUtilities.invokeLater(runnable);
+        }
+    }
+
+    @Data
+    private static class ImageCacheKey {
+
+        private final String path;
+        private final Color color;
+        private final int scale;
+    }
 }

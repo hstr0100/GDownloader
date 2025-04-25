@@ -57,8 +57,6 @@ import net.brlns.gdownloader.ui.themes.UIColors;
 
 import static net.brlns.gdownloader.lang.Language.*;
 import static net.brlns.gdownloader.ui.GUIManager.createIconButton;
-import static net.brlns.gdownloader.ui.GUIManager.loadIcon;
-import static net.brlns.gdownloader.ui.GUIManager.runOnEDT;
 import static net.brlns.gdownloader.ui.UIUtils.*;
 import static net.brlns.gdownloader.ui.themes.ThemeProvider.*;
 import static net.brlns.gdownloader.ui.themes.UIColors.*;
@@ -326,7 +324,7 @@ public class SettingsPanel {
                             loadIcon("/assets/update.png", ICON, 24),
                             loadIcon("/assets/update.png", ICON_HOVER, 24),
                             "gui.update.tooltip",
-                            e -> main.checkForUpdates()
+                            e -> main.getUpdateManager().checkForUpdates()
                         ));
 
                         bottomPanel.add(leftPanel, BorderLayout.WEST);
@@ -389,6 +387,7 @@ public class SettingsPanel {
                 gabButton.setToolTipText("Gabriel's GitHub - #hireme");
                 gabButton.setUI(new BasicButtonUI());
                 gabButton.setForeground(color(FOREGROUND));
+                gabButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
                 gabButton.setFocusPainted(false);
                 gabButton.setBorderPainted(false);
                 gabButton.setContentAreaFilled(false);
@@ -771,6 +770,13 @@ public class SettingsPanel {
             .setter(settings::setRemoveFromDownloadArchive)
             .build());
 
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.query_metadata")
+            .getter(settings::isQueryMetadata)
+            .setter(settings::setQueryMetadata)
+            .build());
+
         addLabel(panel, "settings.downloader.yt_dlp");
 
         addComboBox(panel, ComboBoxBuilder.<PlayListOptionEnum>builder()
@@ -834,13 +840,6 @@ public class SettingsPanel {
             .labelKey("settings.download_thumbnails")
             .getter(settings::isDownloadThumbnails)
             .setter(settings::setDownloadThumbnails)
-            .build());
-
-        addCheckBox(panel, CheckBoxBuilder.builder()
-            .background(resolveColor(panel))
-            .labelKey("settings.query_metadata")
-            .getter(settings::isQueryMetadata)
-            .setter(settings::setQueryMetadata)
             .build());
 
         addCheckBox(panel, CheckBoxBuilder.builder()

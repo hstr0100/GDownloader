@@ -72,8 +72,8 @@ public class GalleryDlUpdater extends AbstractGitUpdater {
     }
 
     @Override
-    public boolean isSupported() {
-        return true;
+    public boolean isEnabled() {
+        return main.getConfig().isGalleryDlEnabled();
     }
 
     @Override

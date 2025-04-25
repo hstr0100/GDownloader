@@ -26,12 +26,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import javax.swing.*;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
-import net.brlns.gdownloader.ui.GUIManager;
 import net.brlns.gdownloader.ui.custom.CustomProgressBar;
 import net.brlns.gdownloader.ui.themes.UIColors;
 import net.brlns.gdownloader.util.CancelHook;
 
 import static net.brlns.gdownloader.ui.GUIManager.*;
+import static net.brlns.gdownloader.ui.UIUtils.loadIcon;
 import static net.brlns.gdownloader.ui.message.MessageTypeEnum.WARNING;
 import static net.brlns.gdownloader.ui.themes.ThemeProvider.*;
 import static net.brlns.gdownloader.ui.themes.UIColors.*;
@@ -152,7 +152,7 @@ public class ToastMessenger extends AbstractMessenger {
         JPanel contentPanel = new JPanel(new BorderLayout());
         contentPanel.setOpaque(false);
 
-        JLabel iconLabel = new JLabel(GUIManager.loadIcon(iconPath, iconColor, 32));
+        JLabel iconLabel = new JLabel(loadIcon(iconPath, iconColor, 32));
         contentPanel.add(iconLabel, BorderLayout.WEST);
 
         JLabel messageLabel = new JLabel();

@@ -73,7 +73,8 @@ public class MediaCardDnDHandler implements IDnDHandler {
 
             MediaCard card = (MediaCard)transferable.getTransferData(MEDIA_CARD_FLAVOR);
 
-            return manager.handleMediaCardDnD(card, support.getComponent());
+            return manager.getMediaCardManager()
+                .handleMediaCardDnD(card, support.getComponent());
         } catch (Exception e) {
             GDownloader.handleException(e, false);
         }

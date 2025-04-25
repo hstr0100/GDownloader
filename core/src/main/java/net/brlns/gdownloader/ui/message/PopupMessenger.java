@@ -26,6 +26,7 @@ import net.brlns.gdownloader.ui.custom.CustomProgressBar;
 import net.brlns.gdownloader.util.CancelHook;
 
 import static net.brlns.gdownloader.ui.GUIManager.*;
+import static net.brlns.gdownloader.ui.UIUtils.*;
 import static net.brlns.gdownloader.ui.themes.ThemeProvider.*;
 import static net.brlns.gdownloader.ui.themes.UIColors.*;
 

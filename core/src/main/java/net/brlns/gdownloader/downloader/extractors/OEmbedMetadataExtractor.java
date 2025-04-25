@@ -2,6 +2,7 @@ package net.brlns.gdownloader.downloader.extractors;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.annotation.PostConstruct;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpRequest;
@@ -29,6 +30,12 @@ import net.brlns.gdownloader.util.URLUtils;
 public class OEmbedMetadataExtractor implements IMetadataExtractor {
 
     private static final OEmbedProviders oembedProviders = new OEmbedProviders();
+
+    @PostConstruct
+    @Override
+    public void init() {
+        oembedProviders.init();
+    }
 
     protected Optional<OEmbedDTO> getOEmbedDTO(String url) {
         for (Provider provider : oembedProviders.getProviders()) {

@@ -54,7 +54,7 @@ public class Settings {
     private boolean monitorClipboardForLinks = true;
 
     @JsonProperty("AutomaticUpdates")
-    private boolean automaticUpdates = true;
+    private boolean automaticUpdates = false;
 
     @JsonProperty("LanguageDefined")
     private boolean languageDefined = false;

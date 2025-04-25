@@ -83,6 +83,10 @@ public class PersistenceManager {
         databaseDirectory = new File(GDownloader.getWorkDirectory(), "db");
     }
 
+    public boolean isFirstBoot() {
+        return !databaseDirectory.exists();
+    }
+
     @PostConstruct
     public final boolean init() throws Exception {
         if (initialized) {

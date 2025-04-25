@@ -27,8 +27,8 @@ import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.SwingConstants;
-import net.brlns.gdownloader.ui.GUIManager;
 
+import static net.brlns.gdownloader.ui.UIUtils.loadIcon;
 import static net.brlns.gdownloader.ui.themes.ThemeProvider.*;
 import static net.brlns.gdownloader.ui.themes.UIColors.*;
 
@@ -55,7 +55,7 @@ public class CustomMenuButton extends JButton {
         textLabel.setHorizontalAlignment(SwingConstants.LEFT);
 
         if (iconAsset != null) {
-            ImageIcon icon = GUIManager.loadIcon(iconAsset, ICON, 16);
+            ImageIcon icon = loadIcon(iconAsset, ICON, 16);
             textLabel.setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 0));
 
             JLabel iconLabel = new JLabel(icon);

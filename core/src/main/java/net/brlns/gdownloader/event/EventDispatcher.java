@@ -29,6 +29,8 @@ import lombok.EqualsAndHashCode;
 import lombok.NonNull;
 import net.brlns.gdownloader.GDownloader;
 
+import static net.brlns.gdownloader.ui.UIUtils.runOnEDT;
+
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
@@ -37,11 +39,19 @@ public class EventDispatcher {
     private static final Map<Class<?>, List<Handler>> handlers = new ConcurrentHashMap<>();
 
     public static <E extends IEvent> LambdaHandler<E> register(@NonNull Class<E> eventType, Consumer<E> listener) {
+        return register(eventType, listener, false);
+    }
+
+    public static <E extends IEvent> LambdaHandler<E> registerEDT(@NonNull Class<E> eventType, Consumer<E> listener) {
+        return register(eventType, listener, true);
+    }
+
+    private static <E extends IEvent> LambdaHandler<E> register(@NonNull Class<E> eventType, Consumer<E> listener, boolean runOnEDT) {
         if (!IEvent.class.isAssignableFrom(eventType)) {
             throw new IllegalArgumentException("Consumer must handle a type that implements IEvent");
         }
 
-        LambdaHandler<E> handler = new LambdaHandler<>(eventType, listener);
+        LambdaHandler<E> handler = new LambdaHandler<>(eventType, listener, runOnEDT);
 
         handlers.computeIfAbsent(eventType, k -> new CopyOnWriteArrayList<>()).add(handler);
 
@@ -135,7 +145,12 @@ public class EventDispatcher {
                         case LambdaHandler<?> lambdaHandler -> {
                             @SuppressWarnings("unchecked")
                             Consumer<IEvent> consumer = (Consumer<IEvent>)lambdaHandler.getListener();
-                            consumer.accept(event);
+
+                            if (lambdaHandler.isRunOnEDT()) {
+                                runOnEDT(() -> consumer.accept(event));
+                            } else {
+                                consumer.accept(event);
+                            }
                         }
                         default -> {
                         }
@@ -164,6 +179,7 @@ public class EventDispatcher {
 
         private final Class<E> eventType;
         private final Consumer<E> listener;
+        private final boolean runOnEDT;
 
     }
 

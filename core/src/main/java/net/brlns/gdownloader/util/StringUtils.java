@@ -205,4 +205,11 @@ public final class StringUtils {
             || c == '(' || c == ')' || c == '$' || c == '`'
             || c == '!' || c == '*' || c == '/';
     }
+
+    public static String removeEmojis(String text) {
+        String regex = "[\\x{1F000}-\\x{1FFFF}]|[\\x{2600}-\\x{27BF}]"
+            + "|[\\x{1F300}-\\x{1F64F}]|[\\x{1F680}-\\x{1F6FF}]";
+
+        return text.replaceAll(regex, "");
+    }
 }

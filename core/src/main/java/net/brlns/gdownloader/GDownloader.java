@@ -38,7 +38,6 @@ import java.nio.file.Paths;
 import java.nio.file.attribute.PosixFilePermission;
 import java.util.*;
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -57,6 +56,7 @@ import net.brlns.gdownloader.clipboard.ClipboardManager;
 import net.brlns.gdownloader.downloader.DownloadManager;
 import net.brlns.gdownloader.event.EventDispatcher;
 import net.brlns.gdownloader.event.impl.NativeMouseClickEvent;
+import net.brlns.gdownloader.event.impl.SettingsChangeEvent;
 import net.brlns.gdownloader.ffmpeg.FFmpegSelfTester;
 import net.brlns.gdownloader.ffmpeg.FFmpegTranscoder;
 import net.brlns.gdownloader.lang.Language;
@@ -127,6 +127,11 @@ import static net.brlns.gdownloader.util.StringUtils.nullOrEmpty;
 // TODO automatic ui sorting
 // TODO welcome screen with some setting presets based on selected use case
 // TODO Manually mark downloads as complete, correctly move files to final directory
+// TODO Should not download updates if the latest tag is the same as current one
+// TODO Make download paths for the different downloaders customizable
+// TODO Fetch favicons for url filters
+// TODO Direct-HTTP: user-agent
+// TODO Tags/Filtering
 /**
  * GDownloader - GUI wrapper for yt-dlp
  *
@@ -182,7 +187,7 @@ public final class GDownloader {
     private PersistenceManager persistenceManager;
 
     @Getter
-    private List<AbstractGitUpdater> updaters = new ArrayList<>();
+    private UpdateManager updateManager;
 
     @Getter
     private GUIManager guiManager;
@@ -194,7 +199,12 @@ public final class GDownloader {
     private ProcessMonitor processMonitor;
 
     @Getter
+    private NetworkConnectivityListener connectivityListener;
+
+    @Getter
     private boolean initialized = false;
+
+    private final AtomicBoolean uiInitialized = new AtomicBoolean();
 
     @Getter(AccessLevel.PRIVATE)
     private final ScheduledExecutorService mainTicker;
@@ -271,12 +281,41 @@ public final class GDownloader {
 
             processMonitor = new ProcessMonitor();
             persistenceManager = new PersistenceManager(this);
-            persistenceManager.init();
+            updateManager = new UpdateManager(this);
 
             ffmpegTranscoder = new FFmpegTranscoder(processMonitor);
             clipboardManager = new ClipboardManager(this);
             downloadManager = new DownloadManager(this);
             guiManager = new GUIManager(this);
+
+            connectivityListener = new NetworkConnectivityListener();
+
+            // Java doesn't natively support detecting a click outside of the program window,
+            // Which we would need for our custom context menus
+            GlobalScreen.addNativeMouseListener(new NativeMouseListener() {
+                @Override
+                public void nativeMousePressed(NativeMouseEvent e) {
+                    EventDispatcher.dispatch(new NativeMouseClickEvent(e.getPoint()));
+                }
+            });
+
+            initialized = true;
+        } catch (Exception e) {
+            handleException(e);
+        }
+    }
+
+    public void initMainWindow() {
+        guiManager.createAndShowGUI();
+
+        if (uiInitialized.compareAndSet(false, true)) {
+            runStartupTasks();
+        }
+    }
+
+    public void runStartupTasks() {
+        try {
+            persistenceManager.init();
 
             // Register to the system tray
             if (SystemTray.isSupported()) {
@@ -303,26 +342,7 @@ public final class GDownloader {
                 log.error("System tray not supported? did you run this on a calculator?");
             }
 
-            updaters.add(new SelfUpdater(this));
-            updaters.add(new YtDlpUpdater(this));
-            updaters.add(new FFMpegUpdater(this));
-
-            if (config.isGalleryDlEnabled()) {
-                updaters.add(new GalleryDlUpdater(this));
-            }
-
-            if (config.isSpotDLEnabled()) {
-                updaters.add(new SpotDLUpdater(this));
-            }
-
-            if (config.isDebugMode()) {
-                for (AbstractGitUpdater updater : updaters) {
-                    updater.registerListener((status, progress) -> {
-                        log.info("UPDATER {}: Status: {} Progress: {}",
-                            updater.getClass().getName(), status, String.format("%.1f", progress));
-                    });
-                }
-            }
+            updateManager.checkForUpdates(true);
 
             updateStartupStatus();
 
@@ -349,19 +369,17 @@ public final class GDownloader {
                 }
             }, 0, 50, TimeUnit.MILLISECONDS);
 
-            // Java doesn't natively support detecting a click outside of the program window,
-            // Which we would need for our custom context menus
-            GlobalScreen.addNativeMouseListener(new NativeMouseListener() {
-                @Override
-                public void nativeMousePressed(NativeMouseEvent e) {
-                    EventDispatcher.dispatch(new NativeMouseClickEvent(e.getPoint()));
-                }
-            });
-
-            initialized = true;
+            connectivityListener.startBackgroundConnectivityCheck();
         } catch (Exception e) {
             handleException(e);
         }
+    }
+
+    public void runPostUpdateInitTasks() {
+        GLOBAL_THREAD_POOL.execute(() -> {
+            downloadManager.init();
+            ffmpegTranscoder.init();
+        });
     }
 
     public void clearCache() {
@@ -392,108 +410,12 @@ public final class GDownloader {
 
     public void initUi() {
         if (initialized) {
-            guiManager.createAndShowGUI();
-        }
-    }
-
-    public boolean checkForUpdates() {
-        return checkForUpdates(true);
-    }
-
-    public boolean checkForUpdates(boolean userInitiated) {
-        if (userInitiated) {
-            if (downloadManager.isBlocked()) {// This means we are already checking for updates
-                return false;
-            }
-
-            downloadManager.block();
-            downloadManager.stopDownloads();
-
-            PopupMessenger.show(Message.builder()
-                .title("gui.update.notification_title")
-                .message("gui.update.checking")
-                .durationMillis(2000)
-                .messageType(MessageTypeEnum.INFO)
-                .discardDuplicates(true)
-                .build());
-        }
-
-        CountDownLatch latch = new CountDownLatch(updaters.size());
-
-        for (AbstractGitUpdater updater : updaters) {
-            if (updater.isSupported()) {
-                GLOBAL_THREAD_POOL.execute(() -> {
-                    try {
-                        log.info("Starting updater " + updater.getClass().getName());
-                        updater.check(userInitiated);
-                    } catch (NoFallbackAvailableException e) {
-                        log.error("Updater for " + updater.getClass().getName()
-                            + " failed and no fallback is available. Your OS might be unsupported.");
-                    } catch (Exception e) {
-                        handleException(e);
-                    } finally {
-                        latch.countDown();
-                    }
-                });
+            if (persistenceManager.isFirstBoot()) {
+                guiManager.displayWelcomeScreen();
             } else {
-                log.info("Updater " + updater.getClass().getName() + " is not supported on this platform or runtime method.");
-                latch.countDown();
+                initMainWindow();
             }
         }
-
-        GLOBAL_THREAD_POOL.execute(() -> {
-            try {
-                latch.await();
-            } catch (InterruptedException e) {
-                log.error("Interrupted", e);
-            }
-
-            log.info("Finished checking for updates");
-
-            boolean updated = updaters.stream()
-                .anyMatch(AbstractGitUpdater::isUpdated);
-
-            if (userInitiated) {
-                PopupMessenger.show(Message.builder()
-                    .title("gui.update.notification_title")
-                    .message(updated
-                        ? "gui.update.new_updates_installed"
-                        : "gui.update.updated")
-                    .durationMillis(2000)
-                    .messageType(MessageTypeEnum.INFO)
-                    .playTone(true)
-                    .build());
-            }
-
-            for (AbstractGitUpdater updater : updaters) {
-                if (updater instanceof SelfUpdater selfUpdater) {
-                    if (selfUpdater.isUpdated()) {
-                        log.info("Restarting to apply updates.");
-                        restart();
-                        break;
-                    }
-                }
-            }
-
-            if (!downloadManager.isMainDownloaderInitialized()) {
-                log.error("Failed to initialize yt-dlp, the program cannot continue. Exiting...");
-
-                if (!userInitiated) {
-                    shutdown();
-                }
-            }
-
-            downloadManager.unblock();
-            clipboardManager.unblock();
-
-            if (!userInitiated) {
-                downloadManager.init();
-            }
-
-            ffmpegTranscoder.init();
-        });
-
-        return true;
     }
 
     /**
@@ -519,8 +441,6 @@ public final class GDownloader {
         }));
 
         popup.add(buildMenuItem(l10n("gui.exit"), (ActionEvent e) -> {
-            log.info("Exiting....");
-
             shutdown();
         }));
 
@@ -755,6 +675,10 @@ public final class GDownloader {
             }
 
             LoggerUtils.setDebugLogLevel(configIn.isDebugMode());
+
+            EventDispatcher.dispatch(SettingsChangeEvent.builder()
+                .settings(config)
+                .build());
         } catch (IOException e) {
             handleException(e);
         }
@@ -823,6 +747,7 @@ public final class GDownloader {
     }
 
     public void shutdown(int code) {
+        log.info("Exiting....");
         System.exit(code);
     }
 
@@ -1401,8 +1326,6 @@ public final class GDownloader {
             instance.initUi();
         }
 
-        instance.checkForUpdates(false);
-
         log.info("{} is initialized", REGISTRY_APP_NAME);
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
@@ -1414,6 +1337,12 @@ public final class GDownloader {
 
             if (instance.isRestartRequested()) {
                 instance.launchNewInstance();
+            }
+
+            try {
+                instance.getConnectivityListener().close();
+            } catch (Exception e) {
+                log.error("There was a problem closing the connectivity listener", e);
             }
 
             try {

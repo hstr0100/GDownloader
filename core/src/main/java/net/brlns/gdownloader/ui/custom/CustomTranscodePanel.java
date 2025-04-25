@@ -35,7 +35,6 @@ import net.brlns.gdownloader.ui.themes.UIColors;
 
 import static net.brlns.gdownloader.lang.Language.*;
 import static net.brlns.gdownloader.settings.enums.VideoContainerEnum.*;
-import static net.brlns.gdownloader.ui.GUIManager.runOnEDT;
 import static net.brlns.gdownloader.ui.SettingsPanel.addComboBox;
 import static net.brlns.gdownloader.ui.SettingsPanel.addLabel;
 import static net.brlns.gdownloader.ui.SettingsPanel.wrapComponentRow;

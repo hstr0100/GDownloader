@@ -27,7 +27,8 @@ import javax.swing.SwingUtilities;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import net.brlns.gdownloader.ui.GUIManager;
+
+import static net.brlns.gdownloader.ui.UIUtils.wrapTextInHtml;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -71,11 +72,17 @@ public class CustomDynamicLabel extends JLabel {
     }
 
     public final void setFullText(String... text) {
-        fullText = Arrays.stream(text)
+        String[] newFullText = Arrays.stream(text)
             .flatMap(s -> Arrays.stream(s.split("\n")))
             .toArray(String[]::new);
 
-        setText(GUIManager.wrapTextInHtml(Integer.MAX_VALUE, centerText, fullText));
+        if (Arrays.equals(fullText, newFullText)) {
+            return;
+        }
+
+        fullText = newFullText;
+
+        setText(wrapTextInHtml(Integer.MAX_VALUE, centerText, fullText));
         updateTruncatedText();
     }
 
@@ -142,6 +149,6 @@ public class CustomDynamicLabel extends JLabel {
             }
         }
 
-        setText(GUIManager.wrapTextInHtml(Integer.MAX_VALUE, centerText, truncatedText));
+        setText(wrapTextInHtml(Integer.MAX_VALUE, centerText, truncatedText));
     }
 }

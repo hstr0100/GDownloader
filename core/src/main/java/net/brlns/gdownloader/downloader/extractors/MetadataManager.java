@@ -16,6 +16,7 @@
  */
 package net.brlns.gdownloader.downloader.extractors;
 
+import jakarta.annotation.PostConstruct;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -38,8 +39,14 @@ public final class MetadataManager {
 
     public MetadataManager() {
         registerExtractor(new SpotifyMetadataExtractor());
+        registerExtractor(defaultExtractor = new OEmbedMetadataExtractor());
+    }
 
-        defaultExtractor = new OEmbedMetadataExtractor();
+    @PostConstruct
+    public void init() {
+        for (IMetadataExtractor extractor : extractors) {
+            extractor.init();
+        }
     }
 
     public void registerExtractor(@NonNull IMetadataExtractor extractor) {

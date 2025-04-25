@@ -24,15 +24,17 @@ import net.brlns.gdownloader.settings.enums.ISettingsEnum;
  */
 @Getter
 public enum DownloaderIdEnum implements ISettingsEnum {
-    YT_DLP("yt-dlp"),
-    GALLERY_DL("gallery-dl"),
-    SPOTDL("spotDL"),
-    DIRECT_HTTP("Direct-HTTP");
+    YT_DLP("yt-dlp", "https://github.com/yt-dlp/yt-dlp"),
+    GALLERY_DL("gallery-dl", "https://github.com/mikf/gallery-dl"),
+    SPOTDL("spotDL", "https://github.com/spotDL/spotify-downloader"),
+    DIRECT_HTTP("Direct-HTTP", "https://github.com/hstr0100/GDownloader");
 
     private final String displayName;
+    private final String homepage;
 
-    private DownloaderIdEnum(String displayNameIn) {
+    private DownloaderIdEnum(String displayNameIn, String homepageIn) {
         displayName = displayNameIn;
+        homepage = homepageIn;
     }
 
     @Override

@@ -298,7 +298,9 @@ task createAppImage(type: Exec, dependsOn: zipJpackageImage) {
             into appUsrPath
         }
 
-        delete file("$appLibPath/runtime/portable.lock")
+        // TODO: different update endpoint for AppImage
+        file("$appLibPath/runtime/portable.lock")
+            .renameTo(file("$appLibPath/runtime/appimage.lock"))
 
         file("$appUsrPath/share/metainfo").mkdirs()
         file("$appUsrPath/share/applications").mkdirs()

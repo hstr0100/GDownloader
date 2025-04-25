@@ -24,7 +24,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.ui.AudioEngine;
 
-import static net.brlns.gdownloader.ui.GUIManager.runOnEDT;
+import static net.brlns.gdownloader.ui.UIUtils.runOnEDT;
 
 /**
  * @author Gabriel / hstr0100 / vertx010

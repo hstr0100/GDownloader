@@ -14,20 +14,20 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package net.brlns.gdownloader.downloader.extractors;
+package net.brlns.gdownloader.event.impl;
 
-import java.util.Optional;
-import net.brlns.gdownloader.downloader.structs.MediaInfo;
+import lombok.Builder;
+import lombok.Data;
+import net.brlns.gdownloader.event.IEvent;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-public interface IMetadataExtractor {
+@Data
+@Builder
+public class PerformUpdateCheckEvent implements IEvent {
 
-    void init();
-
-    boolean canConsume(String urlIn);
-
-    Optional<MediaInfo> fetchMetadata(String urlIn) throws Exception;
+    private final boolean checking;
+    private final boolean networkOnline;
 
 }

@@ -35,8 +35,8 @@ import net.brlns.gdownloader.ui.menu.IMenuEntry;
 import net.brlns.gdownloader.util.ImageUtils;
 import net.brlns.gdownloader.util.collection.ConcurrentLinkedHashMap;
 
-import static net.brlns.gdownloader.ui.GUIManager.runOnEDT;
 import static net.brlns.gdownloader.ui.MediaCard.UpdateType.*;
+import static net.brlns.gdownloader.ui.UIUtils.runOnEDT;
 
 /**
  * @author Gabriel / hstr0100 / vertx010

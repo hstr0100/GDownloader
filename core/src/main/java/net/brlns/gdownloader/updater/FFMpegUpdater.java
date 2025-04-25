@@ -77,7 +77,7 @@ public class FFMpegUpdater extends AbstractGitUpdater {
     }
 
     @Override
-    public boolean isSupported() {
+    public boolean isEnabled() {
         return GDownloader.isWindows();
     }
 

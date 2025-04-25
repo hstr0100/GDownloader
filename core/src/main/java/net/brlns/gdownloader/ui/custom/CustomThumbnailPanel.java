@@ -27,7 +27,7 @@ import net.brlns.gdownloader.downloader.enums.DownloadPriorityEnum;
 import net.brlns.gdownloader.downloader.enums.DownloadTypeEnum;
 
 import static net.brlns.gdownloader.downloader.enums.DownloadTypeEnum.*;
-import static net.brlns.gdownloader.ui.GUIManager.loadIcon;
+import static net.brlns.gdownloader.ui.UIUtils.loadIcon;
 import static net.brlns.gdownloader.ui.themes.UIColors.ICON;
 
 /**

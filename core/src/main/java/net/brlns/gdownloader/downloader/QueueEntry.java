@@ -150,8 +150,8 @@ public class QueueEntry {
     }
 
     public void dispose(CloseReasonEnum closeReason) {
-        main.getGuiManager().removeMediaCard(
-            mediaCard.getId(), closeReason);
+        main.getGuiManager().getMediaCardManager()
+            .removeMediaCard(mediaCard.getId(), closeReason);
     }
 
     public void tryOpenMediaFiles() {
@@ -419,6 +419,11 @@ public class QueueEntry {
     }
 
     private String getTitle() {
+        // Emojis won't render, but will successfully distort the layout.
+        return StringUtils.removeEmojis(getRawTitle());
+    }
+
+    private String getRawTitle() {
         if (mediaInfo != null) {
             // Give priority to playlist titles
             if (notNullOrEmpty(mediaInfo.getPlaylistTitle())) {
@@ -637,8 +642,7 @@ public class QueueEntry {
                     setForcedDownloader(downloaderId);
                     setCurrentDownloader(downloaderId);
                     manager.stopDownload(this, () -> {
-                        manager.resetDownload(this);
-                        //manager.submitDownloadTask(this, true);
+                        manager.requeueEntry(this);
                     });
                 })
             );

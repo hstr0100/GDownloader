@@ -71,6 +71,7 @@ public class DarkTheme extends AbstractTheme {
         put(TOAST_INFO, new Color(30, 136, 229));
         put(SETTINGS_ROW_BACKGROUND_LIGHT, new Color(68, 68, 68));
         put(SETTINGS_ROW_BACKGROUND_DARK, new Color(64, 64, 64));
+        put(LINK_COLOR, new Color(64, 196, 255));
     }
 
     @Override

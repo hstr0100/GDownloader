@@ -18,6 +18,7 @@ package net.brlns.gdownloader.downloader.extractors;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.annotation.PostConstruct;
 import java.io.*;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -29,12 +30,14 @@ import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
+import net.brlns.gdownloader.util.NetworkConnectivityListener;
 import net.brlns.gdownloader.util.URLUtils;
 
 /**
@@ -46,12 +49,19 @@ public class OEmbedProviders {
     private static final String PROVIDERS_URL = "https://oembed.com/providers.json";
 
     @Getter
-    private final HttpClient httpClient;
+    private HttpClient httpClient;
 
     @Getter
     private List<Provider> providers = new ArrayList<>();
 
-    public OEmbedProviders() {
+    private AtomicBoolean initialized = new AtomicBoolean();
+
+    @PostConstruct
+    public void init() {
+        if (!initialized.compareAndSet(false, true)) {
+            return;
+        }
+
         httpClient = HttpClient.newBuilder()
             .followRedirects(HttpClient.Redirect.ALWAYS)
             .connectTimeout(Duration.ofSeconds(10))
@@ -62,7 +72,13 @@ public class OEmbedProviders {
     }
 
     private void loadProviders() {
+        if (!GDownloader.getInstance().getConfig().isQueryMetadata()) {
+            return;
+        }
+
         GDownloader.GLOBAL_THREAD_POOL.execute(() -> {
+            NetworkConnectivityListener.waitForConnectivity();
+
             try {
                 HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(PROVIDERS_URL))

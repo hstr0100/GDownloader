@@ -37,7 +37,7 @@ import net.brlns.gdownloader.event.IEventListener;
 import net.brlns.gdownloader.event.impl.NativeMouseClickEvent;
 import net.brlns.gdownloader.ui.custom.CustomMenuButton;
 
-import static net.brlns.gdownloader.ui.GUIManager.runOnEDT;
+import static net.brlns.gdownloader.ui.UIUtils.runOnEDT;
 
 /**
  * @author Gabriel / hstr0100 / vertx010

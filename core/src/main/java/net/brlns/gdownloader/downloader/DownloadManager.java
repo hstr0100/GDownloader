@@ -122,14 +122,11 @@ public class DownloadManager implements IEvent {
     @PostConstruct
     public void init() {
         try {
-            if (persistence.isInitialized()) {
-                // Even if persistance is disabled, we still initialize the db so a restart is not
-                // needed and no data is lost if the user toggles persistence back on during runtime.
-                long nextId = persistence.getCounters().getCurrentValue(CounterTypeEnum.DOWNLOAD_ID);
-                downloadIdGenerator.set(nextId);
-                log.info("Current download id: {}", nextId);
+            metadataManager.init();
 
-                if (nextId > 0 && main.getConfig().isRestoreSessionAfterRestart()) {
+            if (persistence.isInitialized()) {
+                if (!persistence.isFirstBoot()
+                    && main.getConfig().isRestoreSessionAfterRestart()) {
                     ToastMessenger.show(Message.builder()
                         .message("gui.restoring_session.toast")
                         .durationMillis(5000)
@@ -137,6 +134,12 @@ public class DownloadManager implements IEvent {
                         .discardDuplicates(true)
                         .build());
                 }
+
+                // Even if persistance is disabled, we still initialize the db so a restart is not
+                // needed and no data is lost if the user toggles persistence back on during runtime.
+                long nextId = persistence.getCounters().getCurrentValue(CounterTypeEnum.DOWNLOAD_ID);
+                downloadIdGenerator.set(nextId);
+                log.info("Current download id: {}", nextId);
 
                 GDownloader.GLOBAL_THREAD_POOL.execute(() -> {
                     linkCaptureLock.lock();// Intentionally block url capture during the entire restoring proccess
@@ -175,7 +178,8 @@ public class DownloadManager implements IEvent {
                                 continue;
                             }
 
-                            MediaCard mediaCard = main.getGuiManager().addMediaCard(downloadUrl);
+                            MediaCard mediaCard = main.getGuiManager()
+                                .getMediaCardManager().addMediaCard(downloadUrl);
 
                             QueueEntry queueEntry = QueueEntry.fromEntity(entity, mediaCard, compatibleDownloaders);
 
@@ -199,6 +203,8 @@ public class DownloadManager implements IEvent {
             }
         } catch (Exception e) {
             GDownloader.handleException(e);
+        } finally {
+            main.getClipboardManager().unblock();
         }
     }
 
@@ -390,8 +396,8 @@ public class DownloadManager implements IEvent {
                                     future.complete(false);
                                 });
 
-                            // TODO: This whole section needs to be refactored
-                            if (urlIgnoreSet.contains(playlist) && !force) {// Temporary fix for double popups
+                            // TODO: This whole section really needs to be refactored
+                            if (urlIgnoreSet.contains(playlist) && !force) {// Very temporary fix for double popups
                                 future.complete(false);
                                 return future;
                             } else {
@@ -443,7 +449,8 @@ public class DownloadManager implements IEvent {
 
                 log.info("Captured {}", inputUrl);
 
-                MediaCard mediaCard = main.getGuiManager().addMediaCard(filteredUrl);
+                MediaCard mediaCard = main.getGuiManager()
+                    .getMediaCardManager().addMediaCard(filteredUrl);
 
                 long downloadId = downloadIdGenerator.incrementAndGet();
 
@@ -629,12 +636,16 @@ public class DownloadManager implements IEvent {
 
     public void retryFailedDownloads() {
         sequencer.requeueFailed((entry) -> {
-            resetDownload(entry);
-            offerTo(QUEUED, entry);
+            requeueEntry(entry);
         });
 
         startDownloads(suggestedDownloaderId.get());
         fireListeners();
+    }
+
+    public void requeueEntry(QueueEntry entry) {
+        resetDownload(entry);
+        offerTo(QUEUED, entry);
     }
 
     public void processQueue() {
@@ -730,8 +741,8 @@ public class DownloadManager implements IEvent {
     public void setSortOrder(QueueSortOrderEnum sortOrder) {
         sequencer.setSortOrder(sortOrder);
 
-        main.getGuiManager().reorderMediaCards(
-            getSortedMediaCardIds());
+        main.getGuiManager().getMediaCardManager()
+            .reorderMediaCards(getSortedMediaCardIds());
     }
 
     public QueueSortOrderEnum getSortOrder() {
