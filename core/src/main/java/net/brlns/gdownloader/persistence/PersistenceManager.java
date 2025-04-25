@@ -78,13 +78,13 @@ public class PersistenceManager {
     @Getter
     private MediaInfoRepository mediaInfos;
 
+    @Getter
+    private final boolean firstBoot;
+
     public PersistenceManager(GDownloader mainIn) {
         main = mainIn;
         databaseDirectory = new File(GDownloader.getWorkDirectory(), "db");
-    }
-
-    public boolean isFirstBoot() {
-        return !databaseDirectory.exists();
+        firstBoot = !databaseDirectory.exists();
     }
 
     @PostConstruct

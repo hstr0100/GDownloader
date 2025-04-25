@@ -125,7 +125,7 @@ public class DownloadManager implements IEvent {
             metadataManager.init();
 
             if (persistence.isInitialized()) {
-                if (!persistence.isFirstBoot()
+                if (main.getConfig().isPersistenceDatabaseInitialized()
                     && main.getConfig().isRestoreSessionAfterRestart()) {
                     ToastMessenger.show(Message.builder()
                         .message("gui.restoring_session.toast")
@@ -198,6 +198,9 @@ public class DownloadManager implements IEvent {
                         }
                     } finally {
                         linkCaptureLock.unlock();
+
+                        main.getConfig().setPersistenceDatabaseInitialized(true);
+                        main.updateConfig();
                     }
                 });
             }

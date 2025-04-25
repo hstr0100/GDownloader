@@ -50,6 +50,9 @@ public class Settings {
     @JsonProperty("ConfigVersion")
     private int configVersion = CONFIG_VERSION;
 
+    @JsonProperty("PersistenceDatabaseInitialized")
+    private boolean persistenceDatabaseInitialized = false;
+
     @JsonProperty("MonitorClipboardForLinks")
     private boolean monitorClipboardForLinks = true;
 

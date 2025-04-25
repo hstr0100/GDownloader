@@ -45,6 +45,7 @@ import net.brlns.gdownloader.event.EventDispatcher;
 import net.brlns.gdownloader.event.impl.ConnectivityStatusEvent;
 import net.brlns.gdownloader.event.impl.PerformUpdateCheckEvent;
 import net.brlns.gdownloader.event.impl.SettingsChangeEvent;
+import net.brlns.gdownloader.settings.Settings;
 import net.brlns.gdownloader.ui.custom.*;
 import net.brlns.gdownloader.ui.dnd.WindowDragSourceListener;
 import net.brlns.gdownloader.ui.dnd.WindowDropTargetListener;
@@ -750,8 +751,8 @@ public final class GUIManager {
         emptyQueuePane.add(label, BorderLayout.CENTER);
 
         AtomicReference<String> lastString = new AtomicReference<>("");
-        Runnable labelUpdateTask = () -> {
-            String newString = main.getConfig().isMonitorClipboardForLinks()
+        Consumer<Settings> labelUpdateTask = (config) -> {
+            String newString = config.isMonitorClipboardForLinks()
                 ? l10n("gui.empty_queue")
                 : l10n("gui.empty_queue.enable_clipboard");
 
@@ -761,10 +762,10 @@ public final class GUIManager {
             }
         };
 
-        labelUpdateTask.run();
+        labelUpdateTask.accept(main.getConfig());
 
         EventDispatcher.registerEDT(SettingsChangeEvent.class, (event) -> {
-            labelUpdateTask.run();
+            labelUpdateTask.accept(event.getSettings());
         });
 
         return emptyQueuePane;

@@ -677,7 +677,7 @@ public final class GDownloader {
             LoggerUtils.setDebugLogLevel(configIn.isDebugMode());
 
             EventDispatcher.dispatch(SettingsChangeEvent.builder()
-                .settings(config)
+                .settings(configIn)
                 .build());
         } catch (IOException e) {
             handleException(e);
