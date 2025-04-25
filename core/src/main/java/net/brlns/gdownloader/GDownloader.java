@@ -314,8 +314,12 @@ public final class GDownloader {
         }
     }
 
-    public void initMainWindow() {
-        guiManager.createAndShowGUI();
+    public void initMainWindow(boolean silently) {
+        if (!silently) {
+            guiManager.createAndShowGUI();
+        } else {
+            guiManager.createGUISilently();
+        }
 
         runStartupTasks();
     }
@@ -337,7 +341,7 @@ public final class GDownloader {
                     trayIcon = new TrayIcon(image, REGISTRY_APP_NAME, buildPopupMenu());
                     trayIcon.setImageAutoSize(true);
                     trayIcon.addActionListener((ActionEvent e) -> {
-                        initUi();
+                        initUi(false);
                     });
 
                     tray.add(trayIcon);
@@ -417,12 +421,12 @@ public final class GDownloader {
         }
     }
 
-    public void initUi() {
+    public void initUi(boolean silently) {
         if (initialized) {
-            if (persistenceManager.isFirstBoot()) {
+            if (!silently && persistenceManager.isFirstBoot()) {
                 guiManager.displayWelcomeScreen();
             } else {
-                initMainWindow();
+                initMainWindow(silently);
             }
         }
     }
@@ -1331,11 +1335,7 @@ public final class GDownloader {
 
         instance.setAppClient(appClient);
 
-        if (!noGui) {
-            instance.initUi();
-        } else {
-            instance.runStartupTasks();
-        }
+        instance.initUi(noGui);
 
         log.info("{} is initialized", REGISTRY_APP_NAME);
 

@@ -149,6 +149,14 @@ public final class GUIManager {
         return (appWindow.getExtendedState() & JFrame.MAXIMIZED_BOTH) == JFrame.MAXIMIZED_BOTH;
     }
 
+    public void createGUISilently() {
+        runOnEDT(() -> {
+            setUpAppWindow();
+
+            appWindow.setVisible(false);
+        });
+    }
+
     public void createAndShowGUI() {
         runOnEDT(() -> {
             setUpAppWindow();

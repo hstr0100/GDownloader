@@ -179,7 +179,7 @@ public final class AppServer {
 
     private AbstractResult handleWakeUp(String params) {
         log.info("Wake-up command received {} params: {}", params);
-        main.initUi();
+        main.initUi(false);
 
         return new StatusResult(ResultEnum.SUCCESS);
     }

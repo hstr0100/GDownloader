@@ -346,7 +346,7 @@ public class WelcomeScreen {
             main.updateConfig(settings);
             frame.dispose();
 
-            main.initMainWindow();
+            main.initMainWindow(false);
         });
 
         buttonPanel.add(ffmpegWarningLabel, BorderLayout.WEST);
