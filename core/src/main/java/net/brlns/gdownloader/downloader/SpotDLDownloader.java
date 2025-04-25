@@ -419,7 +419,7 @@ public class SpotDLDownloader extends AbstractDownloader {
 
         if (lastOutput.contains("Downloading")) {
             entry.getMediaCard().setPercentage(-1);
-            entry.updateStatus(DownloadStatusEnum.DOWNLOADING, lastOutput);
+            entry.updateStatus(DownloadStatusEnum.DOWNLOADING, lastOutput, false);
         } else {
             if (entry.getDownloadStarted().get()) {
                 entry.updateStatus(DownloadStatusEnum.PROCESSING, lastOutput);

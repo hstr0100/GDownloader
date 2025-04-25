@@ -32,6 +32,7 @@ import java.util.Map;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
+import net.brlns.gdownloader.persistence.entity.CounterTypeEnum;
 import net.brlns.gdownloader.persistence.repository.CounterRepository;
 import net.brlns.gdownloader.persistence.repository.MediaInfoRepository;
 import net.brlns.gdownloader.persistence.repository.QueueEntryRepository;

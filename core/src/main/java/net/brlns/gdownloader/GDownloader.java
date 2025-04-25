@@ -61,6 +61,7 @@ import net.brlns.gdownloader.ffmpeg.FFmpegSelfTester;
 import net.brlns.gdownloader.ffmpeg.FFmpegTranscoder;
 import net.brlns.gdownloader.lang.Language;
 import net.brlns.gdownloader.persistence.PersistenceManager;
+import net.brlns.gdownloader.persistence.entity.CounterTypeEnum;
 import net.brlns.gdownloader.process.ProcessMonitor;
 import net.brlns.gdownloader.server.AppClient;
 import net.brlns.gdownloader.server.AppServer;
@@ -281,6 +282,14 @@ public final class GDownloader {
 
             processMonitor = new ProcessMonitor();
             persistenceManager = new PersistenceManager(this);
+            persistenceManager.init();
+
+            GLOBAL_THREAD_POOL.execute(() -> {
+                // Prime the db by preloading some random item before the updaters even fire up
+                persistenceManager.getCounters()
+                    .getCurrentValue(CounterTypeEnum.DOWNLOAD_ID);
+            });
+
             updateManager = new UpdateManager(this);
 
             ffmpegTranscoder = new FFmpegTranscoder(processMonitor);
@@ -308,15 +317,15 @@ public final class GDownloader {
     public void initMainWindow() {
         guiManager.createAndShowGUI();
 
-        if (uiInitialized.compareAndSet(false, true)) {
-            runStartupTasks();
-        }
+        runStartupTasks();
     }
 
     public void runStartupTasks() {
-        try {
-            persistenceManager.init();
+        if (!uiInitialized.compareAndSet(false, true)) {
+            return;
+        }
 
+        try {
             // Register to the system tray
             if (SystemTray.isSupported()) {
                 try {
@@ -1324,6 +1333,8 @@ public final class GDownloader {
 
         if (!noGui) {
             instance.initUi();
+        } else {
+            instance.runStartupTasks();
         }
 
         log.info("{} is initialized", REGISTRY_APP_NAME);
