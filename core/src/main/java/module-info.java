@@ -74,6 +74,7 @@ module net.brlns.gdownloader {
     exports net.brlns.gdownloader.ui.status;
     exports net.brlns.gdownloader.ui.themes;
     exports net.brlns.gdownloader.updater;
+    exports net.brlns.gdownloader.updater.impl;
     exports net.brlns.gdownloader.util;
     exports net.brlns.gdownloader.util.collection;
 

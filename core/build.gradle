@@ -83,6 +83,23 @@ tasks.named('run') {
     jvmArgs = ['-Xss5M']
 }
 
+task generateVersionFile {
+    group = 'build'
+
+    def versionFile = file("src/main/resources/version.properties")
+
+    inputs.property("version", project.version)
+    outputs.file(versionFile)
+
+    doLast {
+        versionFile.parentFile.mkdirs()
+        versionFile.text = "version=${project.version}"
+    }
+}
+
+compileJava.dependsOn generateVersionFile
+processResources.dependsOn generateVersionFile
+
 extraJavaModuleInfo {
     failOnMissingModuleInfo.set(true)
     deriveAutomaticModuleNamesFromFileNames.set(true)
@@ -334,25 +351,17 @@ task createAppImage(type: Exec, dependsOn: zipJpackageImage) {
             "$appUsrPath/share/icons/hicolor/512x512/apps/${appGroup}.${lowercaseName}.png",
             "$appDir/.DirIcon"
         ].each { destPath ->
-            def destFile = file(destPath)
-            def parentDir = destFile.parentFile
-
-            parentDir.mkdirs()
-
-            if (destFile.exists()) {
-                destFile.delete()
+            copy {
+                from iconPath
+                into file(destPath).parent
+                rename { file(destPath).name }
             }
-
-            java.nio.file.Files.createSymbolicLink(
-                destFile.toPath(),
-                file(iconPath).toPath()
-            )
         }
 
         def desktopFileContent = [
             "[Desktop Entry]",
             "Name=${rootProject.name}",
-            "GenericName=yt-dlp GUI",
+            "GenericName=Download Manager",
             "TryExec=${rootProject.name}",
             "Exec=${rootProject.name} %f",
             "Icon=${appGroup}.${lowercaseName}",
@@ -378,29 +387,37 @@ task createAppImage(type: Exec, dependsOn: zipJpackageImage) {
             "HERE=\"\$(dirname \"\$(readlink -f \"\${0}\")\")\"",
             "NATIVES=\"\${HERE}/usr/lib/runtime/bin/native-libs/linux/${nativeLibsArch}\"",
             "export PATH=\"\${HERE}/usr/bin:\${PATH}\"",
-            "export LD_LIBRARY_PATH=\"\${HERE}/usr/lib:\${NATIVES}:\${LD_LIBRARY_PATH}\"",
+            "export LD_LIBRARY_PATH=\"\${HERE}/usr/lib:\${NATIVES}" + '${LD_LIBRARY_PATH:+:\${LD_LIBRARY_PATH}}\"',
             "exec \"\${HERE}/usr/bin/${rootProject.name}\" \"\$@\""
         ].join("\n")
         appRun.setExecutable(true, false)
     }
 
     // Build image
+    // We are using a lowercase name due to convention; .deb files require lowercase names, and it would look out of place and trigger OCD.
     def appImageName = "${lowercaseName}-${version}-${appImageArch}.AppImage"
+    def updateInfo = "gh-releases-zsync|hstr0100|${rootProject.name}|latest|${lowercaseName}-*${appImageArch}.AppImage.zsync"
+
     workingDir "$buildDir/appimage"
     environment "ARCH", appImageArch
 
     // this requires appimagetool (without extension and version number) to be in your PATH
     // https://github.com/AppImage/appimagetool/releases
-    commandLine "appimagetool", "--verbose", "-n", "AppDir", appImageName
+    commandLine "appimagetool", "--verbose", "-n", "AppDir", appImageName,
+        "--updateinformation", updateInfo
 
     doLast {
-        copy {
-            from "$buildDir/appimage/${appImageName}"
-            into "$buildDir/jpackage"
+        [
+            file("$buildDir/appimage/${appImageName}"),
+            file("$buildDir/appimage/${appImageName}.zsync")
+        ].each { sourcePath ->
+            copy {
+                from sourcePath
+                into "$buildDir/jpackage"
+            }
         }
 
-        delete appDirBase
-
+        //delete appDirBase
         println "Created AppImage at: $buildDir/jpackage/${appImageName}"
     }
 }

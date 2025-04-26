@@ -17,50 +17,77 @@
 package net.brlns.gdownloader.updater;
 
 import java.util.Locale;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-@Getter
 @Slf4j
+@Getter
+@AllArgsConstructor
 public enum ArchVersionEnum {
-    MAC_LEGACY("yt-dlp_macos_legacy", null, null, null, null, OS.MAC),
-    MAC_X64("yt-dlp_macos", null, "-darwin", null, null, OS.MAC),
-    MAC_ARM64("yt-dlp_macos", null, "-darwin", null, null, OS.MAC),
-    WINDOWS_X86("yt-dlp_x86.exe", null, "-win32.exe", null, null, OS.WINDOWS),
-    // Neither Apache Compress nor any java library that I know of supports the -mx=9 option used by FFmpeg's 7zs
-    WINDOWS_X64("yt-dlp.exe", "gallery-dl.exe", "-win32.exe", "-full_build.zip", "windows_portable_x64.zip", OS.WINDOWS),
-    // TODO: Linux ffmpeg setup
+    // gallery-dl support is pretty much barely there due to their lack of native binaries.
+    // Python installations are brittle and not something we want to mess with.
+    MAC_LEGACY(UpdateDefinitions.builder()
+        .ytDlpBinary("yt-dlp_macos_legacy")
+        .os(OS.MAC)
+        .build()),
+    MAC_X64(UpdateDefinitions.builder()
+        .ytDlpBinary("yt-dlp_macos")
+        .spotDlBinary("-darwin")
+        .os(OS.MAC)
+        .build()),
+    MAC_ARM64(UpdateDefinitions.builder()
+        .ytDlpBinary("yt-dlp_macos")
+        .spotDlBinary("-darwin")
+        .os(OS.MAC)
+        .build()),
+    WINDOWS_X86(UpdateDefinitions.builder()
+        .ytDlpBinary("yt-dlp_x86.exe")
+        .spotDlBinary("-win32.exe")
+        .os(OS.WINDOWS)
+        .build()),
     // TODO: https://aka.ms/vs/17/release/vc_redist.x86.exe
-    LINUX_X64("yt-dlp_linux", "gallery-dl.bin", "-linux", null, "linux_portable_amd64.zip", OS.LINUX),
-    LINUX_ARM("yt-dlp_linux_armv7l", null, null, null, null, OS.LINUX),
-    LINUX_ARM64("yt-dlp_linux_aarch64", null, null, null, "linux_portable_arm64.zip", OS.LINUX);
+    WINDOWS_X64(UpdateDefinitions.builder()
+        .ytDlpBinary("yt-dlp.exe")
+        .galleryDlBinary("gallery-dl.exe")
+        .spotDlBinary("-win32.exe")
+        // Neither Apache Compress nor any java library that I know of supports the -mx=9 option used by FFmpeg's 7zs
+        // Hence the need to download their huge zip instead.
+        .ffmpegBinary("-full_build.zip")
+        .selfBinary("windows_portable_x64.zip")
+        .os(OS.WINDOWS)
+        .build()),
+    // TODO: Linux ffmpeg setup
+    LINUX_X64(UpdateDefinitions.builder()
+        .ytDlpBinary("yt-dlp_linux")
+        .galleryDlBinary("gallery-dl.bin")
+        .spotDlBinary("-linux")
+        .selfBinary("linux_portable_amd64.zip")
+        .selfAppImageBinary("x86_64.AppImage")
+        .os(OS.LINUX)
+        .build()),
+    LINUX_ARM(UpdateDefinitions.builder()
+        .ytDlpBinary("yt-dlp_linux_armv7l")
+        .os(OS.LINUX)
+        .build()),
+    LINUX_ARM64(UpdateDefinitions.builder()
+        .ytDlpBinary("yt-dlp_linux_aarch64")
+        // As of 2025-04-26, updates for other architectures are only supported by AppImage
+        //.selfBinary("linux_portable_arm64.zip")
+        .selfAppImageBinary("aarch64.AppImage")
+        .os(OS.LINUX)
+        .build());
 
-    private final String ytDlpBinary;
-    private final String galleryDlBinary;
-    private final String spotDlBinary;
-    private final String ffmpegBinary;
-    private final String selfBinary;
+    private final UpdateDefinitions updateDefinitions;
 
-    private final OS os;
+    public static UpdateDefinitions getDefinitions() {
+        ArchVersionEnum archVersion = getArchVersion();
 
-    private ArchVersionEnum(
-        String ytDlpBinaryIn,
-        String galleryDlBinaryIn,
-        String spotDlBinaryIn,
-        String ffmpegBinaryIn,
-        String selfBinaryIn,
-        OS osIn) {
-
-        ytDlpBinary = ytDlpBinaryIn;
-        galleryDlBinary = galleryDlBinaryIn;
-        spotDlBinary = spotDlBinaryIn;
-        ffmpegBinary = ffmpegBinaryIn;
-        selfBinary = selfBinaryIn;
-
-        os = osIn;
+        return archVersion.getUpdateDefinitions();
     }
 
     public static ArchVersionEnum getArchVersion() {
@@ -146,5 +173,19 @@ public enum ArchVersionEnum {
 
             return false;
         }
+    }
+
+    @Getter
+    @Builder
+    public static class UpdateDefinitions {
+
+        private final String ytDlpBinary;
+        private final String galleryDlBinary;
+        private final String spotDlBinary;
+        private final String ffmpegBinary;
+        private final String selfBinary;
+        private final String selfAppImageBinary;
+
+        private final OS os;
     }
 }

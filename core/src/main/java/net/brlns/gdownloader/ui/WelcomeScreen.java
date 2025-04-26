@@ -343,6 +343,7 @@ public class WelcomeScreen {
         );
         continueButton.setPreferredSize(new Dimension(130, 35));
         continueButton.addActionListener(e -> {
+            settings.setShowWelcomeScreen(false);
             main.updateConfig(settings);
             frame.dispose();
 
@@ -372,14 +373,7 @@ public class WelcomeScreen {
     }
 
     private String buildDescriptionHtml(String template) {
-        template = template.replace("\n", "<br>");
-
-        String textColorHex = Integer.toHexString(color(FOREGROUND).getRGB()).substring(2);
         String linkColorHex = Integer.toHexString(color(LINK_COLOR).getRGB()).substring(2);
-
-        Font baseFont = UIManager.getFont("Label.font");
-        int fontSize = baseFont.getSize();
-        String fontFamily = baseFont.getFamily();
 
         List<DownloaderIdEnum> downloaders = Arrays.stream(DownloaderIdEnum.values())
             .filter(d -> d != DownloaderIdEnum.DIRECT_HTTP)
@@ -396,8 +390,7 @@ public class WelcomeScreen {
             template = template.replace(placeholder, linkHtml);
         }
 
-        return String.format("<html><body style='font-family: %s; font-size: %dpt; color: #%s;'><b>%s</b></body></html>",
-            fontFamily, fontSize, textColorHex, template);
+        return UIUtils.wrapTextInHtml(FOREGROUND, true, false, template);
     }
 
     private void customizeCheckBox(JCheckBox checkBox, Supplier<Boolean> getter, Consumer<Boolean> setter) {

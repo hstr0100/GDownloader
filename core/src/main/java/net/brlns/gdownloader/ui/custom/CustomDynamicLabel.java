@@ -29,6 +29,7 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
 import static net.brlns.gdownloader.ui.UIUtils.wrapTextInHtml;
+import static net.brlns.gdownloader.ui.themes.UIColors.FOREGROUND;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -82,7 +83,7 @@ public class CustomDynamicLabel extends JLabel {
 
         fullText = newFullText;
 
-        setText(wrapTextInHtml(Integer.MAX_VALUE, centerText, fullText));
+        setText(wrapTextInHtml(FOREGROUND, true, centerText, fullText));
         updateTruncatedText();
     }
 
@@ -149,6 +150,6 @@ public class CustomDynamicLabel extends JLabel {
             }
         }
 
-        setText(wrapTextInHtml(Integer.MAX_VALUE, centerText, truncatedText));
+        setText(wrapTextInHtml(FOREGROUND, true, centerText, truncatedText));
     }
 }

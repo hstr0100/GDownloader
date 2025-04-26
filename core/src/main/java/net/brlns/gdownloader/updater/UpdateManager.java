@@ -29,6 +29,7 @@ import net.brlns.gdownloader.event.impl.PerformUpdateCheckEvent;
 import net.brlns.gdownloader.ui.message.Message;
 import net.brlns.gdownloader.ui.message.MessageTypeEnum;
 import net.brlns.gdownloader.ui.message.PopupMessenger;
+import net.brlns.gdownloader.updater.impl.*;
 import net.brlns.gdownloader.util.NetworkConnectivityListener;
 import net.brlns.gdownloader.util.NoFallbackAvailableException;
 
@@ -55,6 +56,9 @@ public final class UpdateManager {
     @PostConstruct
     private void init() {
         updaters.add(new SelfUpdater(main));
+        updaters.add(new SelfAppImageUpdater(main));
+        updaters.add(new SelfJarUpdater(main));
+
         updaters.add(new YtDlpUpdater(main));
         updaters.add(new GalleryDlUpdater(main));
         updaters.add(new SpotDLUpdater(main));
@@ -145,12 +149,10 @@ public final class UpdateManager {
                 }
 
                 for (AbstractGitUpdater updater : updaters) {
-                    if (updater instanceof SelfUpdater selfUpdater) {
-                        if (selfUpdater.isUpdated()) {
-                            log.info("Restarting to apply updates.");
-                            main.restart();
-                            break;
-                        }
+                    if (updater.isUpdated() && updater.isRestartRequired()) {
+                        log.info("Restarting to apply updates.");
+                        main.restart();
+                        break;
                     }
                 }
 

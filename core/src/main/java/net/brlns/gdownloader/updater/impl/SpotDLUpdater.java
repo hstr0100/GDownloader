@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package net.brlns.gdownloader.updater;
+package net.brlns.gdownloader.updater.impl;
 
 import jakarta.annotation.Nullable;
 import java.io.File;
@@ -25,6 +25,7 @@ import java.nio.file.Paths;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
+import net.brlns.gdownloader.updater.ArchVersionEnum;
 import net.brlns.gdownloader.util.FileUtils;
 
 /**
@@ -52,8 +53,8 @@ public class SpotDLUpdater extends AbstractGitUpdater {
 
     @Override
     @Nullable
-    public String getBinaryName() {
-        return ArchVersionEnum.getArchVersion().getSpotDlBinary();
+    public String getGitHubBinaryName() {
+        return ArchVersionEnum.getDefinitions().getSpotDlBinary();
     }
 
     @Nullable

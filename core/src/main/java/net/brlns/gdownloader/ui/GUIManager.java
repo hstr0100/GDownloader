@@ -56,7 +56,8 @@ import net.brlns.gdownloader.ui.menu.RunnableMenuEntry;
 import net.brlns.gdownloader.ui.status.StatusIndicatorPanel;
 import net.brlns.gdownloader.ui.themes.ThemeProvider;
 import net.brlns.gdownloader.ui.themes.UIColors;
-import net.brlns.gdownloader.updater.AbstractGitUpdater;
+import net.brlns.gdownloader.updater.impl.AbstractGitUpdater;
+import net.brlns.gdownloader.util.Version;
 
 import static net.brlns.gdownloader.lang.Language.*;
 import static net.brlns.gdownloader.ui.UIUtils.*;
@@ -211,7 +212,7 @@ public final class GUIManager {
 
         if (appWindow == null) {
             // note to self, tooltips only show up when focused
-            String version = System.getProperty("jpackage.app-version");
+            String version = Version.VERSION;
 
             appWindow = new JFrame(GDownloader.REGISTRY_APP_NAME + (version != null ? " v" + version : ""));
             refreshAppWindow();
@@ -842,17 +843,20 @@ public final class GUIManager {
             progressBarGbc.fill = GridBagConstraints.NONE;
 
             CustomProgressBar progressBar = new CustomProgressBar(Color.WHITE);
-            progressBar.setValue(0);
             progressBar.setStringPainted(true);
-            progressBar.setString(l10n("enums.update_status.checking"));
-            progressBar.setForeground(Color.MAGENTA);
-            progressBar.setBackground(Color.GRAY);
             progressBar.setPreferredSize(new Dimension(200, 15));
             progressBar.setMaximumSize(new Dimension(200, 15));
+            Runnable defaultState = () -> {
+                progressBar.setValue(0);
+                progressBar.setString(l10n("enums.update_status.checking"));
+                progressBar.setForeground(Color.MAGENTA);
+                progressBar.setBackground(Color.GRAY);
+            };
+            defaultState.run();
 
             EventDispatcher.registerEDT(PerformUpdateCheckEvent.class, (event) -> {
                 if (event.isChecking() && !event.isNetworkOnline()) {
-                    progressBar.setValue(0);
+                    defaultState.run();
                 }
             });
 

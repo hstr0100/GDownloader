@@ -14,26 +14,27 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package net.brlns.gdownloader.updater;
+package net.brlns.gdownloader.updater.impl;
 
 import jakarta.annotation.Nullable;
 import java.io.File;
-import java.nio.file.Files;
-import java.nio.file.StandardCopyOption;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
+import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
+import net.brlns.gdownloader.updater.ArchVersionEnum;
+import net.brlns.gdownloader.util.FileUtils;
 import net.brlns.gdownloader.util.LockUtils;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
 @Slf4j
-public class SelfUpdater extends AbstractGitUpdater {
+public class YtDlpUpdater extends AbstractGitUpdater {
 
-    private static final String USER = "hstr0100";
-    private static final String REPO = "GDownloader";
+    private static final String USER = "yt-dlp";
+    private static final String REPO = "yt-dlp";
 
-    public SelfUpdater(GDownloader mainIn) {
+    public YtDlpUpdater(GDownloader mainIn) {
         super(mainIn);
     }
 
@@ -49,62 +50,59 @@ public class SelfUpdater extends AbstractGitUpdater {
 
     @Override
     @Nullable
-    public String getBinaryName() {
-        return ArchVersionEnum.getArchVersion().getSelfBinary();
+    public String getGitHubBinaryName() {
+        return ArchVersionEnum.getDefinitions().getYtDlpBinary();
     }
 
     @Nullable
     @Override
     protected String getRuntimeBinaryName() {
-        return "gdownloader_ota.zip";
+        return getGitHubBinaryName();
     }
 
     @Override
     @Nullable
     public String getSystemBinaryName() {
-        return null;
+        return "yt-dlp";
     }
 
     @Nullable
     @Override
     protected String getLockFileName() {
-        return "ota.lock";
+        return "yt-dlp.lock";
     }
 
     @Override
     public boolean isEnabled() {
-        return !GDownloader.isFromJar();
+        return true;
     }
 
     @Override
     protected void setExecutablePath(File executablePath) {
-        // Not used
+        main.getDownloadManager().setExecutablePath(DownloaderIdEnum.YT_DLP, executablePath);
     }
 
     @Override
     public String getName() {
-        return "GDownloader";
+        return "YT-DLP";
     }
 
     @Override
     protected void init() throws Exception {
-        LockUtils.renameLockIfExists("ota_lock.txt", getLockFileName());
+        LockUtils.renameLockIfExists("ytdlp_lock.txt", getLockFileName());
     }
 
     @Override
     protected File doDownload(String url, File workDir) throws Exception {
-        String fileName = getFilenameFromUrl(url);
+        File outputFile = super.doDownload(url, workDir);
 
-        File zipPath = new File(workDir, fileName);
-        log.info("Zip path {}", zipPath);
+        File configFile = new File(workDir, "yt-dlp.conf");
 
-        File outputFile = new File(workDir, getRuntimeBinaryName());
-        log.info("Out path {}", outputFile);
-
-        downloadFile(url, zipPath);
-
-        Files.move(zipPath.toPath(), outputFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+        if (!configFile.exists()) {
+            FileUtils.writeResourceToFile("/yt-dlp.conf", configFile);
+        }
 
         return outputFile;
     }
+
 }

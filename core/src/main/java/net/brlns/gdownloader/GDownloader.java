@@ -76,8 +76,8 @@ import net.brlns.gdownloader.updater.*;
 import net.brlns.gdownloader.util.*;
 
 import static net.brlns.gdownloader.lang.Language.*;
+import static net.brlns.gdownloader.updater.UpdaterBootstrap.*;
 import static net.brlns.gdownloader.util.StringUtils.notNullOrEmpty;
-import static net.brlns.gdownloader.util.StringUtils.nullOrEmpty;
 
 // TODO media converter
 // TODO implement CD Ripper
@@ -258,7 +258,7 @@ public final class GDownloader {
 
         log.info("Loaded config file");
 
-        if (config.isDebugMode()) {
+        if (log.isDebugEnabled()) {
             printDebugInformation();
         }
 
@@ -423,7 +423,7 @@ public final class GDownloader {
 
     public void initUi(boolean silently) {
         if (initialized) {
-            if (!silently && persistenceManager.isFirstBoot()) {
+            if (!silently && config.isShowWelcomeScreen()) {
                 guiManager.displayWelcomeScreen();
             } else {
                 initMainWindow(silently);
@@ -701,41 +701,25 @@ public final class GDownloader {
     private List<String> getLaunchCommand() {
         List<String> launchString = null;
 
-        String jarLocation = getJarLocation();
-        if (jarLocation != null) {
-            String javaHome = System.getProperty("java.home");
-
-            if (nullOrEmpty(javaHome)) {
-                javaHome = System.getenv("JAVA_HOME");
-            }
-
-            if (notNullOrEmpty(javaHome)) {
-                if (!javaHome.endsWith(File.separator)) {
-                    javaHome = javaHome + File.separator;
-                }
-
-                String javaPath;
-                String os = System.getProperty("os.name").toLowerCase();
-                if (os.contains("win")) {
-                    javaPath = javaHome + "bin" + File.separator + "javaw.exe";
-                } else {
-                    javaPath = javaHome + "bin" + File.separator + "java";
-                }
-
-                String jarString = new File(jarLocation).getAbsolutePath();
-
-                launchString = List.of(javaPath, "-jar", jarString);
-            } else {
-                log.error("Runtime type is .jar but JAVA_HOME is not set. Cannot restart program if necessary.");
-            }
-        }
-
         if (launchString == null && launcher != null) {
-            launchString = List.of(launcher);
+            if (launcher.endsWith(".jar") && !launcher.contains(" -jar ")) {
+                launchString = getJarLaunchCommand(new File(launcher));
+            } else {
+                launchString = List.of(launcher);
+            }
         }
 
-        String jpackageAppPath = System.getProperty("jpackage.app-path");
+        File jarLocation = getJarLocation();
+        if (jarLocation != null) {
+            launchString = getJarLaunchCommand(jarLocation);
+        }
 
+        String appImage = getAppImageLauncher();
+        if (launchString == null && notNullOrEmpty(appImage)) {
+            launchString = List.of(appImage);
+        }
+
+        String jpackageAppPath = getJpackageLauncher();
         if (launchString == null && jpackageAppPath != null) {
             launchString = List.of(jpackageAppPath);
         }
@@ -1123,24 +1107,11 @@ public final class GDownloader {
     }
 
     public static boolean isFromJpackage() {
-        String appPath = System.getProperty("jpackage.app-path");
-
-        return appPath != null;
+        return !isFromAppImage() && notNullOrEmpty(System.getProperty("jpackage.app-path"));
     }
 
-    @Nullable
-    private static String getJarLocation() {
-        try {
-            URI jarPath = GDownloader.class.getProtectionDomain().getCodeSource().getLocation().toURI();
-
-            if (jarPath.toString().endsWith(".jar")) {
-                return new File(jarPath).getAbsolutePath();
-            }
-        } catch (URISyntaxException e) {
-            // Ignore
-        }
-
-        return null;
+    public static boolean isFromAppImage() {
+        return notNullOrEmpty(System.getenv("APPIMAGE"));
     }
 
     private static File getPortableRuntimeDirectory() {

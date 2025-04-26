@@ -22,6 +22,11 @@ It supports various platforms such as Crunchyroll, Twitch, X/Twitter, Spotify, a
 
 The motivation for this project can be found in [this Reddit thread](https://www.reddit.com/r/DataHoarder/comments/1g34i9g/gdownloader_yet_another_user_friendly_ytdlp_gui/)
 
+## Screenshots
+
+<img src="screenshot1.png" alt="Screenshot1" width="500"/>
+<img src="screenshot2.png" alt="Screenshot2" width="500"/>
+
 ## Requirements
 
 For platforms other than Windows, you need to download and install FFMPEG separately, instructions vary per platform.
@@ -61,11 +66,6 @@ Download the latest version for your platform from the [releases page](https://g
    ```bash
    ./gradlew createAppImage
    ```
-
-## Screenshots
-
-<img src="screenshot1.png" alt="Screenshot1" width="500"/>
-<img src="screenshot2.png" alt="Screenshot2" width="500"/>
 
 ## Configurations
 

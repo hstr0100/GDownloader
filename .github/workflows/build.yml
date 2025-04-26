@@ -89,7 +89,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y fakeroot file binutils
+          sudo apt-get install -y fakeroot file binutils zsync
 
       - name: Install AppImageTool
         run: |
@@ -128,7 +128,15 @@ jobs:
           path: ./core/build/jpackage/gdownloader-*-${{ matrix.APPIMAGE_ARCH }}.AppImage
           if-no-files-found: error
 
+      - name: Upload AppImage zsync artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gdownloader-${{ matrix.APPIMAGE_ARCH }}-appimage-zsync
+          path: ./core/build/jpackage/gdownloader-*-${{ matrix.APPIMAGE_ARCH }}.AppImage.zsync
+          if-no-files-found: error
+
       - name: Upload portable ZIP artifact
+        if: matrix.GRADLE_ARCH == 'amd64'
         uses: actions/upload-artifact@v4
         with:
           name: gdownloader-linux-portable-${{ matrix.GRADLE_ARCH }}
@@ -136,6 +144,7 @@ jobs:
           if-no-files-found: error
 
       - name: Upload DEB package artifact
+        if: matrix.GRADLE_ARCH == 'amd64'
         uses: actions/upload-artifact@v4
         with:
           name: gdownloader-linux-deb-${{ matrix.GRADLE_ARCH }}

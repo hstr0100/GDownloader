@@ -40,8 +40,7 @@ public class Language {
             throw new IllegalStateException("Language was not initialized");
         }
 
-        if (!LANGUAGE_BUNDLE.containsKey(key) && log.isDebugEnabled()
-            && !GDownloader.isFromJpackage()) {
+        if (!LANGUAGE_BUNDLE.containsKey(key) && log.isDebugEnabled()) {
             log.error("Unmapped language key: {}", key);
             return key;
         }

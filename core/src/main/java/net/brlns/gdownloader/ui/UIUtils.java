@@ -221,10 +221,12 @@ public final class UIUtils {
         });
     }
 
-    public static String wrapTextInHtml(int maxLineLength, boolean centerText, String... lines) {
-        if (maxLineLength < 20) {
-            throw new IllegalArgumentException("Line length too short: " + maxLineLength);
-        }
+    public static String wrapTextInHtml(UIColors fontColor, boolean bold, boolean centerText, String... lines) {
+        String textColorHex = Integer.toHexString(color(fontColor).getRGB()).substring(2);
+
+        Font baseFont = UIManager.getFont("Label.font");
+        int fontSize = baseFont.getSize();
+        String fontFamily = baseFont.getFamily();
 
         StringBuilder wrappedText = new StringBuilder();
 
@@ -232,8 +234,14 @@ public final class UIUtils {
             wrappedText.append("<center>");
         }
 
+        if (bold) {
+            wrappedText.append("<b>");
+        }
+
         for (String text : lines) {
-            text = text.replace(System.lineSeparator(), "<br>");
+            text = text.replace(System.lineSeparator(), "<br>")
+                .replace("\n", "<br>")
+                .replace("[PLAY]", "►");
 
             for (String line : text.split("<br>")) {
                 if (line.isEmpty()) {
@@ -241,31 +249,9 @@ public final class UIUtils {
                     continue;
                 }
 
-                if (line.length() > maxLineLength) {
-                    int count = 0;
-
-                    for (int i = 0; i < line.length(); i++) {
-                        char c = line.charAt(i);
-                        wrappedText.append(c);
-
-                        if (++count == maxLineLength) {
-                            wrappedText.append("<br>");
-                            count = 0;
-                        }
-                    }
-                } else {
-                    String[] words = line.split(" ");
-                    int lineLength = 0;
-
-                    for (String word : words) {
-                        if (lineLength + word.length() > maxLineLength) {
-                            wrappedText.append("<br>").append(word).append(" ");
-                            lineLength = word.length() + 1; // reset lineLength
-                        } else {
-                            wrappedText.append(word).append(" ");
-                            lineLength += word.length() + 1;
-                        }
-                    }
+                String[] words = line.split(" ");
+                for (String word : words) {
+                    wrappedText.append(word).append(" ");
                 }
 
                 if (!wrappedText.toString().trim().endsWith("<br>")) {
@@ -279,11 +265,16 @@ public final class UIUtils {
             result = result.substring(0, result.length() - 4);
         }
 
+        if (bold) {
+            wrappedText.append("</b>");
+        }
+
         if (centerText) {
             wrappedText.append("</center>");
         }
 
-        return "<html>" + result + "</html>";
+        return String.format("<html><body style='font-family: %s; font-size: %dpt; color: #%s;'>%s</body></html>",
+            fontFamily, fontSize, textColorHex, result);
     }
 
     /**

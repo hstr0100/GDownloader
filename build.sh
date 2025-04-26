@@ -2,7 +2,7 @@
 
 cd "$(dirname "$0")"
 
-echo "Running: ./gradlew clean build jpackage"
+echo "Running: ./gradlew clean build jpackage createAppImage"
 ./gradlew clean build jpackage
 
 if [ $? -ne 0 ]; then

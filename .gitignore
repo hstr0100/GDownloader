@@ -9,7 +9,10 @@ replay_pid*
 /target/*
 
 # Cannot include these because they're too large for github
-/src/main/resources/bin/*
+/core/src/main/resources/bin/*
+
+# GDownloader version file, dynamically generated
+version.properties
 
 # Gradle
 .gradle

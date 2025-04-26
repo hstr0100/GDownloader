@@ -88,7 +88,7 @@ public class PopupMessenger extends AbstractMessenger {
         titlePanel.setOpaque(false);
 
         JLabel titleLabel = new JLabel();
-        titleLabel.setText(wrapTextInHtml(45, false, message.getTitle()));
+        titleLabel.setText(message.getTitle());
         titleLabel.setForeground(titleColor);
         titleLabel.setHorizontalAlignment(SwingConstants.LEFT);
         titlePanel.add(titleLabel, BorderLayout.WEST);

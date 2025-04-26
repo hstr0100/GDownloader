@@ -81,7 +81,7 @@ public enum QueueSortOrderEnum implements ISettingsEnum {
         }
 
         return Long.compare(e1.getCurrentSequence(), e2.getCurrentSequence());
-    }),;
+    });
 
     private final Comparator<QueueEntry> comparator;
     private final String translationKey;

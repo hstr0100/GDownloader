@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package net.brlns.gdownloader.updater;
+package net.brlns.gdownloader.updater.impl;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.annotation.Nullable;
@@ -43,6 +43,8 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.settings.enums.ISettingsEnum;
+import net.brlns.gdownloader.updater.ArchVersionEnum;
+import net.brlns.gdownloader.updater.SystemExecutableLocator;
 import net.brlns.gdownloader.util.NoFallbackAvailableException;
 import net.brlns.gdownloader.util.Pair;
 import net.brlns.gdownloader.util.URLUtils;
@@ -67,7 +69,7 @@ public abstract class AbstractGitUpdater {
     private final List<ProgressListener> listeners = new CopyOnWriteArrayList<>();
 
     @Getter
-    private boolean updated = false;
+    protected boolean updated = false;
 
     public AbstractGitUpdater(GDownloader mainIn) {
         main = mainIn;
@@ -82,6 +84,10 @@ public abstract class AbstractGitUpdater {
         listeners.remove(listener);
     }
 
+    public boolean isRestartRequired() {
+        return false;
+    }
+
     protected abstract String getUser();
 
     protected abstract String getRepo();
@@ -93,7 +99,7 @@ public abstract class AbstractGitUpdater {
      * In the future, this may need to be replaced with a more robust regex-based solution.
      */
     @Nullable
-    protected abstract String getBinaryName();
+    protected abstract String getGitHubBinaryName();
 
     @Nullable
     protected abstract String getRuntimeBinaryName();
@@ -196,22 +202,24 @@ public abstract class AbstractGitUpdater {
             }
         }
 
-        if (isEnabled() && isInstalled() && !main.getConfig().isAutomaticUpdates() && !force) {
-            log.info("Automatic updates are disabled {}", getRepo());
-
-            tryFallback(workDir);
-            return;
-        }
-
-        if (getBinaryName() == null) {
+        if (getGitHubBinaryName() == null || getRuntimeBinaryName() == null) {
             log.error("Cannot update, no binary configured for {}", getRepo());
 
             tryFallback(workDir);
             return;
         }
 
-        Pair<String, String> tag = null;
+        File binaryPath = new File(workDir, getRuntimeBinaryName());
 
+        if (isEnabled() && isInstalled()
+            && !main.getConfig().isAutomaticUpdates() && !force) {
+            log.info("Automatic updates are disabled {}", getRepo());
+
+            tryFallback(workDir);
+            return;
+        }
+
+        Pair<String, String> tag = null;
         try {
             tag = getLatestReleaseTag();
         } catch (Exception e) {
@@ -228,7 +236,6 @@ public abstract class AbstractGitUpdater {
         }
 
         String url = tag.getValue();
-
         if (url == null) {
             log.error("No {} binary for platform", getRepo());
 
@@ -236,23 +243,12 @@ public abstract class AbstractGitUpdater {
             return;
         }
 
-        File binaryPath = new File(workDir, getRuntimeBinaryName());
-
         String lockTag = getLockTag(tag.getKey());
         log.info("current {} tag is {}", getRepo(), lockTag);
 
         File lock = new File(workDir, getLockFileName());
 
-        if (!lock.exists() && this instanceof SelfUpdater) {
-            String version = UpdaterBootstrap.getVersion();
-            log.info("Current version: {}", version);
-
-            if (version != null) {
-                createLock(lock, getLockTag("v" + version));
-            }
-        }
-
-        if (binaryPath.exists() || this instanceof SelfUpdater) {
+        if (binaryPath.exists()) {
             if (checkLock(lock, lockTag)) {
                 finishUpdate(binaryPath);
 
@@ -278,6 +274,9 @@ public abstract class AbstractGitUpdater {
             notifyProgress(UpdateStatus.CHECKING, 100);
 
             File path = doDownload(url, workDir);
+            if (path.exists()) {
+                makeExecutable(path.toPath());
+            }
 
             createLock(lock, lockTag);
 
@@ -359,7 +358,7 @@ public abstract class AbstractGitUpdater {
 
             String downloadUrl = asset.get("browser_download_url").asText();
 
-            if (downloadUrl.endsWith(getBinaryName())) {
+            if (downloadUrl.endsWith(getGitHubBinaryName())) {
                 return new Pair<>(tagName.asText(), downloadUrl);
             }
         }

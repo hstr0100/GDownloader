@@ -160,7 +160,7 @@ public class YtDlpDownloader extends AbstractDownloader {
                 double on = 1000L * 365.25 * 24 * 60 * 60 * 1000;
                 double earth = (what / on) * 100;
 
-                log.info("The slow as molasses thing took {}ms, jesus man! that's about {}% of a millenium",
+                log.info("The slow as molasses 'yt-dlp --dump-json' took {}ms, jesus man! that's about {}% of a millenium",
                     what, String.format("%.12f", earth));
             }
 

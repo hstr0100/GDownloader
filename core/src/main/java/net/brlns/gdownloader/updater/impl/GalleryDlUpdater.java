@@ -14,13 +14,14 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package net.brlns.gdownloader.updater;
+package net.brlns.gdownloader.updater.impl;
 
 import jakarta.annotation.Nullable;
 import java.io.File;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
+import net.brlns.gdownloader.updater.ArchVersionEnum;
 import net.brlns.gdownloader.util.FileUtils;
 import net.brlns.gdownloader.util.LockUtils;
 
@@ -49,14 +50,14 @@ public class GalleryDlUpdater extends AbstractGitUpdater {
 
     @Override
     @Nullable
-    public String getBinaryName() {
-        return ArchVersionEnum.getArchVersion().getGalleryDlBinary();
+    public String getGitHubBinaryName() {
+        return ArchVersionEnum.getDefinitions().getGalleryDlBinary();
     }
 
     @Nullable
     @Override
     protected String getRuntimeBinaryName() {
-        return getBinaryName();
+        return getGitHubBinaryName();
     }
 
     @Override

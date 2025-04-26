@@ -45,7 +45,7 @@ import net.brlns.gdownloader.settings.filters.GenericFilter;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class Settings {
 
-    public static final int CONFIG_VERSION = 33;
+    public static final int CONFIG_VERSION = 34;
 
     @JsonProperty("ConfigVersion")
     private int configVersion = CONFIG_VERSION;
@@ -53,11 +53,19 @@ public class Settings {
     @JsonProperty("PersistenceDatabaseInitialized")
     private boolean persistenceDatabaseInitialized = false;
 
+    @JsonProperty("ShowWelcomeScreen")
+    private boolean showWelcomeScreen = true;
+
     @JsonProperty("MonitorClipboardForLinks")
     private boolean monitorClipboardForLinks = true;
 
     @JsonProperty("AutomaticUpdates")
-    private boolean automaticUpdates = false;
+    // With websites constantly changing, automatically enabling updates by default, at least for Windows, is the most sensible option.
+    // If this program is meant to follow its idea of 'User Friendly even your grandma can use it', placing dialogs and barriers on top
+    // of essentially required updates completely breaks that premise.
+    //
+    // Users can still toggle it off right at the welcome screen if they prefer to manage updates manually.
+    private boolean automaticUpdates = GDownloader.isWindows();
 
     @JsonProperty("LanguageDefined")
     private boolean languageDefined = false;
@@ -341,6 +349,10 @@ public class Settings {
 
         if (!getExtraYtDlpArguments().isEmpty() && getConfigVersion() < 33) {
             setEnableExtraArguments(true);
+        }
+
+        if (isShowWelcomeScreen() && getConfigVersion() < 34) {
+            setShowWelcomeScreen(false);
         }
 
         setConfigVersion(CONFIG_VERSION);

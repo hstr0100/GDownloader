@@ -345,6 +345,8 @@ public class SettingsPanel {
                         resetButton.setPreferredSize(new Dimension(200, 30));
                         resetButton.addActionListener((ActionEvent e) -> {
                             settings = new Settings();
+                            settings.setShowWelcomeScreen(false);
+                            settings.setPersistenceDatabaseInitialized(true);
 
                             reloadSettings();
 
