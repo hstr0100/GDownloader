@@ -180,9 +180,6 @@ public class SelfUpdater extends AbstractGitUpdater {
                 makeExecutable(path.toPath());
             }
 
-            log.info("Binary path: {}", binaryPath);
-
-            log.info("path: {}", path);
             createLock(lock, lockTag);
 
             updated = true;

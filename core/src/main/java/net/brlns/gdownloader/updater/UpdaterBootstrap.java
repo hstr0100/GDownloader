@@ -77,30 +77,25 @@ public class UpdaterBootstrap {
             log.error("Failed to migrate old lock file, cause: {}, ignoring...", e.getMessage());
         }
 
-        if (fromOta) {
-            log.info("Current running image is from ota: {} v{}", appPath, version);
-            return;
-        }
-
         if (GDownloader.isFromJpackage()) {
-            handleJpackageOta(args, workDir, appPath, version);
+            handleJpackageOta(args, fromOta, workDir, appPath, version);
         } else if (GDownloader.isFromAppImage()) {
-            handleAppImageOta(args, workDir, appPath, version);
+            handleAppImageOta(args, fromOta, workDir, appPath, version);
         } else if (GDownloader.isFromJar()) {
-            handleJarOta(args, workDir, appPath, version);
+            handleJarOta(args, fromOta, workDir, appPath, version);
         } else {
             log.error("getAppData() returned garbage: {}", appPath);
         }
     }
 
-    private static void handleJpackageOta(String[] args, Path workDir, String appPath, String version) {
+    private static void handleJpackageOta(String[] args, boolean fromOta, Path workDir, String appPath, String version) {
         Path path = Paths.get(workDir.toString(), "gdownloader_ota.zip");
         if (!Files.exists(path)) {
             Path runtimePath = getNewestDirectoryEntry(PREFIX, workDir);
 
             String launcherCommand = getJpackageLauncher();
 
-            if (launcherCommand != null && launcherCommand.contains(PREFIX)) {
+            if (fromOta || launcherCommand != null && launcherCommand.contains(PREFIX)) {
                 log.info("Current running image is from ota {} v{}", runtimePath, version);
                 return;
             } else {
@@ -164,12 +159,12 @@ public class UpdaterBootstrap {
         }
     }
 
-    private static void handleAppImageOta(String[] args, Path workDir, String appPath, String version) {
+    private static void handleAppImageOta(String[] args, boolean fromOta, Path workDir, String appPath, String version) {
         Path path = Paths.get(workDir.toString(), appPath);
         if (Files.exists(path)) {
             String launcherCommand = getAppImageLauncher();
 
-            if (launcherCommand != null && launcherCommand.contains(appPath)) {
+            if (fromOta || launcherCommand != null && launcherCommand.contains(appPath)) {
                 log.info("Current running AppImage is from ota {} v{}", path, version);
                 return;
             }
@@ -188,14 +183,14 @@ public class UpdaterBootstrap {
         }
     }
 
-    private static void handleJarOta(String[] args, Path workDir, String appPath, String version) {
+    private static void handleJarOta(String[] args, boolean fromOta, Path workDir, String appPath, String version) {
         Path path = Paths.get(workDir.toString(), appPath);
         if (Files.exists(path)) {
             File launcherFile = getJarLocation();
 
             String launcherCommand = launcherFile != null ? launcherFile.getAbsolutePath() : null;
 
-            if (launcherCommand != null && launcherCommand.contains(appPath)) {
+            if (fromOta || launcherCommand != null && launcherCommand.contains(appPath)) {
                 log.info("Current running jar is from ota {} v{}", path, version);
                 return;
             }
