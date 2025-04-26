@@ -72,13 +72,16 @@ public enum QueueSortOrderEnum implements ISettingsEnum {
     ADDED("enums.sort_order.added", (e1, e2) -> {
         return Long.compare(e1.getDownloadId(), e2.getDownloadId());
     }),
+    ADDED_REVERSE("enums.sort_order.added_reverse", (e1, e2) -> {
+        return Long.compare(e2.getDownloadId(), e1.getDownloadId());
+    }),
     SEQUENCE("enums.sort_order.sequence", (e1, e2) -> {
         if (e1.getCurrentSequence() == null || e2.getCurrentSequence() == null) {
             return 0;
         }
 
         return Long.compare(e1.getCurrentSequence(), e2.getCurrentSequence());
-    });
+    }),;
 
     private final Comparator<QueueEntry> comparator;
     private final String translationKey;
