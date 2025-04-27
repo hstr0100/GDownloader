@@ -85,10 +85,8 @@ import static net.brlns.gdownloader.util.StringUtils.notNullOrEmpty;
 //
 // TODO max simultaneous downloads should be independent per website
 // TODO scale on resolution DPI
-// TODO save last window size in config
 // TODO verify checksums during updates, add bouncycastle, check signatures
 // TODO write a component factory for GUIManager
-// TODO git actions build for different platforms
 // FEEDBACK Should choose to download video and audio independently on each card
 // DROPPED check updates on a timer, but do not ever restart when anything is in the queue.
 // TODO --no-playlist when single video option is active
@@ -123,16 +121,15 @@ import static net.brlns.gdownloader.util.StringUtils.notNullOrEmpty;
 // TODO ctrl+z to undo removals
 // TODO implement remuxing to mkv
 // TODO System/provided binary selection should be individually configurable per downloader
-// prio
 // TODO display number in download queue
 // TODO automatic ui sorting
-// TODO welcome screen with some setting presets based on selected use case
 // TODO Manually mark downloads as complete, correctly move files to final directory
-// TODO Should not download updates if the latest tag is the same as current one
 // TODO Make download paths for the different downloaders customizable
 // TODO Fetch favicons for url filters
 // TODO Direct-HTTP: user-agent
 // TODO Tags/Filtering
+// prio
+// TODO save last window size in config
 /**
  * GDownloader - GUI wrapper for yt-dlp
  *

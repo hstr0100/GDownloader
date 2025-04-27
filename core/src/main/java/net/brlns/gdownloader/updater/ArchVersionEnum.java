@@ -21,6 +21,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import net.brlns.gdownloader.GDownloader;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -150,12 +151,11 @@ public enum ArchVersionEnum {
     }
 
     private static boolean isMacOsOlderThanBigSur() {
-        String os = System.getProperty("os.name");
-        String version = System.getProperty("os.version");
-
-        if (!os.contains("mac")) {
+        if (!GDownloader.isMac()) {
             return false;
         }
+
+        String version = System.getProperty("os.version");
 
         try {
             String[] versionParts = version.split("\\.");
