@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package net.brlns.gdownloader.updater.impl;
+package net.brlns.gdownloader.updater.git;
 
 import jakarta.annotation.Nullable;
 import java.io.File;

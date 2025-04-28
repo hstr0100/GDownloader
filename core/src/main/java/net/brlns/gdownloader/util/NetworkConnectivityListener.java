@@ -32,14 +32,19 @@ import net.brlns.gdownloader.event.impl.ConnectivityStatusEvent;
 @Slf4j
 public class NetworkConnectivityListener {
 
-    private static final String[] TARGET_HOSTS = new String[] {"1.1.1.1", "8.8.8.8"};
+    private static final String[] TARGET_HOSTS = new String[] {
+        "1.1.1.1", // Cloudflare (IPv4)
+        "2606:4700:4700::1111", // Cloudflare (IPv6)
+        "8.8.8.8", // Google (IPv4)
+        "2001:4860:4860::8888" // Google (IPv6)
+    };
 
     private static final int TARGET_PORT = 53;
     private static final int CONNECTION_TIMEOUT_MS = 2000;
-    private static final int RETRY_DELAY_SECONDS = 5;
+    private static final int RETRY_DELAY_SECONDS = 6;
 
     private static final int BACKGROUND_CHECK_INTERVAL_SECONDS = 30;
-    private static final int RESTORATION_CHECK_INTERVAL_SECONDS = 5;
+    private static final int RESTORATION_CHECK_INTERVAL_SECONDS = 6;
 
     private final AtomicBoolean shutdown = new AtomicBoolean();
 

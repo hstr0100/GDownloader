@@ -14,44 +14,36 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package net.brlns.gdownloader.util;
+package net.brlns.gdownloader.updater.git;
 
 import jakarta.annotation.Nullable;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.Properties;
-import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import net.brlns.gdownloader.GDownloader;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
 @Slf4j
-public final class Version {
+public class SelfJarUpdater extends SelfUpdater {
 
-    @Getter
-    @Nullable
-    public static final String VERSION;
-
-    static {
-        String version = System.getProperty("jpackage.app-version");
-
-        if (version == null) {
-            try (
-                InputStream is = Version.class.getResourceAsStream("/version.properties")) {
-
-                Properties props = new Properties();
-                props.load(is);
-
-                version = props.getProperty("version");
-            } catch (IOException | NullPointerException e) {
-                log.error("Failed to read version file", e);
-            }
-        }
-
-        VERSION = version;
+    public SelfJarUpdater(GDownloader mainIn) {
+        super(mainIn);
     }
 
-    private Version() {
+    @Override
+    @Nullable
+    public String getGitHubBinaryName() {
+        return "-all.jar";// Same for all platforms
+    }
+
+    @Nullable
+    @Override
+    protected String getRuntimeBinaryName() {
+        return GDownloader.REGISTRY_APP_NAME.toLowerCase() + "_latest.jar";
+    }
+
+    @Override
+    public boolean isEnabled() {
+        return GDownloader.isFromJar();
     }
 }

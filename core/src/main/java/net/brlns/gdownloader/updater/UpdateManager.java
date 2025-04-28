@@ -17,8 +17,8 @@
 package net.brlns.gdownloader.updater;
 
 import jakarta.annotation.PostConstruct;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -29,7 +29,7 @@ import net.brlns.gdownloader.event.impl.PerformUpdateCheckEvent;
 import net.brlns.gdownloader.ui.message.Message;
 import net.brlns.gdownloader.ui.message.MessageTypeEnum;
 import net.brlns.gdownloader.ui.message.PopupMessenger;
-import net.brlns.gdownloader.updater.impl.*;
+import net.brlns.gdownloader.updater.git.*;
 import net.brlns.gdownloader.util.NetworkConnectivityListener;
 import net.brlns.gdownloader.util.NoFallbackAvailableException;
 
@@ -43,7 +43,7 @@ import static net.brlns.gdownloader.GDownloader.handleException;
 public final class UpdateManager {
 
     @Getter
-    private final List<AbstractGitUpdater> updaters = new ArrayList<>();
+    private final List<IUpdater> updaters = new CopyOnWriteArrayList<>();
 
     private final GDownloader main;
 
@@ -55,14 +55,22 @@ public final class UpdateManager {
 
     @PostConstruct
     private void init() {
-        updaters.add(new SelfUpdater(main));
-        updaters.add(new SelfAppImageUpdater(main));
-        updaters.add(new SelfJarUpdater(main));
+        registerUpdater(new SelfUpdater(main));
+        registerUpdater(new SelfAppImageUpdater(main));
+        registerUpdater(new SelfJarUpdater(main));
 
-        updaters.add(new YtDlpUpdater(main));
-        updaters.add(new GalleryDlUpdater(main));
-        updaters.add(new SpotDLUpdater(main));
-        updaters.add(new FFMpegUpdater(main));
+        registerUpdater(new YtDlpUpdater(main));
+        registerUpdater(new GalleryDlUpdater(main));
+        registerUpdater(new SpotDLUpdater(main));
+        registerUpdater(new FFMpegUpdater(main));
+    }
+
+    public void registerUpdater(IUpdater updater) {
+        updaters.add(updater);
+    }
+
+    public void unregisterUpdater(IUpdater updater) {
+        updaters.remove(updater);
     }
 
     public boolean checkForUpdates() {
@@ -104,7 +112,7 @@ public final class UpdateManager {
 
                 CountDownLatch latch = new CountDownLatch(updaters.size());
 
-                for (AbstractGitUpdater updater : updaters) {
+                for (IUpdater updater : updaters) {
                     if (updater.isEnabled()) {
                         GLOBAL_THREAD_POOL.execute(() -> {
                             try {
@@ -134,7 +142,7 @@ public final class UpdateManager {
                 log.info("Finished checking for updates");
 
                 boolean updated = updaters.stream()
-                    .anyMatch(AbstractGitUpdater::isUpdated);
+                    .anyMatch(IUpdater::isUpdated);
 
                 if (!isBooting) {
                     PopupMessenger.show(Message.builder()
@@ -148,7 +156,7 @@ public final class UpdateManager {
                         .build());
                 }
 
-                for (AbstractGitUpdater updater : updaters) {
+                for (IUpdater updater : updaters) {
                     if (updater.isUpdated() && updater.isRestartRequired()) {
                         log.info("Restarting to apply updates.");
                         main.restart();

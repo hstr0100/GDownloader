@@ -330,9 +330,10 @@ public final class MediaCardManager {
                     mediaQueuePane.revalidate();
                     mediaQueuePane.repaint();
 
-                    if (!manager.getAppWindow().isVisible()) {
-                        manager.getAppWindow().setVisible(true);
-                    }
+                    // TODO: setting for this. if the window is hidden it should remain hidden
+                    //if (!manager.getAppWindow().isVisible()) {
+                    //    manager.getAppWindow().setVisible(true);
+                    //}
                 }
 
                 if (main.getConfig().isAutoScrollToBottom() && scrollToBottom) {

@@ -56,7 +56,7 @@ import net.brlns.gdownloader.ui.menu.RunnableMenuEntry;
 import net.brlns.gdownloader.ui.status.StatusIndicatorPanel;
 import net.brlns.gdownloader.ui.themes.ThemeProvider;
 import net.brlns.gdownloader.ui.themes.UIColors;
-import net.brlns.gdownloader.updater.impl.AbstractGitUpdater;
+import net.brlns.gdownloader.updater.IUpdater;
 import net.brlns.gdownloader.util.Version;
 
 import static net.brlns.gdownloader.lang.Language.*;
@@ -818,7 +818,7 @@ public final class GUIManager {
         spacerPanel.setPreferredSize(new Dimension(1, 20));
         updaterPane.add(spacerPanel, gbc);
 
-        for (AbstractGitUpdater updater : main.getUpdateManager().getUpdaters()) {
+        for (IUpdater updater : main.getUpdateManager().getUpdaters()) {
             JPanel updaterRowPanel = new JPanel(new GridBagLayout());
             updaterRowPanel.setOpaque(false);
             updaterRowPanel.setBackground(color(BACKGROUND));

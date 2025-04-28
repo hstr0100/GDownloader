@@ -28,14 +28,18 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.List;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.process.ProcessArguments;
-import net.brlns.gdownloader.updater.impl.AbstractGitUpdater;
+import net.brlns.gdownloader.updater.git.AbstractGitUpdater;
 import net.brlns.gdownloader.util.ArchiveUtils;
+import net.brlns.gdownloader.util.FileUtils;
 import net.brlns.gdownloader.util.LockUtils;
 import net.brlns.gdownloader.util.Version;
 
+import static net.brlns.gdownloader.updater.UpdaterBootstrap.PackageType.*;
 import static net.brlns.gdownloader.util.DirectoryUtils.*;
 import static net.brlns.gdownloader.util.LockUtils.*;
 import static net.brlns.gdownloader.util.StringUtils.notNullOrEmpty;
@@ -44,7 +48,7 @@ import static net.brlns.gdownloader.util.StringUtils.nullOrEmpty;
 /**
  * Modifications to this class should be made with caution, as it may affect compatibility with clients running older versions.
  *
- * If addressing update-related issues is necessary, please consider handling them through the {@link net.brlns.gdownloader.updater.SelfUpdater} class
+ * If addressing update-related issues is necessary, please consider handling them through the {@link net.brlns.gdownloader.updater.git.SelfUpdater} class
  * whenever possible, rather than modifying this class directly. For example, you can modify and reconstruct the update ZIP
  * to ensure it remains compatible with this updater.
  *
@@ -59,15 +63,10 @@ public class UpdaterBootstrap {
 
     public static void tryOta(String[] args, boolean fromOta) {
         Path workDir = GDownloader.getWorkDirectory().toPath();
-        String appPath = getAppPath();
-        if (appPath == null) {
-            log.error("Ota not available for platform");
-            return;
-        }
 
         String version = Version.VERSION;
         if (version == null) {
-            log.error("Ota not available, could not determine version number.");
+            log.error("OTA not available, could not determine version number");
             return;
         }
 
@@ -77,133 +76,178 @@ public class UpdaterBootstrap {
             log.error("Failed to migrate old lock file, cause: {}, ignoring...", e.getMessage());
         }
 
+        PackageType packageType = determinePackageType();
+        if (packageType == null) {
+            log.error("Failed to determine package type for udpater");
+            return;
+        }
+
+        handleOta(args, fromOta, workDir, version, packageType);
+    }
+
+    @Nullable
+    private static PackageType determinePackageType() {
         if (GDownloader.isFromJpackage()) {
-            handleJpackageOta(args, fromOta, workDir, appPath, version);
+            return PackageType.JPACKAGE;
         } else if (GDownloader.isFromAppImage()) {
-            handleAppImageOta(args, fromOta, workDir, appPath, version);
+            return PackageType.APPIMAGE;
         } else if (GDownloader.isFromJar()) {
-            handleJarOta(args, fromOta, workDir, appPath, version);
+            return PackageType.JAR;
+        }
+
+        // This is odd
+        return null;
+    }
+
+    private static void handleOta(String[] args, boolean fromOta, Path workDir,
+        String version, PackageType packageType) {
+
+        Path updatePath = Paths.get(workDir.toString(), packageType.getOtaFileName());
+
+        if (!Files.exists(updatePath)) {
+            handleExistingRuntime(args, fromOta, workDir, version, packageType);
         } else {
-            log.error("getAppData() returned garbage: {}", appPath);
+            handleUpdateFile(args, updatePath, workDir, version, packageType);
         }
     }
 
-    private static void handleJpackageOta(String[] args, boolean fromOta, Path workDir, String appPath, String version) {
-        Path path = Paths.get(workDir.toString(), "gdownloader_ota.zip");
-        if (!Files.exists(path)) {
-            Path runtimePath = getNewestDirectoryEntry(PREFIX, workDir);
+    private static void handleExistingRuntime(String[] args, boolean fromOta, Path workDir,
+        String version, PackageType packageType) {
 
-            String launcherCommand = getJpackageLauncher();
+        Path runtimePath = getNewestDirectoryEntry(PREFIX, workDir);
 
-            if (fromOta || launcherCommand != null && launcherCommand.contains(PREFIX)) {
-                log.info("Current running image is from ota {} v{}", runtimePath, version);
-                return;
-            } else {
-                log.info("No ota file found, trying to locate current runtime");
-            }
-
-            if (!Files.exists(runtimePath)) {
-                log.info("No ota runtimes found, running current version.");
-                return;
-            }
-
-            // This is a backwards-compatible check
-            if (!diskLockExistsAndIsNewer(workDir, version)) {
-                log.info("Ota runtime on disk is not newer, staying in current version. (v{})", version);
-                return;
-            }
-
-            File binary = new File(runtimePath.toFile(), appPath);
-
-            if (!binary.exists() || !binary.canExecute()) {
-                log.error("Cannot open or execute {}", binary.getAbsolutePath());
-                return;
-            }
-
-            launchUpdatedInstance(List.of(binary.getAbsolutePath()), launcherCommand, args);
+        String launcherCommand = getLauncherCommand(packageType);
+        if (fromOta || launcherCommand != null && launcherCommand.contains(PREFIX)) {
+            log.info("Current running image is from OTA {} v{}", runtimePath, version);
+            return;
         } else {
-            try {
-                if (diskLockExistsAndIsNewer(workDir, version)) {
-                    Path zipOutputPath = Paths.get(workDir.toString(), "tmp_ota_zip");
-                    log.info("Zip out path {}", zipOutputPath);
+            log.info("No OTA file found, trying to locate current runtime");
+        }
 
-                    ArchiveUtils.inflateZip(path.toFile(), zipOutputPath, false, (progress) -> {
-                        log.info("Unpack progress: {}%", progress);
-                    });
+        if (!Files.exists(runtimePath)) {
+            log.info("No OTA runtimes found, running current version");
+            return;
+        }
 
-                    log.info("Trying to perform ota update");
+        // This is a backwards-compatible check
+        if (!diskLockExistsAndIsNewer(workDir, version)) {
+            log.info("OTA runtime on disk is not newer, staying in current version (v{})", version);
+            return;
+        }
 
-                    Path newEntry = createNewDirectoryEntry(PREFIX, workDir);
-                    log.info("Next directory: {}", newEntry);
+        List<String> executableArgs = getExecutableCommandIfAvailable(runtimePath);
+        if (executableArgs == null) {
+            log.info("OTA arguments could not be determined, staying in current version (v{})", version);
+            return;
+        }
 
-                    Files.move(zipOutputPath, newEntry, StandardCopyOption.REPLACE_EXISTING);
-                    log.info("Directory copied");
+        launchUpdatedInstance(executableArgs, launcherCommand, args);
+    }
 
-                    AbstractGitUpdater.makeExecutable(newEntry);
+    private static List<String> getExecutableCommandIfAvailable(Path runtimePath) {
+        PackageType inferredPackageType = null;
+        File binary = null;
+        for (PackageType discoveredPackageType : PackageType.values()) {
+            String binaryName = discoveredPackageType.getBinaryFileName();
+            if (binaryName == null) {
+                continue;
+            }
 
-                    log.info("Removing older entries");
-                    deleteOlderDirectoryEntries(PREFIX, workDir, 2);
-
-                    log.info("Removing ota file");
-                    Files.delete(path);
-
-                    log.info("Ota complete, restarting");
-                    tryOta(args, false);
-                } else {
-                    log.error("Disk version is older or the same, deleting ota update and remaining in the current version (v{}).", version);
-                    Files.delete(path);
+            File foundFile = new File(runtimePath.toFile(), binaryName);
+            if (foundFile.exists()) {
+                if (!foundFile.canExecute()) {
+                    log.error("Cannot execute updated binary. Skipping...");
+                    continue;
                 }
-            } catch (IOException e) {
-                log.error("Cannot procceed, IO error with ota file {}", path, e);
+
+                inferredPackageType = discoveredPackageType;
+                binary = foundFile;
+                break;
             }
+        }
+
+        if (inferredPackageType != null) {
+            return getExecutableArgs(inferredPackageType, binary);
+        }
+
+        return null;
+    }
+
+    private static List<String> getExecutableArgs(PackageType packageType, File binary) {
+        return switch (packageType) {
+            case JAR ->
+                getJarLaunchCommand(binary);
+            default ->
+                List.of(binary.getAbsolutePath());
+        };
+    }
+
+    @Nullable
+    private static String getLauncherCommand(PackageType packageType) {
+        return switch (packageType) {
+            case JPACKAGE ->
+                getJpackageLauncher();
+            case APPIMAGE ->
+                getAppImageLauncher();
+            case JAR -> {
+                File launcherFile = getJarLocation();
+                yield launcherFile != null ? launcherFile.getAbsolutePath() : null;
+            }
+            default ->
+                throw new IllegalArgumentException();
+        };
+    }
+
+    private static void handleUpdateFile(String[] args, Path updatePath, Path workDir,
+        String version, PackageType packageType) {
+        try {
+            if (diskLockExistsAndIsNewer(workDir, version)) {
+                Path newEntry = createNewDirectoryEntry(PREFIX, workDir);
+                log.info("Next directory: {}", newEntry);
+
+                switch (packageType) {
+                    case JPACKAGE ->
+                        extractZipPackage(workDir, updatePath, newEntry);
+                    default ->
+                        moveUpdateFile(updatePath, newEntry.resolve(updatePath.getFileName()));
+                }
+
+                AbstractGitUpdater.makeExecutable(newEntry);
+
+                log.info("Removing older entries");
+                deleteOlderDirectoryEntries(PREFIX, workDir, 2);
+
+                if (Files.exists(updatePath)) {
+                    log.info("Removing OTA file");
+                    Files.delete(updatePath);
+                }
+
+                log.info("OTA complete, restarting");
+                tryOta(args, false);
+            } else {
+                log.error("Disk version is older or the same, deleting OTA update and remaining in current version (v{})", version);
+                Files.delete(updatePath);
+            }
+        } catch (IOException e) {
+            log.error("Cannot proceed, IO error with OTA file {}", updatePath, e);
         }
     }
 
-    private static void handleAppImageOta(String[] args, boolean fromOta, Path workDir, String appPath, String version) {
-        Path path = Paths.get(workDir.toString(), appPath);
-        if (Files.exists(path)) {
-            String launcherCommand = getAppImageLauncher();
+    private static void extractZipPackage(Path workDir, Path updatePath, Path destDir) throws IOException {
+        Path zipOutputPath = Paths.get(workDir.toString(), "tmp_ota_zip");
+        log.info("Zip output path: {}", zipOutputPath);
 
-            if (fromOta || launcherCommand != null && launcherCommand.contains(appPath)) {
-                log.info("Current running AppImage is from ota {} v{}", path, version);
-                return;
-            }
+        ArchiveUtils.inflateZip(updatePath.toFile(), zipOutputPath, false, (progress) -> {
+            log.info("Unpack progress: {}%", progress);
+        });
 
-            if (!diskLockExistsAndIsNewer(workDir, version)) {
-                log.info("AppImage runtime on disk is not newer, staying in current version. (v{})", version);
-                return;
-            }
-
-            if (!Files.isExecutable(path)) {
-                log.error("Cannot execute {}", path);
-                return;
-            }
-
-            launchUpdatedInstance(List.of(path.toString()), launcherCommand, args);
-        }
+        moveUpdateFile(zipOutputPath, destDir);
     }
 
-    private static void handleJarOta(String[] args, boolean fromOta, Path workDir, String appPath, String version) {
-        Path path = Paths.get(workDir.toString(), appPath);
-        if (Files.exists(path)) {
-            File launcherFile = getJarLocation();
-
-            String launcherCommand = launcherFile != null ? launcherFile.getAbsolutePath() : null;
-
-            if (fromOta || launcherCommand != null && launcherCommand.contains(appPath)) {
-                log.info("Current running jar is from ota {} v{}", path, version);
-                return;
-            }
-
-            if (!diskLockExistsAndIsNewer(workDir, version)) {
-                log.info("Jar on disk is not newer, staying in current version. (v{})", version);
-                return;
-            }
-
-            // Here we're just passing the raw jar as the launcher as this is correctly handled by newer clients.
-            // If for some bizarre reason this launches an older client, that client is gonna implode itself in confusion.
-            launchUpdatedInstance(getJarLaunchCommand(path.toFile()), launcherCommand, args);
-        }
+    private static void moveUpdateFile(Path updatePath, Path destDir) throws IOException {
+        log.info("Trying to perform OTA update");
+        Files.move(updatePath, destDir, StandardCopyOption.REPLACE_EXISTING);
+        log.info("OTA file copied");
     }
 
     private static void launchUpdatedInstance(List<String> launchArguments, String originalLauncher, String[] args) {
@@ -278,27 +322,25 @@ public class UpdaterBootstrap {
 
     @Nullable
     public static List<String> getJarLaunchCommand(File jarLocation) {
+        if (jarLocation == null) {
+            log.error("Cannot create JAR launch command: JAR location is null");
+            return null;
+        }
+
         String javaHome = System.getProperty("java.home");
 
-        if (nullOrEmpty(javaHome)) {
+        if (nullOrEmpty(javaHome) || GDownloader.isFromAppImage()) {
             javaHome = System.getenv("JAVA_HOME");
         }
 
         if (notNullOrEmpty(javaHome)) {
-            if (!javaHome.endsWith(File.separator)) {
-                javaHome = javaHome + File.separator;
-            }
-
-            String javaPath;
-            if (GDownloader.isWindows()) {
-                javaPath = javaHome + "bin" + File.separator + "javaw.exe";
-            } else {
-                javaPath = javaHome + "bin" + File.separator + "java";
-            }
+            Path javaHomePath = Paths.get(javaHome);
+            Path javaBinaryPath = javaHomePath.resolve("bin")
+                .resolve(FileUtils.getBinaryName("java"));
 
             String jarString = jarLocation.getAbsolutePath();
 
-            return List.of(javaPath, "-jar", jarString);
+            return List.of(javaBinaryPath.toString(), "-jar", jarString);
         } else {
             log.error("JAVA_HOME is not set. Cannot determine relaunch command for .jar.");
         }
@@ -321,23 +363,28 @@ public class UpdaterBootstrap {
         return null;
     }
 
-    @Nullable
-    private static String getAppPath() {
-        if (GDownloader.isFromJpackage()) {
-            if (GDownloader.isWindows()) {
-                return GDownloader.REGISTRY_APP_NAME + ".exe";
-            } else if (GDownloader.isLinux()) {
-                return "bin" + File.separator + GDownloader.REGISTRY_APP_NAME;
-            } else {// Macn't
-                return null;
-            }
-        } else if (GDownloader.isFromAppImage()) {
-            return GDownloader.REGISTRY_APP_NAME.toLowerCase() + "_latest.AppImage";
-        } else if (GDownloader.isFromJar()) {
-            return GDownloader.REGISTRY_APP_NAME.toLowerCase() + "_latest.jar";
-        }
+    @Getter
+    @RequiredArgsConstructor
+    protected static enum PackageType {
+        JPACKAGE("gdownloader_ota.zip"),
+        APPIMAGE(GDownloader.REGISTRY_APP_NAME.toLowerCase() + "_latest.AppImage"),
+        JAR(GDownloader.REGISTRY_APP_NAME.toLowerCase() + "_latest.jar");
 
-        // We don't know what the hell this is running under
-        return null;
+        private final String otaFileName;
+
+        @Nullable
+        public String getBinaryFileName() {
+            if (this == JPACKAGE) {
+                if (GDownloader.isWindows()) {
+                    return GDownloader.REGISTRY_APP_NAME + ".exe";
+                } else if (GDownloader.isLinux()) {
+                    return "bin" + File.separator + GDownloader.REGISTRY_APP_NAME;
+                } else {// Macn't
+                    return null;
+                }
+            } else {
+                return otaFileName;
+            }
+        }
     }
 }

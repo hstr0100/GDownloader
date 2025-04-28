@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package net.brlns.gdownloader.updater.impl;
+package net.brlns.gdownloader.updater.git;
 
 import jakarta.annotation.Nullable;
 import java.io.File;
@@ -29,6 +29,8 @@ import net.brlns.gdownloader.updater.ArchVersionEnum;
 import net.brlns.gdownloader.util.ArchiveUtils;
 import net.brlns.gdownloader.util.DirectoryUtils;
 import net.brlns.gdownloader.util.LockUtils;
+
+import static net.brlns.gdownloader.updater.UpdateStatusEnum.UNPACKING;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -113,16 +115,16 @@ public class FFMpegUpdater extends AbstractGitUpdater {
         try {
             downloadFile(url, zipPath);
 
-            notifyProgress(UpdateStatus.UNPACKING, 0);
+            notifyProgress(UNPACKING, 0);
             ArchiveUtils.inflateZip(zipPath, zipOutputPath, true, (progress) -> {
-                notifyProgress(UpdateStatus.UNPACKING, progress);
+                notifyProgress(UNPACKING, progress);
             });
 
             Path sourcePath = zipOutputPath.resolve("bin");
             log.info("Source binary path {}", sourcePath);
 
             Files.move(sourcePath, outputFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-            notifyProgress(UpdateStatus.UNPACKING, 100);
+            notifyProgress(UNPACKING, 100);
         } finally {
             if (zipPath.exists()) {
                 zipPath.delete();

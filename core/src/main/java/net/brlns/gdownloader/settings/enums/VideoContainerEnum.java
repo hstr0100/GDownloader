@@ -69,6 +69,10 @@ public enum VideoContainerEnum implements ISettingsEnum, IContainerEnum {
         return "video";
     }
 
+    public static boolean isGif(@NonNull Path path) {
+        return path.getFileName().endsWith("." + GIF.getValue());
+    }
+
     public static boolean isFileType(@NonNull Path path) {
         return isFileType(path.toFile());
     }

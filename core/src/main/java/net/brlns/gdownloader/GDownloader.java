@@ -128,8 +128,15 @@ import static net.brlns.gdownloader.util.StringUtils.notNullOrEmpty;
 // TODO Fetch favicons for url filters
 // TODO Direct-HTTP: user-agent
 // TODO Tags/Filtering
+// TODO Remove ffmpeg requirement by omitting transcoding arguments
+// TODO Keep track of file hashes to avoid duplicates if such setting is turned on
+// TODO Investigate issue where video files get downloaded with audio name pattern applied
+// TODO Implement plugin API, create example plugin, create more events.
 // prio
 // TODO save last window size in config
+// TODO Right Click > Skip Download
+// TODO when changing download path, move the cache directory to the new location. Need to take available space into consideration
+// TODO Taskbar progress bar
 /**
  * GDownloader - GUI wrapper for yt-dlp
  *

@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package net.brlns.gdownloader.updater.impl;
+package net.brlns.gdownloader.updater.git;
 
 import jakarta.annotation.Nullable;
 import java.io.File;
@@ -27,6 +27,7 @@ import net.brlns.gdownloader.util.LockUtils;
 import net.brlns.gdownloader.util.Pair;
 import net.brlns.gdownloader.util.Version;
 
+import static net.brlns.gdownloader.updater.UpdateStatusEnum.CHECKING;
 import static net.brlns.gdownloader.util.LockUtils.*;
 
 /**
@@ -110,7 +111,7 @@ public class SelfUpdater extends AbstractGitUpdater {
     protected void doUpdateCheck(boolean force) throws Exception {
         updated = false;
 
-        notifyProgress(UpdateStatus.CHECKING, 0);
+        notifyProgress(CHECKING, 0);
 
         File binaryPath = new File(workDir, getRuntimeBinaryName());
 
@@ -129,7 +130,7 @@ public class SelfUpdater extends AbstractGitUpdater {
             log.error("HTTP error for {}", getRepo(), e);
         }
 
-        notifyProgress(UpdateStatus.CHECKING, 50);
+        notifyProgress(CHECKING, 50);
 
         if (tag == null) {
             log.error("Release tag was null {}", getRepo());
@@ -173,7 +174,7 @@ public class SelfUpdater extends AbstractGitUpdater {
         try {
             log.info("Starting download {}", getRepo());
 
-            notifyProgress(UpdateStatus.CHECKING, 100);
+            notifyProgress(CHECKING, 100);
 
             File path = doDownload(url, workDir);
             if (path.exists() && !path.getName().endsWith("zip")) {

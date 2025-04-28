@@ -9,7 +9,7 @@ It supports various platforms such as Crunchyroll, Twitch, X/Twitter, Spotify, a
 
 ## Features
 
-- Batch download videos and playlists
+- Batch download videos, image galleries and playlists
 - Supports multiple sites and content types
 - Seamlessly switch between the supported downloaders
 - Embeds thumbnails and subtitles in the resulting media files, when available

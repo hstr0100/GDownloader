@@ -27,7 +27,8 @@ import lombok.NonNull;
 public enum SubtitleContainerEnum implements ISettingsEnum, IContainerEnum {
     SRT,
     ASS,
-    VTT;
+    VTT,
+    SRV3;
 
     @Override
     public String getValue() {

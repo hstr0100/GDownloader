@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package net.brlns.gdownloader.updater.impl;
+package net.brlns.gdownloader.updater.git;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.annotation.Nullable;
@@ -42,20 +42,23 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
-import net.brlns.gdownloader.settings.enums.ISettingsEnum;
 import net.brlns.gdownloader.updater.ArchVersionEnum;
+import net.brlns.gdownloader.updater.IUpdater;
 import net.brlns.gdownloader.updater.SystemExecutableLocator;
+import net.brlns.gdownloader.updater.UpdateProgressListener;
+import net.brlns.gdownloader.updater.UpdateStatusEnum;
 import net.brlns.gdownloader.util.NoFallbackAvailableException;
 import net.brlns.gdownloader.util.Pair;
 import net.brlns.gdownloader.util.URLUtils;
 
+import static net.brlns.gdownloader.updater.UpdateStatusEnum.*;
 import static net.brlns.gdownloader.util.LockUtils.*;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
 @Slf4j
-public abstract class AbstractGitUpdater {
+public abstract class AbstractGitUpdater implements IUpdater {
 
     private static final HttpClient client = HttpClient.newBuilder()
         .followRedirects(HttpClient.Redirect.ALWAYS)
@@ -66,7 +69,7 @@ public abstract class AbstractGitUpdater {
     protected final GDownloader main;
     protected final File workDir;
 
-    private final List<ProgressListener> listeners = new CopyOnWriteArrayList<>();
+    private final List<UpdateProgressListener> listeners = new CopyOnWriteArrayList<>();
 
     @Getter
     protected boolean updated = false;
@@ -76,14 +79,17 @@ public abstract class AbstractGitUpdater {
         workDir = GDownloader.getWorkDirectory();
     }
 
-    public void registerListener(ProgressListener listener) {
+    @Override
+    public void registerListener(UpdateProgressListener listener) {
         listeners.add(listener);
     }
 
-    public void unregisterListener(ProgressListener listener) {
+    @Override
+    public void unregisterListener(UpdateProgressListener listener) {
         listeners.remove(listener);
     }
 
+    @Override
     public boolean isRestartRequired() {
         return false;
     }
@@ -110,8 +116,10 @@ public abstract class AbstractGitUpdater {
     @Nullable
     protected abstract String getLockFileName();
 
+    @Override
     public abstract boolean isEnabled();
 
+    @Override
     public abstract String getName();
 
     protected abstract void setExecutablePath(File executablePath);
@@ -121,7 +129,7 @@ public abstract class AbstractGitUpdater {
     protected void finishUpdate(File executablePath) {
         setExecutablePath(executablePath);
 
-        notifyStatus(UpdateStatus.DONE);
+        notifyStatus(DONE);
     }
 
     protected void tryFallback(File workDir) throws NoFallbackAvailableException, Exception {
@@ -139,7 +147,7 @@ public abstract class AbstractGitUpdater {
             return;
         }
 
-        notifyStatus(UpdateStatus.FAILED);
+        notifyStatus(FAILED);
 
         throw new NoFallbackAvailableException();
     }
@@ -167,20 +175,21 @@ public abstract class AbstractGitUpdater {
         return null;
     }
 
-    public final void check(boolean force) throws Exception {
+    @Override
+    public final void check(boolean forceInstall) throws Exception {
         init();
 
-        doUpdateCheck(force);
+        doUpdateCheck(forceInstall);
 
-        if (_internalLastStatus != UpdateStatus.DONE && _internalLastStatus != UpdateStatus.FAILED) {
+        if (_internalLastStatus != DONE && _internalLastStatus != FAILED) {
             throw new IllegalStateException("Exitted without notifying either status DONE or FAILED, final status was: " + _internalLastStatus);
         }
     }
 
-    protected void doUpdateCheck(boolean force) throws Exception {
+    protected void doUpdateCheck(boolean forceInstall) throws Exception {
         updated = false;
 
-        notifyProgress(UpdateStatus.CHECKING, 0);
+        notifyProgress(CHECKING, 0);
 
         if (main.getConfig().isPreferSystemExecutables()) {
             File systemFallback = SystemExecutableLocator.locateExecutable(getSystemBinaryName());
@@ -212,7 +221,7 @@ public abstract class AbstractGitUpdater {
         File binaryPath = new File(workDir, getRuntimeBinaryName());
 
         if (isEnabled() && isInstalled()
-            && !main.getConfig().isAutomaticUpdates() && !force) {
+            && !main.getConfig().isAutomaticUpdates() && !forceInstall) {
             log.info("Automatic updates are disabled {}", getRepo());
 
             tryFallback(workDir);
@@ -226,7 +235,7 @@ public abstract class AbstractGitUpdater {
             log.error("HTTP error for {}", getRepo(), e);
         }
 
-        notifyProgress(UpdateStatus.CHECKING, 50);
+        notifyProgress(CHECKING, 50);
 
         if (tag == null) {
             log.error("Release tag was null {}", getRepo());
@@ -271,7 +280,7 @@ public abstract class AbstractGitUpdater {
         try {
             log.info("Starting download {}", getRepo());
 
-            notifyProgress(UpdateStatus.CHECKING, 100);
+            notifyProgress(CHECKING, 100);
 
             File path = doDownload(url, workDir);
             if (path.exists()) {
@@ -288,7 +297,7 @@ public abstract class AbstractGitUpdater {
             log.error("Failed to update {}", getRepo(), e);
 
             if (tmpDir != null) {
-                notifyStatus(UpdateStatus.FAILED);
+                notifyStatus(FAILED);
 
                 Files.move(tmpDir.resolve(binaryPath.getName()), binaryPath.toPath(), StandardCopyOption.REPLACE_EXISTING);
             } else {
@@ -371,7 +380,7 @@ public abstract class AbstractGitUpdater {
     }
 
     protected void downloadFile(String urlIn, File outputFile) throws IOException, InterruptedException {
-        notifyProgress(UpdateStatus.DOWNLOADING, 0);
+        notifyProgress(DOWNLOADING, 0);
 
         log.info("Downloading {} -> {}", urlIn, outputFile);
 
@@ -399,27 +408,27 @@ public abstract class AbstractGitUpdater {
 
                     if (totalBytes > 0) {
                         double progress = (double)downloadedBytes * 100 / totalBytes;
-                        notifyProgress(UpdateStatus.DOWNLOADING, progress);
+                        notifyProgress(DOWNLOADING, progress);
                     }
                 }
 
-                notifyProgress(UpdateStatus.DOWNLOADING, 100);
+                notifyProgress(DOWNLOADING, 100);
             }
         } else {
             throw new IOException("Failed to download file: " + urlIn + ": " + response.statusCode());
         }
     }
 
-    private UpdateStatus _internalLastStatus;
+    private UpdateStatusEnum _internalLastStatus;
 
-    protected void notifyStatus(UpdateStatus status) {
+    protected void notifyStatus(UpdateStatusEnum status) {
         notifyProgress(status, 0);
     }
 
-    protected void notifyProgress(UpdateStatus status, double progress) {
+    protected void notifyProgress(UpdateStatusEnum status, double progress) {
         _internalLastStatus = status;
 
-        for (ProgressListener listener : listeners) {
+        for (UpdateProgressListener listener : listeners) {
             listener.update(status, progress);
         }
     }
@@ -443,27 +452,5 @@ public abstract class AbstractGitUpdater {
                 throw new IOException("The path provided is neither a file nor a directory.");
             }
         }
-    }
-
-    @Getter
-    public enum UpdateStatus implements ISettingsEnum {
-        CHECKING("enums.update_status.checking"),
-        DOWNLOADING("enums.update_status.downloading"),
-        UNPACKING("enums.update_status.unpacking"),
-        DONE("enums.update_status.done"),
-        FAILED("enums.update_status.failed");
-
-        private final String translationKey;
-
-        private UpdateStatus(String translationKeyIn) {
-            translationKey = translationKeyIn;
-        }
-    }
-
-    @FunctionalInterface
-    public static interface ProgressListener {
-
-        void update(UpdateStatus status, double progress);
-
     }
 }

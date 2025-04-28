@@ -366,7 +366,7 @@ public class YtDlpDownloader extends AbstractDownloader {
 
     private Path determineTargetPath(File tmpPath, File finalPath, Path path, QualitySettings quality) {
         boolean isAudio = AudioContainerEnum.isFileType(path);
-        boolean isVideo = VideoContainerEnum.isFileType(path);
+        boolean isVideo = VideoContainerEnum.isFileType(path) || VideoContainerEnum.isGif(path);
         boolean isSubtitle = SubtitleContainerEnum.isFileType(path);
         boolean isThumbnail = ThumbnailContainerEnum.isFileType(path);
 

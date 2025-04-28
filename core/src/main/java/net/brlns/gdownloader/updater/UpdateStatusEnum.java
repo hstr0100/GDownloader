@@ -14,36 +14,23 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package net.brlns.gdownloader.updater.impl;
+package net.brlns.gdownloader.updater;
 
-import jakarta.annotation.Nullable;
-import lombok.extern.slf4j.Slf4j;
-import net.brlns.gdownloader.GDownloader;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import net.brlns.gdownloader.settings.enums.ISettingsEnum;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-@Slf4j
-public class SelfJarUpdater extends SelfUpdater {
+@Getter
+@RequiredArgsConstructor
+public enum UpdateStatusEnum implements ISettingsEnum {
+    CHECKING("enums.update_status.checking"),
+    DOWNLOADING("enums.update_status.downloading"),
+    UNPACKING("enums.update_status.unpacking"),
+    DONE("enums.update_status.done"),
+    FAILED("enums.update_status.failed");
 
-    public SelfJarUpdater(GDownloader mainIn) {
-        super(mainIn);
-    }
-
-    @Override
-    @Nullable
-    public String getGitHubBinaryName() {
-        return "-all.jar";// Same for all platforms
-    }
-
-    @Nullable
-    @Override
-    protected String getRuntimeBinaryName() {
-        return GDownloader.REGISTRY_APP_NAME.toLowerCase() + "_latest.jar";
-    }
-
-    @Override
-    public boolean isEnabled() {
-        return GDownloader.isFromJar();
-    }
+    private final String translationKey;
 }

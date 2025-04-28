@@ -17,7 +17,7 @@ jobs:
       matrix:
         include:
           - GRADLE_ARCH: amd64
-            RUNS_ON: ubuntu-latest
+            RUNS_ON: ubuntu-22.04
             JAVA_VERSION: 21
 
     runs-on: ${{ matrix.RUNS_ON }}
