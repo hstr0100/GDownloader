@@ -176,17 +176,17 @@ public abstract class AbstractGitUpdater implements IUpdater {
     }
 
     @Override
-    public final void check(boolean forceInstall) throws Exception {
+    public final void check(boolean installIfMissing) throws Exception {
         init();
 
-        doUpdateCheck(forceInstall);
+        doUpdateCheck(installIfMissing);
 
         if (_internalLastStatus != DONE && _internalLastStatus != FAILED) {
             throw new IllegalStateException("Exitted without notifying either status DONE or FAILED, final status was: " + _internalLastStatus);
         }
     }
 
-    protected void doUpdateCheck(boolean forceInstall) throws Exception {
+    protected void doUpdateCheck(boolean installIfMissing) throws Exception {
         updated = false;
 
         notifyProgress(CHECKING, 0);
@@ -221,7 +221,7 @@ public abstract class AbstractGitUpdater implements IUpdater {
         File binaryPath = new File(workDir, getRuntimeBinaryName());
 
         if (isEnabled() && isInstalled()
-            && !main.getConfig().isAutomaticUpdates() && !forceInstall) {
+            && !main.getConfig().isAutomaticUpdates() && !installIfMissing) {
             log.info("Automatic updates are disabled {}", getRepo());
 
             tryFallback(workDir);

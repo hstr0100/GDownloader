@@ -155,7 +155,7 @@ public class UpdaterBootstrap {
 
             File foundFile = new File(runtimePath.toFile(), binaryName);
             if (foundFile.exists()) {
-                if (!foundFile.canExecute()) {
+                if (!foundFile.canExecute() && discoveredPackageType != JAR) {
                     log.error("Cannot execute updated binary. Skipping...");
                     continue;
                 }
@@ -190,6 +190,8 @@ public class UpdaterBootstrap {
             case APPIMAGE ->
                 getAppImageLauncher();
             case JAR -> {
+                // Here we're just passing the raw jar as the launcher as this is correctly handled by newer clients.
+                // If for some bizarre reason this class launches an older client, that client is gonna implode itself in confusion.
                 File launcherFile = getJarLocation();
                 yield launcherFile != null ? launcherFile.getAbsolutePath() : null;
             }

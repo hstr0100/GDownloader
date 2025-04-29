@@ -54,7 +54,6 @@ import net.brlns.gdownloader.ui.message.MessageTypeEnum;
 import net.brlns.gdownloader.ui.message.PopupMessenger;
 import net.brlns.gdownloader.ui.message.ToastMessenger;
 import net.brlns.gdownloader.util.CancelHook;
-import net.brlns.gdownloader.util.DownloadIntervalometer;
 import net.brlns.gdownloader.util.collection.ExpiringSet;
 
 import static net.brlns.gdownloader.downloader.enums.DownloadFlagsEnum.*;

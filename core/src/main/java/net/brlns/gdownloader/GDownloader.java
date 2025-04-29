@@ -35,7 +35,6 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.attribute.PosixFilePermission;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -59,7 +58,6 @@ import net.brlns.gdownloader.event.impl.NativeMouseClickEvent;
 import net.brlns.gdownloader.event.impl.SettingsChangeEvent;
 import net.brlns.gdownloader.ffmpeg.FFmpegSelfTester;
 import net.brlns.gdownloader.ffmpeg.FFmpegTranscoder;
-import net.brlns.gdownloader.lang.Language;
 import net.brlns.gdownloader.persistence.PersistenceManager;
 import net.brlns.gdownloader.persistence.entity.CounterTypeEnum;
 import net.brlns.gdownloader.process.ProcessMonitor;
@@ -77,6 +75,7 @@ import net.brlns.gdownloader.util.*;
 
 import static net.brlns.gdownloader.lang.Language.*;
 import static net.brlns.gdownloader.updater.UpdaterBootstrap.*;
+import static net.brlns.gdownloader.util.LoggerUtils.initLogFile;
 import static net.brlns.gdownloader.util.StringUtils.notNullOrEmpty;
 
 // TODO media converter
@@ -212,7 +211,8 @@ public final class GDownloader {
     private final AtomicBoolean uiInitialized = new AtomicBoolean();
 
     @Getter(AccessLevel.PRIVATE)
-    private final ScheduledExecutorService mainTicker;
+    private final ScheduledExecutorService mainTicker
+        = Executors.newScheduledThreadPool(1);
 
     private final AtomicBoolean restartRequested = new AtomicBoolean(false);
 
@@ -226,49 +226,13 @@ public final class GDownloader {
     public GDownloader() {
         // Initialize the config file
         File workDir = getWorkDirectory();
-        configFile = new File(workDir, "config.json");
 
-        // TODO: move log rotation to utils
-        File logFile = new File(workDir, "gdownloader_log.txt");
-        File previousLogFile = new File(workDir, "gdownloader_log_previous.txt");
+        initLogFile(workDir);
 
-        if (logFile.exists()) {
-            if (previousLogFile.exists()) {
-                previousLogFile.delete();
-            }
+        initConfig(workDir);
 
-            logFile.renameTo(previousLogFile);
-        }
+        initLanguage(config);
 
-        LoggerUtils.setLogFile(logFile);
-
-        if (!configFile.exists()) {
-            config = new Settings();
-            updateConfig();
-        }
-
-        try {
-            config = OBJECT_MAPPER.readValue(configFile, Settings.class);
-            config.doMigration();
-        } catch (IOException e) {
-            config = new Settings();
-            updateConfig();
-
-            // We have to init the language to display the exception.
-            Language.initLanguage(config);
-
-            handleException(e, true);
-        }
-
-        log.info("Loaded config file");
-
-        if (log.isDebugEnabled()) {
-            printDebugInformation();
-        }
-
-        mainTicker = Executors.newScheduledThreadPool(1);
-
-        Language.initLanguage(config);
         updateConfig();
 
         log.info(l10n("_startup"));
@@ -276,9 +240,9 @@ public final class GDownloader {
         ThemeProvider.setTheme(config.getTheme());
 
         if (!config.isUseSystemFont()) {
-            setUIFont(new FontUIResource("Dialog", Font.BOLD, config.getFontSize()));
+            GUIManager.setUIFont(new FontUIResource("Dialog", Font.BOLD, config.getFontSize()));
         } else {
-            setUIFontSize(config.getFontSize());
+            GUIManager.setUIFontSize(config.getFontSize());
         }
 
         try {
@@ -334,62 +298,69 @@ public final class GDownloader {
         }
 
         try {
-            // Register to the system tray
-            if (SystemTray.isSupported()) {
-                try {
-                    tray = SystemTray.getSystemTray();
-
-                    Image image = Toolkit.getDefaultToolkit().createImage(
-                        getClass().getResource(guiManager.getCurrentTrayIconPath()));
-
-                    trayIcon = new TrayIcon(image, REGISTRY_APP_NAME, buildPopupMenu());
-                    trayIcon.setImageAutoSize(true);
-                    trayIcon.addActionListener((ActionEvent e) -> {
-                        initUi(false);
-                    });
-
-                    tray.add(trayIcon);
-
-                    systemTrayInitialized = true;
-                } catch (AWTException e) {
-                    log.error("Error initializing the system tray");
-                    handleException(e);
-                }
-            } else {
-                log.error("System tray not supported? did you run this on a calculator?");
-            }
+            registerToSystemTray();
 
             updateManager.checkForUpdates(true);
 
-            updateStartupStatus();
+            StartupManager.updateAutoStartupState(this);
 
-            AtomicBoolean failedOnce = new AtomicBoolean();
-            mainTicker.scheduleAtFixedRate(new Runnable() {
-                @Override
-                public void run() {
-                    loop(clipboardManager::tickClipboard);
-                    loop(downloadManager::processQueue);
-                }
-
-                private void loop(Runnable action) {
-                    try {
-                        action.run();
-                    } catch (Exception e) {
-                        if (failedOnce.compareAndSet(false, true)) {
-                            log.error("Looper task has failed at least once: {}", e.getMessage());
-
-                            if (log.isDebugEnabled()) {
-                                log.error("Exception: ", e);
-                            }
-                        }
-                    }
-                }
-            }, 0, 50, TimeUnit.MILLISECONDS);
+            startLooperTasks();
 
             connectivityListener.startBackgroundConnectivityCheck();
         } catch (Exception e) {
             handleException(e);
         }
+    }
+
+    private void registerToSystemTray() {
+        if (SystemTray.isSupported()) {
+            try {
+                tray = SystemTray.getSystemTray();
+
+                Image image = Toolkit.getDefaultToolkit().createImage(
+                    getClass().getResource(guiManager.getCurrentTrayIconPath()));
+
+                trayIcon = new TrayIcon(image, REGISTRY_APP_NAME, buildPopupMenu());
+                trayIcon.setImageAutoSize(true);
+                trayIcon.addActionListener((ActionEvent e) -> {
+                    initUi(false);
+                });
+
+                tray.add(trayIcon);
+
+                systemTrayInitialized = true;
+            } catch (AWTException e) {
+                log.error("Error initializing the system tray");
+                handleException(e);
+            }
+        } else {
+            log.error("System tray is not supported, some features may not work.");
+        }
+    }
+
+    private void startLooperTasks() {
+        AtomicBoolean failedOnce = new AtomicBoolean();
+        mainTicker.scheduleAtFixedRate(new Runnable() {
+            @Override
+            public void run() {
+                loop(clipboardManager::tickClipboard);
+                loop(downloadManager::processQueue);
+            }
+
+            private void loop(Runnable action) {
+                try {
+                    action.run();
+                } catch (Exception e) {
+                    if (failedOnce.compareAndSet(false, true)) {
+                        log.error("Looper task has failed at least once: {}", e.getMessage());
+
+                        if (log.isDebugEnabled()) {
+                            log.error("Exception: ", e);
+                        }
+                    }
+                }
+            }
+        }, 0, 50, TimeUnit.MILLISECONDS);
     }
 
     public void runPostUpdateInitTasks() {
@@ -441,25 +412,20 @@ public final class GDownloader {
     private PopupMenu buildPopupMenu() {
         PopupMenu popup = new PopupMenu();
 
-        popup.add(buildMenuItem(l10n("gui.toggle_downloads"), (ActionEvent e) -> {
-            downloadManager.toggleDownloads();
-        }));
+        popup.add(buildMenuItem(l10n("gui.toggle_downloads"),
+            e -> downloadManager.toggleDownloads()));
 
-        popup.add(buildMenuItem(l10n("gui.open_downloads_directory"), (ActionEvent e) -> {
-            openDownloadsDirectory();
-        }));
+        popup.add(buildMenuItem(l10n("gui.open_downloads_directory"),
+            e -> openDownloadsDirectory()));
 
-        popup.add(buildMenuItem(l10n("settings.sidebar_title"), (ActionEvent e) -> {
-            guiManager.displaySettingsPanel();
-        }));
+        popup.add(buildMenuItem(l10n("settings.sidebar_title"),
+            e -> guiManager.displaySettingsPanel()));
 
-        popup.add(buildMenuItem(l10n("gui.restart"), (ActionEvent e) -> {
-            restart();
-        }));
+        popup.add(buildMenuItem(l10n("gui.restart"),
+            e -> restart()));
 
-        popup.add(buildMenuItem(l10n("gui.exit"), (ActionEvent e) -> {
-            shutdown();
-        }));
+        popup.add(buildMenuItem(l10n("gui.exit"),
+            e -> shutdown()));
 
         return popup;
     }
@@ -667,6 +633,27 @@ public final class GDownloader {
         return _cachedBrowser;
     }
 
+    private void initConfig(File workDir) {
+        configFile = new File(workDir, "config.json");
+
+        if (!configFile.exists()) {
+            config = new Settings();
+            updateConfig();
+        }
+
+        try {
+            config = OBJECT_MAPPER.readValue(configFile, Settings.class);
+            config.doMigration();
+        } catch (IOException e) {
+            config = new Settings();
+            updateConfig();
+
+            log.error("I/O Error initializing the config file, settings have been reset.", e);
+        }
+
+        log.info("Loaded config file");
+    }
+
     // TODO: this could be moved to the settings class itself.
     public void updateConfig() {
         updateConfig(config);
@@ -702,10 +689,10 @@ public final class GDownloader {
     }
 
     @Nullable
-    private List<String> getLaunchCommand() {
+    public List<String> getLaunchCommand() {
         List<String> launchString = null;
 
-        if (launchString == null && launcher != null) {
+        if (launcher != null) {
             if (launcher.endsWith(".jar") && !launcher.contains(" -jar ")) {
                 launchString = getJarLaunchCommand(new File(launcher));
             } else {
@@ -714,7 +701,7 @@ public final class GDownloader {
         }
 
         File jarLocation = getJarLocation();
-        if (jarLocation != null) {
+        if (launchString == null && jarLocation != null) {
             launchString = getJarLaunchCommand(jarLocation);
         }
 
@@ -774,167 +761,6 @@ public final class GDownloader {
             log.info("New instance launched with command: {}", launchString);
         } catch (IOException e) {
             log.error("Cannot restart, IO error", e);
-        }
-    }
-
-    /**
-     * Toggles the status of automatic startup
-     */
-    public void updateStartupStatus() {
-        try {
-            boolean currentStatus = config.isAutoStart();
-
-            List<String> launchString = getLaunchCommand();
-
-            log.debug("Launch command is: {}", launchString);
-
-            if (launchString == null || launchString.isEmpty()) {
-                log.error("Cannot locate runtime binary.");
-                return;
-            }
-
-            if (isWindows()) {
-                ProcessBuilder checkBuilder = new ProcessBuilder("reg", "query",
-                    "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run",
-                    "/v", REGISTRY_APP_NAME);
-
-                Process checkProcess = checkBuilder.start();
-                checkProcess.waitFor();
-
-                int checkExitValue = checkProcess.exitValue();
-
-                log.debug("Check startup status: {}", checkExitValue);
-
-                if (checkExitValue == 0 && !currentStatus) {
-                    ProcessBuilder deleteBuilder = new ProcessBuilder("reg", "delete",
-                        "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run",
-                        "/v", REGISTRY_APP_NAME, "/f");
-
-                    Process updateProcess = deleteBuilder.start();
-                    updateProcess.waitFor();
-
-                    if (config.isDebugMode()) {
-                        int updateExitValue = updateProcess.exitValue();
-                        if (updateExitValue == 0) {
-                            log.info("Startup entry updated successfully.");
-                        } else {
-                            log.error("Failed to update startup entry.");
-                        }
-                    }
-                } else if (checkExitValue != 0 && currentStatus) {
-                    List<String> regArgs = new ArrayList<>(List.of("reg", "add",
-                        "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run",
-                        "/v", REGISTRY_APP_NAME,
-                        "/t", "REG_SZ",
-                        "/d"));
-
-                    List<String> programArgs = new ArrayList<>(launchString);
-                    programArgs.add("--no-gui");
-
-                    StringBuilder builder = new StringBuilder();
-                    builder.append("\"");
-
-                    for (String arg : programArgs) {
-                        if (arg.contains(File.separator)) {
-                            builder.append("\\\"").append(arg).append("\\\"").append(" ");
-                        } else {
-                            builder.append(arg).append(" ");
-                        }
-                    }
-
-                    if (builder.charAt(builder.length() - 1) == ' ') {
-                        builder.deleteCharAt(builder.length() - 1);
-                    }
-
-                    builder.append("\"");
-
-                    regArgs.add(builder.toString());
-                    regArgs.add("/f");
-
-                    ProcessBuilder createBuilder = new ProcessBuilder(regArgs);
-
-                    Process process = createBuilder.start();
-                    int exitCode = process.waitFor();
-
-                    if (config.isDebugMode()) {
-                        log.info("Program args: {}", programArgs);
-                        log.info("Startup command args: {}", regArgs);
-
-                        if (exitCode == 0) {
-                            log.info("Registry entry added successfully.");
-                        } else {
-                            log.error("Failed to add registry entry. Exit code: {} Command list: {}",
-                                exitCode, createBuilder.command());
-                        }
-                    }
-                }
-            } else if (isLinux()) {
-                File autostartDirectory = DirectoryUtils.getOrCreate(System.getProperty("user.home"), "/.config/autostart");
-
-                File desktopFile = new File(autostartDirectory, REGISTRY_APP_NAME + ".desktop");
-                if (!desktopFile.exists() && currentStatus) {
-                    Path iconPath = getWorkDirectory().toPath().resolve("icon.png");
-                    if (!iconPath.toFile().exists()) {
-                        try (
-                            InputStream imageStream = getClass().getResourceAsStream(guiManager.getCurrentAppIconPath())) {
-                            if (imageStream == null) {
-                                throw new FileNotFoundException("Resource not found: " + guiManager.getCurrentAppIconPath());
-                            }
-
-                            Files.copy(imageStream, iconPath);
-                        }
-                    }
-
-                    // We almost give no thoughts to whitespaces on linux, but they can happen.
-                    List<String> programArgs = new ArrayList<>(launchString);
-                    programArgs.add("--no-gui");
-
-                    StringBuilder builder = new StringBuilder();
-
-                    for (String arg : programArgs) {
-                        if (arg.contains(" ")) {
-                            builder.append("\"").append(arg).append("\"").append(" ");
-                        } else {
-                            builder.append(arg).append(" ");
-                        }
-                    }
-
-                    if (builder.charAt(builder.length() - 1) == ' ') {
-                        builder.deleteCharAt(builder.length() - 1);
-                    }
-
-                    try (FileWriter writer = new FileWriter(desktopFile)) {
-                        writer.write("[Desktop Entry]\n");
-                        writer.write("Categories=Network;\n");
-                        writer.write("Comment=Start " + REGISTRY_APP_NAME + "\n");
-                        writer.write("Exec=" + builder.toString() + "\n");
-                        writer.write("Icon=" + iconPath + "\n");
-                        writer.write("Terminal=false\n");
-                        writer.write("MimeType=\n");
-                        writer.write("X-GNOME-Autostart-enabled=true\n");
-                        writer.write("Name=" + REGISTRY_APP_NAME + "\n");
-                        writer.write("Type=Application\n");
-                    }
-
-                    Set<PosixFilePermission> permissions = Files.getPosixFilePermissions(desktopFile.toPath());
-
-                    permissions.add(PosixFilePermission.OWNER_EXECUTE);
-                    permissions.add(PosixFilePermission.GROUP_EXECUTE);
-                    permissions.add(PosixFilePermission.OTHERS_EXECUTE);
-
-                    Files.setPosixFilePermissions(desktopFile.toPath(), permissions);
-
-                    log.info("Registered as a startup program.");
-                } else if (desktopFile.exists() && !currentStatus) {
-                    Files.delete(desktopFile.toPath());
-
-                    log.info("Startup entry removed.");
-                }
-            } else {
-                log.error("Unsupported operation.");
-            }
-        } catch (Exception e) {
-            handleException(e);
         }
     }
 
@@ -1018,64 +844,6 @@ public final class GDownloader {
 
     public void logUrl(String fileName, String text, Object... replacements) {
         FileUtils.logToFile(getOrCreateDownloadsDirectory(), fileName, text, replacements);
-    }
-
-    private void printDebugInformation() {
-        log.info("System Properties:");
-        Properties properties = System.getProperties();
-        properties.forEach((key, value) -> log.info("{}: {}", key, value));
-
-        log.info("Environment Variables:");
-        Map<String, String> env = System.getenv();
-        env.forEach((key, value) -> log.info("{}: {}", key, value));
-
-        log.info("Code Source: {}", GDownloader.class.getProtectionDomain().getCodeSource().getLocation());
-
-        try {
-            Path codeSourcePath = Paths.get(GDownloader.class.getProtectionDomain()
-                .getCodeSource().getLocation().toURI());
-            log.info("Code source path: {}", codeSourcePath);
-        } catch (URISyntaxException e) {
-            log.warn("URI syntax error", e);
-        }
-
-        GraphicsDevice device = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice();
-        GraphicsConfiguration config = device.getDefaultConfiguration();
-        AffineTransform transform = config.getDefaultTransform();
-        double scaleX = transform.getScaleX();
-        double scaleY = transform.getScaleY();
-
-        log.info("ScaleX: {}", scaleX);
-        log.info("ScaleY: {}", scaleY);
-
-        int cores = Runtime.getRuntime().availableProcessors();
-        log.info("Number of available processor cores: {}", cores);
-    }
-
-    public static final void handleException(Throwable e) {
-        handleException(e, true);
-    }
-
-    public static final void handleException(Throwable e, String message) {
-        handleException(e, message, true);
-    }
-
-    public static final void handleException(Throwable e, boolean displayToUser) {
-        handleException(e, "", true);
-    }
-
-    public static final void handleException(Throwable e, @NonNull String message, boolean displayToUser) {
-        log.error(!message.isEmpty() ? message : "An exception has been caught", e);
-
-        if (displayToUser && instance != null) {
-            PopupMessenger.show(Message.builder()
-                .title("gui.error_popup_title")
-                .message("gui.error_popup", e.getClass().getSimpleName(), e.getMessage())
-                .durationMillis(4000)
-                .messageType(MessageTypeEnum.ERROR)
-                .playTone(true)
-                .build());
-        }
     }
 
     public List<String> readOutput(String... command)
@@ -1206,11 +974,69 @@ public final class GDownloader {
         return getPortableLockFilePath().exists();
     }
 
+    private static void printDebugInformation() {
+        log.info("System Properties:");
+        Properties properties = System.getProperties();
+        properties.forEach((key, value) -> log.info("{}: {}", key, value));
+
+        log.info("Environment Variables:");
+        Map<String, String> env = System.getenv();
+        env.forEach((key, value) -> log.info("{}: {}", key, value));
+
+        log.info("Code Source: {}", GDownloader.class.getProtectionDomain().getCodeSource().getLocation());
+
+        try {
+            Path codeSourcePath = Paths.get(GDownloader.class.getProtectionDomain()
+                .getCodeSource().getLocation().toURI());
+            log.info("Code source path: {}", codeSourcePath);
+        } catch (URISyntaxException e) {
+            log.warn("URI syntax error", e);
+        }
+
+        GraphicsDevice device = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice();
+        GraphicsConfiguration config = device.getDefaultConfiguration();
+        AffineTransform transform = config.getDefaultTransform();
+        double scaleX = transform.getScaleX();
+        double scaleY = transform.getScaleY();
+
+        log.info("ScaleX: {}", scaleX);
+        log.info("ScaleY: {}", scaleY);
+
+        int cores = Runtime.getRuntime().availableProcessors();
+        log.info("Number of available processor cores: {}", cores);
+    }
+
+    public static final void handleException(Throwable e) {
+        handleException(e, true);
+    }
+
+    public static final void handleException(Throwable e, String message) {
+        handleException(e, message, true);
+    }
+
+    public static final void handleException(Throwable e, boolean displayToUser) {
+        handleException(e, "", true);
+    }
+
+    public static final void handleException(Throwable e, @NonNull String message, boolean displayToUser) {
+        log.error(!message.isEmpty() ? message : "An exception has been caught", e);
+
+        if (displayToUser && instance != null) {
+            PopupMessenger.show(Message.builder()
+                .title("gui.error_popup_title")
+                .message("gui.error_popup", e.getClass().getSimpleName(), e.getMessage())
+                .durationMillis(4000)
+                .messageType(MessageTypeEnum.ERROR)
+                .playTone(true)
+                .build());
+        }
+    }
+
     public static void main(String[] args) {
         boolean noGui = false;
         int uiScale = 1;
         boolean fromOta = false;
-        boolean disableHWAccel = false;
+        //boolean disableHWAccel = false;
 
         for (int i = 0; i < args.length; i++) {
             if (args[i].equalsIgnoreCase("--debug")) {
@@ -1235,11 +1061,10 @@ public final class GDownloader {
                 fromOta = true;
             }
 
-            if (args[i].equalsIgnoreCase("--disable-hwaccel")) {
-                log.info("Disabled hardware acceleration");
-                disableHWAccel = true;
-            }
-
+            //if (args[i].equalsIgnoreCase("--disable-hwaccel")) {
+            //    log.info("Disabled hardware acceleration");
+            //    disableHWAccel = true;
+            //}
             if (args[i].equalsIgnoreCase("--launcher")) {
                 launcher = args[++i];
             }
@@ -1277,6 +1102,10 @@ public final class GDownloader {
         //System.setProperty("sun.java2d.d3d", "true");
 
         log.info("Starting...");
+
+        if (log.isDebugEnabled()) {
+            printDebugInformation();
+        }
 
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
@@ -1372,31 +1201,5 @@ public final class GDownloader {
         Thread.setDefaultUncaughtExceptionHandler((Thread t, Throwable e) -> {
             GDownloader.handleException(e);
         });
-    }
-
-    public static void setUIFont(FontUIResource fontResource) {
-        UIManager.getDefaults().keys().asIterator()
-            .forEachRemaining(key -> {
-                if (key.toString().contains("FileChooser")) {
-                    return;
-                }
-
-                Object value = UIManager.get(key);
-                if (value instanceof FontUIResource) {
-                    UIManager.put(key, fontResource);
-                }
-            });
-    }
-
-    public static void setUIFontSize(int size) {
-        UIManager.getDefaults().keys().asIterator()
-            .forEachRemaining(key -> {
-                Object value = UIManager.get(key);
-                if (value instanceof FontUIResource resource) {
-                    Font newFont = resource.deriveFont((float)size);
-
-                    UIManager.put(key, new FontUIResource(newFont));
-                }
-            });
     }
 }

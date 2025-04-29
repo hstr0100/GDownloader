@@ -21,6 +21,7 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -294,5 +295,11 @@ public final class FileUtils {
 
             return Optional.empty();
         });
+    }
+
+    public static void moveFileIfExists(Path source, Path target) throws IOException {
+        if (Files.exists(source)) {
+            Files.move(source, target, StandardCopyOption.REPLACE_EXISTING);
+        }
     }
 }

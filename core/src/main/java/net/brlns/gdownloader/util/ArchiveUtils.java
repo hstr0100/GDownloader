@@ -19,6 +19,7 @@ package net.brlns.gdownloader.util;
 import jakarta.annotation.Nullable;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -28,11 +29,14 @@ import java.util.function.DoubleConsumer;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipInputStream;
+import java.util.zip.ZipOutputStream;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
 public final class ArchiveUtils {
+
+    private static final int BUFFER_SIZE = 4096;
 
     public static void inflateZip(File file, Path destDir, boolean removeRoot, DoubleConsumer progressCallback) throws IOException {
         if (Files.notExists(destDir)) {
@@ -108,6 +112,24 @@ public final class ArchiveUtils {
             }
 
             Files.copy(zipIn, outFile, StandardCopyOption.REPLACE_EXISTING);
+        }
+    }
+
+    public static void deflateToZip(File fileToCompress, Path outputZipPath) throws IOException {
+        try (ZipOutputStream zipOut = new ZipOutputStream(
+            new FileOutputStream(outputZipPath.toFile()));
+             FileInputStream fis = new FileInputStream(fileToCompress)) {
+
+            ZipEntry zipEntry = new ZipEntry(fileToCompress.getName());
+            zipOut.putNextEntry(zipEntry);
+
+            byte[] bytes = new byte[BUFFER_SIZE];
+            int length;
+            while ((length = fis.read(bytes)) >= 0) {
+                zipOut.write(bytes, 0, length);
+            }
+
+            zipOut.closeEntry();
         }
     }
 }

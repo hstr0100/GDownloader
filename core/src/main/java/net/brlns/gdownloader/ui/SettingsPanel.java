@@ -54,6 +54,7 @@ import net.brlns.gdownloader.ui.message.Message;
 import net.brlns.gdownloader.ui.message.MessageTypeEnum;
 import net.brlns.gdownloader.ui.message.PopupMessenger;
 import net.brlns.gdownloader.ui.themes.UIColors;
+import net.brlns.gdownloader.util.StartupManager;
 
 import static net.brlns.gdownloader.lang.Language.*;
 import static net.brlns.gdownloader.ui.GUIManager.createIconButton;
@@ -128,7 +129,7 @@ public class SettingsPanel {
         main.updateConfig(settings);
 
         main.getGuiManager().refreshAppWindow();
-        main.updateStartupStatus();
+        StartupManager.updateAutoStartupState(main);
     }
 
     private void reloadSettings() {

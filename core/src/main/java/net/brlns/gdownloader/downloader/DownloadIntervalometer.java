@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package net.brlns.gdownloader.util;
+package net.brlns.gdownloader.downloader;
 
 import java.net.MalformedURLException;
 import java.net.URI;
@@ -26,6 +26,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.brlns.gdownloader.util.CancelHook;
+import net.brlns.gdownloader.util.RandomUtils;
 
 /**
  * @author Gabriel / hstr0100 / vertx010

@@ -30,6 +30,7 @@ import java.util.function.Supplier;
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.Timer;
+import javax.swing.plaf.FontUIResource;
 import javax.swing.plaf.basic.BasicButtonUI;
 import lombok.Data;
 import lombok.Getter;
@@ -1042,6 +1043,32 @@ public final class GUIManager {
             dialog.add(panel);
             dialog.setVisible(true);
         });
+    }
+
+    public static void setUIFont(FontUIResource fontResource) {
+        UIManager.getDefaults().keys().asIterator()
+            .forEachRemaining(key -> {
+                if (key.toString().contains("FileChooser")) {
+                    return;
+                }
+
+                Object value = UIManager.get(key);
+                if (value instanceof FontUIResource) {
+                    UIManager.put(key, fontResource);
+                }
+            });
+    }
+
+    public static void setUIFontSize(int size) {
+        UIManager.getDefaults().keys().asIterator()
+            .forEachRemaining(key -> {
+                Object value = UIManager.get(key);
+                if (value instanceof FontUIResource resource) {
+                    Font newFont = resource.deriveFont((float)size);
+
+                    UIManager.put(key, new FontUIResource(newFont));
+                }
+            });
     }
 
     protected final class DefaultMouseAdapter extends MouseAdapter {
