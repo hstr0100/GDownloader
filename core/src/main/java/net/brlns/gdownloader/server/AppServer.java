@@ -47,7 +47,7 @@ import net.brlns.gdownloader.server.result.StatusResult;
  * @author Gabriel / hstr0100 / vertx010
  */
 @Slf4j
-public final class AppServer {
+public final class AppServer implements AutoCloseable {
 
     protected static final int TIMEOUT_MS = 3000;
 
@@ -192,6 +192,7 @@ public final class AppServer {
     }
 
     @PreDestroy
+    @Override
     public void close() {
         try {
             running.set(false);

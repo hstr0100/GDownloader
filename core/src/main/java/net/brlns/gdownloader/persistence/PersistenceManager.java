@@ -47,7 +47,7 @@ import static net.brlns.gdownloader.GDownloader.GLOBAL_THREAD_POOL;
  * @author Gabriel / hstr0100 / vertx010
  */
 @Slf4j
-public class PersistenceManager {
+public class PersistenceManager implements AutoCloseable {
 
     public static final ObjectMapper ENTITY_MAPPER = JsonMapper.builder()
         .annotationIntrospector(new JacksonAnnotationIntrospector() {
@@ -144,6 +144,7 @@ public class PersistenceManager {
     }
 
     @PreDestroy
+    @Override
     public void close() {
         if (emf != null && emf.isOpen()) {
             emf.close();

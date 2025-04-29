@@ -65,6 +65,9 @@ import net.brlns.gdownloader.util.URLUtils;
 import net.brlns.gdownloader.util.collection.ConcurrentLinkedHashSet;
 
 import static net.brlns.gdownloader.downloader.enums.DownloadStatusEnum.*;
+import static net.brlns.gdownloader.downloader.enums.QueueCategoryEnum.COMPLETED;
+import static net.brlns.gdownloader.downloader.enums.QueueCategoryEnum.FAILED;
+import static net.brlns.gdownloader.downloader.enums.QueueCategoryEnum.QUEUED;
 import static net.brlns.gdownloader.lang.Language.*;
 import static net.brlns.gdownloader.util.FileUtils.isFileType;
 import static net.brlns.gdownloader.util.FileUtils.isMimeType;
@@ -457,6 +460,27 @@ public class QueueEntry {
         } else {
             return originalFilter.getDisplayName();
         }
+    }
+
+    public double getPerceivedPercentage() {
+        QueueCategoryEnum category = getCurrentQueueCategory();
+        if (category == null) {
+            return -1d;
+        }
+
+        return switch (category) {
+            case FAILED, COMPLETED ->
+                100d;
+            case QUEUED ->
+                0d;
+            default -> {
+                if (getDownloadStatus() == DOWNLOADING || getDownloadStatus() == TRANSCODING) {
+                    yield getMediaCard().getPercentage();
+                } else {
+                    yield 0d;// Consider all other statuses as zero
+                }
+            }
+        };
     }
 
     public void updateStatus(DownloadStatusEnum status, String text) {

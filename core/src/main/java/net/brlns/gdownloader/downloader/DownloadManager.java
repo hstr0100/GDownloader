@@ -19,6 +19,7 @@ package net.brlns.gdownloader.downloader;
 import jakarta.annotation.Nullable;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
+import java.awt.Taskbar;
 import java.io.File;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -47,6 +48,7 @@ import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
 import net.brlns.gdownloader.settings.filters.GenericFilter;
 import net.brlns.gdownloader.settings.filters.YoutubeFilter;
 import net.brlns.gdownloader.settings.filters.YoutubePlaylistFilter;
+import net.brlns.gdownloader.system.TaskbarManager;
 import net.brlns.gdownloader.ui.GUIManager;
 import net.brlns.gdownloader.ui.MediaCard;
 import net.brlns.gdownloader.ui.message.Message;
@@ -54,6 +56,7 @@ import net.brlns.gdownloader.ui.message.MessageTypeEnum;
 import net.brlns.gdownloader.ui.message.PopupMessenger;
 import net.brlns.gdownloader.ui.message.ToastMessenger;
 import net.brlns.gdownloader.util.CancelHook;
+import net.brlns.gdownloader.util.MathUtils;
 import net.brlns.gdownloader.util.collection.ExpiringSet;
 
 import static net.brlns.gdownloader.downloader.enums.DownloadFlagsEnum.*;
@@ -66,7 +69,7 @@ import static net.brlns.gdownloader.util.URLUtils.*;
  * @author Gabriel / hstr0100 / vertx010
  */
 @Slf4j
-public class DownloadManager implements IEvent {
+public class DownloadManager implements IEvent, AutoCloseable {
 
     private final AtomicLong downloadIdGenerator = new AtomicLong();
 
@@ -103,7 +106,7 @@ public class DownloadManager implements IEvent {
     private final String _forceStartKey = l10n("gui.force_download_start");
     private final String _restartKey = l10n("gui.restart_download");
 
-    private final DownloadIntervalometer intervalometer = new DownloadIntervalometer(5, 15);
+    private final DownloadIntervalometer intervalometer = new DownloadIntervalometer(30, 60);
 
     @SuppressWarnings("this-escape")
     public DownloadManager(GDownloader mainIn) {
@@ -1113,7 +1116,66 @@ public class DownloadManager implements IEvent {
         });
     }
 
+    public void processTaskbarProgress() {
+        TaskbarManager taskbarManager = main.getGuiManager().getTaskbarManager();
+        if (taskbarManager == null || !taskbarManager.isTaskbarSupported()) {
+            return;
+        }
+
+        int runningCount = getRunningDownloads();
+        int failedCount = getFailedDownloads();
+        int queuedCount = getQueuedDownloads();
+        int completedCount = getCompletedDownloads();
+
+        int totalCount = sequencer.getTotalCount();
+
+        if (!isRunning()) {
+            if (failedCount > 0 && queuedCount == 0) {
+                taskbarManager.setProgressState(Taskbar.State.ERROR);
+            } else {
+                taskbarManager.setProgressState(Taskbar.State.OFF);
+            }
+
+            return;
+        }
+
+        if (queuedCount + runningCount > 50) {
+            // With >50 downloads, the variation becomes so small we can simplify the progress calculation
+            int finishedDownloads = completedCount + failedCount;
+
+            double completionPercentage = (double)finishedDownloads / totalCount * 100;
+            taskbarManager.setProgressState(Taskbar.State.NORMAL);
+            taskbarManager.setProgressValue(completionPercentage);
+
+            return;
+        }
+
+        List<QueueEntry> allEntries = sequencer.getAllEntries();
+        List<Double> validPercentages = allEntries.stream()
+            .map(e -> e.getPerceivedPercentage())
+            .filter(percentage -> percentage >= 0)
+            .collect(Collectors.toList());
+
+        if (validPercentages.isEmpty()) {
+            taskbarManager.setProgressState(Taskbar.State.INDETERMINATE);
+            // This might happen if all entries return -1, indicating-
+            // gallery-dl/spotDL downloaders where we are unable to track progress.
+            return;
+        }
+
+        int fillerNeeded = allEntries.size() - validPercentages.size();
+        for (int i = 0; i < fillerNeeded; i++) {
+            validPercentages.add(0d);
+        }
+
+        double averagePercentage = MathUtils.calculateAveragePercentage(validPercentages);
+
+        taskbarManager.setProgressState(Taskbar.State.NORMAL);
+        taskbarManager.setProgressValue(averagePercentage);
+    }
+
     @PreDestroy
+    @Override
     public void close() {
         stopDownloads();
 

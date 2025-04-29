@@ -26,11 +26,11 @@ import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.downloader.DownloadManager;
 import net.brlns.gdownloader.event.EventDispatcher;
 import net.brlns.gdownloader.event.impl.PerformUpdateCheckEvent;
+import net.brlns.gdownloader.system.NetworkConnectivityListener;
 import net.brlns.gdownloader.ui.message.Message;
 import net.brlns.gdownloader.ui.message.MessageTypeEnum;
 import net.brlns.gdownloader.ui.message.PopupMessenger;
 import net.brlns.gdownloader.updater.git.*;
-import net.brlns.gdownloader.util.NetworkConnectivityListener;
 import net.brlns.gdownloader.util.NoFallbackAvailableException;
 
 import static net.brlns.gdownloader.GDownloader.GLOBAL_THREAD_POOL;
@@ -116,11 +116,11 @@ public final class UpdateManager {
                     if (updater.isEnabled()) {
                         GLOBAL_THREAD_POOL.execute(() -> {
                             try {
-                                log.info("Starting updater " + updater.getClass().getName());
+                                log.info("Starting {} updater", updater.getName());
                                 updater.check(!isBooting);
                             } catch (NoFallbackAvailableException e) {
-                                log.error("Updater for " + updater.getClass().getName()
-                                    + " failed and no fallback is available. Your OS might be unsupported.");
+                                log.error("Updater {} failed and no fallback is available."
+                                    + " Your OS might be unsupported.", updater.getName());
                             } catch (Exception e) {
                                 handleException(e);
                             } finally {
@@ -128,7 +128,7 @@ public final class UpdateManager {
                             }
                         });
                     } else {
-                        log.info("Updater " + updater.getClass().getName() + " is not supported on this platform or runtime method.");
+                        log.info("Updater {} is not supported on this platform or runtime method.", updater.getName());
                         latch.countDown();
                     }
                 }

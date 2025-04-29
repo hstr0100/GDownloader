@@ -44,6 +44,7 @@ import net.brlns.gdownloader.settings.QualitySettings;
 import net.brlns.gdownloader.settings.Settings;
 import net.brlns.gdownloader.settings.enums.*;
 import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
+import net.brlns.gdownloader.system.StartupManager;
 import net.brlns.gdownloader.ui.builder.CheckBoxBuilder;
 import net.brlns.gdownloader.ui.builder.ComboBoxBuilder;
 import net.brlns.gdownloader.ui.builder.SliderBuilder;
@@ -54,7 +55,6 @@ import net.brlns.gdownloader.ui.message.Message;
 import net.brlns.gdownloader.ui.message.MessageTypeEnum;
 import net.brlns.gdownloader.ui.message.PopupMessenger;
 import net.brlns.gdownloader.ui.themes.UIColors;
-import net.brlns.gdownloader.util.StartupManager;
 
 import static net.brlns.gdownloader.lang.Language.*;
 import static net.brlns.gdownloader.ui.GUIManager.createIconButton;

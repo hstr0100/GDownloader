@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package net.brlns.gdownloader.util;
+package net.brlns.gdownloader.system;
 
 import jakarta.annotation.PreDestroy;
 import java.io.IOException;
@@ -30,7 +30,7 @@ import net.brlns.gdownloader.event.impl.ConnectivityStatusEvent;
  * @author Gabriel / hstr0100 / vertx010
  */
 @Slf4j
-public class NetworkConnectivityListener {
+public class NetworkConnectivityListener implements AutoCloseable {
 
     private static final String[] TARGET_HOSTS = new String[] {
         "1.1.1.1", // Cloudflare (IPv4)
@@ -127,6 +127,7 @@ public class NetworkConnectivityListener {
     }
 
     @PreDestroy
+    @Override
     public void close() {
         shutdown.set(true);
     }

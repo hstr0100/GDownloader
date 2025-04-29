@@ -36,7 +36,7 @@ import net.brlns.gdownloader.util.CancelHook;
  * @author Gabriel / hstr0100 / vertx010
  */
 @Slf4j
-public final class ProcessMonitor {
+public final class ProcessMonitor implements AutoCloseable {
 
     private final ExecutorService processMonitor;
 
@@ -49,6 +49,7 @@ public final class ProcessMonitor {
     private final AtomicBoolean closed = new AtomicBoolean();
 
     @PreDestroy
+    @Override
     public void close() {
         if (!closed.compareAndSet(false, true)) {
             return;

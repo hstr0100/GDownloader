@@ -51,7 +51,7 @@ import static net.brlns.gdownloader.util.StringUtils.notNullOrEmpty;
  * @author Gabriel / hstr0100 / vertx010
  */
 @Slf4j
-public final class FFmpegTranscoder {
+public final class FFmpegTranscoder implements AutoCloseable {
 
     private final Map<VideoCodecEnum, EncoderEnum> autoEncoderCache = new ConcurrentHashMap<>();
 
@@ -773,6 +773,7 @@ public final class FFmpegTranscoder {
     }
 
     @PreDestroy
+    @Override
     public void close() {
         processMonitor.close();
     }

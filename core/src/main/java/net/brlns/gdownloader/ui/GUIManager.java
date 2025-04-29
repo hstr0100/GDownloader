@@ -47,6 +47,7 @@ import net.brlns.gdownloader.event.impl.ConnectivityStatusEvent;
 import net.brlns.gdownloader.event.impl.PerformUpdateCheckEvent;
 import net.brlns.gdownloader.event.impl.SettingsChangeEvent;
 import net.brlns.gdownloader.settings.Settings;
+import net.brlns.gdownloader.system.TaskbarManager;
 import net.brlns.gdownloader.ui.custom.*;
 import net.brlns.gdownloader.ui.dnd.WindowDragSourceListener;
 import net.brlns.gdownloader.ui.dnd.WindowDropTargetListener;
@@ -84,6 +85,10 @@ public final class GUIManager {
 
     @Getter
     private final MediaCardManager mediaCardManager;
+
+    @Getter
+    @Nullable
+    private TaskbarManager taskbarManager;
 
     @Getter
     private final DefaultMouseAdapter defaultMouseAdapter;
@@ -320,6 +325,8 @@ public final class GUIManager {
             });
 
             appWindow.add(mainPanel);
+
+            taskbarManager = new TaskbarManager(appWindow);
         }
     }
 

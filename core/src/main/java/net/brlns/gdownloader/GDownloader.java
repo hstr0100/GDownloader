@@ -65,6 +65,9 @@ import net.brlns.gdownloader.server.AppClient;
 import net.brlns.gdownloader.server.AppServer;
 import net.brlns.gdownloader.settings.Settings;
 import net.brlns.gdownloader.settings.enums.BrowserEnum;
+import net.brlns.gdownloader.system.NetworkConnectivityListener;
+import net.brlns.gdownloader.system.ShutdownRegistry;
+import net.brlns.gdownloader.system.StartupManager;
 import net.brlns.gdownloader.ui.GUIManager;
 import net.brlns.gdownloader.ui.message.Message;
 import net.brlns.gdownloader.ui.message.MessageTypeEnum;
@@ -74,6 +77,7 @@ import net.brlns.gdownloader.updater.*;
 import net.brlns.gdownloader.util.*;
 
 import static net.brlns.gdownloader.lang.Language.*;
+import static net.brlns.gdownloader.system.ShutdownRegistry.closeable;
 import static net.brlns.gdownloader.updater.UpdaterBootstrap.*;
 import static net.brlns.gdownloader.util.LoggerUtils.initLogFile;
 import static net.brlns.gdownloader.util.StringUtils.notNullOrEmpty;
@@ -135,7 +139,7 @@ import static net.brlns.gdownloader.util.StringUtils.notNullOrEmpty;
 // TODO save last window size in config
 // TODO Right Click > Skip Download
 // TODO when changing download path, move the cache directory to the new location. Need to take available space into consideration
-// TODO Taskbar progress bar
+// TODO when expanded, display video info in the media cards
 /**
  * GDownloader - GUI wrapper for yt-dlp
  *
@@ -238,8 +242,8 @@ public final class GDownloader {
 
         setupAppServer();
 
-        processMonitor = new ProcessMonitor();
-        persistenceManager = new PersistenceManager(this);
+        processMonitor = closeable(new ProcessMonitor());
+        persistenceManager = closeable(new PersistenceManager(this));
 
         try {
             persistenceManager.init();
@@ -248,12 +252,12 @@ public final class GDownloader {
         }
 
         updateManager = new UpdateManager(this);
-        ffmpegTranscoder = new FFmpegTranscoder(processMonitor);
+        ffmpegTranscoder = closeable(new FFmpegTranscoder(processMonitor));
         clipboardManager = new ClipboardManager(this);
-        downloadManager = new DownloadManager(this);
+        downloadManager = closeable(new DownloadManager(this));
         guiManager = new GUIManager(this);
 
-        connectivityListener = new NetworkConnectivityListener();
+        connectivityListener = closeable(new NetworkConnectivityListener());
 
         // Java doesn't natively support detecting a click outside of the program window,
         // Which we would need for our custom context menus
@@ -324,29 +328,15 @@ public final class GDownloader {
     }
 
     private void startLooperTasks() {
-        mainTicker.scheduleAtFixedRate(new Runnable() {
-            AtomicBoolean failedOnce = new AtomicBoolean();
-
-            @Override
-            public void run() {
-                loop(clipboardManager::tickClipboard);
-                loop(downloadManager::processQueue);
-            }
-
-            private void loop(Runnable action) {
-                try {
-                    action.run();
-                } catch (Exception e) {
-                    if (failedOnce.compareAndSet(false, true)) {
-                        log.error("Looper task has failed at least once: {}", e.getMessage());
-
-                        if (log.isDebugEnabled()) {
-                            log.error("Exception: ", e);
-                        }
-                    }
-                }
-            }
-        }, 0, 50, TimeUnit.MILLISECONDS);
+        mainTicker.scheduleAtFixedRate(
+            new LooperTask(clipboardManager::tickClipboard),
+            0, 50, TimeUnit.MILLISECONDS);
+        mainTicker.scheduleAtFixedRate(
+            new LooperTask(downloadManager::processQueue),
+            0, 50, TimeUnit.MILLISECONDS);
+        mainTicker.scheduleAtFixedRate(
+            new LooperTask(downloadManager::processTaskbarProgress),
+            0, 1, TimeUnit.SECONDS);
     }
 
     public void runPostUpdateInitTasks() {
@@ -396,6 +386,9 @@ public final class GDownloader {
      * Builds the system tray menu.
      */
     private PopupMenu buildPopupMenu() {
+        // TODO: Java's SystemTray menu looks horrifying.
+        // Evaluate over time whether this project warrants the effort required to implement cross-platform custom menus.
+        // Dorkbox's existing library does not seem reliable enough across all the environments we support.
         PopupMenu popup = new PopupMenu();
 
         popup.add(buildMenuItem(l10n("gui.toggle_downloads"),
@@ -403,6 +396,8 @@ public final class GDownloader {
 
         popup.add(buildMenuItem(l10n("gui.open_downloads_directory"),
             e -> openDownloadsDirectory()));
+
+        popup.addSeparator();
 
         popup.add(buildMenuItem(l10n("settings.sidebar_title"),
             e -> guiManager.displaySettingsPanel()));
@@ -417,7 +412,7 @@ public final class GDownloader {
     }
 
     public void setupAppServer() {
-        appServer = new AppServer(this);
+        appServer = closeable(new AppServer(this));
         appServer.init();
     }
 
@@ -1140,45 +1135,7 @@ public final class GDownloader {
                 log.error("There was a problem unregistering the native hook.", e);
             }
 
-            if (instance.isRestartRequested()) {
-                instance.launchNewInstance();
-            }
-
-            try {
-                instance.getConnectivityListener().close();
-            } catch (Exception e) {
-                log.error("There was a problem closing the connectivity listener", e);
-            }
-
-            try {
-                instance.getDownloadManager().close();
-            } catch (Exception e) {
-                log.error("There was a problem closing the download manager", e);
-            }
-
-            try {
-                instance.getFfmpegTranscoder().close();
-            } catch (Exception e) {
-                log.error("There was a problem closing the ffmpeg transcoder", e);
-            }
-
-            try {
-                instance.getProcessMonitor().close();
-            } catch (Exception e) {
-                log.error("There was a problem closing the process monitor", e);
-            }
-
-            try {
-                instance.getPersistenceManager().close();
-            } catch (Exception e) {
-                log.error("There was a problem closing the persistence manager", e);
-            }
-
-            try {
-                instance.getAppServer().close();
-            } catch (Exception e) {
-                log.error("There was a problem closing the app server", e);
-            }
+            ShutdownRegistry.closeAllResources();
 
             try {
                 instance.getMainTicker().shutdownNow();
@@ -1186,6 +1143,10 @@ public final class GDownloader {
             } catch (Exception e) {
                 log.error("There was a problem closing thread pools", e);
             }
-        }));
+
+            if (instance.isRestartRequested()) {
+                instance.launchNewInstance();
+            }
+        }, "ShutdownHookActor"));
     }
 }

@@ -345,12 +345,25 @@ public class DownloadSequencer {
         return categorySets.get(category).size();
     }
 
+    public int getTotalCount() {
+        return entriesById.size();
+    }
+
     public boolean isEmpty(QueueCategoryEnum category) {
         return categorySets.get(category).isEmpty();
     }
 
     public boolean isEmpty() {// Locking this is overkill
         return entriesById.isEmpty();
+    }
+
+    public List<QueueEntry> getAllEntries() {
+        sequencerLock.lock();
+        try {
+            return new ArrayList<>(entriesById.values());
+        } finally {
+            sequencerLock.unlock();
+        }
     }
 
     public List<QueueEntry> getEntries(QueueCategoryEnum category) {

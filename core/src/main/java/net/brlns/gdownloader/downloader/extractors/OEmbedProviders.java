@@ -37,7 +37,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
-import net.brlns.gdownloader.util.NetworkConnectivityListener;
+import net.brlns.gdownloader.system.NetworkConnectivityListener;
 import net.brlns.gdownloader.util.URLUtils;
 
 /**
