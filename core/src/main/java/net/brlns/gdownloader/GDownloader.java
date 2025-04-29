@@ -58,8 +58,8 @@ import net.brlns.gdownloader.event.impl.NativeMouseClickEvent;
 import net.brlns.gdownloader.event.impl.SettingsChangeEvent;
 import net.brlns.gdownloader.ffmpeg.FFmpegSelfTester;
 import net.brlns.gdownloader.ffmpeg.FFmpegTranscoder;
+import net.brlns.gdownloader.lang.Language;
 import net.brlns.gdownloader.persistence.PersistenceManager;
-import net.brlns.gdownloader.persistence.entity.CounterTypeEnum;
 import net.brlns.gdownloader.process.ProcessMonitor;
 import net.brlns.gdownloader.server.AppClient;
 import net.brlns.gdownloader.server.AppServer;
@@ -182,28 +182,21 @@ public final class GDownloader {
     private Settings config;
 
     @Getter
-    private ClipboardManager clipboardManager;
-
+    private final ClipboardManager clipboardManager;
     @Getter
-    private DownloadManager downloadManager;
-
+    private final DownloadManager downloadManager;
     @Getter
-    private PersistenceManager persistenceManager;
-
+    private final PersistenceManager persistenceManager;
     @Getter
-    private UpdateManager updateManager;
-
+    private final UpdateManager updateManager;
     @Getter
-    private GUIManager guiManager;
-
+    private final GUIManager guiManager;
     @Getter
-    private FFmpegTranscoder ffmpegTranscoder;
-
+    private final FFmpegTranscoder ffmpegTranscoder;
     @Getter
-    private ProcessMonitor processMonitor;
-
+    private final ProcessMonitor processMonitor;
     @Getter
-    private NetworkConnectivityListener connectivityListener;
+    private final NetworkConnectivityListener connectivityListener;
 
     @Getter
     private boolean initialized = false;
@@ -224,7 +217,6 @@ public final class GDownloader {
     private AppServer appServer;
 
     public GDownloader() {
-        // Initialize the config file
         File workDir = getWorkDirectory();
 
         initLogFile(workDir);
@@ -232,7 +224,6 @@ public final class GDownloader {
         initConfig(workDir);
 
         initLanguage(config);
-
         updateConfig();
 
         log.info(l10n("_startup"));
@@ -245,41 +236,35 @@ public final class GDownloader {
             GUIManager.setUIFontSize(config.getFontSize());
         }
 
+        setupAppServer();
+
+        processMonitor = new ProcessMonitor();
+        persistenceManager = new PersistenceManager(this);
+
         try {
-            setupAppServer();
-
-            processMonitor = new ProcessMonitor();
-            persistenceManager = new PersistenceManager(this);
             persistenceManager.init();
-
-            GLOBAL_THREAD_POOL.execute(() -> {
-                // Prime the db by preloading some random item before the updaters even fire up
-                persistenceManager.getCounters()
-                    .getCurrentValue(CounterTypeEnum.DOWNLOAD_ID);
-            });
-
-            updateManager = new UpdateManager(this);
-
-            ffmpegTranscoder = new FFmpegTranscoder(processMonitor);
-            clipboardManager = new ClipboardManager(this);
-            downloadManager = new DownloadManager(this);
-            guiManager = new GUIManager(this);
-
-            connectivityListener = new NetworkConnectivityListener();
-
-            // Java doesn't natively support detecting a click outside of the program window,
-            // Which we would need for our custom context menus
-            GlobalScreen.addNativeMouseListener(new NativeMouseListener() {
-                @Override
-                public void nativeMousePressed(NativeMouseEvent e) {
-                    EventDispatcher.dispatch(new NativeMouseClickEvent(e.getPoint()));
-                }
-            });
-
-            initialized = true;
         } catch (Exception e) {
             handleException(e);
         }
+
+        updateManager = new UpdateManager(this);
+        ffmpegTranscoder = new FFmpegTranscoder(processMonitor);
+        clipboardManager = new ClipboardManager(this);
+        downloadManager = new DownloadManager(this);
+        guiManager = new GUIManager(this);
+
+        connectivityListener = new NetworkConnectivityListener();
+
+        // Java doesn't natively support detecting a click outside of the program window,
+        // Which we would need for our custom context menus
+        GlobalScreen.addNativeMouseListener(new NativeMouseListener() {
+            @Override
+            public void nativeMousePressed(NativeMouseEvent e) {
+                EventDispatcher.dispatch(new NativeMouseClickEvent(e.getPoint()));
+            }
+        });
+
+        initialized = true;
     }
 
     public void initMainWindow(boolean silently) {
@@ -297,19 +282,19 @@ public final class GDownloader {
             return;
         }
 
+        registerToSystemTray();
+
+        updateManager.checkForUpdates(true);
+
         try {
-            registerToSystemTray();
-
-            updateManager.checkForUpdates(true);
-
             StartupManager.updateAutoStartupState(this);
-
-            startLooperTasks();
-
-            connectivityListener.startBackgroundConnectivityCheck();
         } catch (Exception e) {
             handleException(e);
         }
+
+        startLooperTasks();
+
+        connectivityListener.startBackgroundConnectivityCheck();
     }
 
     private void registerToSystemTray() {
@@ -339,8 +324,9 @@ public final class GDownloader {
     }
 
     private void startLooperTasks() {
-        AtomicBoolean failedOnce = new AtomicBoolean();
         mainTicker.scheduleAtFixedRate(new Runnable() {
+            AtomicBoolean failedOnce = new AtomicBoolean();
+
             @Override
             public void run() {
                 loop(clipboardManager::tickClipboard);
@@ -1021,7 +1007,7 @@ public final class GDownloader {
     public static final void handleException(Throwable e, @NonNull String message, boolean displayToUser) {
         log.error(!message.isEmpty() ? message : "An exception has been caught", e);
 
-        if (displayToUser && instance != null) {
+        if (displayToUser && instance != null && Language.isInitialized()) {
             PopupMessenger.show(Message.builder()
                 .title("gui.error_popup_title")
                 .message("gui.error_popup", e.getClass().getSimpleName(), e.getMessage())
@@ -1134,6 +1120,10 @@ public final class GDownloader {
             System.exit(1);
         }
 
+        Thread.setDefaultUncaughtExceptionHandler((Thread t, Throwable e) -> {
+            GDownloader.handleException(e);
+        });
+
         GDownloader instance = new GDownloader();
         GDownloader.instance = instance;
 
@@ -1197,9 +1187,5 @@ public final class GDownloader {
                 log.error("There was a problem closing thread pools", e);
             }
         }));
-
-        Thread.setDefaultUncaughtExceptionHandler((Thread t, Throwable e) -> {
-            GDownloader.handleException(e);
-        });
     }
 }

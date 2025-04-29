@@ -52,6 +52,10 @@ public class Language {
         return MessageFormat.format(pattern, args);
     }
 
+    public static boolean isInitialized() {
+        return LANGUAGE_BUNDLE != null;
+    }
+
     public static void initLanguage(Settings config) {
         if (LANGUAGE_BUNDLE != null) {
             throw new IllegalStateException("Cannot initialize language twice");

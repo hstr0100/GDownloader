@@ -32,10 +32,13 @@ import java.util.Map;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
+import net.brlns.gdownloader.persistence.entity.CounterTypeEnum;
 import net.brlns.gdownloader.persistence.repository.CounterRepository;
 import net.brlns.gdownloader.persistence.repository.MediaInfoRepository;
 import net.brlns.gdownloader.persistence.repository.QueueEntryRepository;
 import org.eclipse.persistence.config.PersistenceUnitProperties;
+
+import static net.brlns.gdownloader.GDownloader.GLOBAL_THREAD_POOL;
 
 /**
  * This class relies on HSQLDB and EclipseLink JPA.
@@ -124,6 +127,11 @@ public class PersistenceManager {
             counters = new CounterRepository(emf);
             queueEntries = new QueueEntryRepository(emf);
             mediaInfos = new MediaInfoRepository(emf);
+
+            GLOBAL_THREAD_POOL.execute(() -> {
+                // Prime the db by preloading some random item before the updaters even fire up
+                counters.getCurrentValue(CounterTypeEnum.DOWNLOAD_ID);
+            });
 
             log.info("{} db is now open", databaseFile);
             initialized = true;
