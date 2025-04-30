@@ -139,6 +139,7 @@ import static net.brlns.gdownloader.util.StringUtils.notNullOrEmpty;
 // TODO save last window size in config
 // TODO when changing download path, move the cache directory to the new location. Need to take available space into consideration
 // TODO when expanded, display video info in the media cards
+// TODO implement taskbar shortcuts
 /**
  * GDownloader - GUI wrapper for yt-dlp
  *

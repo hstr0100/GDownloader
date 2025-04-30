@@ -43,6 +43,7 @@ import net.brlns.gdownloader.event.IEvent;
 import net.brlns.gdownloader.persistence.PersistenceManager;
 import net.brlns.gdownloader.persistence.entity.CounterTypeEnum;
 import net.brlns.gdownloader.persistence.entity.QueueEntryEntity;
+import net.brlns.gdownloader.process.ProcessMonitor;
 import net.brlns.gdownloader.settings.enums.PlayListOptionEnum;
 import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
 import net.brlns.gdownloader.settings.filters.GenericFilter;
@@ -70,7 +71,7 @@ import static net.brlns.gdownloader.util.URLUtils.*;
  * @author Gabriel / hstr0100 / vertx010
  */
 @Slf4j
-@CloseBefore(before = {PersistenceManager.class})
+@CloseBefore(before = {PersistenceManager.class, ProcessMonitor.class})
 public class DownloadManager implements IEvent, AutoCloseable {
 
     private final AtomicLong downloadIdGenerator = new AtomicLong();
@@ -207,8 +208,11 @@ public class DownloadManager implements IEvent, AutoCloseable {
 
                     main.getClipboardManager().unblock();
 
-                    main.getConfig().setPersistenceDatabaseInitialized(true);
-                    main.updateConfig();
+                    boolean dbInitialized = main.getConfig().isPersistenceDatabaseInitialized();
+                    if (!dbInitialized) {
+                        main.getConfig().setPersistenceDatabaseInitialized(true);
+                        main.updateConfig();
+                    }
 
                     initialized.set(true);
                     fireListeners();
@@ -1133,9 +1137,9 @@ public class DownloadManager implements IEvent, AutoCloseable {
             } finally {
                 entry.getRunning().set(false);
 
-                if (sequencer.contains(entry)) {
-                    entry.updateStatus(DownloadStatusEnum.STOPPED,
-                        l10n("gui.download_status.not_started"));
+                if (entry.getCurrentQueueCategory() == RUNNING
+                    && sequencer.contains(entry)) {
+                    log.error("Unexpected RUNNING download state, switching to QUEUED");
 
                     offerTo(QUEUED, entry);
                 }
