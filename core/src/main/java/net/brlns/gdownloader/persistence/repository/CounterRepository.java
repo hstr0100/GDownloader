@@ -42,6 +42,9 @@ public class CounterRepository extends AbstractRepository {
             }
 
             return counter.getValue();
+        } catch (Exception e) {
+            log.error("Failed to obtain counter value for: {}", counterType, e);
+            return 0l;
         }
     }
 

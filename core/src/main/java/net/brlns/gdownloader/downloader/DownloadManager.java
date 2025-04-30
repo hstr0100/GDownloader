@@ -128,96 +128,92 @@ public class DownloadManager implements IEvent, AutoCloseable {
 
     @PostConstruct
     public void init() {
-        try {
-            metadataManager.init();
+        metadataManager.init();
 
-            if (persistence.isInitialized()) {
-                if (main.getConfig().isPersistenceDatabaseInitialized()
-                    && main.getConfig().isRestoreSessionAfterRestart()) {
-                    ToastMessenger.show(Message.builder()
-                        .message("gui.restoring_session.toast")
-                        .durationMillis(5000)
-                        .messageType(MessageTypeEnum.INFO)
-                        .discardDuplicates(true)
-                        .build());
-                }
-
-                // Even if persistance is disabled, we still initialize the db so a restart is not
-                // needed and no data is lost if the user toggles persistence back on during runtime.
-                long nextId = persistence.getCounters().getCurrentValue(CounterTypeEnum.DOWNLOAD_ID);
-                downloadIdGenerator.set(nextId);
-                log.info("Current download id: {}", nextId);
-
-                GDownloader.GLOBAL_THREAD_POOL.execute(() -> {
-                    linkCaptureLock.lock();// Intentionally block url capture during the entire restoring proccess
-                    try {
-                        int count = 0;
-
-                        // We need an ugly comparator here because of null sequence numbers.
-                        // This way, we still preserve the original insertion order until a checkpoint updates the sequence.
-                        List<QueueEntryEntity> entities = persistence.getQueueEntries().getAll();
-                        List<QueueEntryEntity> originalOrder = new ArrayList<>(entities);
-                        entities.sort((e1, e2) -> {
-                            Long seq1 = e1.getCurrentDownloadSequence();
-                            Long seq2 = e2.getCurrentDownloadSequence();
-
-                            if (seq1 == null && seq2 == null) {
-                                return Integer.compare(originalOrder.indexOf(e1), originalOrder.indexOf(e2));
-                            } else if (seq1 == null) {
-                                return 1;
-                            } else if (seq2 == null) {
-                                return -1;
-                            } else {
-                                return seq1.compareTo(seq2);
-                            }
-                        });
-
-                        for (QueueEntryEntity entity : entities) {
-                            String downloadUrl = entity.getUrl();
-
-                            capturedLinks.add(downloadUrl);
-                            capturedLinks.add(entity.getOriginalUrl());
-
-                            List<AbstractDownloader> compatibleDownloaders = getCompatibleDownloaders(downloadUrl);
-
-                            if (compatibleDownloaders.isEmpty()) {
-                                log.error("No compatible downloaders found for: {}", downloadUrl);
-                                continue;
-                            }
-
-                            MediaCard mediaCard = main.getGuiManager()
-                                .getMediaCardManager().addMediaCard(downloadUrl);
-
-                            QueueEntry queueEntry = QueueEntry.fromEntity(entity, mediaCard, compatibleDownloaders);
-
-                            if (queueEntry.getCurrentQueueCategory() == QueueCategoryEnum.RUNNING) {
-                                queueEntry.updateStatus(DownloadStatusEnum.STOPPED, l10n("gui.download_status.not_started"));
-                            }
-
-                            initializeAndEnqueueEntry(queueEntry);
-                            count++;
-                        }
-
-                        if (count > 0) {
-                            log.info("Successfully restored {} downloads", count);
-                        } else {
-                            log.info("No downloads to restore");
-                        }
-                    } finally {
-                        linkCaptureLock.unlock();
-
-                        main.getConfig().setPersistenceDatabaseInitialized(true);
-                        main.updateConfig();
-                    }
-                });
+        if (persistence.isInitialized()) {
+            if (main.getConfig().isPersistenceDatabaseInitialized()
+                && main.getConfig().isRestoreSessionAfterRestart()) {
+                ToastMessenger.show(Message.builder()
+                    .message("gui.restoring_session.toast")
+                    .durationMillis(5000)
+                    .messageType(MessageTypeEnum.INFO)
+                    .discardDuplicates(true)
+                    .build());
             }
-        } catch (Exception e) {
-            GDownloader.handleException(e);
-        } finally {
-            main.getClipboardManager().unblock();
 
-            initialized.set(true);
-            fireListeners();
+            // Even if persistance is disabled, we still initialize the db so a restart is not
+            // needed and no data is lost if the user toggles persistence back on during runtime.
+            long nextId = persistence.getCounters().getCurrentValue(CounterTypeEnum.DOWNLOAD_ID);
+            downloadIdGenerator.set(nextId);
+            log.info("Current download id: {}", nextId);
+
+            GDownloader.GLOBAL_THREAD_POOL.execute(() -> {
+                linkCaptureLock.lock();// Intentionally block url capture during the entire restoring proccess
+                try {
+                    int count = 0;
+
+                    // We need an ugly comparator here because of null sequence numbers.
+                    // This way, we still preserve the original insertion order until a checkpoint updates the sequence.
+                    List<QueueEntryEntity> entities = persistence.getQueueEntries().getAll();
+                    List<QueueEntryEntity> originalOrder = new ArrayList<>(entities);
+                    entities.sort((e1, e2) -> {
+                        Long seq1 = e1.getCurrentDownloadSequence();
+                        Long seq2 = e2.getCurrentDownloadSequence();
+
+                        if (seq1 == null && seq2 == null) {
+                            return Integer.compare(originalOrder.indexOf(e1), originalOrder.indexOf(e2));
+                        } else if (seq1 == null) {
+                            return 1;
+                        } else if (seq2 == null) {
+                            return -1;
+                        } else {
+                            return seq1.compareTo(seq2);
+                        }
+                    });
+
+                    for (QueueEntryEntity entity : entities) {
+                        String downloadUrl = entity.getUrl();
+
+                        capturedLinks.add(downloadUrl);
+                        capturedLinks.add(entity.getOriginalUrl());
+
+                        List<AbstractDownloader> compatibleDownloaders = getCompatibleDownloaders(downloadUrl);
+
+                        if (compatibleDownloaders.isEmpty()) {
+                            log.error("No compatible downloaders found for: {}", downloadUrl);
+                            continue;
+                        }
+
+                        MediaCard mediaCard = main.getGuiManager()
+                            .getMediaCardManager().addMediaCard(downloadUrl);
+
+                        QueueEntry queueEntry = QueueEntry.fromEntity(entity, mediaCard, compatibleDownloaders);
+
+                        if (queueEntry.getCurrentQueueCategory() == QueueCategoryEnum.RUNNING) {
+                            queueEntry.updateStatus(DownloadStatusEnum.STOPPED, l10n("gui.download_status.not_started"));
+                        }
+
+                        initializeAndEnqueueEntry(queueEntry);
+                        count++;
+                    }
+
+                    if (count > 0) {
+                        log.info("Successfully restored {} downloads", count);
+                    } else {
+                        log.info("No downloads to restore");
+                    }
+                } finally {
+                    linkCaptureLock.unlock();
+
+                    main.getClipboardManager().unblock();
+
+                    main.getConfig().setPersistenceDatabaseInitialized(true);
+                    main.updateConfig();
+
+                    initialized.set(true);
+                    fireListeners();
+                }
+            });
         }
     }
 
