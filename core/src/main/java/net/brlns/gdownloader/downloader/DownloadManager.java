@@ -48,6 +48,7 @@ import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
 import net.brlns.gdownloader.settings.filters.GenericFilter;
 import net.brlns.gdownloader.settings.filters.YoutubeFilter;
 import net.brlns.gdownloader.settings.filters.YoutubePlaylistFilter;
+import net.brlns.gdownloader.system.ShutdownRegistry.CloseBefore;
 import net.brlns.gdownloader.system.TaskbarManager;
 import net.brlns.gdownloader.ui.GUIManager;
 import net.brlns.gdownloader.ui.MediaCard;
@@ -69,12 +70,16 @@ import static net.brlns.gdownloader.util.URLUtils.*;
  * @author Gabriel / hstr0100 / vertx010
  */
 @Slf4j
+@CloseBefore(before = {PersistenceManager.class})
 public class DownloadManager implements IEvent, AutoCloseable {
 
     private final AtomicLong downloadIdGenerator = new AtomicLong();
 
     @Getter
     private final GDownloader main;
+
+    @Getter
+    private final AtomicBoolean initialized = new AtomicBoolean();
 
     private final PersistenceManager persistence;
 
@@ -210,7 +215,14 @@ public class DownloadManager implements IEvent, AutoCloseable {
             GDownloader.handleException(e);
         } finally {
             main.getClipboardManager().unblock();
+
+            initialized.set(true);
+            fireListeners();
         }
+    }
+
+    public boolean isInitialized() {
+        return initialized.get();
     }
 
     public boolean isBlocked() {
@@ -535,6 +547,8 @@ public class DownloadManager implements IEvent, AutoCloseable {
         sequencer.addNewEntry(queueEntry);
         fireListeners();
 
+        setSkipDownload(queueEntry, queueEntry.isSkipped());
+
         updateRightClick(queueEntry, queueEntry.getCurrentQueueCategory());
 
         if (main.getConfig().isAutoDownloadStart() && !downloadsRunning.get()) {
@@ -799,6 +813,20 @@ public class DownloadManager implements IEvent, AutoCloseable {
         fireListeners();
     }
 
+    protected void setSkipDownload(QueueEntry queueEntry, boolean shouldSkip) {
+        queueEntry.setSkipped(shouldSkip);
+
+        stopDownload(queueEntry, () -> {
+            if (shouldSkip) {
+                queueEntry.updateStatus(DownloadStatusEnum.SKIPPED,
+                    l10n("gui.download_status.skipped"));
+            } else if (queueEntry.getDownloadStatus() == DownloadStatusEnum.SKIPPED) {
+                queueEntry.updateStatus(DownloadStatusEnum.QUEUED,
+                    l10n("gui.download_status.not_started"));
+            }
+        });
+    }
+
     private void queryMetadata(QueueEntry queueEntry) {
         if (!main.getConfig().isQueryMetadata() || queueEntry.getQueried().get()) {
             if (queueEntry.getDownloadStatus() == DownloadStatusEnum.QUERYING) {
@@ -900,6 +928,8 @@ public class DownloadManager implements IEvent, AutoCloseable {
         }
 
         fireListeners();
+
+        entry.setSkipped(false);
 
         GDownloader.GLOBAL_THREAD_POOL.execute(() -> {
             try {
@@ -1107,9 +1137,10 @@ public class DownloadManager implements IEvent, AutoCloseable {
             } finally {
                 entry.getRunning().set(false);
 
-                if (entry.getCurrentQueueCategory() == RUNNING
-                    && !entry.getCancelHook().get()) {
-                    log.error("Unexpected RUNNING download state, switching to QUEUED");
+                if (sequencer.contains(entry)) {
+                    entry.updateStatus(DownloadStatusEnum.STOPPED,
+                        l10n("gui.download_status.not_started"));
+
                     offerTo(QUEUED, entry);
                 }
             }
@@ -1127,8 +1158,6 @@ public class DownloadManager implements IEvent, AutoCloseable {
         int queuedCount = getQueuedDownloads();
         int completedCount = getCompletedDownloads();
 
-        int totalCount = sequencer.getTotalCount();
-
         if (!isRunning()) {
             if (failedCount > 0 && queuedCount == 0) {
                 taskbarManager.setProgressState(Taskbar.State.ERROR);
@@ -1142,6 +1171,7 @@ public class DownloadManager implements IEvent, AutoCloseable {
         if (queuedCount + runningCount > 50) {
             // With >50 downloads, the variation becomes so small we can simplify the progress calculation
             int finishedDownloads = completedCount + failedCount;
+            int totalCount = sequencer.getTotalCount();
 
             double completionPercentage = (double)finishedDownloads / totalCount * 100;
             taskbarManager.setProgressState(Taskbar.State.NORMAL);

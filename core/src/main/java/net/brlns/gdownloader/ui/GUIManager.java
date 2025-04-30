@@ -105,6 +105,7 @@ public final class GUIManager {
 
     private ContentPane currentContentPane;
     private JPanel emptyQueuePane;
+    private JPanel loadingQueuePane;
     private JPanel updaterPane;
 
     public GUIManager(GDownloader mainIn) {
@@ -321,6 +322,10 @@ public final class GUIManager {
             updateContentPane();
 
             EventDispatcher.registerEDT(PerformUpdateCheckEvent.class, (event) -> {
+                updateContentPane();
+            });
+
+            EventDispatcher.registerEDT(DownloadManager.class, (event) -> {
                 updateContentPane();
             });
 
@@ -714,12 +719,18 @@ public final class GUIManager {
         runOnEDT(() -> {
             if (main.getDownloadManager().isBlocked()) {
                 switchContentPane(ContentPane.UPDATER);
+                return;
+            }
+
+            if (!main.getDownloadManager().isInitialized()) {
+                switchContentPane(ContentPane.LOADING_QUEUE);
+                return;
+            }
+
+            if (!mediaCardManager.isEmpty()) {
+                switchContentPane(ContentPane.MAIN_QUEUE);
             } else {
-                if (!mediaCardManager.isEmpty()) {
-                    switchContentPane(ContentPane.MAIN_QUEUE);
-                } else {
-                    switchContentPane(ContentPane.EMPTY_QUEUE);
-                }
+                switchContentPane(ContentPane.EMPTY_QUEUE);
             }
         });
     }
@@ -743,11 +754,28 @@ public final class GUIManager {
                 mediaCardManager.getOrCreateMediaQueuePanel();
             case EMPTY_QUEUE ->
                 getOrCreateEmptyQueuePanel();
+            case LOADING_QUEUE ->
+                getOrCreateLoadingQueuePanel();
             case UPDATER ->
                 getOrCreateUpdaterPanel();
             default ->
                 throw new IllegalArgumentException("Unmapped content pane: " + pane);
         };
+    }
+
+    private JPanel getOrCreateLoadingQueuePanel() {
+        if (loadingQueuePane != null) {
+            return loadingQueuePane;
+        }
+
+        loadingQueuePane = new JPanel(new BorderLayout());
+        loadingQueuePane.setOpaque(false);
+        loadingQueuePane.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0));
+
+        CustomLoadingSpinner spinner = new CustomLoadingSpinner(50);
+        loadingQueuePane.add(spinner, BorderLayout.CENTER);
+
+        return loadingQueuePane;
     }
 
     private JPanel getOrCreateEmptyQueuePanel() {
@@ -1142,6 +1170,7 @@ public final class GUIManager {
     private static enum ContentPane {
         MAIN_QUEUE,
         EMPTY_QUEUE,
-        UPDATER
+        LOADING_QUEUE,
+        UPDATER,
     }
 }

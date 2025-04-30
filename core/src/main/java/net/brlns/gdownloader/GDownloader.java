@@ -137,7 +137,6 @@ import static net.brlns.gdownloader.util.StringUtils.notNullOrEmpty;
 // TODO Implement plugin API, create example plugin, create more events.
 // prio
 // TODO save last window size in config
-// TODO Right Click > Skip Download
 // TODO when changing download path, move the cache directory to the new location. Need to take available space into consideration
 // TODO when expanded, display video info in the media cards
 /**
@@ -391,21 +390,21 @@ public final class GDownloader {
         // Dorkbox's existing library does not seem reliable enough across all the environments we support.
         PopupMenu popup = new PopupMenu();
 
-        popup.add(buildMenuItem(l10n("gui.toggle_downloads"),
+        popup.add(buildMenuItem("gui.toggle_downloads",
             e -> downloadManager.toggleDownloads()));
 
-        popup.add(buildMenuItem(l10n("gui.open_downloads_directory"),
+        popup.add(buildMenuItem("gui.open_downloads_directory",
             e -> openDownloadsDirectory()));
 
         popup.addSeparator();
 
-        popup.add(buildMenuItem(l10n("settings.sidebar_title"),
+        popup.add(buildMenuItem("settings.sidebar_title",
             e -> guiManager.displaySettingsPanel()));
 
-        popup.add(buildMenuItem(l10n("gui.restart"),
+        popup.add(buildMenuItem("gui.restart",
             e -> restart()));
 
-        popup.add(buildMenuItem(l10n("gui.exit"),
+        popup.add(buildMenuItem("gui.exit",
             e -> shutdown()));
 
         return popup;
@@ -419,8 +418,8 @@ public final class GDownloader {
     /**
      * Helper for building system tray menu entries.
      */
-    private MenuItem buildMenuItem(String name, ActionListener actionListener) {
-        MenuItem menuItem = new MenuItem(name);
+    private MenuItem buildMenuItem(String translationKey, ActionListener actionListener) {
+        MenuItem menuItem = new MenuItem(l10n(translationKey));
         menuItem.addActionListener(actionListener);
 
         return menuItem;

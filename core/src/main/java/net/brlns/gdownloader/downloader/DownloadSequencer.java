@@ -191,6 +191,7 @@ public class DownloadSequencer {
                 long downloadId = queueEntry.getDownloadId();
 
                 if (queueEntry.getCurrentQueueCategory() == QUEUED
+                    && !queueEntry.getDownloadSkipped().get()
                     && categorySets.get(QUEUED).contains(downloadId)) {
 
                     updateEntryCategory(queueEntry, RUNNING);

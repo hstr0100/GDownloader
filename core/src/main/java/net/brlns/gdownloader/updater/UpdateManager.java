@@ -119,7 +119,7 @@ public final class UpdateManager {
                                 log.info("Starting {} updater", updater.getName());
                                 updater.check(!isBooting);
                             } catch (NoFallbackAvailableException e) {
-                                log.error("Updater {} failed and no fallback is available."
+                                log.error("{} updater failed and no fallback is available."
                                     + " Your OS might be unsupported.", updater.getName());
                             } catch (Exception e) {
                                 handleException(e);
@@ -128,7 +128,7 @@ public final class UpdateManager {
                             }
                         });
                     } else {
-                        log.info("Updater {} is not supported on this platform or runtime method.", updater.getName());
+                        log.info("{} updater is not supported on this platform or runtime method.", updater.getName());
                         latch.countDown();
                     }
                 }

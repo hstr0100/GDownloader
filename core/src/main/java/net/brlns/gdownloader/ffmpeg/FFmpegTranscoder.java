@@ -38,6 +38,7 @@ import net.brlns.gdownloader.process.ProcessArguments;
 import net.brlns.gdownloader.process.ProcessMonitor;
 import net.brlns.gdownloader.settings.Settings;
 import net.brlns.gdownloader.settings.enums.VideoContainerEnum;
+import net.brlns.gdownloader.system.ShutdownRegistry;
 import net.brlns.gdownloader.updater.SystemExecutableLocator;
 import net.brlns.gdownloader.util.CancelHook;
 import net.brlns.gdownloader.util.FileUtils;
@@ -51,6 +52,7 @@ import static net.brlns.gdownloader.util.StringUtils.notNullOrEmpty;
  * @author Gabriel / hstr0100 / vertx010
  */
 @Slf4j
+@ShutdownRegistry.CloseBefore(before = {ProcessMonitor.class})
 public final class FFmpegTranscoder implements AutoCloseable {
 
     private final Map<VideoCodecEnum, EncoderEnum> autoEncoderCache = new ConcurrentHashMap<>();
@@ -62,12 +64,14 @@ public final class FFmpegTranscoder implements AutoCloseable {
 
     @Getter
     private final ProcessMonitor processMonitor;
+    private final boolean mustCloseProcessMonitor;
 
     @Getter
     private final FFmpegCompatibilityScanner compatScanner;
 
     public FFmpegTranscoder(@Nullable ProcessMonitor processMonitorIn) {
         processMonitor = processMonitorIn == null ? new ProcessMonitor() : processMonitorIn;
+        mustCloseProcessMonitor = processMonitorIn == null;
         compatScanner = new FFmpegCompatibilityScanner(this);
     }
 
@@ -775,6 +779,8 @@ public final class FFmpegTranscoder implements AutoCloseable {
     @PreDestroy
     @Override
     public void close() {
-        processMonitor.close();
+        if (mustCloseProcessMonitor) {
+            processMonitor.close();
+        }
     }
 }

@@ -26,6 +26,7 @@ import net.brlns.gdownloader.settings.enums.ISettingsEnum;
 public enum DownloadStatusEnum implements ISettingsEnum {
     QUERYING("enums.download_status.querying"),
     STOPPED("enums.download_status.stopped"),
+    SKIPPED("enums.download_status.skipped"),
     QUEUED("enums.download_status.queued"),
     STARTING("enums.download_status.starting"),
     RETRYING("enums.download_status.retrying"),

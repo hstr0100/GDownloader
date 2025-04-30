@@ -120,6 +120,8 @@ public class QueueEntry {
     private String lastStatusMessage;
 
     private final AtomicBoolean downloadStarted = new AtomicBoolean(false);
+    private final AtomicBoolean downloadSkipped = new AtomicBoolean(false);
+
     private final CancelHook cancelHook = new CancelHook();
     private final AtomicBoolean running = new AtomicBoolean(false);
     private final AtomicBoolean queried = new AtomicBoolean(false);
@@ -334,6 +336,16 @@ public class QueueEntry {
         mediaCard.setPriorityIcon(priorityIn);
     }
 
+    public boolean isSkipped() {
+        return downloadSkipped.get();
+    }
+
+    public void setSkipped(boolean skip) {
+        downloadSkipped.set(skip);
+
+        updateExtraRightClickOptions();
+    }
+
     public void setMediaInfo(MediaInfo mediaInfoIn) {
         mediaInfo = mediaInfoIn;
 
@@ -539,6 +551,10 @@ public class QueueEntry {
                     mediaCard.setPercentage(100);
                     mediaCard.setProgressBarTextAndColors(status.getDisplayName(), Color.GRAY);
                 }
+                case SKIPPED -> {
+                    mediaCard.setPercentage(100);
+                    mediaCard.setProgressBarTextAndColors(status.getDisplayName(), new Color(61, 61, 61));
+                }
                 case DOWNLOADING, TRANSCODING -> {
                     if (mediaCard.getPercentage() >= 0) {
                         mediaCard.setPercentage(0);
@@ -686,6 +702,8 @@ public class QueueEntry {
     }
 
     public void updateExtraRightClickOptions() {
+        DownloadManager manager = main.getDownloadManager();
+
         NestedMenuEntry extrasSubmenu = new NestedMenuEntry();
 
         BufferedImage thumbnailImage;
@@ -716,6 +734,16 @@ public class QueueEntry {
         extrasSubmenu.put(l10n("gui.remove_entry"),
             new RunnableMenuEntry(()
                 -> dispose(CloseReasonEnum.MANUAL)));
+
+        if (currentQueueCategory == QueueCategoryEnum.QUEUED
+            || currentQueueCategory == QueueCategoryEnum.RUNNING) {
+            boolean skipped = isSkipped();
+            extrasSubmenu.put(skipped
+                ? l10n("gui.skip.unskip_download")
+                : l10n("gui.skip.skip_download"),
+                new RunnableMenuEntry(()
+                    -> manager.setSkipDownload(this, !skipped)));
+        }
 
         if (!finalMediaFiles.isEmpty()) {
             extrasSubmenu.put(l10n("gui.delete_files_and_remove"),
@@ -884,6 +912,7 @@ public class QueueEntry {
         entity.setLastStatusMessage(getLastStatusMessage());
 
         entity.setDownloadStarted(getDownloadStarted().get());
+        entity.setDownloadSkipped(getDownloadSkipped().get());
         // Runtime properties, do not save.
         //entity.setCancelHook(getCancelHook().get());
         //entity.setRunning(isRunning());
@@ -943,6 +972,7 @@ public class QueueEntry {
         }
 
         queueEntry.getDownloadStarted().set(entity.isDownloadStarted());
+        queueEntry.getDownloadSkipped().set(entity.isDownloadSkipped());
         //queueEntry.getCancelHook().set(entity.isCancelHook());
         //queueEntry.getRunning().set(entity.isRunning());
         queueEntry.getRetryCounter().set(entity.getRetryCounter());
