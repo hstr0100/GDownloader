@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package net.brlns.gdownloader.updater;
+package net.brlns.gdownloader.system;
 
 import jakarta.annotation.Nullable;
 import java.io.File;
@@ -93,6 +93,26 @@ public final class SystemExecutableLocator {
         }
 
         // Welp
+        return null;
+    }
+
+    @Nullable
+    public static File locateDesktopFile(String filename) {
+        List<String> applicationDirs = List.of(
+            "/usr/share/applications/",
+            "/usr/local/share/applications/",
+            System.getProperty("user.home") + "/.local/share/applications/",
+            System.getProperty("user.home") + "/.config/autostart"
+        );
+
+        for (String dir : applicationDirs) {
+            Path path = Paths.get(dir, filename);
+
+            if (Files.exists(path)) {
+                return path.toFile();
+            }
+        }
+
         return null;
     }
 }

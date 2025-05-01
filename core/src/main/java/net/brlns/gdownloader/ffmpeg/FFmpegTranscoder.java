@@ -39,7 +39,7 @@ import net.brlns.gdownloader.process.ProcessMonitor;
 import net.brlns.gdownloader.settings.Settings;
 import net.brlns.gdownloader.settings.enums.VideoContainerEnum;
 import net.brlns.gdownloader.system.ShutdownRegistry;
-import net.brlns.gdownloader.updater.SystemExecutableLocator;
+import net.brlns.gdownloader.system.SystemExecutableLocator;
 import net.brlns.gdownloader.util.CancelHook;
 import net.brlns.gdownloader.util.FileUtils;
 import net.brlns.gdownloader.util.NoFallbackAvailableException;

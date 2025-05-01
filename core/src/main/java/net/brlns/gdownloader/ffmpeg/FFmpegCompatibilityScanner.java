@@ -42,7 +42,7 @@ import net.brlns.gdownloader.ffmpeg.enums.VideoCodecEnum;
 import net.brlns.gdownloader.ffmpeg.structs.EncoderPreset;
 import net.brlns.gdownloader.ffmpeg.structs.EncoderProfile;
 import net.brlns.gdownloader.process.ProcessArguments;
-import net.brlns.gdownloader.updater.SystemExecutableLocator;
+import net.brlns.gdownloader.system.SystemExecutableLocator;
 
 import static net.brlns.gdownloader.ffmpeg.FFmpegCompatibilityScanner.EncoderPresetCommandEnum.*;
 

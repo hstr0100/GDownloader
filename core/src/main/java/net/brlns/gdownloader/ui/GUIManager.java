@@ -923,6 +923,11 @@ public final class GUIManager {
                             progressBar.setValue((int)progress);
                             progressBar.setString(status.getDisplayName() + ": " + String.format("%.1f", progress) + "%");
                             progressBar.setForeground(new Color(255, 214, 0));
+
+                            String waitText = l10n("gui.checking_updates.please_wait");
+                            if (!bottomLabel.getText().equals(waitText)) {
+                                bottomLabel.setText(waitText);
+                            }
                         }
                         case UNPACKING -> {
                             progressBar.setValue((int)progress);

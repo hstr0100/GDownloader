@@ -29,7 +29,7 @@ import java.util.Map;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
-import net.brlns.gdownloader.util.FileUtils;
+import net.brlns.gdownloader.system.SystemExecutableLocator;
 import org.freedesktop.dbus.annotations.DBusInterfaceName;
 import org.freedesktop.dbus.annotations.Position;
 import org.freedesktop.dbus.connections.impl.DBusConnection;
@@ -234,7 +234,7 @@ public class UnityTaskbarManager implements ITaskbarManager {
             );
 
             connection.sendMessage(updateSignal);
-        } catch (DBusException e) {
+        } catch (Exception e) {
             log.error("Failed to update progress bar via DBus: {}", e.getMessage());
         }
     }
@@ -305,7 +305,7 @@ public class UnityTaskbarManager implements ITaskbarManager {
         ));
 
         for (String basename : possibleBasenames) {
-            File desktopFile = FileUtils.locateDesktopFile(basename + ".desktop");
+            File desktopFile = SystemExecutableLocator.locateDesktopFile(basename + ".desktop");
 
             if (desktopFile != null) {
                 log.info("Resolved .desktop file to: {}", basename);
