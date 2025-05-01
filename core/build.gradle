@@ -407,10 +407,17 @@ task createAppImage(type: Exec, dependsOn: zipJpackageImage) {
     workingDir "$buildDir/appimage"
     environment "ARCH", appImageArch
 
+    def gpgKeyId = System.getenv('GPG_KEY_ID')
     // this requires appimagetool (without extension and version number) to be in your PATH
     // https://github.com/AppImage/appimagetool/releases
-    commandLine "appimagetool", "--verbose", "-n", "AppDir", appImageName,
-        "--updateinformation", updateInfo
+    def commandLineArgs = ["appimagetool", "--verbose", "-n", "AppDir", appImageName,
+        "--updateinformation", updateInfo]
+
+    if (gpgKeyId) {
+        commandLineArgs += ["--sign", gpgKeyId]
+    }
+
+    commandLine commandLineArgs
 
     doLast {
         [

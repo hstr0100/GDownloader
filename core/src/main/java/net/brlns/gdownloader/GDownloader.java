@@ -66,7 +66,7 @@ import net.brlns.gdownloader.settings.enums.BrowserEnum;
 import net.brlns.gdownloader.system.NetworkConnectivityListener;
 import net.brlns.gdownloader.system.ShutdownRegistry;
 import net.brlns.gdownloader.system.StartupManager;
-import net.brlns.gdownloader.system.taskbar.SystemTrayManager;
+import net.brlns.gdownloader.system.SystemTrayManager;
 import net.brlns.gdownloader.ui.GUIManager;
 import net.brlns.gdownloader.ui.message.Message;
 import net.brlns.gdownloader.ui.message.MessageTypeEnum;
@@ -141,6 +141,7 @@ import static net.brlns.gdownloader.util.StringUtils.notNullOrEmpty;
 // TODO when changing download path, move the cache directory to the new location. Need to take available space into consideration
 // TODO when expanded, display video info in the media cards
 // TODO --dump-json, filter only required fields
+// TODO button to cancel update check
 /**
  * GDownloader - GUI wrapper for yt-dlp
  *

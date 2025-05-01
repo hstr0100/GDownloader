@@ -9,51 +9,6 @@ permissions:
   contents: write
 
 jobs:
-  test-linux:
-    name: Test Linux Build
-    if: ${{ !startsWith(github.ref, 'refs/tags/') }}
-
-    strategy:
-      matrix:
-        include:
-          - GRADLE_ARCH: amd64
-            RUNS_ON: ubuntu-22.04
-            JAVA_VERSION: 21
-
-    runs-on: ${{ matrix.RUNS_ON }}
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Set up JDK ${{ matrix.JAVA_VERSION }}
-        uses: actions/setup-java@v4
-        with:
-          java-version: ${{ matrix.JAVA_VERSION }}
-          distribution: 'temurin'
-
-      - name: Make gradlew executable
-        run: chmod +x ./gradlew
-
-      - name: Setup Gradle cache
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-            .gradle
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
-
-      - name: Build Shaded JAR
-        run: ./gradlew clean build
-
-      - name: Build JPackage Binary
-        run: ./gradlew jpackage
-
   build-linux:
     name: Build Linux
     if: startsWith(github.ref, 'refs/tags/')
@@ -73,6 +28,7 @@ jobs:
     runs-on: ${{ matrix.RUNS_ON }}
     env:
       ARCH: ${{ matrix.APPIMAGE_ARCH }}
+      GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}
 
     steps:
       - name: Checkout repository
@@ -89,7 +45,14 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y fakeroot file binutils zsync
+          sudo apt-get install -y fakeroot file binutils zsync desktop-file-utils gnupg
+
+      - name: Import GPG key
+        uses: crazy-max/ghaction-import-gpg@v6
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE }}
+          fingerprint: ${{ secrets.GPG_KEY_ID }}
 
       - name: Install AppImageTool
         run: |

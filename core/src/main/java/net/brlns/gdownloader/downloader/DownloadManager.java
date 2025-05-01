@@ -769,6 +769,8 @@ public class DownloadManager implements IEvent, AutoCloseable {
     }
 
     private void updateRightClick(QueueEntry entry, QueueCategoryEnum category) {
+        entry.updateExtraRightClickOptions();
+
         if (category == RUNNING) {
             entry.removeRightClick(_forceStartKey);
             return;

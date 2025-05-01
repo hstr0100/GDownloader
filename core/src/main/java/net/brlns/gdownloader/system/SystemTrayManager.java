@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package net.brlns.gdownloader.system.taskbar;
+package net.brlns.gdownloader.system;
 
 import java.awt.AWTException;
 import java.awt.Image;
@@ -105,7 +105,7 @@ public class SystemTrayManager {
         return popup;
     }
 
-    protected static PopupMenu getDefaultShortcutMenu() {
+    public static PopupMenu getDefaultShortcutMenu() {
         GDownloader main = GDownloader.getInstance();
 
         PopupMenu popup = new PopupMenu();

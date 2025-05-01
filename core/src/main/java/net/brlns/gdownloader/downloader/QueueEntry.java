@@ -133,6 +133,7 @@ public class QueueEntry {
     private File tmpDirectory;
     private final Set<File> finalMediaFiles = new HashSet<>();
 
+    private final List<String> thumbnailUrls = new CopyOnWriteArrayList<>();
     private final List<String> lastCommandLine = new CopyOnWriteArrayList<>();
 
     private final ConcurrentLinkedHashSet<String> errorLog = new ConcurrentLinkedHashSet<>();
@@ -346,6 +347,16 @@ public class QueueEntry {
         updateExtraRightClickOptions();
     }
 
+    @Nullable
+    public BufferedImage getValidFullResThumbnail() {
+        return thumbnailUrls.stream()
+            .map(this::tryLoadThumbnail)
+            .filter(Optional::isPresent)
+            .map(Optional::get)
+            .findFirst()
+            .orElse(null);
+    }
+
     public void setMediaInfo(MediaInfo mediaInfoIn) {
         mediaInfo = mediaInfoIn;
 
@@ -390,12 +401,15 @@ public class QueueEntry {
 
         optional.ifPresentOrElse(
             img -> {
+                // Downscale thumbnails to save space and resources, we don't need the full resolution here.
+                BufferedImage downscaledImage = ImageUtils.downscaleImage(img, 240);
+
                 if (base64encoded.isEmpty()) {
                     mediaInfo.setBase64EncodedThumbnail(
-                        ImageUtils.bufferedImageToBase64(img, "png"));
+                        ImageUtils.bufferedImageToBase64(downscaledImage, "jpg"));
                 }
 
-                mediaCard.setThumbnailAndDuration(img, mediaInfo.getDuration());
+                mediaCard.setThumbnailAndDuration(downscaledImage, mediaInfo.getDuration());
             },
             () -> {
                 if (log.isDebugEnabled()) {
@@ -403,6 +417,9 @@ public class QueueEntry {
                 }
             }
         );
+
+        mediaInfo.bestThumbnails()
+            .forEach(thumbnailUrls::add);
     }
 
     private Optional<BufferedImage> tryLoadThumbnail(String url) {
@@ -706,11 +723,17 @@ public class QueueEntry {
 
         NestedMenuEntry extrasSubmenu = new NestedMenuEntry();
 
-        BufferedImage thumbnailImage;
-        if ((thumbnailImage = mediaCard.getFullResThumbnailImage()) != null) {
+        if (mediaCard.getThumbnailImage() != null) {
             extrasSubmenu.put(l10n("gui.view_thumbnail"),
-                new RunnableMenuEntry(
-                    () -> openThumbnail(thumbnailImage)));
+                new RunnableMenuEntry(() -> {
+                    BufferedImage thumbnailImage = getValidFullResThumbnail();
+                    if (thumbnailImage != null) {
+                        openThumbnail(thumbnailImage);
+                    } else {
+                        log.warn("Could not load a valid full resolution thumbnail.");
+                        openThumbnail(mediaCard.getThumbnailImage());
+                    }
+                }));
         }
 
         if (!lastCommandLine.isEmpty()) {
@@ -928,6 +951,7 @@ public class QueueEntry {
             .map(File::getAbsolutePath)
             .collect(Collectors.toCollection(ArrayList::new)));
 
+        entity.setThumbnailUrls(new ArrayList<>(getThumbnailUrls()));
         entity.setLastCommandLine(new ArrayList<>(getLastCommandLine()));
 
         entity.setErrorLog(getErrorLog().snapshotAsList());
@@ -990,6 +1014,9 @@ public class QueueEntry {
         for (String path : entity.getMediaFilePaths()) {
             queueEntry.getFinalMediaFiles().add(new File(path));
         }
+
+        queueEntry.getThumbnailUrls().clear();
+        queueEntry.getThumbnailUrls().addAll(entity.getThumbnailUrls());
 
         queueEntry.setLastCommandLine(entity.getLastCommandLine());
 

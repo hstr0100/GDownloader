@@ -22,6 +22,7 @@ import java.awt.PopupMenu;
 import java.awt.Taskbar;
 import java.awt.Window;
 import lombok.extern.slf4j.Slf4j;
+import net.brlns.gdownloader.system.SystemTrayManager;
 import net.brlns.gdownloader.util.ImageUtils;
 
 /**

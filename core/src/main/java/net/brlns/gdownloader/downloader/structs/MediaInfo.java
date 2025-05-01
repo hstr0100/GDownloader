@@ -150,6 +150,24 @@ public class MediaInfo {
         return builder.build();
     }
 
+    @JsonIgnore
+    public Stream<String> bestThumbnails() {
+        Stream.Builder<String> builder = Stream.builder();
+
+        thumbnails.stream()
+            .filter(thumb -> thumb.getUrl() != null && thumb.getUrl().matches("^https?://.*"))
+            .sorted(Comparator.comparingInt(Thumbnail::getWidth).reversed())
+            .map(Thumbnail::getUrl)
+            .limit(5)
+            .forEach(builder::add);
+
+        if (thumbnail != null && thumbnail.matches("^https?://.*")) {
+            builder.add(thumbnail);
+        }
+
+        return builder.build();
+    }
+
     /**
      * Converts this MediaInfo to a MediaInfoEntity for persistence.
      */
