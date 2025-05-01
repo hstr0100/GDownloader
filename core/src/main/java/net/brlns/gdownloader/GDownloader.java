@@ -108,12 +108,10 @@ import static net.brlns.gdownloader.util.StringUtils.notNullOrEmpty;
 // TODO Wget integration
 // TODO NTFS File path length workaround for gallery-dl
 // TODO Split main window from GUIManager
-// TODO gallery-dl does not accept an argument specifying yt-dlp/ffmpeg location, figure out a workaround to pass the correct path to it
 // TODO Fastutil collections
 // TODO Proxy settings should be add to the UI, fields should be validated on the fly
 // TODO Tabs in settings for the different downloaders
 // TODO Crawl for valid links that can be consumed by direct-http
-// TODO Two column layout when in full screen
 // TODO Fix notification line wrapping
 // TODO Downloader priority settings
 // TODO Notifications are appearing below the main window when in fullscreen mode.
@@ -131,16 +129,13 @@ import static net.brlns.gdownloader.util.StringUtils.notNullOrEmpty;
 // TODO Direct-HTTP: user-agent
 // TODO Tags/Filtering
 // TODO Remove ffmpeg requirement by omitting transcoding arguments
-// TODO Keep track of file hashes to avoid duplicates if such setting is turned on
 // TODO Investigate issue where video files get downloaded with audio name pattern applied
 // TODO Implement plugin API, create example plugin, create more events.
-// TODO implement Linux taskbar shortcuts
 // prio
 // TODO save last window size in config
 // TODO right-click > set download location
 // TODO when changing download path, move the cache directory to the new location. Need to take available space into consideration
 // TODO when expanded, display video info in the media cards
-// TODO --dump-json, filter only required fields
 // TODO button to cancel update check
 /**
  * GDownloader - GUI wrapper for yt-dlp

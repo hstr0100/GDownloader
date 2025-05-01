@@ -123,6 +123,7 @@ public class QueueEntryEntity implements Serializable {
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "thumbnail_urls", joinColumns = @JoinColumn(name = "download_id"))
     @Lob
+    @OrderColumn
     @Column(name = "media_thumbnail_urls", length = 2048)
     private ArrayList<String> thumbnailUrls = new ArrayList<>();
 
