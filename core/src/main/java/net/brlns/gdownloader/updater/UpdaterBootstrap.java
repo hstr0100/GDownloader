@@ -278,6 +278,12 @@ public class UpdaterBootstrap {
             // Turns out we need to get rid of this conflicting env variable.
             processBuilder.environment().remove("_JPACKAGE_LAUNCHER");
 
+            // Ideally, updates should have X-AppImage-Integrate=false desktop property set
+            if (GDownloader.isLinux()) {
+                processBuilder.environment().put("APPIMAGELAUNCHER_DISABLE", "1");
+                processBuilder.environment().put("DESKTOPINTEGRATION", "0");
+            }
+
             Process process = processBuilder.start();
 
             try (BufferedReader reader = new BufferedReader(
