@@ -347,6 +347,12 @@ public class Settings {
             }
         }
 
+        // Reset this suboptimal default if launching from an ancient version.
+        // Old launchers aren't aware of our current single-instance mode.
+        if (!isExitOnClose() && getConfigVersion() <= 20) {
+            setExitOnClose(true);
+        }
+
         if (!getExtraYtDlpArguments().isEmpty() && getConfigVersion() < 33) {
             setEnableExtraArguments(true);
         }
