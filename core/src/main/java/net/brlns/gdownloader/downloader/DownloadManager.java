@@ -1164,9 +1164,9 @@ public class DownloadManager implements IEvent, AutoCloseable {
             taskbarManager.setBadgeValue(0);
 
             if (failedCount > 0 && queuedCount == 0) {
-                taskbarManager.setProgressState(TaskbarState.ERROR);
+                taskbarManager.setTaskbarState(TaskbarState.ERROR);
             } else {
-                taskbarManager.setProgressState(TaskbarState.OFF);
+                taskbarManager.setTaskbarState(TaskbarState.OFF);
             }
 
             return;
@@ -1180,7 +1180,7 @@ public class DownloadManager implements IEvent, AutoCloseable {
             int totalCount = sequencer.getTotalCount();
 
             double completionPercentage = (double)finishedDownloads / totalCount * 100;
-            taskbarManager.setProgressState(TaskbarState.NORMAL);
+            taskbarManager.setTaskbarState(TaskbarState.NORMAL);
             taskbarManager.setProgressValue(completionPercentage);
 
             return;
@@ -1193,7 +1193,7 @@ public class DownloadManager implements IEvent, AutoCloseable {
             .collect(Collectors.toList());
 
         if (validPercentages.isEmpty()) {
-            taskbarManager.setProgressState(TaskbarState.INDETERMINATE);
+            taskbarManager.setTaskbarState(TaskbarState.INDETERMINATE);
             // This might happen if all entries return -1, indicating-
             // gallery-dl/spotDL downloaders where we are unable to track progress.
             return;
@@ -1206,7 +1206,7 @@ public class DownloadManager implements IEvent, AutoCloseable {
 
         double averagePercentage = MathUtils.calculateAveragePercentage(validPercentages);
 
-        taskbarManager.setProgressState(TaskbarState.NORMAL);
+        taskbarManager.setTaskbarState(TaskbarState.NORMAL);
         taskbarManager.setProgressValue(averagePercentage);
     }
 

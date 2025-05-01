@@ -29,7 +29,7 @@ public class NoOpTaskbarManager implements ITaskbarManager {
     }
 
     @Override
-    public void setProgressState(ITaskbarManager.TaskbarState state) {
+    public void setTaskbarState(ITaskbarManager.TaskbarState state) {
         // No-op
     }
 

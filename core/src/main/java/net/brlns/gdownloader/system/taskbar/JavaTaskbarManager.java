@@ -42,7 +42,7 @@ public class JavaTaskbarManager implements ITaskbarManager {
 
     private int lastBadgeValue = -1;
     private int lastProgressValue = -1;
-    private TaskbarState lastProgressState = null;
+    private TaskbarState lastTaskbarState = null;
 
     public JavaTaskbarManager(Window targetWindowIn) {
         targetWindow = targetWindowIn;
@@ -80,16 +80,16 @@ public class JavaTaskbarManager implements ITaskbarManager {
     }
 
     @Override
-    public void setProgressState(TaskbarState state) {
+    public void setTaskbarState(TaskbarState state) {
         if (!isSupported || !taskbar.isSupported(Taskbar.Feature.PROGRESS_STATE_WINDOW)) {
             return;
         }
 
-        if (state == lastProgressState) {
+        if (state == lastTaskbarState) {
             return;
         }
 
-        lastProgressState = state;
+        lastTaskbarState = state;
 
         try {
             Taskbar.State nativeState = switch (state) {
@@ -228,14 +228,11 @@ public class JavaTaskbarManager implements ITaskbarManager {
     public void resetIndicators() {
         lastProgressValue = -1;
         lastBadgeValue = -1;
-        lastProgressState = null;
+        lastTaskbarState = null;
 
         setProgressValue(0);
         setBadgeValue(0);
-
-        if (isSupported) {
-            setProgressState(TaskbarState.OFF);
-        }
+        setTaskbarState(TaskbarState.OFF);
     }
 
     @Override

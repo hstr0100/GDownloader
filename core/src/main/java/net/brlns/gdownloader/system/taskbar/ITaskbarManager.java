@@ -25,7 +25,7 @@ public interface ITaskbarManager {
 
     boolean isTaskbarSupported();
 
-    void setProgressState(TaskbarState state);
+    void setTaskbarState(TaskbarState state);
 
     default void setProgressValue(double value) {
         setProgressValue((int)Math.round(value));

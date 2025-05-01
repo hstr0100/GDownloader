@@ -57,8 +57,8 @@ public class TaskbarManager implements ITaskbarManager, AutoCloseable {
     }
 
     @Override
-    public void setProgressState(TaskbarState state) {
-        delegate.setProgressState(state);
+    public void setTaskbarState(TaskbarState state) {
+        delegate.setTaskbarState(state);
     }
 
     @Override

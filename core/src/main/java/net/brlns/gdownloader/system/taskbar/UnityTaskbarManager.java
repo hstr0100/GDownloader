@@ -63,13 +63,13 @@ public class UnityTaskbarManager implements ITaskbarManager {
     private DBusConnection connection;
     private boolean isDBusAvailable = false;
 
-    private TaskbarState currentTaskbarState = null;
-    private int progressValue = -1;
-    private int badgeValue = -1;
+    private TaskbarState currentTaskbarState = TaskbarState.OFF;
+    private int progressValue = 0;
+    private int badgeValue = 0;
 
-    private TaskbarState lastTaskbarState = currentTaskbarState;
-    private int lastProgressValue = progressValue;
-    private int lastBadgeValue = badgeValue;
+    private TaskbarState lastTaskbarState = null;
+    private int lastProgressValue = -1;
+    private int lastBadgeValue = -1;
 
     private final String applicationId;
     private final String objectPath = "/gdownloader";
@@ -136,7 +136,7 @@ public class UnityTaskbarManager implements ITaskbarManager {
     }
 
     @Override
-    public void setProgressState(TaskbarState state) {
+    public void setTaskbarState(TaskbarState state) {
         currentTaskbarState = state;
 
         if (currentTaskbarState != lastTaskbarState) {
@@ -188,13 +188,13 @@ public class UnityTaskbarManager implements ITaskbarManager {
 
     @Override
     public void resetIndicators() {
+        lastProgressValue = -1;
+        lastBadgeValue = -1;
+        lastTaskbarState = null;
+
         progressValue = 0;
         badgeValue = 0;
         currentTaskbarState = TaskbarState.OFF;
-
-        lastTaskbarState = currentTaskbarState;
-        lastProgressValue = progressValue;
-        lastBadgeValue = badgeValue;
 
         updateProgress();
     }
