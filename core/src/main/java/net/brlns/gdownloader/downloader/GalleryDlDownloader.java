@@ -151,13 +151,13 @@ public class GalleryDlDownloader extends AbstractDownloader {
         }
 
         Optional<File> ffmpegPath = main.getFfmpegTranscoder().getFfmpegPath();
-        if (ffmpegPath.isPresent()) {// TODO: test
+        if (ffmpegPath.isPresent()) {
             genericArguments.add(
                 "-o",
-                "downloader.ytdl.raw-options=['"
-                + "--ffmpeg-location" + "', '"
-                + ffmpegPath.get().getAbsolutePath()
-                + "']"
+                String.format(
+                    "downloader.ytdl.raw-options={\"ffmpeg-location\": \"%s\"}",
+                    ffmpegPath.get().getAbsolutePath()
+                )
             );
         }
 

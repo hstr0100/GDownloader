@@ -58,6 +58,10 @@ public class UnityTaskbarManager implements ITaskbarManager {
     static {
         Logger noisyLogger = (Logger)LoggerFactory.getLogger("org.freedesktop.dbus");
         noisyLogger.setLevel(Level.OFF);
+
+        Logger unityLogger = (Logger)LoggerFactory.getLogger(
+            "net.brlns.gdownloader.system.taskbar.UnityTaskbarManager$LauncherEntry$Update");
+        unityLogger.setLevel(Level.OFF);
     }
 
     private DBusConnection connection;
