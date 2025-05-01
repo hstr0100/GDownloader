@@ -19,6 +19,7 @@ package net.brlns.gdownloader.system.taskbar;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import java.awt.MenuItem;
+import java.awt.PopupMenu;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -51,7 +52,6 @@ import static net.brlns.gdownloader.util.StringUtils.notNullOrEmpty;
  *
  * @author Gabriel / hstr0100 / vertx010
  */
-// TODO: test behavior under a DE without D-Bus support.
 @Slf4j
 public class UnityTaskbarManager implements ITaskbarManager {
 
@@ -166,6 +166,12 @@ public class UnityTaskbarManager implements ITaskbarManager {
 
             updateProgress();
         }
+    }
+
+    @Override
+    public void setShortcutMenu(PopupMenu shortcutMenu) {
+        // TODO quicklists, handle actions via AppServer.
+        log.warn("Shortcut menu is not supported in Unity implementation");
     }
 
     @Override
@@ -296,8 +302,6 @@ public class UnityTaskbarManager implements ITaskbarManager {
 
         for (String basename : possibleBasenames) {
             File desktopFile = FileUtils.locateDesktopFile(basename + ".desktop");
-
-            log.info("Testing {} {}", basename, desktopFile);
 
             if (desktopFile != null) {
                 log.info("Resolved .desktop file to: {}", basename);

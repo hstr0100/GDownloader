@@ -224,7 +224,7 @@ public class PopupMessenger extends AbstractMessenger {
         GDownloader main = GDownloader.getInstance();
 
         if (main.getConfig().isUseNativeSystemNotifications()
-            && main.isSystemTrayInitialized()) {
+            && main.getSystemTrayManager().isInitialized()) {
             TrayIcon.MessageType nativeType = switch (message.getMessageType()) {
                 case ERROR ->
                     TrayIcon.MessageType.ERROR;
@@ -234,7 +234,7 @@ public class PopupMessenger extends AbstractMessenger {
                     TrayIcon.MessageType.INFO;
             };
 
-            main.getTrayIcon().displayMessage(
+            main.getSystemTrayManager().getTrayIcon().displayMessage(
                 message.getTitle(), message.getMessage(), nativeType);
             return;
         }

@@ -17,6 +17,7 @@
 package net.brlns.gdownloader.system.taskbar;
 
 import java.awt.MenuItem;
+import java.awt.PopupMenu;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -40,6 +41,11 @@ public class NoOpTaskbarManager implements ITaskbarManager {
 
     @Override
     public void setBadgeValue(int value) {
+        // No-op
+    }
+
+    @Override
+    public void setShortcutMenu(PopupMenu shortcutMenu) {
         // No-op
     }
 

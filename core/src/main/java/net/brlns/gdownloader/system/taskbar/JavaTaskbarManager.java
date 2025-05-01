@@ -34,9 +34,10 @@ public class JavaTaskbarManager implements ITaskbarManager {
     private final Taskbar taskbar;
 
     private final boolean isSupported;
-    private final boolean isNumberBadgeSupported;
-    private final boolean isTextBadgeSupported;
-    private final boolean isImageBadgeSupported;
+
+    private boolean isNumberBadgeSupported;
+    private boolean isTextBadgeSupported;
+    private boolean isImageBadgeSupported;
 
     private PopupMenu shortcutMenu;
 
@@ -44,6 +45,7 @@ public class JavaTaskbarManager implements ITaskbarManager {
     private int lastProgressValue = -1;
     private TaskbarState lastTaskbarState = null;
 
+    @SuppressWarnings("this-escape")
     public JavaTaskbarManager(Window targetWindowIn) {
         targetWindow = targetWindowIn;
         isSupported = Taskbar.isTaskbarSupported();
@@ -54,22 +56,14 @@ public class JavaTaskbarManager implements ITaskbarManager {
             isTextBadgeSupported = taskbar.isSupported(Taskbar.Feature.ICON_BADGE_TEXT);
             isImageBadgeSupported = taskbar.isSupported(Taskbar.Feature.ICON_BADGE_IMAGE_WINDOW);
 
-            shortcutMenu = new PopupMenu();
-
-            try {
-                if (taskbar.isSupported(Taskbar.Feature.MENU)) {
-                    taskbar.setMenu(shortcutMenu);
-                }
-            } catch (UnsupportedOperationException e) {
-                log.error("Taskbar menu feature not fully supported: {}", e.getMessage());
-            } catch (Exception e) {
-                log.error("An unexpected error occurred setting the Taskbar menu: {}", e.getMessage());
+            for (Taskbar.Feature feature : Taskbar.Feature.values()) {
+                log.info("TaskBar feature {} supported: {}",
+                    feature, taskbar.isSupported(feature));
             }
-        } else {
-            isNumberBadgeSupported = false;
-            isTextBadgeSupported = false;
-            isImageBadgeSupported = false;
 
+            // Not supported by the JRE on Windows.
+            setShortcutMenu(SystemTrayManager.getDefaultShortcutMenu());
+        } else {
             log.error("Java taskbar is not supported on this platform.");
         }
     }
@@ -170,6 +164,23 @@ public class JavaTaskbarManager implements ITaskbarManager {
             log.error("Taskbar badge feature unexpectedly not supported during set operation: {}", e.getMessage());
         } catch (Exception e) {
             log.error("An unexpected error occurred setting Taskbar badge: {}", e.getMessage());
+        }
+    }
+
+    @Override
+    public void setShortcutMenu(PopupMenu shortcutMenuIn) {
+        if (!isSupported || !taskbar.isSupported(Taskbar.Feature.MENU)) {
+            return;
+        }
+
+        shortcutMenu = shortcutMenuIn;
+
+        try {
+            taskbar.setMenu(shortcutMenu);
+        } catch (UnsupportedOperationException e) {
+            log.error("Adding Taskbar menu not supported: {}", e.getMessage());
+        } catch (Exception e) {
+            log.error("An unexpected error occurred adding Taskbar menu: {}", e.getMessage());
         }
     }
 

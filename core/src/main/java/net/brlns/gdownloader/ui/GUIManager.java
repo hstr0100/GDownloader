@@ -240,7 +240,7 @@ public final class GUIManager {
             appWindow.addWindowListener(new WindowAdapter() {
                 @Override
                 public void windowClosing(WindowEvent e) {
-                    if (!main.isSystemTrayInitialized()) {
+                    if (!main.getSystemTrayManager().isInitialized()) {
                         log.info("System tray not available, exiting...");
                         main.shutdown();
                     }

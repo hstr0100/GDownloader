@@ -1147,6 +1147,10 @@ public class DownloadManager implements IEvent, AutoCloseable {
         });
     }
 
+    public void migrateCacheDirectory() {
+        // TODO: Move partial playlists when changing download paths
+    }
+
     public void processTaskbarProgress() {
         TaskbarManager taskbarManager = main.getGuiManager().getTaskbarManager();
         if (taskbarManager == null || !taskbarManager.isTaskbarSupported()) {

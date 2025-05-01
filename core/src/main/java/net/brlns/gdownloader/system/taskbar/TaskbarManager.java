@@ -17,6 +17,7 @@
 package net.brlns.gdownloader.system.taskbar;
 
 import java.awt.MenuItem;
+import java.awt.PopupMenu;
 import java.awt.Window;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
@@ -74,6 +75,11 @@ public class TaskbarManager implements ITaskbarManager, AutoCloseable {
     @Override
     public void setBadgeValue(int value) {
         delegate.setBadgeValue(value);
+    }
+
+    @Override
+    public void setShortcutMenu(PopupMenu shortcutMenu) {
+        delegate.setShortcutMenu(shortcutMenu);
     }
 
     @Override

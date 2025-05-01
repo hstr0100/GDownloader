@@ -25,8 +25,6 @@ import com.github.kwhat.jnativehook.mouse.NativeMouseListener;
 import jakarta.annotation.Nullable;
 import java.awt.*;
 import java.awt.desktop.QuitStrategy;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.geom.AffineTransform;
 import java.io.*;
 import java.net.URI;
@@ -68,6 +66,7 @@ import net.brlns.gdownloader.settings.enums.BrowserEnum;
 import net.brlns.gdownloader.system.NetworkConnectivityListener;
 import net.brlns.gdownloader.system.ShutdownRegistry;
 import net.brlns.gdownloader.system.StartupManager;
+import net.brlns.gdownloader.system.taskbar.SystemTrayManager;
 import net.brlns.gdownloader.ui.GUIManager;
 import net.brlns.gdownloader.ui.message.Message;
 import net.brlns.gdownloader.ui.message.MessageTypeEnum;
@@ -135,11 +134,12 @@ import static net.brlns.gdownloader.util.StringUtils.notNullOrEmpty;
 // TODO Keep track of file hashes to avoid duplicates if such setting is turned on
 // TODO Investigate issue where video files get downloaded with audio name pattern applied
 // TODO Implement plugin API, create example plugin, create more events.
+// TODO implement Linux taskbar shortcuts
 // prio
 // TODO save last window size in config
+// TODO right-click > set download location
 // TODO when changing download path, move the cache directory to the new location. Need to take available space into consideration
 // TODO when expanded, display video info in the media cards
-// TODO implement taskbar shortcuts
 /**
  * GDownloader - GUI wrapper for yt-dlp
  *
@@ -173,18 +173,13 @@ public final class GDownloader {
     @Getter
     private static boolean portable;
 
-    @Getter
-    private boolean systemTrayInitialized;
-
-    private SystemTray tray;
-    @Getter
-    private TrayIcon trayIcon = null;
-
     private File configFile;
 
     @Getter
     private Settings config;
 
+    @Getter
+    private final SystemTrayManager systemTrayManager;
     @Getter
     private final ClipboardManager clipboardManager;
     @Getter
@@ -260,6 +255,7 @@ public final class GDownloader {
         clipboardManager = new ClipboardManager(this);
         downloadManager = closeable(new DownloadManager(this));
         guiManager = new GUIManager(this);
+        systemTrayManager = new SystemTrayManager(this);
 
         connectivityListener = closeable(new NetworkConnectivityListener());
 
@@ -290,7 +286,7 @@ public final class GDownloader {
             return;
         }
 
-        registerToSystemTray();
+        systemTrayManager.register();
 
         updateManager.checkForUpdates(true);
 
@@ -303,32 +299,6 @@ public final class GDownloader {
         startLooperTasks();
 
         connectivityListener.startBackgroundConnectivityCheck();
-    }
-
-    private void registerToSystemTray() {
-        if (SystemTray.isSupported()) {
-            try {
-                tray = SystemTray.getSystemTray();
-
-                Image image = Toolkit.getDefaultToolkit().createImage(
-                    getClass().getResource(guiManager.getCurrentTrayIconPath()));
-
-                trayIcon = new TrayIcon(image, REGISTRY_APP_NAME, buildPopupMenu());
-                trayIcon.setImageAutoSize(true);
-                trayIcon.addActionListener((ActionEvent e) -> {
-                    initUi(false);
-                });
-
-                tray.add(trayIcon);
-
-                systemTrayInitialized = true;
-            } catch (AWTException e) {
-                log.error("Error initializing the system tray");
-                handleException(e);
-            }
-        } else {
-            log.error("System tray is not supported, some features may not work.");
-        }
     }
 
     private void startLooperTasks() {
@@ -354,6 +324,7 @@ public final class GDownloader {
         clearCache(false);
     }
 
+    // TODO: Delete only empty directories and files, *.ytdl, *.temp.* and *.part
     public void clearCache(boolean notify) {
         downloadManager.stopDownloads();
 
@@ -386,48 +357,9 @@ public final class GDownloader {
         }
     }
 
-    /**
-     * Builds the system tray menu.
-     */
-    private PopupMenu buildPopupMenu() {
-        // TODO: Java's SystemTray menu looks horrifying.
-        // Evaluate over time whether this project warrants the effort required to implement cross-platform custom menus.
-        // Dorkbox's existing library does not seem reliable enough across all the environments we support.
-        PopupMenu popup = new PopupMenu();
-
-        popup.add(buildMenuItem("gui.toggle_downloads",
-            e -> downloadManager.toggleDownloads()));
-
-        popup.add(buildMenuItem("gui.open_downloads_directory",
-            e -> openDownloadsDirectory()));
-
-        popup.addSeparator();
-
-        popup.add(buildMenuItem("settings.sidebar_title",
-            e -> guiManager.displaySettingsPanel()));
-
-        popup.add(buildMenuItem("gui.restart",
-            e -> restart()));
-
-        popup.add(buildMenuItem("gui.exit",
-            e -> shutdown()));
-
-        return popup;
-    }
-
     public void setupAppServer() {
         appServer = closeable(new AppServer(this));
         appServer.init();
-    }
-
-    /**
-     * Helper for building system tray menu entries.
-     */
-    private MenuItem buildMenuItem(String translationKey, ActionListener actionListener) {
-        MenuItem menuItem = new MenuItem(l10n(translationKey));
-        menuItem.addActionListener(actionListener);
-
-        return menuItem;
     }
 
     public void openDownloadsDirectory() {
@@ -819,12 +751,11 @@ public final class GDownloader {
         if (!oldDir.equals(newDir)) {
             downloadManager.stopDownloads();
 
-            clearCache();
+            config.setDownloadsPath(newDir.getAbsolutePath());
+            updateConfig();
+
+            downloadManager.migrateCacheDirectory();
         }
-
-        config.setDownloadsPath(newDir.getAbsolutePath());
-
-        updateConfig();
     }
 
     public void logUrl(String fileName, String text, Object... replacements) {

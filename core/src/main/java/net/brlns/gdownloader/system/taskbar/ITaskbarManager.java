@@ -17,6 +17,7 @@
 package net.brlns.gdownloader.system.taskbar;
 
 import java.awt.MenuItem;
+import java.awt.PopupMenu;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -34,6 +35,8 @@ public interface ITaskbarManager {
     void setProgressValue(int value);
 
     void setBadgeValue(int value);
+
+    void setShortcutMenu(PopupMenu shortcutMenu);
 
     void addShortcutMenuItem(MenuItem item);
 
