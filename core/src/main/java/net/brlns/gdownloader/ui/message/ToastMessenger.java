@@ -233,7 +233,9 @@ public class ToastMessenger extends AbstractMessenger {
 
     @Override
     protected boolean canDisplay() {
-        return windowVisible.get();
+        // windowVisible relies on the window being previously visible then hidden.
+        // The isVisible() check is needed when starting headless.
+        return windowVisible.get() && targetWindow.isVisible();
     }
 
     private void updateLocation(JFrame appWindow) {

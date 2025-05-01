@@ -124,19 +124,10 @@ public class DirectoryDeduplicator {
                 }
 
                 byte[] hashBytes = digest.digest();
-                return bytesToHex(hashBytes);
+                return StringUtils.bytesToHex(hashBytes);
             } catch (NoSuchAlgorithmException | IOException e) {
                 throw new RuntimeException(e);
             }
         });
-    }
-
-    private static String bytesToHex(byte[] hash) {
-        StringBuilder hexString = new StringBuilder();
-        for (byte b : hash) {
-            hexString.append(String.format("%02x", b));
-        }
-
-        return hexString.toString();
     }
 }

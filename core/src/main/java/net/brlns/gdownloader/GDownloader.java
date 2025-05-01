@@ -227,6 +227,10 @@ public final class GDownloader {
 
         initConfig(workDir);
 
+        if (config.isDebugMode()) {
+            printDebugInformation();
+        }
+
         initLanguage(config);
         updateConfig();
 
@@ -1083,10 +1087,6 @@ public final class GDownloader {
         //System.setProperty("sun.java2d.d3d", "true");
 
         log.info("Starting...");
-
-        if (log.isDebugEnabled()) {
-            printDebugInformation();
-        }
 
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());

@@ -111,6 +111,8 @@ public class StartupManager {
                 writer.write("MimeType=\n");
                 writer.write("X-GNOME-Autostart-enabled=true\n");
                 writer.write("Name=" + REGISTRY_APP_NAME + "\n");
+                // WM_CLASS is hardcoded in Java, and we cannot change it due to JPMS.
+                writer.write("StartupWMClass=net-brlns-gdownloader-GDownloader\n");
                 writer.write("Type=Application\n");
             }
 

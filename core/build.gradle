@@ -64,6 +64,8 @@ dependencies {
     implementation("org.eclipse.persistence:eclipselink:$eclipselinkVersion")
     implementation("org.hsqldb:hsqldb:$hsqldbVersion")
     implementation("com.adonax:audiocue:$adonaxVersion")
+    implementation("com.github.hypfvieh:dbus-java-core:$dbusVersion")
+    implementation("com.github.hypfvieh:dbus-java-transport-native-unixsocket:$dbusVersion")
 
     compileOnly("org.projectlombok:lombok:$lombokVersion")
     annotationProcessor("org.projectlombok:lombok:$lombokVersion")
@@ -246,6 +248,7 @@ tasks.jpackage.doFirst {
         include('GDownloader.png')
         include('GDownloader.icns')
         include('GDownloader.ico')
+        include('GDownloader.desktop')
         into("$buildDir/jpackage/$basePath/app")
     }
 }
@@ -358,27 +361,30 @@ task createAppImage(type: Exec, dependsOn: zipJpackageImage) {
             }
         }
 
-        def desktopFileContent = [
-            "[Desktop Entry]",
-            "Name=${rootProject.name}",
-            "GenericName=Download Manager",
-            "TryExec=${rootProject.name}",
-            "Exec=${rootProject.name} %f",
-            "Icon=${appGroup}.${lowercaseName}",
-            "Type=Application",
-            "Categories=Network;",
-            "Keywords=YouTube;yt-dlp;gallery-dl;spotDL",
-            "StartupWMClass=gdownloader",
-            "Comment=Graphical interface for yt-dlp, gallery-dl, and spotDL",
-            "Terminal=false"
-        ].join("\n")
-
         [
-            file("$appUsrPath/share/applications/${appGroup}.${lowercaseName}.desktop"),
-            file("$appDir/${appGroup}.${lowercaseName}.desktop")
-        ].each {
-            it.text = desktopFileContent
-            it.setExecutable(true, false)
+            "$appUsrPath/share/applications/${appGroup}.${lowercaseName}.desktop",
+            "$appDir/${appGroup}.${lowercaseName}.desktop",
+        ].each { destPathString ->
+            def destFile = file(destPathString)
+            def parentDir = destFile.parentFile
+
+            parentDir.mkdirs()
+
+            copy {
+                from file("src/main/resources/assets/launcher/${rootProject.name}.desktop")
+                into parentDir
+
+                rename { destFile.name }
+
+                filter { line ->
+                    line.replace("APPLICATION_LAUNCHER", rootProject.name)
+                        .replace("APPLICATION_ICON", "${appGroup}.${lowercaseName}")
+                }
+            }
+
+            if (destFile.exists()) {
+                 destFile.setExecutable(true, false)
+            }
         }
 
         def appRun = file("$appDir/AppRun")

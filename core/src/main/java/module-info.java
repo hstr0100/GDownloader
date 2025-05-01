@@ -31,12 +31,14 @@ module net.brlns.gdownloader {
     requires transitive com.fasterxml.jackson.databind;
     requires transitive jakarta.annotation;
     requires transitive jakarta.persistence;
+    requires transitive org.freedesktop.dbus;
     requires com.fasterxml.jackson.annotation;
     requires com.fasterxml.jackson.core;
     requires eclipselink;
     requires org.hsqldb;
     requires org.jsoup;
     requires org.slf4j;
+    requires org.freedesktop.dbus.transport.jre;
     requires ch.qos.logback.classic;
     requires ch.qos.logback.core;
     requires com.sun.jna;
@@ -66,6 +68,7 @@ module net.brlns.gdownloader {
     exports net.brlns.gdownloader.settings.enums;
     exports net.brlns.gdownloader.settings.filters;
     exports net.brlns.gdownloader.system;
+    exports net.brlns.gdownloader.system.taskbar;
     exports net.brlns.gdownloader.ui;
     exports net.brlns.gdownloader.ui.builder;
     exports net.brlns.gdownloader.ui.custom;

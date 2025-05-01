@@ -302,4 +302,24 @@ public final class FileUtils {
             Files.move(source, target, StandardCopyOption.REPLACE_EXISTING);
         }
     }
+
+    @Nullable
+    public static File locateDesktopFile(String filename) {
+        List<String> applicationDirs = List.of(
+            "/usr/share/applications/",
+            "/usr/local/share/applications/",
+            System.getProperty("user.home") + "/.local/share/applications/",
+            System.getProperty("user.home") + "/.config/autostart"
+        );
+
+        for (String dir : applicationDirs) {
+            Path path = Paths.get(dir, filename);
+
+            if (Files.exists(path)) {
+                return path.toFile();
+            }
+        }
+
+        return null;
+    }
 }

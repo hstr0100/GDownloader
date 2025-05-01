@@ -1,0 +1,14 @@
+[Desktop Entry]
+Name=GDownloader
+GenericName=Download Manager
+TryExec=APPLICATION_LAUNCHER
+Exec=APPLICATION_LAUNCHER
+Icon=APPLICATION_ICON
+Type=Application
+Categories=Network;
+Keywords=YouTube;yt-dlp;gallery-dl;spotDL
+StartupWMClass=net-brlns-gdownloader-GDownloader
+Comment=Graphical interface for yt-dlp, gallery-dl, and spotDL
+Terminal=false
+StartupNotify=true
+MimeType=

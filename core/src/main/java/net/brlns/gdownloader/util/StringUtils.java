@@ -18,10 +18,12 @@ package net.brlns.gdownloader.util;
 
 import jakarta.annotation.Nullable;
 import java.io.File;
+import java.security.MessageDigest;
 import java.text.DecimalFormat;
 import java.time.Duration;
 import java.util.List;
 import java.util.stream.Collectors;
+import lombok.SneakyThrows;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -211,5 +213,28 @@ public final class StringUtils {
             + "|[\\x{1F300}-\\x{1F64F}]|[\\x{1F680}-\\x{1F6FF}]";
 
         return text.replaceAll(regex, "");
+    }
+
+    public static String bytesToHex(byte[] hash) {
+        StringBuilder hexString = new StringBuilder();
+        for (byte b : hash) {
+            hexString.append(String.format("%02x", b));
+        }
+
+        return hexString.toString();
+    }
+
+    public static String calculateMD5(byte[] input) {
+        return calculateMD5(input, true);
+    }
+
+    @SneakyThrows
+    public static String calculateMD5(byte[] input, boolean lowercase) {
+        MessageDigest md = MessageDigest.getInstance("MD5");
+        byte[] digest = md.digest(input);
+
+        String hex = bytesToHex(digest);
+
+        return lowercase ? hex.toLowerCase() : hex;
     }
 }

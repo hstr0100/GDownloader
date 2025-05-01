@@ -47,7 +47,7 @@ import net.brlns.gdownloader.event.impl.ConnectivityStatusEvent;
 import net.brlns.gdownloader.event.impl.PerformUpdateCheckEvent;
 import net.brlns.gdownloader.event.impl.SettingsChangeEvent;
 import net.brlns.gdownloader.settings.Settings;
-import net.brlns.gdownloader.system.TaskbarManager;
+import net.brlns.gdownloader.system.taskbar.TaskbarManager;
 import net.brlns.gdownloader.ui.custom.*;
 import net.brlns.gdownloader.ui.dnd.WindowDragSourceListener;
 import net.brlns.gdownloader.ui.dnd.WindowDropTargetListener;
@@ -62,6 +62,7 @@ import net.brlns.gdownloader.updater.IUpdater;
 import net.brlns.gdownloader.util.Version;
 
 import static net.brlns.gdownloader.lang.Language.*;
+import static net.brlns.gdownloader.system.ShutdownRegistry.closeable;
 import static net.brlns.gdownloader.ui.UIUtils.*;
 import static net.brlns.gdownloader.ui.status.StatusIndicatorEnum.*;
 import static net.brlns.gdownloader.ui.themes.ThemeProvider.*;
@@ -331,7 +332,7 @@ public final class GUIManager {
 
             appWindow.add(mainPanel);
 
-            taskbarManager = new TaskbarManager(appWindow);
+            taskbarManager = closeable(new TaskbarManager(appWindow));
         }
     }
 

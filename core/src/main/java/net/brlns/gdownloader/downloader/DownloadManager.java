@@ -19,7 +19,6 @@ package net.brlns.gdownloader.downloader;
 import jakarta.annotation.Nullable;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
-import java.awt.Taskbar;
 import java.io.File;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -50,7 +49,8 @@ import net.brlns.gdownloader.settings.filters.GenericFilter;
 import net.brlns.gdownloader.settings.filters.YoutubeFilter;
 import net.brlns.gdownloader.settings.filters.YoutubePlaylistFilter;
 import net.brlns.gdownloader.system.ShutdownRegistry.CloseBefore;
-import net.brlns.gdownloader.system.TaskbarManager;
+import net.brlns.gdownloader.system.taskbar.ITaskbarManager.TaskbarState;
+import net.brlns.gdownloader.system.taskbar.TaskbarManager;
 import net.brlns.gdownloader.ui.GUIManager;
 import net.brlns.gdownloader.ui.MediaCard;
 import net.brlns.gdownloader.ui.message.Message;
@@ -1158,23 +1158,29 @@ public class DownloadManager implements IEvent, AutoCloseable {
         int queuedCount = getQueuedDownloads();
         int completedCount = getCompletedDownloads();
 
+        int badgeCount = queuedCount + runningCount;
+
         if (!isRunning()) {
+            taskbarManager.setBadgeValue(0);
+
             if (failedCount > 0 && queuedCount == 0) {
-                taskbarManager.setProgressState(Taskbar.State.ERROR);
+                taskbarManager.setProgressState(TaskbarState.ERROR);
             } else {
-                taskbarManager.setProgressState(Taskbar.State.OFF);
+                taskbarManager.setProgressState(TaskbarState.OFF);
             }
 
             return;
         }
 
-        if (queuedCount + runningCount > 50) {
+        taskbarManager.setBadgeValue(badgeCount);
+
+        if (badgeCount > 50) {
             // With >50 downloads, the variation becomes so small we can simplify the progress calculation
             int finishedDownloads = completedCount + failedCount;
             int totalCount = sequencer.getTotalCount();
 
             double completionPercentage = (double)finishedDownloads / totalCount * 100;
-            taskbarManager.setProgressState(Taskbar.State.NORMAL);
+            taskbarManager.setProgressState(TaskbarState.NORMAL);
             taskbarManager.setProgressValue(completionPercentage);
 
             return;
@@ -1187,7 +1193,7 @@ public class DownloadManager implements IEvent, AutoCloseable {
             .collect(Collectors.toList());
 
         if (validPercentages.isEmpty()) {
-            taskbarManager.setProgressState(Taskbar.State.INDETERMINATE);
+            taskbarManager.setProgressState(TaskbarState.INDETERMINATE);
             // This might happen if all entries return -1, indicating-
             // gallery-dl/spotDL downloaders where we are unable to track progress.
             return;
@@ -1200,7 +1206,7 @@ public class DownloadManager implements IEvent, AutoCloseable {
 
         double averagePercentage = MathUtils.calculateAveragePercentage(validPercentages);
 
-        taskbarManager.setProgressState(Taskbar.State.NORMAL);
+        taskbarManager.setProgressState(TaskbarState.NORMAL);
         taskbarManager.setProgressValue(averagePercentage);
     }
 
