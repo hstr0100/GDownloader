@@ -210,7 +210,7 @@ public class UnityTaskbarManager implements ITaskbarManager {
     }
 
     private void updateProgress() {
-        if (!isDBusAvailable || connection == null) {
+        if (!isDBusAvailable || connection == null || !connection.isConnected()) {
             return;
         }
 

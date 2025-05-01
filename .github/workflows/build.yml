@@ -78,11 +78,8 @@ jobs:
         if: matrix.GRADLE_ARCH == 'amd64'
         run: ./gradlew clean build
 
-      - name: Build JPackage Binary
-        run: ./gradlew jpackage
-
-      - name: Build AppImage
-        run: ./gradlew createAppImage
+      - name: Build JPackage and AppImage Binary
+        run: ./gradlew jpackage createAppImage
 
       - name: Upload AppImage artifact
         uses: actions/upload-artifact@v4
