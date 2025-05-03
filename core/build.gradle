@@ -400,9 +400,9 @@ task createAppImage(type: Exec, dependsOn: zipJpackageImage) {
     }
 
     // Build image
-    // We are using a lowercase name due to convention; .deb files require lowercase names, and it would look out of place and trigger OCD.
-    def appImageName = "${lowercaseName}-${version}-${appImageArch}.AppImage"
-    def updateInfo = "gh-releases-zsync|hstr0100|${rootProject.name}|latest|${lowercaseName}-*${appImageArch}.AppImage.zsync"
+    // We were using a lowercase name due to convention; .deb files require lowercase names, and it would look out of place and trigger OCD.
+    def appImageName = "${rootProject.name}-${version}-${appImageArch}.AppImage"
+    def updateInfo = "gh-releases-zsync|hstr0100|${rootProject.name}|latest|${rootProject.name}-*${appImageArch}.AppImage.zsync"
 
     workingDir "$buildDir/appimage"
     environment "ARCH", appImageArch
