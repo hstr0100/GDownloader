@@ -126,20 +126,19 @@ public final class SystemExecutableLocator {
             return true;  // Assume available on non-Linux systems
         }
 
-        Path[] searchPaths = {
+        List<Path> searchPaths = List.of(
             Paths.get("/usr/lib"),
             Paths.get("/usr/local/lib"),
             Paths.get("/lib"),
             Paths.get("/lib64"),
             Paths.get(System.getProperty("user.home"), ".local/lib")
-        };
+        );
 
         String ldLibraryPath = System.getenv("LD_LIBRARY_PATH");
         if (ldLibraryPath != null) {
-            for (String path : ldLibraryPath.split(":")) {
+            for (String path : ldLibraryPath.split(File.pathSeparator)) {
                 if (!path.trim().isEmpty()) {
-                    searchPaths = Arrays.copyOf(searchPaths, searchPaths.length + 1);
-                    searchPaths[searchPaths.length - 1] = Paths.get(path);
+                    searchPaths.add(Paths.get(path.trim()));
                 }
             }
         }
