@@ -1033,14 +1033,16 @@ public final class GDownloader {
         }
 
         try {
-            GlobalScreen.registerNativeHook();
+            if (!GlobalScreen.isNativeHookRegistered()) {
+                GlobalScreen.registerNativeHook();
+            }
 
             // Get the logger for "com.github.kwhat.jnativehook" and set the level to off.
             Logger logger = Logger.getLogger(GlobalScreen.class.getPackage().getName());
             logger.setLevel(Level.OFF);
 
             logger.setUseParentHandlers(false);
-        } catch (NativeHookException | UnsatisfiedLinkError e) {
+        } catch (Throwable e) {
             log.error("There was a problem registering the native hook: {}", e.getMessage());
 
             if (isLinux()) {
