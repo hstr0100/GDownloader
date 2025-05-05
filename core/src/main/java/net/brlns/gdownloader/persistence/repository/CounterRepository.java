@@ -18,6 +18,9 @@ package net.brlns.gdownloader.persistence.repository;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
+import jakarta.persistence.LockModeType;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.persistence.entity.CounterEntity;
 import net.brlns.gdownloader.persistence.entity.CounterTypeEnum;
@@ -28,54 +31,86 @@ import net.brlns.gdownloader.persistence.entity.CounterTypeEnum;
 @Slf4j
 public class CounterRepository extends AbstractRepository {
 
+    private final Lock lock = new ReentrantLock();
+
     public CounterRepository(EntityManagerFactory emfIn) {
         super(emfIn);
     }
 
     public long getCurrentValue(CounterTypeEnum counterType) {
-        try (EntityManager em = getEmf().createEntityManager()) {
-            CounterEntity counter = em.find(CounterEntity.class, counterType);
-            if (counter == null) {
-                counter = new CounterEntity(counterType, 0);
+        lock.lock();
+        try {
+            EntityManager em = getEmf().createEntityManager();
+            try {
+                em.getTransaction().begin();
 
-                upsert(counter);
+                CounterEntity counter = em.find(CounterEntity.class,
+                    counterType, LockModeType.PESSIMISTIC_READ);
+
+                if (counter == null) {
+                    counter = new CounterEntity(counterType, 0);
+                    em.persist(counter);
+                }
+
+                long value = counter.getValue();
+                em.getTransaction().commit();
+
+                return value;
+            } catch (Exception e) {
+                log.error("Failed to obtain counter value for: {}", counterType, e);
+                if (em.getTransaction().isActive()) {
+                    em.getTransaction().rollback();
+                }
+
+                return 0L;
+            } finally {
+                em.close();
             }
-
-            return counter.getValue();
-        } catch (Exception e) {
-            log.error("Failed to obtain counter value for: {}", counterType, e);
-            return 0l;
+        } finally {
+            lock.unlock();
         }
     }
 
     public void setCurrentValue(CounterTypeEnum counterType, long value) {
-        long curr = getCurrentValue(counterType);
+        lock.lock();
+        try {
+            EntityManager em = getEmf().createEntityManager();
+            try {
+                em.getTransaction().begin();
 
-        boolean overflowed = value < Long.MIN_VALUE / 2 && curr > Long.MAX_VALUE / 2;
-        if (overflowed) {
-            // Somehow, you downloaded so much stuff you actually overflowed a signed long, congrats!
-            log.info("Counter {} overflowed {} < {}, wrapping around...",
-                counterType, value, curr);
-        }
+                CounterEntity counter = em.find(CounterEntity.class,
+                    counterType, LockModeType.PESSIMISTIC_WRITE);
 
-        if (value > curr || overflowed) {
-            CounterEntity counter = new CounterEntity(counterType, value);
+                if (counter == null) {
+                    counter = new CounterEntity(counterType, value);
+                    em.persist(counter);
+                } else {
+                    long curr = counter.getValue();
+                    boolean overflowed = value < Long.MIN_VALUE / 2 && curr > Long.MAX_VALUE / 2;
 
-            upsert(counter);
-        }
-    }
+                    if (value > curr || overflowed) {
+                        if (overflowed) {
+                            // Somehow, you downloaded so much stuff you actually overflowed a signed long, congrats!
+                            log.info("Counter {} overflowed {} < {}, wrapping around...",
+                                counterType, value, curr);
+                        }
 
-    public CounterEntity upsert(CounterEntity entity) {
-        try (EntityManager em = getEmf().createEntityManager()) {
-            em.getTransaction().begin();
+                        counter.setValue(value);
+                    }
+                }
 
-            CounterEntity managedEntity = em.merge(entity);
+                em.getTransaction().commit();
+            } catch (Exception e) {
+                log.error("Failed to set counter value for: {}", counterType, e);
 
-            em.flush();
-
-            em.getTransaction().commit();
-
-            return managedEntity;
+                if (em.getTransaction().isActive()) {
+                    em.getTransaction().rollback();
+                }
+            } finally {
+                em.close();
+            }
+        } finally {
+            lock.unlock();
         }
     }
 }
