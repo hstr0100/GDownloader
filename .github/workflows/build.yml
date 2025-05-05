@@ -84,15 +84,15 @@ jobs:
       - name: Upload AppImage artifact
         uses: actions/upload-artifact@v4
         with:
-          name: gdownloader-${{ matrix.APPIMAGE_ARCH }}-appimage
-          path: ./core/build/jpackage/gdownloader-*-${{ matrix.APPIMAGE_ARCH }}.AppImage
+          name: GDownloader-${{ matrix.APPIMAGE_ARCH }}-appimage
+          path: ./core/build/jpackage/GDownloader-*-${{ matrix.APPIMAGE_ARCH }}.AppImage
           if-no-files-found: error
 
       - name: Upload AppImage zsync artifact
         uses: actions/upload-artifact@v4
         with:
-          name: gdownloader-${{ matrix.APPIMAGE_ARCH }}-appimage-zsync
-          path: ./core/build/jpackage/gdownloader-*-${{ matrix.APPIMAGE_ARCH }}.AppImage.zsync
+          name: GDownloader-${{ matrix.APPIMAGE_ARCH }}-appimage-zsync
+          path: ./core/build/jpackage/GDownloader-*-${{ matrix.APPIMAGE_ARCH }}.AppImage.zsync
           if-no-files-found: error
 
       - name: Upload portable ZIP artifact
@@ -248,11 +248,18 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Download all artifacts
+      - name: Download gdownloader artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
           pattern: 'gdownloader-*'
+          merge-multiple: true
+
+      - name: Download GDownloader artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: 'GDownloader-*'
           merge-multiple: true
 
       - name: Generate SHA256 checksums
