@@ -16,6 +16,7 @@
  */
 package net.brlns.gdownloader.clipboard;
 
+import com.github.kwhat.jnativehook.GlobalScreen;
 import jakarta.annotation.Nullable;
 import java.awt.Toolkit;
 import java.awt.datatransfer.Clipboard;
@@ -83,7 +84,10 @@ public class ClipboardManager {
 
         //TODO: X11/Wayland. X11 will be a mess.
         clipboardListeners.add(new MaybeChangedClipboardListener());
-        clipboardListeners.add(new CtrlCNativeClipboardListener());
+
+        if (GlobalScreen.isNativeHookRegistered()) {
+            clipboardListeners.add(new CtrlCNativeClipboardListener());
+        }
     }
 
     public void unblock() {

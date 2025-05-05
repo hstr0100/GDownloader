@@ -259,12 +259,14 @@ public final class GDownloader {
 
         // Java doesn't natively support detecting a click outside of the program window,
         // Which we would need for our custom context menus
-        GlobalScreen.addNativeMouseListener(new NativeMouseListener() {
-            @Override
-            public void nativeMousePressed(NativeMouseEvent e) {
-                EventDispatcher.dispatch(new NativeMouseClickEvent(e.getPoint()));
-            }
-        });
+        if (GlobalScreen.isNativeHookRegistered()) {
+            GlobalScreen.addNativeMouseListener(new NativeMouseListener() {
+                @Override
+                public void nativeMousePressed(NativeMouseEvent e) {
+                    EventDispatcher.dispatch(new NativeMouseClickEvent(e.getPoint()));
+                }
+            });
+        }
 
         initialized = true;
     }
@@ -1038,10 +1040,12 @@ public final class GDownloader {
             logger.setLevel(Level.OFF);
 
             logger.setUseParentHandlers(false);
-        } catch (NativeHookException e) {
-            log.error("There was a problem registering the native hook.", e);
+        } catch (NativeHookException | UnsatisfiedLinkError e) {
+            log.error("There was a problem registering the native hook: {}", e.getMessage());
 
-            System.exit(1);
+            if (isLinux()) {
+                log.info("Please ensure libxkbcommon-x11 is installed on your system.");
+            }
         }
 
         Thread.setDefaultUncaughtExceptionHandler((Thread t, Throwable e) -> {
@@ -1058,10 +1062,12 @@ public final class GDownloader {
         log.info("{} is initialized", REGISTRY_APP_NAME);
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            try {
-                GlobalScreen.unregisterNativeHook();
-            } catch (NativeHookException e) {
-                log.error("There was a problem unregistering the native hook.", e);
+            if (GlobalScreen.isNativeHookRegistered()) {
+                try {
+                    GlobalScreen.unregisterNativeHook();
+                } catch (NativeHookException e) {
+                    log.error("There was a problem unregistering the native hook.", e);
+                }
             }
 
             ShutdownRegistry.closeAllResources();
