@@ -45,7 +45,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y fakeroot file binutils zsync desktop-file-utils gnupg
+          sudo apt-get install -y fakeroot file binutils zsync desktop-file-utils gnupg libxkbcommon-x11-0
 
       - name: Import GPG key
         uses: crazy-max/ghaction-import-gpg@v6

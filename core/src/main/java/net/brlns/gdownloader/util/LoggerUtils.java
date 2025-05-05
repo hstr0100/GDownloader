@@ -24,7 +24,6 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.FileAppender;
 import ch.qos.logback.core.filter.Filter;
 import ch.qos.logback.core.spi.FilterReply;
-import com.github.kwhat.jnativehook.GlobalScreen;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -132,17 +131,12 @@ public final class LoggerUtils {
         LoggerContext loggerContext = (LoggerContext)LoggerFactory.getILoggerFactory();
         Logger logger = loggerContext.getLogger("ROOT");
 
-        java.util.logging.Logger jnativeLogger
-            = java.util.logging.Logger.getLogger(GlobalScreen.class.getPackage().getName());
-
         if (debug && logger.getLevel() != Level.DEBUG) {
             logger.setLevel(Level.DEBUG);
-            jnativeLogger.setLevel(java.util.logging.Level.ALL);
 
             log.info("Log level changed to: {}", logger.getLevel());
         } else if (!debug && logger.getLevel() != DEFAULT_LOG_LEVEL && !DEBUG_MODE_FORCED) {
             logger.setLevel(DEFAULT_LOG_LEVEL);
-            jnativeLogger.setLevel(java.util.logging.Level.OFF);
 
             log.info("Log level changed to: {}", logger.getLevel());
         }

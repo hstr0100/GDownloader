@@ -18,6 +18,7 @@ package net.brlns.gdownloader.system;
 
 import jakarta.annotation.Nullable;
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -98,6 +99,10 @@ public final class SystemExecutableLocator {
 
     @Nullable
     public static File locateDesktopFile(String filename) {
+        if (!GDownloader.isLinux()) {
+            return null;
+        }
+
         List<String> applicationDirs = List.of(
             "/usr/share/applications/",
             "/usr/local/share/applications/",
@@ -114,5 +119,62 @@ public final class SystemExecutableLocator {
         }
 
         return null;
+    }
+
+    public static boolean isSystemLibraryAvailable(String libraryName) {
+        if (!GDownloader.isLinux()) {
+            return true;  // Assume available on non-Linux systems
+        }
+
+        Path[] searchPaths = {
+            Paths.get("/usr/lib"),
+            Paths.get("/usr/local/lib"),
+            Paths.get("/lib"),
+            Paths.get("/lib64"),
+            Paths.get(System.getProperty("user.home"), ".local/lib")
+        };
+
+        String ldLibraryPath = System.getenv("LD_LIBRARY_PATH");
+        if (ldLibraryPath != null) {
+            for (String path : ldLibraryPath.split(":")) {
+                if (!path.trim().isEmpty()) {
+                    searchPaths = Arrays.copyOf(searchPaths, searchPaths.length + 1);
+                    searchPaths[searchPaths.length - 1] = Paths.get(path);
+                }
+            }
+        }
+
+        String[] archSubdirs = {
+            "",
+            "x86_64-linux-gnu",
+            "aarch64-linux-gnu",
+            "arm-linux-gnueabihf",
+            "i386-linux-gnu"
+        };
+
+        for (Path basePath : searchPaths) {
+            if (!Files.exists(basePath)) {
+                continue;
+            }
+
+            for (String archDir : archSubdirs) {
+                Path searchPath = archDir.isEmpty() ? basePath : basePath.resolve(archDir);
+
+                try {
+                    if (Files.exists(searchPath)
+                        && Files.find(searchPath, 1,
+                            (path, attrs) -> path.getFileName().toString().equals(libraryName))
+                            .findFirst()
+                            .isPresent()) {
+
+                        return true;
+                    }
+                } catch (IOException e) {
+                    log.debug("Error searching for library {} in {}: {}", libraryName, searchPath, e.getMessage());
+                }
+            }
+        }
+
+        return false;
     }
 }

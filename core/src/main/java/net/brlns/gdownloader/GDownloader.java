@@ -66,6 +66,7 @@ import net.brlns.gdownloader.settings.enums.BrowserEnum;
 import net.brlns.gdownloader.system.NetworkConnectivityListener;
 import net.brlns.gdownloader.system.ShutdownRegistry;
 import net.brlns.gdownloader.system.StartupManager;
+import net.brlns.gdownloader.system.SystemExecutableLocator;
 import net.brlns.gdownloader.system.SystemTrayManager;
 import net.brlns.gdownloader.ui.GUIManager;
 import net.brlns.gdownloader.ui.message.Message;
@@ -157,6 +158,8 @@ public final class GDownloader {
     public static final String OLD_CACHE_DIRETORY_NAME = "gdownloader_cache";
 
     public static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
+    public static boolean HAS_JNATIVEHOOK = false;
 
     // Virtual threads remove the limitations of a small thread pool.
     // Task prioritization is no longer necessary.
@@ -259,7 +262,7 @@ public final class GDownloader {
 
         // Java doesn't natively support detecting a click outside of the program window,
         // Which we would need for our custom context menus
-        if (GlobalScreen.isNativeHookRegistered()) {
+        if (HAS_JNATIVEHOOK) {
             GlobalScreen.addNativeMouseListener(new NativeMouseListener() {
                 @Override
                 public void nativeMousePressed(NativeMouseEvent e) {
@@ -1033,21 +1036,24 @@ public final class GDownloader {
         }
 
         try {
-            if (!GlobalScreen.isNativeHookRegistered()) {
+            // If libxkbcommon-x11 is missing, JNativeHook's GlobalScreen class will be completely DOA.
+            if (!isLinux() || SystemExecutableLocator.isSystemLibraryAvailable("libxkbcommon-x11.so.0")) {
                 GlobalScreen.registerNativeHook();
+                HAS_JNATIVEHOOK = true;
+
+                // Get the logger for "com.github.kwhat.jnativehook" and set the level to off.
+                Logger logger = Logger.getLogger(GlobalScreen.class.getPackage().getName());
+                logger.setLevel(Level.OFF);
+
+                logger.setUseParentHandlers(false);
+
+                log.info("Successfully registered native hook");
+            } else {
+                log.warn("Could not locate libxkbcommon-x11.so.0");
+                log.warn("Please ensure libxkbcommon-x11 is installed on your system.");
             }
-
-            // Get the logger for "com.github.kwhat.jnativehook" and set the level to off.
-            Logger logger = Logger.getLogger(GlobalScreen.class.getPackage().getName());
-            logger.setLevel(Level.OFF);
-
-            logger.setUseParentHandlers(false);
         } catch (Throwable e) {
             log.error("There was a problem registering the native hook: {}", e.getMessage());
-
-            if (isLinux()) {
-                log.info("Please ensure libxkbcommon-x11 is installed on your system.");
-            }
         }
 
         Thread.setDefaultUncaughtExceptionHandler((Thread t, Throwable e) -> {
@@ -1064,7 +1070,7 @@ public final class GDownloader {
         log.info("{} is initialized", REGISTRY_APP_NAME);
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            if (GlobalScreen.isNativeHookRegistered()) {
+            if (HAS_JNATIVEHOOK) {
                 try {
                     GlobalScreen.unregisterNativeHook();
                 } catch (NativeHookException e) {

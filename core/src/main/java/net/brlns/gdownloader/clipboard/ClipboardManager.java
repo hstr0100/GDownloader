@@ -85,7 +85,7 @@ public class ClipboardManager {
         //TODO: X11/Wayland. X11 will be a mess.
         clipboardListeners.add(new MaybeChangedClipboardListener());
 
-        if (GlobalScreen.isNativeHookRegistered()) {
+        if (GDownloader.HAS_JNATIVEHOOK) {
             clipboardListeners.add(new CtrlCNativeClipboardListener());
         }
     }
