@@ -136,6 +136,9 @@ public class Settings {
     @JsonProperty("GalleryDlTranscoding")
     private boolean galleryDlTranscoding = false;
 
+    @JsonProperty("UseUploadTimeAsFileTime")
+    private boolean useUploadTimeAsFileTime = true;
+
     @JsonProperty("GalleryDlEnabled")
     // gallery-dl appears to be unsigned
     // let's leave it off by default on Windows to avoid any possible issues with that

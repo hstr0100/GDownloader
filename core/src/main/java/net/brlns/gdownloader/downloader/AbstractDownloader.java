@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -291,6 +292,14 @@ public abstract class AbstractDownloader {
         } catch (IOException e) {
             log.error("Failed to scan media files", e);
             return new DownloadResult(FLAG_TRANSCODING_FAILED, e.getMessage());
+        }
+    }
+
+    protected void updateFileTimes(QueueEntry entry, Path filePath) {
+        if (main.getConfig().isUseUploadTimeAsFileTime()) {
+            FileUtils.setAllFileTimesTo(filePath, entry.getUploadTime());
+        } else {
+            FileUtils.setAllFileTimesTo(filePath, LocalDateTime.now());
         }
     }
 }

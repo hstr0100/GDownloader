@@ -350,7 +350,7 @@ public class YtDlpDownloader extends AbstractDownloader {
                         targetPath = FileUtils.ensureUniqueFileName(targetPath);
 
                         Files.move(path, targetPath, StandardCopyOption.REPLACE_EXISTING);
-                        FileUtils.setAllFileTimesTo(targetPath, entry.getUploadTime());
+                        updateFileTimes(entry, targetPath);
 
                         entry.getFinalMediaFiles().add(targetPath.toFile());
                     } catch (IOException e) {

@@ -959,6 +959,13 @@ public class SettingsPanel {
             .setter(settings::setFailDownloadsOnTranscodingFailures)
             .build());
 
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.use_upload_time_as_file_time")
+            .getter(settings::isUseUploadTimeAsFileTime)
+            .setter(settings::setUseUploadTimeAsFileTime)
+            .build());
+
         List<JComponent> extraArgumentFields = new ArrayList<>();
         addCheckBox(panel, CheckBoxBuilder.builder()
             .background(resolveColor(panel))
