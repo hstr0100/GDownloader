@@ -16,7 +16,6 @@
  */
 package net.brlns.gdownloader.clipboard;
 
-import com.github.kwhat.jnativehook.GlobalScreen;
 import jakarta.annotation.Nullable;
 import java.awt.Toolkit;
 import java.awt.datatransfer.Clipboard;

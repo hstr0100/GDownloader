@@ -348,7 +348,10 @@ public class YtDlpDownloader extends AbstractDownloader {
                     try {
                         Files.createDirectories(targetPath.getParent());
                         targetPath = FileUtils.ensureUniqueFileName(targetPath);
+
                         Files.move(path, targetPath, StandardCopyOption.REPLACE_EXISTING);
+                        FileUtils.setAllFileTimesTo(targetPath, entry.getUploadTime());
+
                         entry.getFinalMediaFiles().add(targetPath.toFile());
                     } catch (IOException e) {
                         log.error("Failed to move file: {}", path, e);

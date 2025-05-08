@@ -20,7 +20,10 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.annotation.Nullable;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -118,6 +121,17 @@ public class MediaInfo {
         if (notNullOrEmpty(uploadDate)) {
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd");
             return LocalDate.parse(uploadDate, formatter);
+        }
+
+        return null;
+    }
+
+    @JsonIgnore
+    @Nullable
+    public LocalDateTime getUploadDateAsLocalDateTime() {
+        if (timestamp > 0) {
+            Instant instant = Instant.ofEpochSecond(timestamp);
+            return instant.atZone(ZoneId.systemDefault()).toLocalDateTime();
         }
 
         return null;

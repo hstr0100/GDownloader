@@ -345,6 +345,7 @@ task createAppImage(type: Exec, dependsOn: zipJpackageImage) {
         }
 
         // Include libxkbcommon-x11 in AppImage if available
+        // TODO libxcb-xkb.so.1 -> libxcb-xkb1 + deps
         def libDirs = [
             "/usr/lib/x86_64-linux-gnu",
             "/usr/lib/i386-linux-gnu",

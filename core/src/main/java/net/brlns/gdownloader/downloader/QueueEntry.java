@@ -25,6 +25,8 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.DirectoryNotEmptyException;
 import java.nio.file.Files;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -355,6 +357,25 @@ public class QueueEntry {
             .map(Optional::get)
             .findFirst()
             .orElse(null);
+    }
+
+    @Nullable
+    public LocalDateTime getUploadTime() {
+        if (mediaInfo == null) {
+            return null;
+        }
+
+        LocalDateTime localDateTime = mediaInfo.getUploadDateAsLocalDateTime();
+        if (localDateTime != null) {
+            return localDateTime;
+        }
+
+        LocalDate localDate = mediaInfo.getUploadDateAsLocalDate();
+        if (localDate != null) {
+            return localDate.atStartOfDay();
+        }
+
+        return null;
     }
 
     public void setMediaInfo(MediaInfo mediaInfoIn) {

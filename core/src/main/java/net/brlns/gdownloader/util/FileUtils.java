@@ -22,6 +22,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.attribute.BasicFileAttributeView;
+import java.nio.file.attribute.FileTime;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -300,6 +305,30 @@ public final class FileUtils {
     public static void moveFileIfExists(Path source, Path target) throws IOException {
         if (Files.exists(source)) {
             Files.move(source, target, StandardCopyOption.REPLACE_EXISTING);
+        }
+    }
+
+    public static void setAllFileTimesTo(Path filePath, @Nullable LocalDateTime localDateTime) {
+        if (localDateTime == null) {
+            return;
+        }
+
+        Instant newInstant = localDateTime.atZone(ZoneId.systemDefault()).toInstant();
+        FileTime newFileTime = FileTime.from(newInstant);
+
+        try {
+            Files.setLastModifiedTime(filePath, newFileTime);
+
+            BasicFileAttributeView attributesView = Files.getFileAttributeView(filePath, BasicFileAttributeView.class);
+            if (attributesView != null) {
+                attributesView.setTimes(newFileTime, newFileTime, newFileTime);
+            } else {
+                log.error("File attributes not available for {}, cannot set file time.", filePath);
+            }
+        } catch (IOException e) {
+            log.error("An error occurred setting file time: {}", e.getMessage());
+        } catch (UnsupportedOperationException e) {
+            log.error("Setting file time is not supported by the file system: {}", e.getMessage());
         }
     }
 }
