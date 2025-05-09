@@ -16,11 +16,13 @@
  */
 package net.brlns.gdownloader.ui.custom;
 
+import java.awt.AWTEvent;
 import java.awt.Dimension;
 import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
+import java.awt.event.MouseEvent;
 import javax.swing.BorderFactory;
 import javax.swing.JComponent;
 import javax.swing.JToolTip;
@@ -39,6 +41,11 @@ public class CustomToolTip extends JToolTip {
         UIManager.put("ToolTip.background", color(TOOLTIP_BACKGROUND));
         UIManager.put("ToolTip.foreground", color(TOOLTIP_FOREGROUND));
         UIManager.put("ToolTip.border", BorderFactory.createEmptyBorder(5, 5, 5, 5));
+    }
+
+    @SuppressWarnings("this-escape")
+    public CustomToolTip() {
+        enableEvents(AWTEvent.MOUSE_EVENT_MASK | AWTEvent.MOUSE_MOTION_EVENT_MASK);
     }
 
     @Override
@@ -61,5 +68,15 @@ public class CustomToolTip extends JToolTip {
                 return new Dimension(fm.stringWidth(tipText) + 10, fm.getHeight() + 5);
             }
         });
+    }
+
+    @Override
+    protected void processMouseEvent(MouseEvent e) {
+
+    }
+
+    @Override
+    protected void processMouseMotionEvent(MouseEvent e) {
+
     }
 }

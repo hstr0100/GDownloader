@@ -24,6 +24,7 @@ import java.awt.event.FocusEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.File;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
@@ -32,6 +33,7 @@ import javax.swing.*;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.plaf.basic.BasicButtonUI;
 import lombok.Data;
 import lombok.NonNull;
@@ -187,7 +189,7 @@ public class SettingsPanel {
 
             {
                 JPanel headerPanel = new JPanel();
-                headerPanel.setBackground(color(SIDE_PANEL));
+                headerPanel.setBackground(color(SIDE_PANEL_HEADER_FOOTER));
 
                 JLabel headerLabel = new JLabel(l10n("settings.sidebar_title"));
                 headerLabel.setForeground(color(FOREGROUND));
@@ -225,6 +227,7 @@ public class SettingsPanel {
 
                     JButton button = new JButton();
                     button.setToolTipText(entry.getDisplayName());
+                    button.setCursor(new Cursor(Cursor.HAND_CURSOR));
                     button.setPreferredSize(new Dimension(120, 120));
                     button.setBorderPainted(false);
                     button.setContentAreaFilled(false);
@@ -240,7 +243,9 @@ public class SettingsPanel {
 
                         Component[] buttons = sidebarPanel.getComponents();
                         for (Component button1 : buttons) {
-                            button1.setBackground(color(SIDE_PANEL));
+                            if (button1.getBackground().equals(color(SIDE_PANEL_SELECTED))) {
+                                button1.setBackground(color(SIDE_PANEL));
+                            }
                         }
 
                         button.setBackground(color(SIDE_PANEL_SELECTED));
@@ -386,6 +391,36 @@ public class SettingsPanel {
             sidebarPanel.add(Box.createVerticalGlue(), gbc);
 
             {
+                JPanel importExportPanel = new JPanel();
+                importExportPanel.setBackground(color(SIDE_PANEL));
+                importExportPanel.setLayout(new FlowLayout(FlowLayout.CENTER, 10, 0));
+                importExportPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+                importExportPanel.add(createIconButton(
+                    loadIcon("/assets/export.png", ICON, 24),
+                    loadIcon("/assets/export.png", LIGHT_TEXT, 24),
+                    "gui.settings_export.tooltip",
+                    e -> openExportSettingsDialog()
+                ));
+                importExportPanel.add(createIconButton(
+                    loadIcon("/assets/import.png", ICON, 24),
+                    loadIcon("/assets/import.png", LIGHT_TEXT, 24),
+                    "gui.settings_import.tooltip",
+                    e -> openImportSettingsDialog()
+                ));
+
+                gbc.gridy++;
+                gbc.weighty = 0;
+                gbc.fill = GridBagConstraints.HORIZONTAL;
+                sidebarPanel.add(importExportPanel, gbc);
+            }
+
+            {
+                JPanel gabPanel = new JPanel(new BorderLayout());
+                gabPanel.setBackground(color(SIDE_PANEL_HEADER_FOOTER));
+                gabPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+                gabPanel.setPreferredSize(new Dimension(120, 74));
+
                 JButton gabButton = new JButton("@hstr0100");
                 gabButton.setToolTipText("Gabriel's GitHub - #hireme");
                 gabButton.setUI(new BasicButtonUI());
@@ -395,6 +430,7 @@ public class SettingsPanel {
                 gabButton.setBorderPainted(false);
                 gabButton.setContentAreaFilled(false);
                 gabButton.setOpaque(false);
+                gabButton.setMargin(new Insets(0, 0, 0, 0));
 
                 gabButton.addActionListener(e -> {
                     main.openUrlInBrowser("https://github.com/hstr0100");
@@ -412,11 +448,12 @@ public class SettingsPanel {
                     }
                 });
 
-                gabButton.setPreferredSize(new Dimension(64, 64));
+                gabPanel.add(gabButton, BorderLayout.CENTER);
+
                 gbc.gridy++;
                 gbc.weighty = 0;
                 gbc.fill = GridBagConstraints.HORIZONTAL;
-                sidebarPanel.add(gabButton, gbc);
+                sidebarPanel.add(gabPanel, gbc);
             }
 
             frame.add(sidebarPanel, BorderLayout.WEST);
@@ -427,6 +464,91 @@ public class SettingsPanel {
 
             frame.setVisible(true);
         });
+    }
+
+    private void openImportSettingsDialog() {
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setDialogTitle(l10n("gui.settings_import.tooltip"));
+        fileChooser.setFileFilter(new FileNameExtensionFilter(l10n("gui.file_chooser.json"), "json"));
+
+        int userSelection = fileChooser.showOpenDialog(frame);
+
+        if (userSelection == JFileChooser.APPROVE_OPTION) {
+            File fileToLoad = fileChooser.getSelectedFile();
+
+            try {
+                // Perform a few sanity checks before proceeding
+                if (!fileToLoad.getName().endsWith(".json")) {
+                    // It might still be a valid json, but only accept if named as such
+                    throw new IllegalArgumentException(l10n("gui.import_failed_invalid"));
+                }
+
+                long fileSize = fileToLoad.length();
+                final long MAX_SIZE = 1024 * 1024;
+                if (fileSize > MAX_SIZE) {
+                    // A 1MB settings file seems unlikely in the near future
+                    throw new IllegalArgumentException(l10n("gui.import_failed_invalid"));
+                }
+
+                String fileContent = Files.readString(fileToLoad.toPath());
+
+                if (!fileContent.startsWith("{") || !fileContent.contains("ConfigVersion")) {
+                    // Don't know what this is but it sure isn't our settings file
+                    throw new IllegalArgumentException(l10n("gui.import_failed_invalid"));
+                }
+
+                settings = GDownloader.OBJECT_MAPPER.readValue(fileContent, Settings.class);
+
+                reloadSettings();
+
+                main.updateConfig(settings);
+
+                JOptionPane.showMessageDialog(frame,
+                    l10n("gui.import_success_popup", fileToLoad.getAbsolutePath()),
+                    l10n("gui.import_success_popup_title"),
+                    JOptionPane.INFORMATION_MESSAGE);
+            } catch (Exception e) {
+                log.error("Error importing settings: {}", e.getMessage());
+
+                JOptionPane.showMessageDialog(frame,
+                    l10n("gui.error_popup", l10n("gui.settings_import.tooltip"), e.getMessage()),
+                    l10n("gui.error_popup_title"),
+                    JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
+    private void openExportSettingsDialog() {
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setDialogTitle(l10n("gui.settings_export.tooltip"));
+        fileChooser.setFileFilter(new FileNameExtensionFilter(l10n("gui.file_chooser.json"), "json"));
+        fileChooser.setSelectedFile(new File("config.json"));
+
+        int userSelection = fileChooser.showSaveDialog(frame);
+
+        if (userSelection == JFileChooser.APPROVE_OPTION) {
+            File fileToSave = fileChooser.getSelectedFile();
+
+            if (!fileToSave.getName().toLowerCase().endsWith(".json")) {
+                fileToSave = new File(fileToSave.getAbsolutePath() + ".json");
+            }
+
+            try {
+                GDownloader.OBJECT_MAPPER.writerWithDefaultPrettyPrinter().writeValue(fileToSave, settings);
+
+                JOptionPane.showMessageDialog(frame,
+                    l10n("gui.export_success_popup", fileToSave.getAbsolutePath()),
+                    l10n("gui.export_success_popup_title"),
+                    JOptionPane.INFORMATION_MESSAGE);
+            } catch (Exception e) {
+                log.error("Error exporting settings: {}", e.getMessage());
+
+                JOptionPane.showMessageDialog(frame,
+                    l10n("gui.error_popup", l10n("gui.settings_export.tooltip"), e.getMessage()),
+                    l10n("gui.error_popup_title"),
+                    JOptionPane.ERROR_MESSAGE);
+            }
+        }
     }
 
     private JPanel createGeneralSettings() {
