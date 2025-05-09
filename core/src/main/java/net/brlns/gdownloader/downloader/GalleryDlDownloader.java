@@ -94,10 +94,16 @@ public class GalleryDlDownloader extends AbstractDownloader {
 
     @Override
     protected boolean canConsumeUrl(String inputUrl) {
-        return isEnabled()
-            && !(inputUrl.contains("ytimg")
+        boolean isSpotifyUrl = inputUrl.contains("spotify.com/") || inputUrl.contains("spotify.link/");
+
+        // Check if it's not a garbage URL
+        boolean isNotGarbageUrl = !(inputUrl.contains("ytimg")
             || inputUrl.contains("ggpht")
             || inputUrl.endsWith("youtube.com/"));
+
+        return isEnabled()
+            && isNotGarbageUrl
+            && !isSpotifyUrl;
     }
 
     @Override
@@ -256,7 +262,6 @@ public class GalleryDlDownloader extends AbstractDownloader {
                         targetPath = FileUtils.ensureUniqueFileName(targetPath);
 
                         Files.move(path, targetPath, StandardCopyOption.REPLACE_EXISTING);
-                        updateFileTimes(entry, targetPath);
 
                         entry.getFinalMediaFiles().add(targetPath.toFile());
                     } catch (IOException e) {

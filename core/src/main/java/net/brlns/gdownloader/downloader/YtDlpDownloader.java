@@ -111,21 +111,27 @@ public class YtDlpDownloader extends AbstractDownloader {
 
     @Override
     protected boolean canConsumeUrl(String inputUrl) {
-        return isEnabled()
-            && !(inputUrl.contains("ytimg")
+        // If SpotDL is disabled, try to consume url with yt-dlp instead (Not currently supported)
+        boolean isSpotifyUrl = inputUrl.contains("spotify.com/") || inputUrl.contains("spotify.link/");
+        boolean spotDlEnabled = main.getConfig().isSpotDLEnabled();
+
+        // Check if it's not a garbage URL
+        boolean isNotGarbageUrl = !(inputUrl.contains("ytimg")
             || inputUrl.contains("ggpht")
             || inputUrl.endsWith("youtube.com/")
             || inputUrl.endsWith(".jpg")
             || inputUrl.endsWith(".png")
             || inputUrl.endsWith(".webp"));
+
+        return isEnabled()
+            && isNotGarbageUrl
+            && (!isSpotifyUrl || !spotDlEnabled);
     }
 
     @Override
     protected boolean tryQueryMetadata(QueueEntry queueEntry) {
         try {
-            // TODO: It is unclear whether yt-dlp will ever natively support spotify.
-            // Therefore, I prefer not to completely disable spotify links in canConsumeUrl().
-            if (queueEntry.getUrl().contains("spotify.com/") || queueEntry.getUrl().contains("spotify.link/")) {
+            if (!canConsumeUrl(queueEntry.getUrl())) {
                 return false;
             }
 
