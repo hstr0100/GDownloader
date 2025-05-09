@@ -1168,13 +1168,14 @@ public class DownloadManager implements IEvent, AutoCloseable {
 
         if (!isRunning()) {
             taskbarManager.setBadgeValue(0);
+            taskbarManager.setProgressValue(0);
 
             if (failedCount > 0 && queuedCount == 0) {
                 taskbarManager.setTaskbarState(TaskbarState.ERROR);
             } else {
                 taskbarManager.setTaskbarState(TaskbarState.OFF);
             }
-
+            
             return;
         }
 

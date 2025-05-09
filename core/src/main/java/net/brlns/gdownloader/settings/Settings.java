@@ -202,6 +202,9 @@ public class Settings {
     @JsonProperty("ExtraSpotDLArguments")
     private String extraSpotDLArguments = "";
 
+    @JsonProperty("LastSettingsExportDirectory")
+    private String lastSettingsExportDirectory = "";
+
     @JsonProperty("ImpersonateBrowser")
     private boolean impersonateBrowser = false;
 

@@ -63,6 +63,7 @@ import static net.brlns.gdownloader.ui.GUIManager.createIconButton;
 import static net.brlns.gdownloader.ui.UIUtils.*;
 import static net.brlns.gdownloader.ui.themes.ThemeProvider.*;
 import static net.brlns.gdownloader.ui.themes.UIColors.*;
+import static net.brlns.gdownloader.util.StringUtils.notNullOrEmpty;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -472,6 +473,11 @@ public class SettingsPanel {
         fileChooser.setDialogTitle(l10n("gui.settings_import.tooltip"));
         fileChooser.setFileFilter(new FileNameExtensionFilter(l10n("gui.file_chooser.json"), "json"));
 
+        String lastDirectory = settings.getLastSettingsExportDirectory();
+        if (notNullOrEmpty(lastDirectory)) {
+            fileChooser.setCurrentDirectory(new File(lastDirectory));
+        }
+
         int userSelection = fileChooser.showOpenDialog(frame);
 
         if (userSelection == JFileChooser.APPROVE_OPTION) {
@@ -537,6 +543,11 @@ public class SettingsPanel {
             }
 
             try {
+                String currentDirString = fileChooser.getCurrentDirectory().getAbsolutePath();
+                settings.setLastSettingsExportDirectory(currentDirString);
+                main.getConfig().setLastSettingsExportDirectory(currentDirString);
+                main.updateConfig();
+
                 GDownloader.OBJECT_MAPPER.writerWithDefaultPrettyPrinter().writeValue(fileToSave, settings);
 
                 JOptionPane.showMessageDialog(frame,

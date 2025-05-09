@@ -74,6 +74,10 @@ public class GenericFilter extends AbstractUrlFilter {
         QualitySettings quality = getActiveQualitySettings(config);
         AudioBitrateEnum audioBitrate = quality.getAudioBitrate();
 
+        String audioPattern = getAudioNamePattern();
+        audioPattern = audioPattern.replace("%(audio_bitrate)s",
+            (audioBitrate != AudioBitrateEnum.NO_AUDIO ? audioBitrate.getValue() : 0) + "kbps");
+
         ProcessArguments arguments = new ProcessArguments();
 
         File archiveFile = downloader.getArchiveFile(typeEnum);
@@ -203,12 +207,9 @@ public class GenericFilter extends AbstractUrlFilter {
                     }
                     case AUDIO -> {
                         if (audioBitrate != AudioBitrateEnum.NO_AUDIO) {
-                            String audioPatternWithBitrate = getAudioNamePattern()
-                                .replace("%(audio_bitrate)s", audioBitrate.getValue() + "kbps");
-
                             AudioContainerEnum audioContainer = quality.getAudioContainer();
                             arguments.add(
-                                "-o", savePath.getAbsolutePath() + File.separator + audioPatternWithBitrate,
+                                "-o", savePath.getAbsolutePath() + File.separator + audioPattern,
                                 "-f", "bestaudio/worstvideo*+bestaudio/best",
                                 "--extract-audio",
                                 "--audio-format",
@@ -230,7 +231,8 @@ public class GenericFilter extends AbstractUrlFilter {
                     }
                     case THUMBNAILS -> {
                         arguments.add(
-                            "-o", savePath.getAbsolutePath() + File.separator + getVideoNamePattern(),
+                            "-o", savePath.getAbsolutePath() + File.separator
+                            + (config.isDownloadVideo() ? getVideoNamePattern() : audioPattern),
                             "--write-thumbnail",
                             "--skip-download",
                             "--convert-thumbnails",
@@ -239,7 +241,8 @@ public class GenericFilter extends AbstractUrlFilter {
                     }
                     case SUBTITLES -> {
                         arguments.add(
-                            "-o", savePath.getAbsolutePath() + File.separator + getVideoNamePattern(),
+                            "-o", savePath.getAbsolutePath() + File.separator
+                            + (config.isDownloadVideo() ? getVideoNamePattern() : audioPattern),
                             "--all-subs",
                             "--skip-download",
                             "--sub-format",
