@@ -498,6 +498,7 @@ public class SettingsPanel {
                 }
 
                 settings = GDownloader.OBJECT_MAPPER.readValue(fileContent, Settings.class);
+                settings.doMigration();
 
                 reloadSettings();
 
