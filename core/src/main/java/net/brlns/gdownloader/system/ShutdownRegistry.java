@@ -62,7 +62,7 @@ public final class ShutdownRegistry {
 
     public static void closeAllResources() {
         if (closed.compareAndSet(false, true)) {
-            log.error("Closing all registered closeable resources...");
+            log.info("Closing all registered closeable resources...");
 
             List<AutoCloseable> currentResources = new ArrayList<>(resourcesToClose);
             if (currentResources.isEmpty()) {

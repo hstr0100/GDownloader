@@ -655,7 +655,6 @@ public final class GDownloader {
     }
 
     public void shutdown(int code) {
-        log.info("Exiting....");
         System.exit(code);
     }
 
@@ -1070,6 +1069,8 @@ public final class GDownloader {
         log.info("{} is initialized", REGISTRY_APP_NAME);
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            log.info("Exiting....");
+
             if (HAS_JNATIVEHOOK) {
                 try {
                     GlobalScreen.unregisterNativeHook();

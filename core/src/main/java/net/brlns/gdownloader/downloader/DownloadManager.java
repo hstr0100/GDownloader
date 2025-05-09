@@ -1175,7 +1175,7 @@ public class DownloadManager implements IEvent, AutoCloseable {
             } else {
                 taskbarManager.setTaskbarState(TaskbarState.OFF);
             }
-            
+
             return;
         }
 
