@@ -23,6 +23,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.BasicFileAttributeView;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -277,6 +278,17 @@ public final class FileUtils {
         }
     }
 
+    public static String getFilenameWithoutExtension(@NonNull File inputFile) {
+        String baseName = inputFile.getName();
+        int lastDotIndex = baseName.lastIndexOf('.');
+
+        if (lastDotIndex >= 0) {
+            return baseName.substring(0, lastDotIndex);
+        }
+
+        return baseName;
+    }
+
     public static boolean isLargerThan(Path path, int bytes) {
         return isLargerThan(path.toFile(), bytes);
     }
@@ -329,6 +341,31 @@ public final class FileUtils {
             log.error("An error occurred setting file time: {}", e.getMessage());
         } catch (UnsupportedOperationException e) {
             log.error("Setting file time is not supported by the file system: {}", e.getMessage());
+        }
+    }
+
+    public static void copyAllFileTimes(Path sourcePath, Path targetPath) {
+        try {
+            BasicFileAttributes sourceAttributes = Files.readAttributes(sourcePath, BasicFileAttributes.class);
+            FileTime lastModifiedTime = sourceAttributes.lastModifiedTime();
+            FileTime lastAccessTime = sourceAttributes.lastAccessTime();
+            FileTime creationTime = sourceAttributes.creationTime();
+
+            try {
+                Files.setLastModifiedTime(targetPath, lastModifiedTime);
+                BasicFileAttributeView attributesView = Files.getFileAttributeView(targetPath, BasicFileAttributeView.class);
+                if (attributesView != null) {
+                    attributesView.setTimes(lastModifiedTime, lastAccessTime, creationTime);
+                } else {
+                    log.error("File attributes not available for {}, cannot set file time.", targetPath);
+                }
+            } catch (IOException e) {
+                log.error("An error occurred setting file time: {}", e.getMessage());
+            } catch (UnsupportedOperationException e) {
+                log.error("Setting file time is not supported by the file system: {}", e.getMessage());
+            }
+        } catch (IOException e) {
+            log.error("An error occurred reading file attributes from {}: {}", sourcePath, e.getMessage());
         }
     }
 }

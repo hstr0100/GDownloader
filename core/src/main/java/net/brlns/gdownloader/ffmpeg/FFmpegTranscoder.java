@@ -684,6 +684,9 @@ public final class FFmpegTranscoder implements AutoCloseable {
         } finally {
             if (exitCode != 0) {
                 Files.deleteIfExists(outputFile.toPath());
+            } else {
+                FileUtils.copyAllFileTimes(
+                    inputFile.toPath(), outputFile.toPath());
             }
         }
 

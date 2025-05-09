@@ -262,6 +262,10 @@ public class GalleryDlDownloader extends AbstractDownloader {
                         targetPath = FileUtils.ensureUniqueFileName(targetPath);
 
                         Files.move(path, targetPath, StandardCopyOption.REPLACE_EXISTING);
+                        // If upload-time is null, this is no-op
+                        // if the 'use upload time as created time' setting is off, this
+                        // sets the file to the current local time
+                        updateFileTimes(entry, targetPath);
 
                         entry.getFinalMediaFiles().add(targetPath.toFile());
                     } catch (IOException e) {

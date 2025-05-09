@@ -356,7 +356,12 @@ public class YtDlpDownloader extends AbstractDownloader {
                         targetPath = FileUtils.ensureUniqueFileName(targetPath);
 
                         Files.move(path, targetPath, StandardCopyOption.REPLACE_EXISTING);
-                        updateFileTimes(entry, targetPath);
+
+                        if (!entry.isPlaylist() || !main.getConfig().isUseUploadTimeAsFileTime()) {
+                            // TODO handle playlists correctly, for that we need to fetch the entire playlist data not just the first item.
+                            // For now we're just passing through the dates as set by yt-dlp.
+                            updateFileTimes(entry, targetPath);
+                        }
 
                         entry.getFinalMediaFiles().add(targetPath.toFile());
                     } catch (IOException e) {
@@ -368,8 +373,37 @@ public class YtDlpDownloader extends AbstractDownloader {
             if (deepestDir != null) {
                 entry.getFinalMediaFiles().add(deepestDir.toFile());
             }
+
+            updateThumbnailAndSubtitleTimes(entry, quality);
         } catch (IOException e) {
             log.error("Failed to process media files", e);
+        }
+    }
+
+    private void updateThumbnailAndSubtitleTimes(QueueEntry entry, QualitySettings quality) {
+        if (!entry.isPlaylist()) {
+            return;
+        }
+
+        // File times aren't applied to subtitles or thumbnails; this is a temporary O(n²) workaround.
+        for (File file : entry.getFinalMediaFiles()) {
+            Path path = file.toPath();
+
+            boolean isAudio = AudioContainerEnum.isFileType(path);
+            boolean isVideo = VideoContainerEnum.isFileType(path) || VideoContainerEnum.isGif(path);
+
+            if (isAudio || isVideo) {
+                String filenameWithoutExt = FileUtils.getFilenameWithoutExtension(file);
+                for (File childFile : entry.getFinalMediaFiles()) {
+                    boolean isSubtitle = SubtitleContainerEnum.isFileType(childFile);
+                    boolean isThumbnail = ThumbnailContainerEnum.isFileType(childFile);
+
+                    if (childFile.getName().contains(filenameWithoutExt)
+                        && (isSubtitle || isThumbnail)) {
+                        FileUtils.copyAllFileTimes(path, childFile.toPath());
+                    }
+                }
+            }
         }
     }
 
