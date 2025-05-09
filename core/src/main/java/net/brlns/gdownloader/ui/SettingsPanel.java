@@ -397,14 +397,14 @@ public class SettingsPanel {
                 importExportPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
                 importExportPanel.add(createIconButton(
-                    loadIcon("/assets/export.png", ICON, 24),
-                    loadIcon("/assets/export.png", LIGHT_TEXT, 24),
+                    loadIcon("/assets/export.png", ICON, 20),
+                    loadIcon("/assets/export.png", LIGHT_TEXT, 20),
                     "gui.settings_export.tooltip",
                     e -> openExportSettingsDialog()
                 ));
                 importExportPanel.add(createIconButton(
-                    loadIcon("/assets/import.png", ICON, 24),
-                    loadIcon("/assets/import.png", LIGHT_TEXT, 24),
+                    loadIcon("/assets/import.png", ICON, 20),
+                    loadIcon("/assets/import.png", LIGHT_TEXT, 20),
                     "gui.settings_import.tooltip",
                     e -> openImportSettingsDialog()
                 ));
