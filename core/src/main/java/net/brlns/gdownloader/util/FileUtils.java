@@ -321,7 +321,7 @@ public final class FileUtils {
     }
 
     public static void setAllFileTimesTo(Path filePath, @Nullable LocalDateTime localDateTime) {
-        if (localDateTime == null) {
+        if (!Files.exists(filePath) || localDateTime == null) {
             return;
         }
 
@@ -345,6 +345,10 @@ public final class FileUtils {
     }
 
     public static void copyAllFileTimes(Path sourcePath, Path targetPath) {
+        if (!Files.exists(sourcePath) || !Files.exists(targetPath)) {
+            return;// Exit silently
+        }
+
         try {
             BasicFileAttributes sourceAttributes = Files.readAttributes(sourcePath, BasicFileAttributes.class);
             FileTime lastModifiedTime = sourceAttributes.lastModifiedTime();

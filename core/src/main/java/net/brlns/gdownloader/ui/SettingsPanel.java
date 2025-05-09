@@ -467,6 +467,7 @@ public class SettingsPanel {
     }
 
     private void openImportSettingsDialog() {
+        // When importing, we automatically apply and save settings
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setDialogTitle(l10n("gui.settings_import.tooltip"));
         fileChooser.setFileFilter(new FileNameExtensionFilter(l10n("gui.file_chooser.json"), "json"));
@@ -520,6 +521,7 @@ public class SettingsPanel {
     }
 
     private void openExportSettingsDialog() {
+        // This exports the currently open settings file, even if it's not applied.
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setDialogTitle(l10n("gui.settings_export.tooltip"));
         fileChooser.setFileFilter(new FileNameExtensionFilter(l10n("gui.file_chooser.json"), "json"));

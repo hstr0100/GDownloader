@@ -388,6 +388,10 @@ public class YtDlpDownloader extends AbstractDownloader {
         // File times aren't applied to subtitles or thumbnails; this is a temporary O(n²) workaround.
         for (File file : entry.getFinalMediaFiles()) {
             Path path = file.toPath();
+            if (!Files.exists(path)) {
+                // We might unknowingly be holding references to deleted files here.
+                continue;
+            }
 
             boolean isAudio = AudioContainerEnum.isFileType(path);
             boolean isVideo = VideoContainerEnum.isFileType(path) || VideoContainerEnum.isGif(path);
@@ -395,6 +399,10 @@ public class YtDlpDownloader extends AbstractDownloader {
             if (isAudio || isVideo) {
                 String filenameWithoutExt = FileUtils.getFilenameWithoutExtension(file);
                 for (File childFile : entry.getFinalMediaFiles()) {
+                    if (!childFile.exists()) {
+                        continue;
+                    }
+
                     boolean isSubtitle = SubtitleContainerEnum.isFileType(childFile);
                     boolean isThumbnail = ThumbnailContainerEnum.isFileType(childFile);
 
