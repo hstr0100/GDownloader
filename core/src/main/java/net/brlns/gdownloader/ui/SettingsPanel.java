@@ -475,7 +475,11 @@ public class SettingsPanel {
 
         String lastDirectory = settings.getLastSettingsExportDirectory();
         if (notNullOrEmpty(lastDirectory)) {
-            fileChooser.setCurrentDirectory(new File(lastDirectory));
+            File directory = new File(lastDirectory);
+
+            if (directory.exists() && directory.isDirectory()) {
+                fileChooser.setCurrentDirectory(directory);
+            }
         }
 
         int userSelection = fileChooser.showOpenDialog(frame);

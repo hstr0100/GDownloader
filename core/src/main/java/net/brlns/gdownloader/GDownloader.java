@@ -139,6 +139,7 @@ import static net.brlns.gdownloader.util.StringUtils.notNullOrEmpty;
 // TODO when expanded, display video info in the media cards
 // TODO button to cancel update check
 // TODO search bar when expanded
+// TODO fix nested context menus in multi monitor setups
 /**
  * GDownloader - GUI wrapper for yt-dlp
  *
