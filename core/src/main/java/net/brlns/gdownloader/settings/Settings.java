@@ -235,6 +235,12 @@ public class Settings {
     @JsonProperty("AutoDownloadStart")
     private boolean autoDownloadStart = false;
 
+    @JsonProperty("DownloadDescription")
+    private boolean downloadDescription = false;
+
+    @JsonProperty("SaveDescriptionFileAsTxt")
+    private boolean saveDescriptionFileAsTxt = true;
+
     @JsonProperty("RandomIntervalBetweenDownloads")
     private boolean randomIntervalBetweenDownloads = false;
 

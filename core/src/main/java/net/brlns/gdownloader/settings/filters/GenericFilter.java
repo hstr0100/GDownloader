@@ -251,6 +251,14 @@ public class GenericFilter extends AbstractUrlFilter {
                             quality.getSubtitleContainer().getValue()
                         );
                     }
+                    case DESCRIPTION -> {
+                        arguments.add(
+                            "-o", savePath.getAbsolutePath() + File.separator
+                            + (config.isDownloadVideo() ? getVideoNamePattern() : audioPattern),
+                            "--write-description",
+                            "--skip-download"
+                        );
+                    }
                     default ->
                         throw new IllegalArgumentException();
                 }

@@ -980,6 +980,25 @@ public class SettingsPanel {
             .enabled(settings.isDownloadSubtitles())
             .build()));
 
+        AtomicReference<JCheckBox> saveAsTxtCheckBoxRef = new AtomicReference<>();
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.download_description")
+            .getter(settings::isDownloadDescription)
+            .setter(settings::setDownloadDescription)
+            .onSet((selected) -> {
+                enableComponentAndLabel(saveAsTxtCheckBoxRef.get(), selected);
+            })
+            .build());
+
+        saveAsTxtCheckBoxRef.set(addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.download_description_save_as_txt")
+            .getter(settings::isSaveDescriptionFileAsTxt)
+            .setter(settings::setSaveDescriptionFileAsTxt)
+            .enabled(settings.isDownloadDescription())
+            .build()));
+
         addCheckBox(panel, CheckBoxBuilder.builder()
             .background(resolveColor(panel))
             .labelKey("settings.download_thumbnails")

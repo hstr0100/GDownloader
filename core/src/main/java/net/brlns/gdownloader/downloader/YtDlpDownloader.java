@@ -46,6 +46,7 @@ import net.brlns.gdownloader.settings.enums.AudioContainerEnum;
 import net.brlns.gdownloader.settings.enums.SubtitleContainerEnum;
 import net.brlns.gdownloader.settings.enums.ThumbnailContainerEnum;
 import net.brlns.gdownloader.settings.enums.VideoContainerEnum;
+import net.brlns.gdownloader.settings.enums.DescriptionContainerEnum;
 import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
 import net.brlns.gdownloader.util.CancelHook;
 import net.brlns.gdownloader.util.DirectoryUtils;
@@ -246,7 +247,8 @@ public class YtDlpDownloader extends AbstractDownloader {
                 || type == VIDEO && !downloadVideo
                 || type == AUDIO && !main.getConfig().isDownloadAudio()
                 || type == SUBTITLES && (alreadyDownloaded || !main.getConfig().isDownloadSubtitles())
-                || type == THUMBNAILS && (alreadyDownloaded || !main.getConfig().isDownloadThumbnails())) {
+                || type == THUMBNAILS && (alreadyDownloaded || !main.getConfig().isDownloadThumbnails())
+                || type == DESCRIPTION && (alreadyDownloaded || !main.getConfig().isDownloadDescription())) {
                 continue;
             }
 
@@ -351,6 +353,11 @@ public class YtDlpDownloader extends AbstractDownloader {
                 if (!Files.isDirectory(path)) {
                     Path targetPath = determineTargetPath(tmpPath, finalPath, path, quality);
 
+                    if (DescriptionContainerEnum.isFileType(path) && main.getConfig().isSaveDescriptionFileAsTxt()) {
+                        File derivedDescription = FileUtils.deriveFile(targetPath.toFile(), "", "txt");
+                        targetPath = derivedDescription.toPath();
+                    }
+
                     try {
                         Files.createDirectories(targetPath.getParent());
                         targetPath = FileUtils.ensureUniqueFileName(targetPath);
@@ -406,9 +413,10 @@ public class YtDlpDownloader extends AbstractDownloader {
 
                     boolean isSubtitle = SubtitleContainerEnum.isFileType(childFile);
                     boolean isThumbnail = ThumbnailContainerEnum.isFileType(childFile);
+                    boolean isDescription = DescriptionContainerEnum.isFileType(childFile);
 
                     if (childFile.getName().contains(filenameWithoutExt)
-                        && (isSubtitle || isThumbnail)) {
+                        && (isSubtitle || isThumbnail || isDescription)) {
                         FileUtils.copyAllFileTimes(path, childFile.toPath());
                     }
                 }
@@ -421,10 +429,12 @@ public class YtDlpDownloader extends AbstractDownloader {
         boolean isVideo = VideoContainerEnum.isFileType(path) || VideoContainerEnum.isGif(path);
         boolean isSubtitle = SubtitleContainerEnum.isFileType(path);
         boolean isThumbnail = ThumbnailContainerEnum.isFileType(path);
+        boolean isDescription = DescriptionContainerEnum.isFileType(path);
 
         if (isAudio || isVideo
             || (isSubtitle && main.getConfig().isDownloadSubtitles())
-            || (isThumbnail && main.getConfig().isDownloadThumbnails())) {
+            || (isThumbnail && main.getConfig().isDownloadThumbnails())
+            || (isDescription && main.getConfig().isDownloadDescription())) {
             return relativize(tmpPath, finalPath, path);
         }
 
