@@ -379,6 +379,10 @@ public class QueueEntry {
     }
 
     public boolean isPlaylist() {
+        if (mediaInfo == null) {
+            return false;
+        }
+
         return notNullOrEmpty(mediaInfo.getPlaylistTitle());
     }
 
