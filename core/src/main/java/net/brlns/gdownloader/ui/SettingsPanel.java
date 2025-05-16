@@ -472,6 +472,8 @@ public class SettingsPanel {
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setDialogTitle(l10n("gui.settings_import.tooltip"));
         fileChooser.setFileFilter(new FileNameExtensionFilter(l10n("gui.file_chooser.json"), "json"));
+        fileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+        fileChooser.setMultiSelectionEnabled(false);
 
         String lastDirectory = settings.getLastSettingsExportDirectory();
         if (notNullOrEmpty(lastDirectory)) {
@@ -1023,6 +1025,13 @@ public class SettingsPanel {
             .labelKey("settings.downloader.gallery_dl.deduplicate_files")
             .getter(settings::isGalleryDlDeduplication)
             .setter(settings::setGalleryDlDeduplication)
+            .build());
+
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.downloader.gallery_dl.use_original_filenames")
+            .getter(settings::isGalleryDlUseOriginalFilenames)
+            .setter(settings::setGalleryDlUseOriginalFilenames)
             .build());
 
         addCheckBox(panel, CheckBoxBuilder.builder()

@@ -160,6 +160,9 @@ public class Settings {
     @JsonProperty("RespectGalleryDlConfigFile")
     private boolean respectGalleryDlConfigFile = true;
 
+    @JsonProperty("GalleryDlUseOriginalFilenames")
+    private boolean GalleryDlUseOriginalFilenames = false;
+
     @JsonProperty("RespectSpotDLConfigFile")
     private boolean respectSpotDLConfigFile = true;
 

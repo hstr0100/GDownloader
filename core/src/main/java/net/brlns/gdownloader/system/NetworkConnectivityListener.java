@@ -39,8 +39,19 @@ public class NetworkConnectivityListener implements AutoCloseable {
         "2001:4860:4860::8888" // Google (IPv6)
     };
 
-    private static final int TARGET_PORT = 53;
-    private static final int CONNECTION_TIMEOUT_MS = 2000;
+    private static final String[] ALTERNATIVE_HOSTS = new String[] {
+        "github.com", // Our primary home and distribution platform; likely to be available.
+        "google.com", // One of the most popular websites worldwide.
+        "www.bilibili.com", // Popular in China; fallback if GitHub and Google are unreachable.
+        "yandex.ru" // Popular in Russia; fallback if GitHub and Google are unreachable.
+    };
+
+    private static final int DNS_PORT = 53;
+    private static final int HTTP_PORT = 80;
+    private static final int HTTPS_PORT = 443;
+
+    private static final int DNS_TIMEOUT_MS = 1000;
+    private static final int ALTERNATIVE_TIMEOUT_MS = 2000;
     private static final int RETRY_DELAY_SECONDS = 6;
 
     private static final int BACKGROUND_CHECK_INTERVAL_SECONDS = 30;
@@ -48,11 +59,10 @@ public class NetworkConnectivityListener implements AutoCloseable {
 
     private final AtomicBoolean shutdown = new AtomicBoolean();
 
-    private static boolean isNetworkAvailable() {
+    private static boolean checkDnsConnectivity() {
         for (String host : TARGET_HOSTS) {
             try (Socket socket = new Socket()) {
-                socket.connect(new InetSocketAddress(host, TARGET_PORT), CONNECTION_TIMEOUT_MS);
-
+                socket.connect(new InetSocketAddress(host, DNS_PORT), DNS_TIMEOUT_MS);
                 return true;
             } catch (IOException e) {
                 // Continue to the next host
@@ -60,6 +70,32 @@ public class NetworkConnectivityListener implements AutoCloseable {
         }
 
         return false;
+    }
+
+    private static boolean checkAlternativeConnectivity() {
+        for (String host : ALTERNATIVE_HOSTS) {
+            try (Socket socket = new Socket()) {
+                socket.connect(new InetSocketAddress(host, HTTPS_PORT), ALTERNATIVE_TIMEOUT_MS);
+                return true;
+            } catch (IOException e) {
+                try (Socket httpSocket = new Socket()) {
+                    httpSocket.connect(new InetSocketAddress(host, HTTP_PORT), ALTERNATIVE_TIMEOUT_MS);
+                    return true;
+                } catch (IOException httpEx) {
+                    // Continue to next host
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private static boolean isNetworkAvailable() {
+        if (checkDnsConnectivity()) {
+            return true;
+        }
+
+        return checkAlternativeConnectivity();
     }
 
     public static void waitForConnectivity() {

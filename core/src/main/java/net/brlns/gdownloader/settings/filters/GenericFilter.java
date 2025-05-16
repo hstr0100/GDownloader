@@ -313,6 +313,10 @@ public class GenericFilter extends AbstractUrlFilter {
                         arguments.add(
                             "-D", savePath.getAbsolutePath() + (fileName != null ? File.separator + fileName : "")
                         );
+
+                        if (config.isGalleryDlUseOriginalFilenames()) {
+                            arguments.add("-o", "filename=\"{filename}.{extension}\"");
+                        }
                     }
                     default ->
                         throw new IllegalArgumentException();
