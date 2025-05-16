@@ -42,8 +42,8 @@ public class NetworkConnectivityListener implements AutoCloseable {
     private static final String[] ALTERNATIVE_HOSTS = new String[] {
         "github.com", // Our primary home and distribution platform; likely to be available.
         "google.com", // One of the most popular websites worldwide.
+        "wikipedia.org", // Widely popular website; fallback if GitHub and Google are unreachable.
         "www.bilibili.com", // Popular in China; fallback if GitHub and Google are unreachable.
-        "yandex.ru" // Popular in Russia; fallback if GitHub and Google are unreachable.
     };
 
     private static final int DNS_PORT = 53;
