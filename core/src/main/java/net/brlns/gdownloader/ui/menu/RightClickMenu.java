@@ -188,7 +188,16 @@ public class RightClickMenu {
     }
 
     private void setPopupLocation(JWindow popupWindow, Component parentComponent, int x, int y) {
-        GraphicsConfiguration graphicsConfig = parentComponent.getGraphicsConfiguration();
+        Point locationOnScreen = parentComponent.getLocationOnScreen();
+        int choosenX = locationOnScreen.x + x;
+        int choosenY = locationOnScreen.y + y;
+
+        GraphicsDevice currentScreen = findContainingScreen(new Point(choosenX, choosenY));
+        if (currentScreen == null) {
+            currentScreen = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice();
+        }
+
+        GraphicsConfiguration graphicsConfig = currentScreen.getDefaultConfiguration();
         Rectangle screenBounds = graphicsConfig.getBounds();
         Insets screenInsets = Toolkit.getDefaultToolkit().getScreenInsets(graphicsConfig);
 
@@ -199,15 +208,27 @@ public class RightClickMenu {
             screenBounds.height - screenInsets.top - screenInsets.bottom
         );
 
-        Point locationOnScreen = parentComponent.getLocationOnScreen();
-        int choosenX = locationOnScreen.x + x;
-        int choosenY = locationOnScreen.y + y;
-
         Dimension popupSize = popupWindow.getSize();
         int popupX = Math.max(usableBounds.x, Math.min(choosenX, usableBounds.x + usableBounds.width - popupSize.width));
         int popupY = Math.max(usableBounds.y, Math.min(choosenY, usableBounds.y + usableBounds.height - popupSize.height));
 
         popupWindow.setLocation(popupX, popupY);
+    }
+
+    private GraphicsDevice findContainingScreen(Point point) {
+        GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+        GraphicsDevice[] screens = ge.getScreenDevices();
+
+        for (GraphicsDevice screen : screens) {
+            GraphicsConfiguration config = screen.getDefaultConfiguration();
+            Rectangle bounds = config.getBounds();
+
+            if (bounds.contains(point)) {
+                return screen;
+            }
+        }
+
+        return null;
     }
 
     private void closeOtherSubmenus(int currentWindowId, JWindow currentWindow, List<Integer> hierarchy) {

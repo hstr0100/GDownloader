@@ -17,6 +17,7 @@ It supports various platforms such as Crunchyroll, Twitch, X/Twitter, Spotify, a
 - Hardware-accelerated automatic video transcoding
 - Keeps yt-dlp, spotDL and gallery-dl always updated and ready go
 - Multiple customizable settings to best suit your usage style
+- Available in three languages: en-US, pt-BR and es-MX
 
 ## Motivation
 
