@@ -39,7 +39,9 @@ For platforms other than Windows, you need to download and install FFMPEG separa
 
 Download the latest version for your platform from the [releases page](https://github.com/hstr0100/GDownloader/releases/latest).
 
-#### Build from Source
+#### === OR ===
+
+### Build from Source
 
 0. Ensure you have [JDK 21](https://adoptium.net/temurin/releases/) or a newer version installed.
 
