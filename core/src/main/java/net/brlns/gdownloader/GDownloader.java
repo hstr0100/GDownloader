@@ -954,7 +954,6 @@ public final class GDownloader {
         boolean noGui = false;
         int uiScale = 1;
         boolean fromOta = false;
-        //boolean disableHWAccel = false;
 
         for (int i = 0; i < args.length; i++) {
             if (args[i].equalsIgnoreCase("--debug")) {
@@ -979,10 +978,6 @@ public final class GDownloader {
                 fromOta = true;
             }
 
-            //if (args[i].equalsIgnoreCase("--disable-hwaccel")) {
-            //    log.info("Disabled hardware acceleration");
-            //    disableHWAccel = true;
-            //}
             if (args[i].equalsIgnoreCase("--launcher")) {
                 launcher = args[++i];
             }

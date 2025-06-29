@@ -16,6 +16,7 @@
  */
 package net.brlns.gdownloader.ui.menu;
 
+import jakarta.annotation.Nullable;
 import java.awt.*;
 import java.awt.event.AWTEventListener;
 import java.awt.event.MouseAdapter;
@@ -215,6 +216,7 @@ public class RightClickMenu {
         popupWindow.setLocation(popupX, popupY);
     }
 
+    @Nullable
     private GraphicsDevice findContainingScreen(Point point) {
         GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
         GraphicsDevice[] screens = ge.getScreenDevices();
