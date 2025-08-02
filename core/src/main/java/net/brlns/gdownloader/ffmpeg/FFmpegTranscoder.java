@@ -582,6 +582,10 @@ public final class FFmpegTranscoder implements AutoCloseable {
 
                     args.add(bitrate + "k");
                 }
+
+                if (audioCodec == AudioCodecEnum.AAC && mainSettings.isDisableAACPns()) {
+                    args.add("-aac_pns", "0");
+                }
             } else {
                 // If no codec is defined, the default audio codec provided by the source will be passed through.
                 args.add("copy");

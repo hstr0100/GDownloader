@@ -1134,6 +1134,13 @@ public class SettingsPanel {
             .setter(settings::setUseUploadTimeAsFileTime)
             .build());
 
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.disable_aac_pns")
+            .getter(settings::isDisableAACPns)
+            .setter(settings::setDisableAACPns)
+            .build());
+
         List<JComponent> extraArgumentFields = new ArrayList<>();
         addCheckBox(panel, CheckBoxBuilder.builder()
             .background(resolveColor(panel))

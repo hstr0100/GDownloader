@@ -218,6 +218,16 @@ public class GenericFilter extends AbstractUrlFilter {
                                 audioBitrate.getValue() + "k"
                             );
 
+                            if (config.isDisableAACPns()) {
+                                switch (audioContainer) {
+                                    case M4A, AAC ->
+                                        arguments.add(
+                                            "--postprocessor-args",
+                                            "ffmpeg:-aac_pns 0"
+                                        );
+                                }
+                            }
+
                             if (isEmbedThumbnailAndMetadata()) {
                                 if (audioContainer != AudioContainerEnum.WAV
                                     && audioContainer != AudioContainerEnum.AAC) {

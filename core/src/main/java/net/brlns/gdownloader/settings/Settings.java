@@ -193,7 +193,7 @@ public class Settings {
 
     /**
      * These arguments are intended for quick, ad-hoc flags.For more granular control and per-download-type arguments,
- see {@link net.brlns.gdownloader.filters.AbstractUrlFilter}
+     * see {@link net.brlns.gdownloader.filters.AbstractUrlFilter}
      */
     @JsonProperty("ExtraYtDlpArguments")
     private String extraYtDlpArguments = "";
@@ -269,6 +269,9 @@ public class Settings {
 
     @JsonProperty("TranscodeAudioToAAC")
     private boolean transcodeAudioToAAC = true;
+
+    @JsonProperty("DisableAACPns")
+    private boolean disableAACPns = false;
 
     // TODO add more sounds
     @JsonProperty("PlaySounds")
