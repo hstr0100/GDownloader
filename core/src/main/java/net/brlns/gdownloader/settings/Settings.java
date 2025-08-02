@@ -34,8 +34,8 @@ import net.brlns.gdownloader.settings.enums.LanguageEnum;
 import net.brlns.gdownloader.settings.enums.PlayListOptionEnum;
 import net.brlns.gdownloader.settings.enums.ThemeEnum;
 import net.brlns.gdownloader.settings.enums.WebFilterEnum;
-import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
-import net.brlns.gdownloader.settings.filters.GenericFilter;
+import net.brlns.gdownloader.filters.AbstractUrlFilter;
+import net.brlns.gdownloader.filters.GenericFilter;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -192,9 +192,8 @@ public class Settings {
     private boolean enableExtraArguments = false;
 
     /**
-     * These arguments are intended for quick, ad-hoc flags.
-     * For more granular control and per-download-type arguments,
-     * see {@link net.brlns.gdownloader.settings.filters.AbstractUrlFilter}
+     * These arguments are intended for quick, ad-hoc flags.For more granular control and per-download-type arguments,
+ see {@link net.brlns.gdownloader.filters.AbstractUrlFilter}
      */
     @JsonProperty("ExtraYtDlpArguments")
     private String extraYtDlpArguments = "";

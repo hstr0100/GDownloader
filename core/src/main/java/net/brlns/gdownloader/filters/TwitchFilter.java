@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package net.brlns.gdownloader.settings.filters;
+package net.brlns.gdownloader.filters;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -25,6 +25,9 @@ import net.brlns.gdownloader.downloader.AbstractDownloader;
 import net.brlns.gdownloader.downloader.DownloadManager;
 import net.brlns.gdownloader.downloader.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.process.ProcessArguments;
+import net.brlns.gdownloader.settings.QualitySettings;
+import net.brlns.gdownloader.settings.enums.QualitySelectorEnum;
+import net.brlns.gdownloader.settings.enums.ResolutionEnum;
 
 import static net.brlns.gdownloader.downloader.enums.DownloadTypeEnum.*;
 
@@ -34,18 +37,23 @@ import static net.brlns.gdownloader.downloader.enums.DownloadTypeEnum.*;
 @Data
 @EqualsAndHashCode(callSuper = true)
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class YoutubePlaylistFilter extends YoutubeFilter {
+public class TwitchFilter extends GenericFilter {
 
-    public static final String ID = "youtube_playlist";
+    public static final String ID = "twitch";
 
     @SuppressWarnings("this-escape")
-    public YoutubePlaylistFilter() {
+    public TwitchFilter() {
         setId(ID);
-        setFilterName("Youtube Playlists/Channels");
-        setUrlRegex("^(https?:\\/\\/)?(www\\.)?youtube\\.com.*((list=|\\/playlist)|\\/(@|channel\\/|c\\/|user\\/)).*$");
-        setVideoNamePattern("%(playlist)s/%(title).60s (%(uploader_id)s %(upload_date)s %(resolution)s).%(ext)s");
-        setAudioNamePattern("%(playlist)s/%(title).60s (%(audio_bitrate)s).%(ext)s");
-        setEmbedThumbnailAndMetadata(true);
+        setFilterName("Twitch");
+        setUrlRegex("^(https?:\\/\\/)?(www\\.)?twitch\\.tv(\\/.*)?$");
+        setVideoNamePattern("%(title).60s (%(uploader_id)s %(upload_date)s %(resolution)s).%(ext)s");
+        setAudioNamePattern(getVideoNamePattern().replace("%(resolution)s", "%(audio_bitrate)s"));
+        setEmbedThumbnailAndMetadata(false);
+        setQualitySettings(QualitySettings.builder()
+            .selector(QualitySelectorEnum.WORST)
+            .minHeight(ResolutionEnum.RES_480)
+            .maxHeight(ResolutionEnum.RES_720)
+            .build());
     }
 
     @JsonIgnore
@@ -58,9 +66,18 @@ public class YoutubePlaylistFilter extends YoutubeFilter {
                 switch (typeEnum) {
                     case ALL -> {
                         arguments.add(
-                            "--yes-playlist",
-                            "--ignore-errors"
+                            "--verbose",
+                            "--continue",
+                            "--hls-prefer-native"
                         );
+                    }
+                    case VIDEO -> {
+                        if (isEmbedThumbnailAndMetadata()) {
+                            arguments.add(
+                                "--parse-metadata",
+                                ":%(?P<is_live>)"
+                            );
+                        }
                     }
                 }
             }

@@ -14,9 +14,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package net.brlns.gdownloader.settings.filters;
+package net.brlns.gdownloader.filters;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -27,21 +26,15 @@ import lombok.EqualsAndHashCode;
 @Data
 @EqualsAndHashCode(callSuper = true)
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class DropoutFilter extends GenericFilter {
+public class RedditFilter extends GenericFilter {
 
-    public static final String ID = "dropout";
+    public static final String ID = "reddit";
 
     @SuppressWarnings("this-escape")
-    public DropoutFilter() {
+    public RedditFilter() {
         setId(ID);
-        setFilterName("Dropout");
-        setUrlRegex("^(https?:\\/\\/)?(www\\.)?dropout\\.tv(\\/.*)?$");
-        setEmbedThumbnailAndMetadata(false);
-    }
-
-    @JsonIgnore
-    @Override
-    public boolean areCookiesRequired() {
-        return true;
+        setFilterName("Reddit");
+        setUrlRegex("^(https?:\\/\\/)?(www\\.|old\\.|new\\.)?reddit\\.com(\\/.*)?$");
+        setEmbedThumbnailAndMetadata(true);
     }
 }

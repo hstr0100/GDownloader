@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package net.brlns.gdownloader.settings.filters;
+package net.brlns.gdownloader.filters;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;
@@ -26,17 +26,15 @@ import lombok.EqualsAndHashCode;
 @Data
 @EqualsAndHashCode(callSuper = true)
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class BiliBiliFilter extends GenericFilter {
+public class VimeoFilter extends GenericFilter {
 
-    public static final String ID = "bilibili";
+    public static final String ID = "vimeo";
 
     @SuppressWarnings("this-escape")
-    public BiliBiliFilter() {
+    public VimeoFilter() {
         setId(ID);
-        setFilterName("BiliBili");
-        setUrlRegex("^(https?:\\/\\/)?(www\\.)?bilibili\\.com(\\/.*)?$");
-        setVideoNamePattern("%(title).60s (%(uploader_id)s %(upload_date)s %(resolution)s).%(ext)s");
-        setAudioNamePattern(getVideoNamePattern().replace("%(resolution)s", "%(audio_bitrate)s"));
-        setEmbedThumbnailAndMetadata(false);
+        setFilterName("Vimeo");
+        setUrlRegex("^(https?:\\/\\/)?(www\\.)?vimeo\\.com(\\/.*)?$");
+        setEmbedThumbnailAndMetadata(true);
     }
 }

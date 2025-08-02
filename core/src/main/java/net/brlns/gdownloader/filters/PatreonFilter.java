@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package net.brlns.gdownloader.settings.filters;
+package net.brlns.gdownloader.filters;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;
@@ -26,15 +26,15 @@ import lombok.EqualsAndHashCode;
 @Data
 @EqualsAndHashCode(callSuper = true)
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class DailymotionFilter extends GenericFilter {
+public class PatreonFilter extends GenericFilter {
 
-    public static final String ID = "dailymotion";
+    public static final String ID = "patreon";
 
     @SuppressWarnings("this-escape")
-    public DailymotionFilter() {
+    public PatreonFilter() {
         setId(ID);
-        setFilterName("Dailymotion");
-        setUrlRegex("^(https?:\\/\\/)?(www\\.)?dailymotion\\.com(\\/.*)?$");
-        setEmbedThumbnailAndMetadata(true);
+        setFilterName("Patreon");
+        setUrlRegex("^(https?:\\/\\/)?(www\\.)?patreon\\.com(\\/.*)?$");
+        setEmbedThumbnailAndMetadata(false);
     }
 }

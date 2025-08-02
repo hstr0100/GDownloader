@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package net.brlns.gdownloader.settings.filters;
+package net.brlns.gdownloader.filters;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;
@@ -26,15 +26,17 @@ import lombok.EqualsAndHashCode;
 @Data
 @EqualsAndHashCode(callSuper = true)
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class PatreonFilter extends GenericFilter {
+public class BiliBiliFilter extends GenericFilter {
 
-    public static final String ID = "patreon";
+    public static final String ID = "bilibili";
 
     @SuppressWarnings("this-escape")
-    public PatreonFilter() {
+    public BiliBiliFilter() {
         setId(ID);
-        setFilterName("Patreon");
-        setUrlRegex("^(https?:\\/\\/)?(www\\.)?patreon\\.com(\\/.*)?$");
+        setFilterName("BiliBili");
+        setUrlRegex("^(https?:\\/\\/)?(www\\.)?bilibili\\.com(\\/.*)?$");
+        setVideoNamePattern("%(title).60s (%(uploader_id)s %(upload_date)s %(resolution)s).%(ext)s");
+        setAudioNamePattern(getVideoNamePattern().replace("%(resolution)s", "%(audio_bitrate)s"));
         setEmbedThumbnailAndMetadata(false);
     }
 }

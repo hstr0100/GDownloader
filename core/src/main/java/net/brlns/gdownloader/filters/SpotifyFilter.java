@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 hstr0100
+ * Copyright (C) 2025 hstr0100
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,29 +14,33 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package net.brlns.gdownloader.settings.filters;
+package net.brlns.gdownloader.filters;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
 @Data
+@Slf4j
 @EqualsAndHashCode(callSuper = true)
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class XFilter extends GenericFilter {
+public class SpotifyFilter extends GenericFilter {
 
-    public static final String ID = "x";
+    public static final String ID = "spotify";
 
     @SuppressWarnings("this-escape")
-    public XFilter() {
+    public SpotifyFilter() {
         setId(ID);
-        setFilterName("X/Twitter");
-        setUrlRegex("^(https?:\\/\\/)?(www\\.)?(x|twitter)\\.com(\\/.*)?$");
-        setVideoNamePattern("%(title).60s (%(uploader_id)s %(upload_date)s %(resolution)s).%(ext)s");
-        setAudioNamePattern(getVideoNamePattern().replace("%(resolution)s", "%(audio_bitrate)s"));
-        setEmbedThumbnailAndMetadata(false);
+        setFilterName("Spotify");
+        setUrlRegex("^(https?:\\/\\/)?(([a-zA-Z0-9-]+)\\.)?spotify\\.(com|link)(\\/.*)?$");
+        setVideoNamePattern("");
+        setAudioNamePattern("%(artist)s/%(album)s/%(title)s.%(ext)s");// Both yt-dlp and spotDL templates are supported here.
+        setEmbedThumbnailAndMetadata(true);
+        setAudioOnly(true);
+        setCanTranscodeVideo(false);
     }
 }

@@ -14,8 +14,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package net.brlns.gdownloader.settings.filters;
+package net.brlns.gdownloader.filters;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -26,15 +27,21 @@ import lombok.EqualsAndHashCode;
 @Data
 @EqualsAndHashCode(callSuper = true)
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class VimeoFilter extends GenericFilter {
+public class CrunchyrollFilter extends GenericFilter {
 
-    public static final String ID = "vimeo";
+    public static final String ID = "crunchyroll";
 
     @SuppressWarnings("this-escape")
-    public VimeoFilter() {
+    public CrunchyrollFilter() {
         setId(ID);
-        setFilterName("Vimeo");
-        setUrlRegex("^(https?:\\/\\/)?(www\\.)?vimeo\\.com(\\/.*)?$");
+        setFilterName("Crunchyroll");
+        setUrlRegex("^(https?:\\/\\/)?(www\\.)?crunchyroll\\.com(\\/.*)?$");
         setEmbedThumbnailAndMetadata(true);
+    }
+
+    @JsonIgnore
+    @Override
+    public boolean areCookiesRequired() {
+        return true;
     }
 }

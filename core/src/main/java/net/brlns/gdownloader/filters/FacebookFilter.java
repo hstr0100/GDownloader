@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package net.brlns.gdownloader.settings.filters;
+package net.brlns.gdownloader.filters;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -25,9 +25,7 @@ import net.brlns.gdownloader.downloader.AbstractDownloader;
 import net.brlns.gdownloader.downloader.DownloadManager;
 import net.brlns.gdownloader.downloader.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.process.ProcessArguments;
-import net.brlns.gdownloader.settings.QualitySettings;
-import net.brlns.gdownloader.settings.enums.QualitySelectorEnum;
-import net.brlns.gdownloader.settings.enums.ResolutionEnum;
+import net.brlns.gdownloader.settings.Settings;
 
 import static net.brlns.gdownloader.downloader.enums.DownloadTypeEnum.*;
 
@@ -37,45 +35,36 @@ import static net.brlns.gdownloader.downloader.enums.DownloadTypeEnum.*;
 @Data
 @EqualsAndHashCode(callSuper = true)
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class TwitchFilter extends GenericFilter {
+public class FacebookFilter extends GenericFilter {
 
-    public static final String ID = "twitch";
+    public static final String ID = "facebook";
 
     @SuppressWarnings("this-escape")
-    public TwitchFilter() {
+    public FacebookFilter() {
         setId(ID);
-        setFilterName("Twitch");
-        setUrlRegex("^(https?:\\/\\/)?(www\\.)?twitch\\.tv(\\/.*)?$");
-        setVideoNamePattern("%(title).60s (%(uploader_id)s %(upload_date)s %(resolution)s).%(ext)s");
+        setFilterName("Facebook");
+        setUrlRegex("^(https?:\\/\\/)?(www\\.)?facebook\\.com(\\/.*)?$");
+        setVideoNamePattern("%(title).60s (%(upload_date)s %(resolution)s).%(ext)s");
         setAudioNamePattern(getVideoNamePattern().replace("%(resolution)s", "%(audio_bitrate)s"));
-        setEmbedThumbnailAndMetadata(false);
-        setQualitySettings(QualitySettings.builder()
-            .selector(QualitySelectorEnum.WORST)
-            .minHeight(ResolutionEnum.RES_480)
-            .maxHeight(ResolutionEnum.RES_720)
-            .build());
+        setEmbedThumbnailAndMetadata(true);
     }
 
     @JsonIgnore
     @Override
     protected ProcessArguments buildArguments(AbstractDownloader downloader, DownloadTypeEnum typeEnum, DownloadManager manager, File savePath, String inputUrl) {
+        Settings config = manager.getMain().getConfig();
+
         ProcessArguments arguments = super.buildArguments(downloader, typeEnum, manager, savePath, inputUrl);
 
         switch (downloader.getDownloaderId()) {
             case YT_DLP -> {
                 switch (typeEnum) {
                     case ALL -> {
-                        arguments.add(
-                            "--verbose",
-                            "--continue",
-                            "--hls-prefer-native"
-                        );
-                    }
-                    case VIDEO -> {
-                        if (isEmbedThumbnailAndMetadata()) {
+                        if (!config.isRandomIntervalBetweenDownloads()) {
+                            // In my experience, Facebook pretty much requires this. So we add it regardless of settings.
                             arguments.add(
-                                "--parse-metadata",
-                                ":%(?P<is_live>)"
+                                "--max-sleep-interval", 30,
+                                "--min-sleep-interval", 15
                             );
                         }
                     }

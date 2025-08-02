@@ -20,8 +20,8 @@ import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
-import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
-import net.brlns.gdownloader.settings.filters.GenericFilter;
+import net.brlns.gdownloader.filters.AbstractUrlFilter;
+import net.brlns.gdownloader.filters.GenericFilter;
 
 /**
  * @author Gabriel / hstr0100 / vertx010

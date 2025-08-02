@@ -47,7 +47,7 @@ import net.brlns.gdownloader.settings.enums.SubtitleContainerEnum;
 import net.brlns.gdownloader.settings.enums.ThumbnailContainerEnum;
 import net.brlns.gdownloader.settings.enums.VideoContainerEnum;
 import net.brlns.gdownloader.settings.enums.DescriptionContainerEnum;
-import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
+import net.brlns.gdownloader.filters.AbstractUrlFilter;
 import net.brlns.gdownloader.util.CancelHook;
 import net.brlns.gdownloader.util.DirectoryUtils;
 import net.brlns.gdownloader.util.FileUtils;

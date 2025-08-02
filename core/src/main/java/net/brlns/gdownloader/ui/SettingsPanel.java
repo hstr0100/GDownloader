@@ -45,7 +45,7 @@ import net.brlns.gdownloader.lang.ITranslatable;
 import net.brlns.gdownloader.settings.QualitySettings;
 import net.brlns.gdownloader.settings.Settings;
 import net.brlns.gdownloader.settings.enums.*;
-import net.brlns.gdownloader.settings.filters.AbstractUrlFilter;
+import net.brlns.gdownloader.filters.AbstractUrlFilter;
 import net.brlns.gdownloader.system.StartupManager;
 import net.brlns.gdownloader.ui.builder.CheckBoxBuilder;
 import net.brlns.gdownloader.ui.builder.ComboBoxBuilder;

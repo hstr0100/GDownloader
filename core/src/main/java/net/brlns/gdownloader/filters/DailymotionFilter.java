@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package net.brlns.gdownloader.settings.filters;
+package net.brlns.gdownloader.filters;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;
@@ -26,15 +26,15 @@ import lombok.EqualsAndHashCode;
 @Data
 @EqualsAndHashCode(callSuper = true)
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class RedditFilter extends GenericFilter {
+public class DailymotionFilter extends GenericFilter {
 
-    public static final String ID = "reddit";
+    public static final String ID = "dailymotion";
 
     @SuppressWarnings("this-escape")
-    public RedditFilter() {
+    public DailymotionFilter() {
         setId(ID);
-        setFilterName("Reddit");
-        setUrlRegex("^(https?:\\/\\/)?(www\\.|old\\.|new\\.)?reddit\\.com(\\/.*)?$");
+        setFilterName("Dailymotion");
+        setUrlRegex("^(https?:\\/\\/)?(www\\.)?dailymotion\\.com(\\/.*)?$");
         setEmbedThumbnailAndMetadata(true);
     }
 }
