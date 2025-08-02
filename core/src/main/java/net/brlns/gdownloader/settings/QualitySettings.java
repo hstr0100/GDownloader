@@ -83,7 +83,7 @@ public class QualitySettings {
 
     @Builder.Default
     @JsonProperty("UseGlobalSettings")
-    private boolean useGlobalSettings = false;
+    private boolean useGlobalSettings = true;
 
     @Builder.Default
     @JsonProperty("EnableTranscoding")
