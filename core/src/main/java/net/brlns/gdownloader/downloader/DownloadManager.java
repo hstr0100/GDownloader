@@ -843,6 +843,10 @@ public class DownloadManager implements IEvent, AutoCloseable {
     }
 
     private void submitQueryMetadataTask(QueueEntry queueEntry) {
+        if (!main.getConfig().isQueryMetadata()) {
+            return;
+        }
+
         currentlyQueryingCount.incrementAndGet();
 
         GDownloader.GLOBAL_THREAD_POOL.execute(() -> {

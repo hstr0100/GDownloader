@@ -139,6 +139,7 @@ import static net.brlns.gdownloader.util.StringUtils.notNullOrEmpty;
 // TODO when expanded, display video info in the media cards
 // TODO button to cancel update check
 // TODO search bar when expanded
+// TODO run transcoder for audio-only downloads
 /**
  * GDownloader - GUI wrapper for yt-dlp
  *
