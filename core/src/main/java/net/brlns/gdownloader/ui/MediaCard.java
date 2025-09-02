@@ -68,7 +68,7 @@ public class MediaCard {
     private Consumer<MediaCard> onSwap;
     private boolean closed;
 
-    private Supplier<Boolean> validateDropTarget;
+    private Supplier<Boolean> dropTargetValidator;
 
     protected static final int THUMBNAIL_WIDTH = 170;
     protected static final int THUMBNAIL_HEIGHT = (int)(THUMBNAIL_WIDTH / 16.0 * 9.0);

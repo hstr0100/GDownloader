@@ -360,7 +360,7 @@ public final class MediaCardManager {
 
             if (windowBounds.contains(dropLocation) && dropTarget instanceof JPanel jPanel) {
                 MediaCard targetCard = (MediaCard)jPanel.getClientProperty("MEDIA_CARD");
-                if (targetCard != null && targetCard.getValidateDropTarget().get()) {
+                if (targetCard != null && targetCard.getDropTargetValidator().get()) {
                     if (mediaCard.getOnSwap() != null) {
                         mediaCard.getOnSwap().accept(targetCard);
                     }

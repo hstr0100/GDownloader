@@ -538,7 +538,7 @@ public class DownloadManager implements IEvent, AutoCloseable {
             }
         });
 
-        queueEntry.getMediaCard().setValidateDropTarget(() -> {
+        queueEntry.getMediaCard().setDropTargetValidator(() -> {
             return sequencer.contains(queueEntry);
         });
 
