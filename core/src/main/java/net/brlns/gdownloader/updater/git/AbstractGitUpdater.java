@@ -47,8 +47,10 @@ import net.brlns.gdownloader.updater.ArchVersionEnum;
 import net.brlns.gdownloader.updater.IUpdater;
 import net.brlns.gdownloader.updater.UpdateProgressListener;
 import net.brlns.gdownloader.updater.UpdateStatusEnum;
+import net.brlns.gdownloader.util.DirectoryUtils;
 import net.brlns.gdownloader.util.NoFallbackAvailableException;
 import net.brlns.gdownloader.util.Pair;
+import net.brlns.gdownloader.util.StringUtils;
 import net.brlns.gdownloader.util.URLUtils;
 
 import static net.brlns.gdownloader.updater.UpdateStatusEnum.*;
@@ -211,14 +213,15 @@ public abstract class AbstractGitUpdater implements IUpdater {
             }
         }
 
-        if (getGitHubBinaryName() == null || getRuntimeBinaryName() == null) {
+        if (StringUtils.nullOrEmpty(getGitHubBinaryName()) || StringUtils.nullOrEmpty(getRuntimeBinaryName())) {
             log.error("Cannot update, no binary configured for {}", getRepo());
 
             tryFallback(workDir);
             return;
         }
 
-        File binaryPath = new File(workDir, getRuntimeBinaryName());
+        // Can be a file for yt-dlp, gallery-dl and spotDL, is a directory for FFmpeg
+        File binaryFile = new File(workDir, getRuntimeBinaryName());
 
         if (isEnabled() && isInstalled()
             && !main.getConfig().isAutomaticUpdates() && !installIfMissing) {
@@ -257,9 +260,9 @@ public abstract class AbstractGitUpdater implements IUpdater {
 
         File lock = new File(workDir, getLockFileName());
 
-        if (binaryPath.exists()) {
+        if (binaryFile.exists()) {
             if (checkLock(lock, lockTag)) {
-                finishUpdate(binaryPath);
+                finishUpdate(binaryFile);
 
                 log.info("{} is up to date", getRepo());
                 return;
@@ -267,14 +270,19 @@ public abstract class AbstractGitUpdater implements IUpdater {
         }
 
         Path tmpDir = null;
-        if (binaryPath.exists()) {
+        if (binaryFile.exists()) {
             tmpDir = Paths.get(workDir.getAbsolutePath(), "old");
 
             if (!Files.exists(tmpDir)) {
                 Files.createDirectories(tmpDir);
             }
 
-            Files.move(binaryPath.toPath(), tmpDir.resolve(binaryPath.getName()), StandardCopyOption.REPLACE_EXISTING);
+            Path backupPath = tmpDir.resolve(binaryFile.getName());
+            if (Files.isDirectory(backupPath)) {
+                DirectoryUtils.deleteRecursively(backupPath);
+            }
+
+            Files.move(binaryFile.toPath(), backupPath, StandardCopyOption.REPLACE_EXISTING);
         }
 
         try {
@@ -299,13 +307,19 @@ public abstract class AbstractGitUpdater implements IUpdater {
             if (tmpDir != null) {
                 notifyStatus(FAILED);
 
-                Files.move(tmpDir.resolve(binaryPath.getName()), binaryPath.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                Path backupPath = tmpDir.resolve(binaryFile.getName());
+                Path binaryPath = binaryFile.toPath();
+                if (Files.isDirectory(binaryPath)) {
+                    DirectoryUtils.deleteRecursively(binaryPath);
+                }
+
+                Files.move(backupPath, binaryPath, StandardCopyOption.REPLACE_EXISTING);
             } else {
                 tryFallback(workDir);
             }
         } finally {
-            if (binaryPath.exists()) {
-                makeExecutable(binaryPath.toPath());
+            if (binaryFile.exists()) {
+                makeExecutable(binaryFile.toPath());
             }
         }
     }
@@ -329,8 +343,7 @@ public abstract class AbstractGitUpdater implements IUpdater {
                 return null;
             }
 
-            byte[] buffer = new byte[initialStream.available()];
-            initialStream.read(buffer);
+            byte[] buffer = initialStream.readAllBytes();
 
             Files.write(targetFile.toPath(), buffer);
 

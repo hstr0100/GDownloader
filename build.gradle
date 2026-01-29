@@ -1,4 +1,4 @@
-rootProject.version = '1.5.13'
+rootProject.version = '1.5.14'
 
 subprojects {
 	repositories {
