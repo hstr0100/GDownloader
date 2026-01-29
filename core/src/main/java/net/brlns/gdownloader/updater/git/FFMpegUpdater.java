@@ -18,6 +18,7 @@ package net.brlns.gdownloader.updater.git;
 
 import jakarta.annotation.Nullable;
 import java.io.File;
+import java.nio.file.DirectoryNotEmptyException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -123,7 +124,9 @@ public class FFMpegUpdater extends AbstractGitUpdater {
             Path sourcePath = zipOutputPath.resolve("bin");
             log.info("Source binary path {}", sourcePath);
 
+            DirectoryUtils.deleteRecursively(outputFile.toPath());
             Files.move(sourcePath, outputFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+
             notifyProgress(UNPACKING, 100);
         } finally {
             if (zipPath.exists()) {
