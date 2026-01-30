@@ -1,14 +1,14 @@
 package net.brlns.gdownloader;
 
-import net.brlns.gdownloader.filters.GenericFilter;
-import net.brlns.gdownloader.filters.XFilter;
-import net.brlns.gdownloader.filters.RedditFilter;
-import net.brlns.gdownloader.filters.YoutubePlaylistFilter;
-import net.brlns.gdownloader.filters.DropoutFilter;
 import net.brlns.gdownloader.filters.CrunchyrollFilter;
+import net.brlns.gdownloader.filters.DropoutFilter;
 import net.brlns.gdownloader.filters.FacebookFilter;
+import net.brlns.gdownloader.filters.GenericFilter;
+import net.brlns.gdownloader.filters.RedditFilter;
 import net.brlns.gdownloader.filters.TwitchFilter;
+import net.brlns.gdownloader.filters.XFilter;
 import net.brlns.gdownloader.filters.YoutubeFilter;
+import net.brlns.gdownloader.filters.YoutubePlaylistFilter;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;

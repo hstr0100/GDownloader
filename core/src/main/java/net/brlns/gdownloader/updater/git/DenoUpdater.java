@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 hstr0100
+ * Copyright (C) 2026 hstr0100
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,6 +18,7 @@ package net.brlns.gdownloader.updater.git;
 
 import jakarta.annotation.Nullable;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -25,23 +26,25 @@ import java.nio.file.StandardCopyOption;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
+import net.brlns.gdownloader.downloader.YtDlpDownloader;
+import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.updater.ArchVersionEnum;
 import net.brlns.gdownloader.util.ArchiveUtils;
 import net.brlns.gdownloader.util.DirectoryUtils;
-import net.brlns.gdownloader.util.LockUtils;
 
+import static net.brlns.gdownloader.GDownloader.isWindows;
 import static net.brlns.gdownloader.updater.UpdateStatusEnum.UNPACKING;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
 @Slf4j
-public class FFMpegUpdater extends AbstractGitUpdater {
+public class DenoUpdater extends AbstractGitUpdater {
 
-    private static final String USER = "GyanD";
-    private static final String REPO = "codexffmpeg";
+    private static final String USER = "denoland";
+    private static final String REPO = "deno";
 
-    public FFMpegUpdater(GDownloader mainIn) {
+    public DenoUpdater(GDownloader mainIn) {
         super(mainIn);
     }
 
@@ -58,13 +61,13 @@ public class FFMpegUpdater extends AbstractGitUpdater {
     @Override
     @Nullable
     public String getGitHubBinaryName() {
-        return ArchVersionEnum.getDefinitions().getFfmpegBinary();
+        return ArchVersionEnum.getDefinitions().getDenoBinary();
     }
 
     @Nullable
     @Override
     protected String getRuntimeBinaryName() {
-        return "ffmpeg";
+        return isWindows() ? "deno.exe" : "deno";
     }
 
     @Override
@@ -76,27 +79,31 @@ public class FFMpegUpdater extends AbstractGitUpdater {
     @Nullable
     @Override
     protected String getLockFileName() {
-        return "ffmpeg.lock";
+        return "deno.lock";
     }
 
     @Override
     public boolean isEnabled() {
-        return GDownloader.isWindows();
+        return getGitHubBinaryName() != null;
     }
 
     @Override
     protected void setExecutablePath(File executablePath) {
-        main.getFfmpegTranscoder().setFfmpegPath(Optional.of(executablePath));
+        // TODO: generics
+        YtDlpDownloader ytDlpDownloader = (YtDlpDownloader)main.getDownloadManager().getDownloader(DownloaderIdEnum.YT_DLP);
+        if (ytDlpDownloader != null) {
+            ytDlpDownloader.setDenoPath(Optional.of(executablePath));
+        }
     }
 
     @Override
     public String getName() {
-        return "FFMPEG";
+        return "Deno JS Runtime";
     }
 
     @Override
     protected void init() throws Exception {
-        LockUtils.renameLockIfExists("ffmpeg_lock.txt", getLockFileName());
+
     }
 
     @Override
@@ -106,7 +113,7 @@ public class FFMpegUpdater extends AbstractGitUpdater {
         File zipPath = new File(workDir, fileName);
         log.info("Zip path {}", zipPath);
 
-        Path zipOutputPath = Paths.get(workDir.getAbsolutePath(), "tmp_ffmpeg_zip");
+        Path zipOutputPath = Paths.get(workDir.getAbsolutePath(), "tmp_deno_zip");
         log.info("Zip out path {}", zipOutputPath);
 
         File outputFile = new File(workDir, getRuntimeBinaryName());
@@ -120,11 +127,23 @@ public class FFMpegUpdater extends AbstractGitUpdater {
                 notifyProgress(UNPACKING, progress);
             });
 
-            Path sourcePath = zipOutputPath.resolve("bin");
+            String binaryName = getRuntimeBinaryName();
+            if (binaryName == null) {
+                throw new IllegalStateException("Runtime binary name cannot be null");
+            }
+
+            Path sourcePath = zipOutputPath.resolve(binaryName);
             log.info("Source binary path {}", sourcePath);
 
-            DirectoryUtils.deleteRecursively(outputFile.toPath());
+            if (!Files.exists(sourcePath)) {
+                throw new FileNotFoundException("Could not find " + binaryName + " inside extracted zip at " + sourcePath);
+            }
+
             Files.move(sourcePath, outputFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+
+            if (!isWindows()) {
+                outputFile.setExecutable(true);
+            }
 
             notifyProgress(UNPACKING, 100);
         } finally {

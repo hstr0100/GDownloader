@@ -39,15 +39,15 @@ import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.downloader.structs.DownloadResult;
 import net.brlns.gdownloader.downloader.structs.MediaInfo;
 import net.brlns.gdownloader.ffmpeg.enums.AudioBitrateEnum;
+import net.brlns.gdownloader.filters.AbstractUrlFilter;
 import net.brlns.gdownloader.persistence.PersistenceManager;
 import net.brlns.gdownloader.process.ProcessArguments;
 import net.brlns.gdownloader.settings.QualitySettings;
 import net.brlns.gdownloader.settings.enums.AudioContainerEnum;
+import net.brlns.gdownloader.settings.enums.DescriptionContainerEnum;
 import net.brlns.gdownloader.settings.enums.SubtitleContainerEnum;
 import net.brlns.gdownloader.settings.enums.ThumbnailContainerEnum;
 import net.brlns.gdownloader.settings.enums.VideoContainerEnum;
-import net.brlns.gdownloader.settings.enums.DescriptionContainerEnum;
-import net.brlns.gdownloader.filters.AbstractUrlFilter;
 import net.brlns.gdownloader.util.CancelHook;
 import net.brlns.gdownloader.util.DirectoryUtils;
 import net.brlns.gdownloader.util.FileUtils;
@@ -67,6 +67,10 @@ public class YtDlpDownloader extends AbstractDownloader {
     @Getter
     @Setter
     private Optional<File> executablePath = Optional.empty();
+
+    @Getter
+    @Setter
+    private Optional<File> denoPath = Optional.empty();
 
     public YtDlpDownloader(DownloadManager managerIn) {
         super(managerIn);

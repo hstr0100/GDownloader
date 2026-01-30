@@ -16,7 +16,6 @@
  */
 package net.brlns.gdownloader.persistence.entity;
 
-import net.brlns.gdownloader.filters.AbstractUrlFilter;
 import jakarta.persistence.*;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -24,6 +23,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import net.brlns.gdownloader.downloader.enums.*;
+import net.brlns.gdownloader.filters.AbstractUrlFilter;
 import net.brlns.gdownloader.persistence.converter.*;
 
 /**

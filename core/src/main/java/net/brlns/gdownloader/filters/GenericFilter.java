@@ -19,12 +19,14 @@ package net.brlns.gdownloader.filters;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.io.File;
+import java.util.Optional;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.downloader.AbstractDownloader;
 import net.brlns.gdownloader.downloader.DownloadManager;
+import net.brlns.gdownloader.downloader.YtDlpDownloader;
 import net.brlns.gdownloader.downloader.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.ffmpeg.enums.AudioBitrateEnum;
 import net.brlns.gdownloader.process.ProcessArguments;
@@ -89,6 +91,16 @@ public class GenericFilter extends AbstractUrlFilter {
                         "--download-archive",
                         archiveFile.getAbsolutePath()
                     );
+                }
+
+                if (downloader instanceof YtDlpDownloader ytDlpDownloader) {
+                    Optional<File> denoPath = ytDlpDownloader.getDenoPath();
+                    if (denoPath.isPresent()) {
+                        arguments.add(
+                            "--js-runtimes",
+                            "deno:" + denoPath.get().getAbsolutePath()
+                        );
+                    }
                 }
 
                 switch (typeEnum) {

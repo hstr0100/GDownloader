@@ -16,16 +16,16 @@
  */
 package net.brlns.gdownloader.settings.enums;
 
-import net.brlns.gdownloader.filters.YoutubeFilter;
+import lombok.Getter;
 import net.brlns.gdownloader.filters.CrunchyrollFilter;
-import net.brlns.gdownloader.filters.XFilter;
-import net.brlns.gdownloader.filters.YoutubePlaylistFilter;
+import net.brlns.gdownloader.filters.DropoutFilter;
+import net.brlns.gdownloader.filters.FacebookFilter;
+import net.brlns.gdownloader.filters.GenericFilter;
 import net.brlns.gdownloader.filters.RedditFilter;
 import net.brlns.gdownloader.filters.TwitchFilter;
-import net.brlns.gdownloader.filters.GenericFilter;
-import net.brlns.gdownloader.filters.FacebookFilter;
-import net.brlns.gdownloader.filters.DropoutFilter;
-import lombok.Getter;
+import net.brlns.gdownloader.filters.XFilter;
+import net.brlns.gdownloader.filters.YoutubeFilter;
+import net.brlns.gdownloader.filters.YoutubePlaylistFilter;
 
 /**
  * The sole purpose of this enum as of 2024-10-20 is for config migration.

@@ -38,11 +38,13 @@ public enum ArchVersionEnum {
         .build()),
     MAC_X64(UpdateDefinitions.builder()
         .ytDlpBinary("yt-dlp_macos")
+        .denoBinary("deno-x86_64-apple-darwin.zip")
         .spotDlBinary("-darwin")
         .os(OS.MAC)
         .build()),
     MAC_ARM64(UpdateDefinitions.builder()
         .ytDlpBinary("yt-dlp_macos")
+        .denoBinary("deno-aarch64-apple-darwin.zip")
         .spotDlBinary("-darwin")
         .os(OS.MAC)
         .build()),
@@ -54,6 +56,7 @@ public enum ArchVersionEnum {
     // TODO: https://aka.ms/vs/17/release/vc_redist.x86.exe
     WINDOWS_X64(UpdateDefinitions.builder()
         .ytDlpBinary("yt-dlp.exe")
+        .denoBinary("deno-x86_64-pc-windows-msvc.zip")
         .galleryDlBinary("gallery-dl.exe")
         .spotDlBinary("-win32.exe")
         // Neither Apache Compress nor any java library that I know of supports the -mx=9 option used by FFmpeg's 7zs
@@ -65,6 +68,7 @@ public enum ArchVersionEnum {
     // TODO: Linux ffmpeg setup
     LINUX_X64(UpdateDefinitions.builder()
         .ytDlpBinary("yt-dlp_linux")
+        .denoBinary("deno-x86_64-unknown-linux-gnu.zip")
         .galleryDlBinary("gallery-dl.bin")
         .spotDlBinary("-linux")
         .selfBinary("linux_portable_amd64.zip")
@@ -77,6 +81,7 @@ public enum ArchVersionEnum {
         .build()),
     LINUX_ARM64(UpdateDefinitions.builder()
         .ytDlpBinary("yt-dlp_linux_aarch64")
+        .denoBinary("deno-aarch64-unknown-linux-gnu.zip")
         // As of 2025-04-26, updates for other architectures are only supported by AppImage
         //.selfBinary("linux_portable_arm64.zip")
         .selfAppImageBinary("aarch64.AppImage")
@@ -180,6 +185,8 @@ public enum ArchVersionEnum {
     public static class UpdateDefinitions {
 
         private final String ytDlpBinary;
+        // New huge absurd dependency required for dealing with YouTube shenanigans.
+        private final String denoBinary;
         private final String galleryDlBinary;
         private final String spotDlBinary;
         private final String ffmpegBinary;
