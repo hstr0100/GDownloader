@@ -37,6 +37,8 @@ public class XFilter extends GenericFilter {
         setUrlRegex("^(https?:\\/\\/)?(www\\.)?(x|twitter)\\.com(\\/.*)?$");
         setVideoNamePattern("%(title).60s (%(uploader_id)s %(upload_date)s %(resolution)s).%(ext)s");
         setAudioNamePattern(getVideoNamePattern().replace("%(resolution)s", "%(audio_bitrate)s"));
-        setEmbedThumbnailAndMetadata(false);
+        setEmbedThumbnail(false);
+        setEmbedSubtitles(false);
+        setEmbedMetadata(false);
     }
 }

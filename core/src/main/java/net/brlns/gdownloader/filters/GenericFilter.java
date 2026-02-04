@@ -55,7 +55,9 @@ public class GenericFilter extends AbstractUrlFilter {
         setId(ID);
         setVideoNamePattern("%(title).60s (%(resolution)s).%(ext)s");
         setAudioNamePattern(getVideoNamePattern().replace("%(resolution)s", "%(audio_bitrate)s"));
-        setEmbedThumbnailAndMetadata(false);
+        setEmbedThumbnail(false);
+        setEmbedSubtitles(false);
+        setEmbedMetadata(false);
     }
 
     @JsonIgnore
@@ -191,28 +193,47 @@ public class GenericFilter extends AbstractUrlFilter {
                             videoContainer.getValue()// TODO: same as source will actually default to mp4
                         );
 
-                        if (isEmbedThumbnailAndMetadata()) {
-                            switch (quality.getVideoContainer()) {
-                                // aac, alac: not working
-                                // flv, avi, mov: cannot merge (unsupported codecs)
-                                case WEBM ->// WebM does not support thumbnail embedding
+                        switch (quality.getVideoContainer()) {
+                            // aac, alac: not working
+                            // flv, avi, mov: cannot merge (unsupported codecs)
+                            case WEBM -> {// WebM does not support thumbnail embedding
+                                if (isEmbedMetadata()) {
                                     arguments.add(
                                         "--embed-metadata",
-                                        "--embed-chapters",
+                                        "--embed-chapters"
+                                    );
+                                }
+
+                                if (isEmbedSubtitles()) {
+                                    arguments.add(
                                         "--embed-subs",
                                         "--sub-langs",
                                         "all,-live_chat"
                                     );
-                                case MKV, MP4, MOV, DEFAULT ->
+                                }
+                            }
+                            case MKV, MP4, MOV, DEFAULT -> {
+                                if (isEmbedThumbnail()) {
                                     arguments.add(
                                         "--convert-thumbnails", "png",
-                                        "--embed-thumbnail",
+                                        "--embed-thumbnail"
+                                    );
+                                }
+
+                                if (isEmbedMetadata()) {
+                                    arguments.add(
                                         "--embed-metadata",
-                                        "--embed-chapters",
+                                        "--embed-chapters"
+                                    );
+                                }
+
+                                if (isEmbedSubtitles()) {
+                                    arguments.add(
                                         "--embed-subs",
                                         "--sub-langs",
                                         "all,-live_chat"
                                     );
+                                }
                             }
                         }
                         // Transcoding is handled by our built-in ffmpeg transcoder.
@@ -240,13 +261,14 @@ public class GenericFilter extends AbstractUrlFilter {
                                 }
                             }
 
-                            if (isEmbedThumbnailAndMetadata()) {
-                                if (audioContainer != AudioContainerEnum.WAV
-                                    && audioContainer != AudioContainerEnum.AAC) {
-                                    arguments.add(
-                                        "--embed-thumbnail",
-                                        "--embed-metadata"
-                                    );
+                            if (audioContainer != AudioContainerEnum.WAV
+                                && audioContainer != AudioContainerEnum.AAC) {
+                                if (isEmbedThumbnail()) {
+                                    arguments.add("--embed-thumbnail");
+                                }
+
+                                if (isEmbedMetadata()) {
+                                    arguments.add("--embed-metadata");
                                 }
                             }
                         }
@@ -407,7 +429,7 @@ public class GenericFilter extends AbstractUrlFilter {
                                 Math.clamp(audioBitrate.getValue(), 8, 320) + "k"
                             );
 
-                            if (!isEmbedThumbnailAndMetadata()) {
+                            if (!isEmbedThumbnail()) {
                                 // SpotDL does not appear to support disabling metadata embedding.
                                 // This is the best we can do to respect user settings.
                                 arguments.add("--skip-album-art");

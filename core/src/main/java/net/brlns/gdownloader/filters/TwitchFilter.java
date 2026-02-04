@@ -48,11 +48,13 @@ public class TwitchFilter extends GenericFilter {
         setUrlRegex("^(https?:\\/\\/)?(www\\.)?twitch\\.tv(\\/.*)?$");
         setVideoNamePattern("%(title).60s (%(uploader_id)s %(upload_date)s %(resolution)s).%(ext)s");
         setAudioNamePattern(getVideoNamePattern().replace("%(resolution)s", "%(audio_bitrate)s"));
-        setEmbedThumbnailAndMetadata(false);
+        setEmbedThumbnail(false);
+        setEmbedSubtitles(false);
+        setEmbedMetadata(false);
         setQualitySettings(QualitySettings.builder()
             .selector(QualitySelectorEnum.WORST)
-            .minHeight(ResolutionEnum.RES_480)
-            .maxHeight(ResolutionEnum.RES_720)
+            .minHeight(ResolutionEnum.RES_720)
+            .maxHeight(ResolutionEnum.RES_1080)
             .build());
     }
 
@@ -72,7 +74,7 @@ public class TwitchFilter extends GenericFilter {
                         );
                     }
                     case VIDEO -> {
-                        if (isEmbedThumbnailAndMetadata()) {
+                        if (isEmbedMetadata()) {
                             arguments.add(
                                 "--parse-metadata",
                                 ":%(?P<is_live>)"

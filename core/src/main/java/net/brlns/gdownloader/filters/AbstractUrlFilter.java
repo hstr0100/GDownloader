@@ -128,8 +128,18 @@ public abstract class AbstractUrlFilter implements ITranslatable {
     @JsonProperty("AudioNamePattern")
     private String audioNamePattern = "";
 
+    @Deprecated
     @JsonProperty("EmbedThumbnailAndMetadata")
     private boolean embedThumbnailAndMetadata = false;
+
+    @JsonProperty("EmbedThumbnail")
+    private boolean embedThumbnail = false;
+
+    @JsonProperty("EmbedSubtitles")
+    private boolean embedSubtitles = false;
+
+    @JsonProperty("EmbedMetadata")
+    private boolean embedMetadata = false;
 
     @JsonProperty("CanTranscodeVideo")
     private boolean canTranscodeVideo = true;

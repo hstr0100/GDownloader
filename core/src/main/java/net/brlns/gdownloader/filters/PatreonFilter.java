@@ -35,6 +35,8 @@ public class PatreonFilter extends GenericFilter {
         setId(ID);
         setFilterName("Patreon");
         setUrlRegex("^(https?:\\/\\/)?(www\\.)?patreon\\.com(\\/.*)?$");
-        setEmbedThumbnailAndMetadata(false);
+        setEmbedThumbnail(false);
+        setEmbedSubtitles(false);
+        setEmbedMetadata(false);
     }
 }

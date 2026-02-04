@@ -35,6 +35,8 @@ public class ImgurFilter extends GenericFilter {
         setId(ID);
         setFilterName("Imgur");
         setUrlRegex("^(https?:\\/\\/)?(www\\.)?imgur\\.com(\\/.*)?$");
-        setEmbedThumbnailAndMetadata(false);
+        setEmbedThumbnail(false);
+        setEmbedSubtitles(false);
+        setEmbedMetadata(false);
     }
 }

@@ -45,7 +45,7 @@ import net.brlns.gdownloader.settings.enums.WebFilterEnum;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class Settings {
 
-    public static final int CONFIG_VERSION = 34;
+    public static final int CONFIG_VERSION = 35;
 
     @JsonProperty("ConfigVersion")
     private int configVersion = CONFIG_VERSION;
@@ -376,6 +376,14 @@ public class Settings {
 
         if (isShowWelcomeScreen() && getConfigVersion() < 34) {
             setShowWelcomeScreen(false);
+        }
+
+        if (getConfigVersion() < 35) {
+            for (AbstractUrlFilter filter : getUrlFilters()) {
+                filter.setEmbedMetadata(filter.isEmbedThumbnailAndMetadata());
+                filter.setEmbedSubtitles(filter.isEmbedThumbnailAndMetadata());
+                filter.setEmbedThumbnail(filter.isEmbedThumbnailAndMetadata());
+            }
         }
 
         setConfigVersion(CONFIG_VERSION);

@@ -35,6 +35,8 @@ public class VimeoFilter extends GenericFilter {
         setId(ID);
         setFilterName("Vimeo");
         setUrlRegex("^(https?:\\/\\/)?(www\\.)?vimeo\\.com(\\/.*)?$");
-        setEmbedThumbnailAndMetadata(true);
+        setEmbedThumbnail(true);
+        setEmbedSubtitles(true);
+        setEmbedMetadata(true);
     }
 }

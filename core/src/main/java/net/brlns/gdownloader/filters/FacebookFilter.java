@@ -46,7 +46,9 @@ public class FacebookFilter extends GenericFilter {
         setUrlRegex("^(https?:\\/\\/)?(www\\.)?facebook\\.com(\\/.*)?$");
         setVideoNamePattern("%(title).60s (%(upload_date)s %(resolution)s).%(ext)s");
         setAudioNamePattern(getVideoNamePattern().replace("%(resolution)s", "%(audio_bitrate)s"));
-        setEmbedThumbnailAndMetadata(true);
+        setEmbedThumbnail(true);
+        setEmbedSubtitles(true);
+        setEmbedMetadata(true);
     }
 
     @JsonIgnore

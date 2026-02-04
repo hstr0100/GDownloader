@@ -36,7 +36,9 @@ public class DropoutFilter extends GenericFilter {
         setId(ID);
         setFilterName("Dropout");
         setUrlRegex("^(https?:\\/\\/)?(www\\.)?dropout\\.tv(\\/.*)?$");
-        setEmbedThumbnailAndMetadata(false);
+        setEmbedThumbnail(false);
+        setEmbedSubtitles(false);
+        setEmbedMetadata(false);
     }
 
     @JsonIgnore

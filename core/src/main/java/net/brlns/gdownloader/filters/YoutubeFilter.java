@@ -47,7 +47,9 @@ public class YoutubeFilter extends GenericFilter {
         setUrlRegex("^(https?:\\/\\/)?(www\\.)?(youtube\\.com|youtu\\.be)(?!.*(\\/live|\\/playlist|list=|\\/(@|channel\\/|c\\/|user\\/))).*$");
         setVideoNamePattern("%(title).60s (%(uploader_id)s %(upload_date)s %(resolution)s).%(ext)s");
         setAudioNamePattern("%(title).60s (%(audio_bitrate)s).%(ext)s");
-        setEmbedThumbnailAndMetadata(true);
+        setEmbedThumbnail(true);
+        setEmbedSubtitles(true);
+        setEmbedMetadata(true);
     }
 
     @JsonIgnore
@@ -69,7 +71,7 @@ public class YoutubeFilter extends GenericFilter {
                         }
                     }
                     case VIDEO, AUDIO -> {
-                        if (isEmbedThumbnailAndMetadata()) {
+                        if (isEmbedMetadata()) {
                             arguments.add(
                                 "--parse-metadata",
                                 "description:(?s)(?P<meta_comment>.+)"

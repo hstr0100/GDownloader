@@ -36,7 +36,9 @@ public class CrunchyrollFilter extends GenericFilter {
         setId(ID);
         setFilterName("Crunchyroll");
         setUrlRegex("^(https?:\\/\\/)?(www\\.)?crunchyroll\\.com(\\/.*)?$");
-        setEmbedThumbnailAndMetadata(true);
+        setEmbedThumbnail(true);
+        setEmbedSubtitles(true);
+        setEmbedMetadata(true);
     }
 
     @JsonIgnore

@@ -1397,6 +1397,29 @@ public class SettingsPanel {
         }
 
         if (filter != null) {
+            addLabel(itemPanel, "settings.metadata.panel.title");
+
+            addCheckBox(itemPanel, CheckBoxBuilder.builder()
+                .background(resolveColor(itemPanel))
+                .labelKey("settings.metadata.embed_thumbnail")
+                .getter(filter::isEmbedThumbnail)
+                .setter(filter::setEmbedThumbnail)
+                .build());
+
+            addCheckBox(itemPanel, CheckBoxBuilder.builder()
+                .background(resolveColor(itemPanel))
+                .labelKey("settings.metadata.embed_subtitles")
+                .getter(filter::isEmbedSubtitles)
+                .setter(filter::setEmbedSubtitles)
+                .build());
+
+            addCheckBox(itemPanel, CheckBoxBuilder.builder()
+                .background(resolveColor(itemPanel))
+                .labelKey("settings.metadata.embed_metadata")
+                .getter(filter::isEmbedMetadata)
+                .setter(filter::setEmbedMetadata)
+                .build());
+
             addLabel(itemPanel, "settings.advanced.panel.title");
 
             List<JComponent> namePatternFields = new ArrayList<>();

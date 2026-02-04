@@ -35,6 +35,8 @@ public class DailymotionFilter extends GenericFilter {
         setId(ID);
         setFilterName("Dailymotion");
         setUrlRegex("^(https?:\\/\\/)?(www\\.)?dailymotion\\.com(\\/.*)?$");
-        setEmbedThumbnailAndMetadata(true);
+        setEmbedThumbnail(true);
+        setEmbedSubtitles(true);
+        setEmbedMetadata(true);
     }
 }
