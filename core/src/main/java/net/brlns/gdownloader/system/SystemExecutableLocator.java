@@ -72,6 +72,7 @@ public final class SystemExecutableLocator {
             Paths.get(GDownloader.getWorkDirectory().getPath(), "ffmpeg"),
             Paths.get("/usr/local/bin"), // Linux/macOS
             Paths.get("/usr/bin"), // Linux/macOS
+            Paths.get("/opt/homebrew/bin"), // macOS
             Paths.get(System.getProperty("user.home"), ".local", "bin"), // Linux/macOS user-specific
             Paths.get(System.getProperty("user.home"), "bin"), // Linux/macOS user-specific
             Paths.get("C:\\Program Files\\yt-dlp"), // Windows

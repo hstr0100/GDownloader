@@ -677,7 +677,7 @@ public class DownloadManager implements IEvent, AutoCloseable {
 
             QueueEntry entry = sequencer.fetchNext();
             if (entry == null) {
-                log.info("No more entries to fetch from queue");
+                //log.info("No more entries to fetch from queue");
                 break;
             }
 
