@@ -29,7 +29,7 @@ import net.brlns.gdownloader.util.LockUtils;
  * @author Gabriel / hstr0100 / vertx010
  */
 @Slf4j
-public class GalleryDlUpdater extends AbstractGitUpdater {
+public class GalleryDlUpdater extends CodebergUpdater {
 
     private static final String USER = "mikf";
     private static final String REPO = "gallery-dl";
@@ -50,14 +50,14 @@ public class GalleryDlUpdater extends AbstractGitUpdater {
 
     @Override
     @Nullable
-    public String getGitHubBinaryName() {
+    public String getReleaseBinaryName() {
         return ArchVersionEnum.getDefinitions().getGalleryDlBinary();
     }
 
     @Nullable
     @Override
     protected String getRuntimeBinaryName() {
-        return getGitHubBinaryName();
+        return getReleaseBinaryName();
     }
 
     @Override

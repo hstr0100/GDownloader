@@ -53,7 +53,7 @@ public class SpotDLUpdater extends AbstractGitUpdater {
 
     @Override
     @Nullable
-    public String getGitHubBinaryName() {
+    public String getReleaseBinaryName() {
         return ArchVersionEnum.getDefinitions().getSpotDlBinary();
     }
 

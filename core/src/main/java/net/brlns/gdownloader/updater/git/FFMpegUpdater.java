@@ -57,7 +57,7 @@ public class FFMpegUpdater extends AbstractGitUpdater {
 
     @Override
     @Nullable
-    public String getGitHubBinaryName() {
+    public String getReleaseBinaryName() {
         return ArchVersionEnum.getDefinitions().getFfmpegBinary();
     }
 

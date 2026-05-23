@@ -107,7 +107,7 @@ public abstract class AbstractGitUpdater implements IUpdater {
      * In the future, this may need to be replaced with a more robust regex-based solution.
      */
     @Nullable
-    protected abstract String getGitHubBinaryName();
+    protected abstract String getReleaseBinaryName();
 
     @Nullable
     protected abstract String getRuntimeBinaryName();
@@ -213,7 +213,7 @@ public abstract class AbstractGitUpdater implements IUpdater {
             }
         }
 
-        if (StringUtils.nullOrEmpty(getGitHubBinaryName()) || StringUtils.nullOrEmpty(getRuntimeBinaryName())) {
+        if (StringUtils.nullOrEmpty(getReleaseBinaryName()) || StringUtils.nullOrEmpty(getRuntimeBinaryName())) {
             log.error("Cannot update, no binary configured for {}", getRepo());
 
             tryFallback(workDir);
@@ -353,12 +353,14 @@ public abstract class AbstractGitUpdater implements IUpdater {
         }
     }
 
+    protected String getAPIEndpoint() {
+        return String.format("https://api.github.com/repos/%s/%s/releases/latest", getUser(), getRepo());
+    }
+
     @Nullable
     protected Pair<String, String> getLatestReleaseTag() throws IOException, InterruptedException {
-        String apiUrl = String.format("https://api.github.com/repos/%s/%s/releases/latest", getUser(), getRepo());
-
         HttpRequest request = HttpRequest.newBuilder()
-            .uri(URI.create(apiUrl))
+            .uri(URI.create(getAPIEndpoint()))
             .timeout(Duration.ofSeconds(10))
             .header("User-Agent", URLUtils.GLOBAL_USER_AGENT)
             .build();
@@ -380,7 +382,7 @@ public abstract class AbstractGitUpdater implements IUpdater {
 
             String downloadUrl = asset.get("browser_download_url").asText();
 
-            if (downloadUrl.endsWith(getGitHubBinaryName())) {
+            if (downloadUrl.endsWith(getReleaseBinaryName())) {
                 return new Pair<>(tagName.asText(), downloadUrl);
             }
         }

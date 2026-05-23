@@ -32,7 +32,7 @@ public class SelfJarUpdater extends SelfUpdater {
 
     @Override
     @Nullable
-    public String getGitHubBinaryName() {
+    public String getReleaseBinaryName() {
         return "-all.jar";// Same for all platforms
     }
 

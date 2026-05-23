@@ -60,7 +60,7 @@ public class DenoUpdater extends AbstractGitUpdater {
 
     @Override
     @Nullable
-    public String getGitHubBinaryName() {
+    public String getReleaseBinaryName() {
         return ArchVersionEnum.getDefinitions().getDenoBinary();
     }
 
@@ -84,7 +84,7 @@ public class DenoUpdater extends AbstractGitUpdater {
 
     @Override
     public boolean isEnabled() {
-        return getGitHubBinaryName() != null;
+        return getReleaseBinaryName() != null;
     }
 
     @Override

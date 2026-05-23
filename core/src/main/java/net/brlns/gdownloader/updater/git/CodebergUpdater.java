@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 hstr0100
+ * Copyright (C) 2026 hstr0100
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,35 +16,21 @@
  */
 package net.brlns.gdownloader.updater.git;
 
-import jakarta.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
-import net.brlns.gdownloader.updater.ArchVersionEnum;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
 @Slf4j
-public class SelfAppImageUpdater extends SelfUpdater {
+public abstract class CodebergUpdater extends AbstractGitUpdater {
 
-    public SelfAppImageUpdater(GDownloader mainIn) {
-        super(mainIn);
+    public CodebergUpdater(GDownloader main) {
+        super(main);
     }
 
     @Override
-    @Nullable
-    public String getReleaseBinaryName() {
-        return ArchVersionEnum.getDefinitions().getSelfAppImageBinary();
-    }
-
-    @Nullable
-    @Override
-    protected String getRuntimeBinaryName() {
-        return GDownloader.REGISTRY_APP_NAME.toLowerCase() + "_latest.AppImage";
-    }
-
-    @Override
-    public boolean isEnabled() {
-        return GDownloader.isFromAppImage();
+    protected String getAPIEndpoint() {
+        return String.format("https://codeberg.org/api/v1/repos/%s/%s/releases/latest", getUser(), getRepo());
     }
 }

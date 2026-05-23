@@ -50,14 +50,14 @@ public class YtDlpUpdater extends AbstractGitUpdater {
 
     @Override
     @Nullable
-    public String getGitHubBinaryName() {
+    public String getReleaseBinaryName() {
         return ArchVersionEnum.getDefinitions().getYtDlpBinary();
     }
 
     @Nullable
     @Override
     protected String getRuntimeBinaryName() {
-        return getGitHubBinaryName();
+        return getReleaseBinaryName();
     }
 
     @Override
