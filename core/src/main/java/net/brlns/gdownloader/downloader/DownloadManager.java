@@ -655,7 +655,7 @@ public class DownloadManager implements IEvent, AutoCloseable {
 
     public void retryFailedDownloads() {
         sequencer.requeueFailed((entry) -> {
-            requeueEntry(entry);
+            requeueEntry(entry, false);
         });
 
         startDownloads(suggestedDownloaderId.get());
@@ -663,7 +663,11 @@ public class DownloadManager implements IEvent, AutoCloseable {
     }
 
     public void requeueEntry(QueueEntry entry) {
-        resetDownload(entry);
+        requeueEntry(entry, true);
+    }
+
+    public void requeueEntry(QueueEntry entry, boolean cleanDirectories) {
+        resetDownload(entry, cleanDirectories);
         offerTo(QUEUED, entry);
     }
 
@@ -874,9 +878,15 @@ public class DownloadManager implements IEvent, AutoCloseable {
     }
 
     protected void resetDownload(QueueEntry queueEntry) {
+        resetDownload(queueEntry, true);
+    }
+
+    protected void resetDownload(QueueEntry queueEntry, boolean cleanDirectories) {
         queueEntry.createDefaultRightClick(this);
 
-        queueEntry.cleanDirectories();
+        if (cleanDirectories) {
+            queueEntry.cleanDirectories();
+        }
 
         queueEntry.updateStatus(DownloadStatusEnum.QUEUED, l10n("gui.download_status.not_started"));
         queueEntry.resetDownloaderBlacklist();
