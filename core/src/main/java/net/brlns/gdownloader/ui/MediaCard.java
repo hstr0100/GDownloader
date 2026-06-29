@@ -61,6 +61,7 @@ public class MediaCard {
     private long thumbnailDuration;
     private DownloadTypeEnum placeholderIconType;
     private DownloadPriorityEnum downloadPriorityIconType;
+    private String urlHint = "";
 
     private Runnable onLeftClick;
     private Map<String, IMenuEntry> rightClickMenu = new ConcurrentLinkedHashMap<>();

@@ -37,6 +37,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 import javax.swing.*;
 import lombok.Data;
 import lombok.NonNull;
@@ -74,6 +75,8 @@ public final class MediaCardManager {
     private final ConcurrentLinkedHashSet<Integer> selectedMediaCards = new ConcurrentLinkedHashSet<>();
     private final AtomicReference<MediaCard> lastSelectedMediaCard = new AtomicReference<>(null);
     private final AtomicBoolean isMultiSelectMode = new AtomicBoolean();
+
+    private final AtomicReference<String> currentSearchQuery = new AtomicReference<>("");
 
     private JScrollPane queueScrollPane;
 
@@ -291,6 +294,12 @@ public final class MediaCardManager {
                         ui.getMediaNameLabel().addMouseListener(listener);
 
                         card.putClientProperty("MEDIA_CARD", mediaCard);
+
+                        String currentQuery = currentSearchQuery.get();
+                        if (!currentQuery.isEmpty()) {
+                            boolean visible = matchesSearch(mediaCard, currentQuery);
+                            card.setVisible(visible);
+                        }
 
                         mediaQueuePane.add(card);
 
@@ -531,6 +540,70 @@ public final class MediaCardManager {
 
     private boolean isInAnyRange(int index, List<Range> ranges) {
         return ranges.stream().anyMatch(range -> range.inRange(index));
+    }
+
+    public int getMediaCardCount() {
+        return mediaCards.size();
+    }
+
+    public void filterMediaCards(@NonNull String query, @Nullable Consumer<Integer> onCountUpdate) {
+        currentSearchQuery.set(query.trim().toLowerCase());
+
+        runOnEDT(() -> {
+            if (mediaQueuePane == null) {
+                return;
+            }
+
+            int count = 0;
+            for (MediaCard card : mediaCards.values()) {
+                CustomMediaCardUI ui = card.getUi();
+                if (ui == null) {
+                    continue;
+                }
+
+                String currentQuery = currentSearchQuery.get();
+
+                boolean visible = currentQuery.isEmpty() || matchesSearch(card, currentQuery);
+                JPanel cardPanel = ui.getCard();
+
+                if (cardPanel.isVisible() != visible) {
+                    cardPanel.setVisible(visible);
+                }
+
+                if (visible) {
+                    count++;
+                }
+            }
+
+            mediaQueuePane.revalidate();
+            mediaQueuePane.repaint();
+
+            if (onCountUpdate != null) {
+                onCountUpdate.accept(count);
+            }
+        });
+    }
+
+    private boolean matchesSearch(MediaCard card, String query) {
+        String[] labels = card.getLabelText();
+        if (labels != null) {
+            for (String label : labels) {
+                if (label != null && label.toLowerCase().contains(query)) {
+                    return true;
+                }
+            }
+        }
+
+        if (card.getUrlHint().contains(query)) {
+            return true;
+        }
+
+        String tooltip = card.getTooltipText();
+        if (tooltip != null && tooltip.toLowerCase().contains(query)) {
+            return true;
+        }
+
+        return false;
     }
 
     private class MediaCardMouseAdapter extends MouseAdapter {

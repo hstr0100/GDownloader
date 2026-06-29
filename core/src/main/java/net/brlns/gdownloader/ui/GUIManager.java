@@ -109,6 +109,11 @@ public final class GUIManager {
     private JPanel loadingQueuePane;
     private JPanel updaterPane;
 
+    private JPanel searchBarPanel;
+    private JTextField searchField;
+    private JLabel matchCountLabel;
+    private Timer searchDebounceTimer;
+
     public GUIManager(GDownloader mainIn) {
         main = mainIn;
 
@@ -250,12 +255,25 @@ public final class GUIManager {
             KeyboardFocusManager manager = KeyboardFocusManager.getCurrentKeyboardFocusManager();
             manager.addKeyEventDispatcher((KeyEvent e) -> {
                 if (e.getID() == KeyEvent.KEY_PRESSED) {
-                    if ((e.getModifiersEx() & KeyEvent.CTRL_DOWN_MASK) != 0
-                        && e.getKeyCode() == KeyEvent.VK_V) {
-                        main.getClipboardManager().updateClipboard(null, true);
+                    if ((e.getModifiersEx() & KeyEvent.CTRL_DOWN_MASK) != 0) {
+                        switch (e.getKeyCode()) {
+                            case KeyEvent.VK_V ->
+                                main.getClipboardManager().updateClipboard(null, true);
+                            case KeyEvent.VK_F -> {
+                                if (appWindow.isVisible()) {
+                                    runOnEDT(() -> {
+                                        if (searchBarPanel.isVisible()) {
+                                            searchField.requestFocusInWindow();
+                                            searchField.selectAll();
+                                        } else {
+                                            showSearchBar();
+                                        }
+                                    });
+                                }
+                            }
+                        }
                     }
                 }
-
                 return false;
             });
 
@@ -289,9 +307,11 @@ public final class GUIManager {
                 }
             });
 
-            JPanel headerPanel = new JPanel(new BorderLayout());
+            JPanel headerPanel = new JPanel();
+            headerPanel.setLayout(new BoxLayout(headerPanel, BoxLayout.Y_AXIS));
             headerPanel.setBackground(color(BACKGROUND));
-            headerPanel.add(createToolbar(), BorderLayout.SOUTH);
+            headerPanel.add(createToolbar());
+            headerPanel.add(createSearchBar());
             mainPanel.add(headerPanel, BorderLayout.NORTH);
 
             queuePanel = new JPanel(new BorderLayout());
@@ -356,6 +376,106 @@ public final class GUIManager {
         }
 
         appWindow.setLocation(windowX, windowY);
+    }
+
+    private JPanel createSearchBar() {
+        searchBarPanel = new JPanel(new BorderLayout(5, 0));
+        searchBarPanel.setBackground(color(BACKGROUND));
+        searchBarPanel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createMatteBorder(1, 0, 0, 0, color(SIDE_PANEL)),
+            BorderFactory.createEmptyBorder(4, 10, 4, 10)
+        ));
+        searchBarPanel.setVisible(false);
+
+        searchField = new JTextField();
+        searchField.setBackground(color(SIDE_PANEL));
+        searchField.setForeground(color(FOREGROUND));
+        searchField.setCaretColor(color(FOREGROUND));
+        searchField.setBorder(BorderFactory.createEmptyBorder(3, 6, 3, 6));
+        searchField.setToolTipText(l10n("gui.search.tooltip"));
+
+        searchField.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), "hideSearch");
+        searchField.getActionMap().put("hideSearch", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                hideSearchBar();
+            }
+        });
+
+        searchDebounceTimer = new Timer(150, e -> {
+            String query = searchField.getText();
+            mediaCardManager.filterMediaCards(query, count -> {
+                updateMatchCountLabel(query, count);
+            });
+        });
+        searchDebounceTimer.setRepeats(false);
+
+        searchField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            @Override
+            public void insertUpdate(javax.swing.event.DocumentEvent e) {
+                searchDebounceTimer.restart();
+            }
+
+            @Override
+            public void removeUpdate(javax.swing.event.DocumentEvent e) {
+                searchDebounceTimer.restart();
+            }
+
+            @Override
+            public void changedUpdate(javax.swing.event.DocumentEvent e) {
+                searchDebounceTimer.restart();
+            }
+        });
+
+        matchCountLabel = new JLabel("");
+        matchCountLabel.setForeground(color(LIGHT_TEXT));
+        matchCountLabel.setBorder(BorderFactory.createEmptyBorder(0, 5, 0, 5));
+
+        JButton closeButton = createIconButton(
+            loadIcon("/assets/x-mark.png", ICON, 24),
+            loadIcon("/assets/x-mark.png", ICON_CLOSE, 24),
+            "gui.search.close.tooltip",
+            e -> hideSearchBar()
+        );
+
+        closeButton.setPreferredSize(new Dimension(32, 32));
+
+        JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 3, 0));
+        rightPanel.setOpaque(false);
+        rightPanel.add(matchCountLabel);
+        rightPanel.add(closeButton);
+
+        searchBarPanel.add(searchField, BorderLayout.CENTER);
+        searchBarPanel.add(rightPanel, BorderLayout.EAST);
+
+        return searchBarPanel;
+    }
+
+    private void updateMatchCountLabel(String query, int matchCount) {
+        if (query.isEmpty()) {
+            matchCountLabel.setText("");
+            searchField.setBackground(color(SIDE_PANEL));
+        } else {
+            int total = mediaCardManager.getMediaCardCount();
+            matchCountLabel.setText(matchCount + " / " + total);
+            // red if nothing matches
+            searchField.setBackground(matchCount == 0
+                ? new Color(100, 30, 30)
+                : color(SIDE_PANEL));
+        }
+    }
+
+    private void showSearchBar() {
+        searchBarPanel.setVisible(true);
+        searchField.requestFocusInWindow();
+        searchField.selectAll();
+    }
+
+    private void hideSearchBar() {
+        searchBarPanel.setVisible(false);
+        searchField.setText("");
+        matchCountLabel.setText("");
+        mediaCardManager.filterMediaCards("", null);
     }
 
     private JPanel createToolbar() {
@@ -470,7 +590,7 @@ public final class GUIManager {
             JButton toogledDownloadsButton = createToggleDownloadsButton(
                 (state) -> {
                     if (state) {
-                        return loadIcon("/assets/pause.png", ICON);
+                        return loadIcon("/assets/pause.png", QUEUE_PAUSE_ICON);
                     } else {
                         if (main.getDownloadManager().getQueuedDownloads() > 0) {
                             return loadIcon("/assets/play.png", QUEUE_ACTIVE_ICON);
@@ -1137,6 +1257,9 @@ public final class GUIManager {
             }
 
             rightClickMenu.putIfAbsent(l10n("gui.sort_by"), sortSubmenu);
+
+            rightClickMenu.putIfAbsent(l10n("gui.search.tooltip"),
+                new RunnableMenuEntry(() -> showSearchBar()));
 
             return rightClickMenu;
         }

@@ -745,6 +745,8 @@ public class QueueEntry {
 
         updateMediaRightClickOptions();
         updateExtraRightClickOptions();
+
+        mediaCard.setUrlHint(url);
     }
 
     public void updateExtraRightClickOptions() {
