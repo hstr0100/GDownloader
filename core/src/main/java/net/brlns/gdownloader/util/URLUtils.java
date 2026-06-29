@@ -35,7 +35,9 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public final class URLUtils {
 
-    public static String GLOBAL_USER_AGENT = "Mozilla/5.0 (X11; Linux x86_64; rv:151.0) Gecko/20100101 Firefox/151.0";
+    public static String getGlobalUserAgent() {
+        return FirefoxUserAgentProvider.getLatestFirefoxUserAgent();
+    }
 
     @Nullable
     public static String getHostName(String urlIn) {

@@ -362,7 +362,7 @@ public abstract class AbstractGitUpdater implements IUpdater {
         HttpRequest request = HttpRequest.newBuilder()
             .uri(URI.create(getAPIEndpoint()))
             .timeout(Duration.ofSeconds(10))
-            .header("User-Agent", URLUtils.GLOBAL_USER_AGENT)
+            .header("User-Agent", URLUtils.getGlobalUserAgent())
             .build();
 
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
@@ -401,7 +401,7 @@ public abstract class AbstractGitUpdater implements IUpdater {
 
         HttpRequest request = HttpRequest.newBuilder()
             .uri(URI.create(urlIn))
-            .header("User-Agent", URLUtils.GLOBAL_USER_AGENT)
+            .header("User-Agent", URLUtils.getGlobalUserAgent())
             .build();
 
         HttpResponse<InputStream> response = client.send(request, BodyHandlers.ofInputStream());

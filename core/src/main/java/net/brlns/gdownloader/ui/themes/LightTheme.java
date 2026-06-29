@@ -66,7 +66,7 @@ public class LightTheme extends AbstractTheme {
         put(MENU_ITEM_ARMED, Color.LIGHT_GRAY);
         put(MENU_ITEM_PRESSED, Color.GRAY);
         put(QUEUE_ACTIVE_ICON, new Color(29, 233, 182));
-        put(QUEUE_PAUSE_ICON, new Color(255, 167, 38));
+        put(QUEUE_PAUSE_ICON, new Color(255, 179, 0));
         put(TOAST_BACKGROUND, new Color(230, 230, 230, 230));
         put(TOAST_ERROR, Color.RED);
         put(TOAST_WARNING, new Color(255, 214, 0));

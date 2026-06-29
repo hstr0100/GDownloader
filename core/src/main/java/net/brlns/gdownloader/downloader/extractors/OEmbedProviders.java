@@ -83,7 +83,7 @@ public class OEmbedProviders {
                 HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(PROVIDERS_URL))
                     .timeout(Duration.ofSeconds(10))
-                    .header("User-Agent", URLUtils.GLOBAL_USER_AGENT)
+                    .header("User-Agent", URLUtils.getGlobalUserAgent())
                     .header("Accept", "application/json")
                     .GET()
                     .build();
