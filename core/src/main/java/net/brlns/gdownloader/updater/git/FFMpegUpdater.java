@@ -41,8 +41,22 @@ public class FFMpegUpdater extends AbstractGitUpdater {
     private static final String USER = "GyanD";
     private static final String REPO = "codexffmpeg";
 
+    // TODO: remove after upstream NVENC detection issue is addressed
+    // https://github.com/hstr0100/GDownloader/issues/54
+    private static final String PINNED_VERSION = "8.1.1";
+
     public FFMpegUpdater(GDownloader mainIn) {
         super(mainIn);
+    }
+
+    // TODO: remove after upstream NVENC detection issue is addressed
+    // https://github.com/hstr0100/GDownloader/issues/54
+    @Override
+    protected String getAPIEndpoint() {
+        return String.format(
+            "https://api.github.com/repos/%s/%s/releases/tags/%s",
+            getUser(), getRepo(), PINNED_VERSION
+        );
     }
 
     @Override
