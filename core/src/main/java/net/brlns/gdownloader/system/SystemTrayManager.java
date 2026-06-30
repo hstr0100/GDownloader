@@ -51,7 +51,7 @@ public class SystemTrayManager {
     private TrayIcon trayIcon = null;
 
     public void register() {
-        if (SystemTray.isSupported()) {
+        if (SystemTray.isSupported() && main.getConfig().isEnableSystemTray()) {
             try {
                 tray = SystemTray.getSystemTray();
 
@@ -75,17 +75,21 @@ public class SystemTrayManager {
                 handleException(e);
             }
         } else {
-            log.error("System tray is not supported, some features may not work.");
+            log.error("System tray is not supported or is disabled, some features may not work.");
         }
+    }
+
+    public void unregister() {
+        // TODO
     }
 
     /**
      * Builds the system tray menu.
      */
     private PopupMenu getDefaultSystemTrayMenu() {
-        // TODO: Java's SystemTray menu looks horrifying.
+        // TODO: Java's built-in SystemTray menu looks horrid.
         // Evaluate over time whether this project warrants the effort required to implement cross-platform custom menus.
-        // Dorkbox's existing library does not seem reliable enough across all the environments we support.
+        // Dorkbox's existing library is not reliable enough across all the environments we support.
         PopupMenu popup = new PopupMenu();
 
         popup.add(buildMenuItem("gui.toggle_downloads",

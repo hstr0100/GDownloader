@@ -807,6 +807,16 @@ public class QueueEntry {
                 }));
         }
 
+        if (isPlaylist()) {
+            YtDlpDownloader downloader = (YtDlpDownloader)main.getDownloadManager()
+                .getDownloader(DownloaderIdEnum.YT_DLP);
+
+            if (downloader != null) {
+                extrasSubmenu.put(l10n("gui.convert_to_individual_downloads"),
+                    new RunnableMenuEntry(() -> downloader.expandPlaylist(this)));
+            }
+        }
+
         if (!extrasSubmenu.isEmpty()) {
             addRightClick(l10n("gui.more_options"),
                 extrasSubmenu);

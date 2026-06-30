@@ -666,6 +666,14 @@ public class SettingsPanel {
 
         addCheckBox(panel, CheckBoxBuilder.builder()
             .background(resolveColor(panel))
+            .labelKey("settings.enable_system_tray")
+            .getter(settings::isEnableSystemTray)
+            .setter(settings::setEnableSystemTray)
+            .requiresRestart(true)
+            .build());
+
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
             .labelKey("settings.use_system_font")
             .getter(settings::isUseSystemFont)
             .setter(settings::setUseSystemFont)

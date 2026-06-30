@@ -16,6 +16,7 @@
  */
 package net.brlns.gdownloader.downloader;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.annotation.Nullable;
 import jakarta.annotation.PreDestroy;
 import java.io.File;
@@ -33,6 +34,7 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
+import net.brlns.gdownloader.downloader.enums.CloseReasonEnum;
 import net.brlns.gdownloader.downloader.enums.DownloadStatusEnum;
 import net.brlns.gdownloader.downloader.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
@@ -45,9 +47,13 @@ import net.brlns.gdownloader.process.ProcessArguments;
 import net.brlns.gdownloader.settings.QualitySettings;
 import net.brlns.gdownloader.settings.enums.AudioContainerEnum;
 import net.brlns.gdownloader.settings.enums.DescriptionContainerEnum;
+import net.brlns.gdownloader.settings.enums.PlayListOptionEnum;
 import net.brlns.gdownloader.settings.enums.SubtitleContainerEnum;
 import net.brlns.gdownloader.settings.enums.ThumbnailContainerEnum;
 import net.brlns.gdownloader.settings.enums.VideoContainerEnum;
+import net.brlns.gdownloader.ui.message.Message;
+import net.brlns.gdownloader.ui.message.MessageTypeEnum;
+import net.brlns.gdownloader.ui.message.ToastMessenger;
 import net.brlns.gdownloader.util.CancelHook;
 import net.brlns.gdownloader.util.DirectoryUtils;
 import net.brlns.gdownloader.util.FileUtils;
@@ -112,6 +118,63 @@ public class YtDlpDownloader extends AbstractDownloader {
         } catch (Exception e) {
             log.error("Failed to remove archive entry for video: {}", queueEntry.getUrl(), e);
         }
+    }
+
+    public void expandPlaylist(QueueEntry queueEntry) {
+        if (!queueEntry.isPlaylist()) {
+            return;
+        }
+
+        GDownloader.GLOBAL_THREAD_POOL.execute(() -> {
+            try {
+                ProcessArguments arguments = new ProcessArguments(
+                    executablePath.get().getAbsolutePath(),
+                    "--dump-json",
+                    "--flat-playlist",
+                    queueEntry.getUrl());
+
+                List<String> lines = main.readOutput(arguments);
+                List<String> videoUrls = new ArrayList<>();
+
+                for (String line : lines) {
+                    if (!line.startsWith("{")) {
+                        continue;
+                    }
+
+                    JsonNode node = GDownloader.OBJECT_MAPPER.readTree(line);
+
+                    JsonNode urlNode = node.get("url");
+                    if (urlNode != null && !urlNode.isNull()) {
+                        videoUrls.add(urlNode.asText());
+                    }
+                }
+
+                if (!videoUrls.isEmpty()) {
+                    queueEntry.dispose(CloseReasonEnum.MANUAL);
+
+                    for (String videoUrl : videoUrls) {
+                        main.getDownloadManager().captureUrl(
+                            videoUrl, true, PlayListOptionEnum.DOWNLOAD_SINGLE);
+                    }
+
+                    ToastMessenger.show(Message.builder()
+                        .message("gui.converted_playlist_into.toast", videoUrls.size())
+                        .durationMillis(3000)
+                        .messageType(MessageTypeEnum.INFO)
+                        .discardDuplicates(false)
+                        .build());
+                } else {
+                    ToastMessenger.show(Message.builder()
+                        .message("gui.failed_to_expand_playlist.toast")
+                        .durationMillis(3000)
+                        .messageType(MessageTypeEnum.ERROR)
+                        .discardDuplicates(false)
+                        .build());
+                }
+            } catch (Exception e) {
+                GDownloader.handleException(e, "Failed to expand playlist", true);
+            }
+        });
     }
 
     @Override

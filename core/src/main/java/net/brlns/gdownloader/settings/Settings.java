@@ -237,6 +237,9 @@ public class Settings {
     @JsonProperty("DownloadDescription")
     private boolean downloadDescription = false;
 
+    @JsonProperty("EnableSystemTray")
+    private boolean enableSystemTray = true;
+
     @JsonProperty("SaveDescriptionFileAsTxt")
     private boolean saveDescriptionFileAsTxt = true;
 
@@ -268,7 +271,7 @@ public class Settings {
     private boolean exitOnClose = true;
 
     @JsonProperty("TranscodeAudioToAAC")
-    private boolean transcodeAudioToAAC = true;
+    private boolean transcodeAudioToAAC = false;
 
     @JsonProperty("DisableAACPns")
     private boolean disableAACPns = false;
