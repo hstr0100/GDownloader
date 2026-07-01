@@ -16,8 +16,8 @@ jobs:
       matrix:
         include:
           - GRADLE_ARCH: amd64
-            RUNS_ON: ubuntu-22.04
-            JAVA_VERSION: 21
+            RUNS_ON: ubuntu-24.04
+            JAVA_VERSION: 25
 
     runs-on: ${{ matrix.RUNS_ON }}
 
@@ -37,7 +37,7 @@ jobs:
         run: chmod +x ./gradlew
 
       - name: Setup Gradle cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~/.gradle/caches
@@ -52,4 +52,3 @@ jobs:
 
       - name: Build JPackage Binary
         run: ./gradlew jpackage
-

@@ -45,7 +45,7 @@ Download the latest version for your platform from the [releases page](https://g
 
 ### Build from Source
 
-0. Ensure you have [JDK 21](https://adoptium.net/temurin/releases/) or a newer version installed.
+0. Ensure you have [JDK 25](https://adoptium.net/temurin/releases/) or a newer version installed.
 
    **Windows Prerequisite:** On Windows, building requires the [WiX Toolset](https://github.com/wixtoolset/wix3/releases/latest) to be installed.
 

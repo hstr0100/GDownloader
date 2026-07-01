@@ -137,7 +137,7 @@ public class PersistenceManager implements AutoCloseable {
             initialized = true;
             return true;
         } catch (Exception e) {
-            log.error("Cannot initialize database: {} persistance disabled.", e.getMessage());
+            log.error("Cannot initialize database: {} persistance disabled.", e);
         }
 
         return false;

@@ -7,7 +7,7 @@ version = twelvemonkeysVersion
 
 java {
     toolchain {
-        languageVersion.set(JavaLanguageVersion.of(21))
+        languageVersion.set(JavaLanguageVersion.of(25))
     }
 
     modularity.inferModulePath.set(true)
@@ -20,7 +20,7 @@ dependencies {
     implementation("com.twelvemonkeys.imageio:imageio-tiff")
 }
 
-shadowJar {
+tasks.named('shadowJar') {
     mergeServiceFiles()
 }
 
@@ -32,5 +32,5 @@ configurations {
 }
 
 artifacts {
-    moduleJar(tasks.shadowJar)
+    moduleJar(tasks.named('shadowJar'))
 }

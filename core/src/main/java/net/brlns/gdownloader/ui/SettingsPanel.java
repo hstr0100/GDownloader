@@ -666,14 +666,6 @@ public class SettingsPanel {
 
         addCheckBox(panel, CheckBoxBuilder.builder()
             .background(resolveColor(panel))
-            .labelKey("settings.enable_system_tray")
-            .getter(settings::isEnableSystemTray)
-            .setter(settings::setEnableSystemTray)
-            .requiresRestart(true)
-            .build());
-
-        addCheckBox(panel, CheckBoxBuilder.builder()
-            .background(resolveColor(panel))
             .labelKey("settings.use_system_font")
             .getter(settings::isUseSystemFont)
             .setter(settings::setUseSystemFont)
@@ -718,6 +710,14 @@ public class SettingsPanel {
             .labelKey("settings.auto_scroll_to_bottom")
             .getter(settings::isAutoScrollToBottom)
             .setter(settings::setAutoScrollToBottom)
+            .build());
+
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.enable_system_tray")
+            .getter(settings::isEnableSystemTray)
+            .setter(settings::setEnableSystemTray)
+            .requiresRestart(true)
             .build());
 
         panel.add(getFillerPanel());

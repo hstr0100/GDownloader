@@ -1,3 +1,5 @@
+import org.apache.tools.ant.taskdefs.condition.Os
+
 plugins {
     id('java')
     id('application')
@@ -12,7 +14,11 @@ group = 'net.brlns'
 def author = 'Gabriel D @hstr0100'
 def lowercaseName = 'gdownloader'
 
-def os = org.gradle.internal.os.OperatingSystem.current()
+def os = [
+    isWindows: { -> Os.isFamily(Os.FAMILY_WINDOWS) },
+    isLinux:   { -> Os.isFamily(Os.FAMILY_UNIX) && !Os.isFamily(Os.FAMILY_MAC) },
+    isMacOsX:  { -> Os.isFamily(Os.FAMILY_MAC) }
+]
 
 def getArchitecture(def os) {
     def arch = System.getProperty("os.arch").toLowerCase()
@@ -30,11 +36,11 @@ def getArchitecture(def os) {
 def architecture = getArchitecture(os)
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_21
-    targetCompatibility = JavaVersion.VERSION_21
+    sourceCompatibility = JavaVersion.VERSION_25
+    targetCompatibility = JavaVersion.VERSION_25
 
     toolchain {
-        languageVersion.set(JavaLanguageVersion.of(21))
+        languageVersion.set(JavaLanguageVersion.of(25))
     }
 
     // There seems to be no consensus whatsoever on whether to use .set() or =.
@@ -47,11 +53,17 @@ java {
 application {
     mainClass.set('net.brlns.gdownloader.GDownloader')
     mainModule.set('net.brlns.gdownloader')
-    applicationDefaultJvmArgs = ['--add-exports=java.management/sun.management=ALL-UNNAMED']
+    applicationDefaultJvmArgs = [
+        '--add-exports=java.management/sun.management=ALL-UNNAMED',
+        '--enable-native-access=com.github.kwhat.jnativehook'
+    ]
 }
 
 dependencies {
+    // Used only to provide WebP thumbnail support.
+    // TODO: Investigate whether a better JPMS-aware alternative is available.
     implementation(project(path: ':twelvemonkeys', configuration: 'moduleJar'))
+
     implementation("ch.qos.logback:logback-classic:$logbackVersion")
     implementation("com.github.kwhat:jnativehook:$jnativehookVersion")
     implementation("com.fasterxml.jackson.core:jackson-databind:$jacksonVersion")
@@ -61,6 +73,7 @@ dependencies {
     implementation("net.java.dev.jna:jna-platform:$jnaVersion")
     implementation("jakarta.annotation:jakarta.annotation-api:$jakartaAnnotationVersion")
     implementation("jakarta.persistence:jakarta.persistence-api:$jakartaPersistenceVersion")
+    // upgrading eclipselink to v5.0.0 is a no-go with java 25
     implementation("org.eclipse.persistence:eclipselink:$eclipselinkVersion")
     implementation("org.hsqldb:hsqldb:$hsqldbVersion")
     implementation("com.adonax:audiocue:$adonaxVersion")
@@ -73,19 +86,20 @@ dependencies {
     testRuntimeOnly('org.junit.platform:junit-platform-launcher')
 }
 
-test {
+tasks.named('test') {
     useJUnitPlatform()
 }
 
-run {
-    enableAssertions = true
-}
-
 tasks.named('run') {
-    jvmArgs = ['-Xss5M']
+    enableAssertions = true
+    jvmArgs = [
+        '-Xss5M',
+        '--add-exports=java.management/sun.management=ALL-UNNAMED',
+        '--enable-native-access=com.github.kwhat.jnativehook'
+    ]
 }
 
-task generateVersionFile {
+tasks.register('generateVersionFile') {
     group = 'build'
 
     def versionFile = file("src/main/resources/version.properties")
@@ -99,8 +113,13 @@ task generateVersionFile {
     }
 }
 
-compileJava.dependsOn generateVersionFile
-processResources.dependsOn generateVersionFile
+tasks.named('compileJava').configure {
+    dependsOn tasks.named('generateVersionFile')
+}
+
+tasks.named('processResources').configure {
+    dependsOn tasks.named('generateVersionFile')
+}
 
 extraJavaModuleInfo {
     failOnMissingModuleInfo.set(true)
@@ -125,7 +144,7 @@ tasks.withType(JavaCompile).configureEach {
     options.compilerArgs.addAll(['-Xlint:all,-serial,-processing,-requires-automatic,-missing-explicit-ctor'])
 }
 
-jar {
+tasks.named('jar', Jar) {
     archiveBaseName.set("${lowercaseName}-java")
 
     manifest {
@@ -140,34 +159,27 @@ jar {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
-shadowJar {
+tasks.named('shadowJar', com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar) {
     archiveBaseName.set("${lowercaseName}-java")
     mergeServiceFiles()
+    configurations.set([project.configurations.runtimeClasspath])
 }
 
-// Workaround for https://github.com/gradle/gradle/issues/26155 and https://github.com/johnrengelman/shadow/issues/882
-tasks.named('shadowJar') { shadowJar ->
-    inputs.files(project.configurations.runtimeClasspath)
-    configurations = []
+tasks.register('zipJpackageImage', Zip) {
+    dependsOn tasks.named('jpackage')
 
-    doFirst {
-        configurations = [project.configurations.runtimeClasspath]
-    }
-}
-
-task zipJpackageImage(type: Zip, dependsOn: jpackage) {
     def fileName = os.isWindows() ? "${lowercaseName}-${version}-windows_portable_${architecture}.zip" :
                    os.isLinux() ? "${lowercaseName}-${version}-linux_portable_${architecture}.zip" :
                    "${lowercaseName}-${version}-mac_portable_${architecture}.zip"
 
     archiveFileName.set(fileName)
-    destinationDirectory.set(file("$buildDir/jpackage"))
+    destinationDirectory.set(layout.buildDirectory.dir("jpackage"))
 
     // A less-than-stellar but functional way to detect that the program is running in portable mode.
     doFirst {
-        def basePath = os.isWindows() ? "$buildDir/jpackage/${rootProject.name}" :
-                       os.isLinux() ? "$buildDir/jpackage/${rootProject.name}/lib" :
-                       "$buildDir/jpackage/${rootProject.name}.app/Contents"
+        def basePath = os.isWindows() ? "${layout.buildDirectory.get().asFile}/jpackage/${rootProject.name}" :
+                       os.isLinux() ? "${layout.buildDirectory.get().asFile}/jpackage/${rootProject.name}/lib" :
+                       "${layout.buildDirectory.get().asFile}/jpackage/${rootProject.name}.app/Contents"
 
         def portableLockFile = file("$basePath/runtime/portable.lock")
         portableLockFile.text = [
@@ -176,17 +188,38 @@ task zipJpackageImage(type: Zip, dependsOn: jpackage) {
         ].join("\n")
     }
 
-    from("$buildDir/jpackage/${rootProject.name}")
+    from("${layout.buildDirectory.get().asFile}/jpackage/${rootProject.name}")
 }
 
-tasks.jpackage.finalizedBy zipJpackageImage
+tasks.named('jpackage').configure {
+    finalizedBy tasks.named('zipJpackageImage')
+
+    doFirst {
+        def basePath = os.isWindows() ? rootProject.name :
+                       os.isLinux() ? "${rootProject.name}/lib" :
+                       "${rootProject.name}.app/Contents"
+
+        project.copy {
+            from('src/main/resources/assets/launcher')
+            include('GDownloader.png')
+            include('GDownloader.icns')
+            include('GDownloader.ico')
+            include('GDownloader.desktop')
+            into("${layout.buildDirectory.get().asFile}/jpackage/$basePath/app")
+        }
+    }
+}
 
 jlink {
-    options = ['--strip-debug', '--compress', 'zip-6', '--no-header-files', '--no-man-pages']
+    options.set(['--strip-debug', '--compress', 'zip-6', '--no-header-files', '--no-man-pages'])
 
     launcher {
         name = 'GDownloader'
-        jvmArgs = ['-Xmx2G', '-Xss5M']
+        jvmArgs = [
+            '-Xmx2G',
+            '-Xss5M',
+            '--enable-native-access=com.github.kwhat.jnativehook'
+        ]
         noConsole = true
     }
 
@@ -196,93 +229,88 @@ jlink {
         def imgType = os.isWindows() ? 'ico' : os.isMacOsX() ? 'icns' : 'png'
         icon = "src/main/resources/assets/launcher/GDownloader.$imgType"
 
-        installerOptions += [
+        installerOptions.addAll([
             '--about-url', 'https://github.com/hstr0100/GDownloader',
             '--description', 'Graphical interface for yt-dlp, gallery-dl, and spotDL',
             '--vendor', author,
-            '--copyright', "2025 ${author}",
+            '--copyright', "2026 ${author}",
             '--license-file', "../LICENSE",
-            '--app-version', version
-        ]
+            '--app-version', project.version.toString()
+        ])
 
         if (os.isWindows()) {
             installerName = "${lowercaseName}-windows-${architecture}"
             installerType = 'msi'
             //imageOptions += ['--win-console']
-            installerOptions += [
+            installerOptions.addAll([
                 '--win-per-user-install',
                 '--win-dir-chooser',
                 '--win-menu',
                 '--win-menu-group', "${rootProject.name}",
                 '--win-shortcut'
-            ]
+            ])
         } else if (os.isLinux()) {
             // AppImage not yet supported by jpackage
             installerType = 'deb'
-            installerOptions += [
-                '--resource-dir', "build/jpackage/${rootProject.name}/lib/app",
+            installerOptions.addAll([
+                '--resource-dir', "${layout.buildDirectory.get().asFile}/jpackage/${rootProject.name}/lib/app",
                 '--linux-package-name', "${lowercaseName}-linux",
                 '--linux-app-category', 'web',
                 '--linux-menu-group', 'Network;',
                 '--linux-deb-maintainer', 'brokenlensllc@gmail.com',
                 '--linux-rpm-license-type', 'GPLv3',
                 '--linux-shortcut'
-            ]
+            ])
         } else if (os.isMacOsX()) {
             installerName = "${lowercaseName}-mac-${architecture}"
             installerType = 'dmg'
-            installerOptions += [
+            installerOptions.addAll([
                 '--mac-package-name', "${rootProject.name}"
-            ]
+            ])
         }
-    }
-}
-
-tasks.jpackage.doFirst {
-    def basePath = os.isWindows() ? rootProject.name :
-                   os.isLinux() ? "${rootProject.name}/lib" :
-                   "${rootProject.name}.app/Contents"
-
-    copy {
-        from('src/main/resources/assets/launcher')
-        include('GDownloader.png')
-        include('GDownloader.icns')
-        include('GDownloader.ico')
-        include('GDownloader.desktop')
-        into("$buildDir/jpackage/$basePath/app")
     }
 }
 
 configurations {
-    resolvableImplementation { extendsFrom implementation }
+    resolvableImplementation {
+        extendsFrom(configurations.implementation)
+        canBeResolved = true
+        canBeConsumed = false
+    }
 }
 
-tasks.jlink.doLast {
-    configurations.resolvableImplementation.files.findAll { f ->
-        f.name.contains('jnativehook')
-    }.each { nativeJar ->
-        def destDir = file("$imageDir/bin/native-libs")
-        delete(destDir)
-        mkdir(destDir)
-
+tasks.named('jlink').configure {
+    doLast {
         def baseLibPath = 'com/github/kwhat/jnativehook/lib'
-        def zt = zipTree(nativeJar).matching {
-            include("$baseLibPath/**")
-        }
 
-        def expandedPath = zt.asFileTree.tree.mirror.dir.path
-        zt.files.each { f ->
-            def pathInLib = (f.path - expandedPath).substring(1)
-            pathInLib = pathInLib.replace('\\', '/')
-            pathInLib -= "$baseLibPath/"
-            def destFilePath = destDir.toPath().resolve(pathInLib)
-            mkdir(destFilePath.parent)
-            java.nio.file.Files.copy(f.toPath(), destFilePath)
+        configurations.resolvableImplementation.files.findAll { f ->
+            f.name.contains('jnativehook')
+        }.each { nativeJar ->
+            def imgDir = jlink.imageDir.get().asFile
+            def destDir = file("$imgDir/bin/native-libs")
+            delete(destDir)
+            mkdir(destDir)
+
+            project.copy {
+                from(zipTree(nativeJar)) {
+                    include("${baseLibPath}/**")
+                    eachFile { fcd ->
+                        def segments = fcd.relativePath.segments
+                        def prefixDepth = baseLibPath.split('/').length
+                        fcd.relativePath = new RelativePath(true, segments.drop(prefixDepth))
+                    }
+
+                    includeEmptyDirs = false
+                }
+
+                into destDir
+            }
         }
     }
 }
 
-task createAppImage(type: Exec, dependsOn: zipJpackageImage) {
+tasks.register('createAppImage', Exec) {
+    dependsOn tasks.named('zipJpackageImage')
     group = 'distribution'
     onlyIf { os.isLinux() }
 
@@ -303,7 +331,7 @@ task createAppImage(type: Exec, dependsOn: zipJpackageImage) {
     }
 
     def appGroup = 'net.brlns'
-    def appDirBase = file("$buildDir/appimage")
+    def appDirBase = file("${layout.buildDirectory.get().asFile}/appimage")
 
     doFirst {
         def appDir = file("$appDirBase/AppDir")
@@ -314,7 +342,7 @@ task createAppImage(type: Exec, dependsOn: zipJpackageImage) {
         mkdir(appDir)
 
         copy {
-            from file("$buildDir/jpackage/${rootProject.name}")
+            from file("${layout.buildDirectory.get().asFile}/jpackage/${rootProject.name}")
             into appUsrPath
         }
 
@@ -437,7 +465,7 @@ task createAppImage(type: Exec, dependsOn: zipJpackageImage) {
     def appImageName = "${rootProject.name}-${version}-${appImageArch}.AppImage"
     def updateInfo = "gh-releases-zsync|hstr0100|${rootProject.name}|latest|${rootProject.name}-*${appImageArch}.AppImage.zsync"
 
-    workingDir "$buildDir/appimage"
+    workingDir "${layout.buildDirectory.get().asFile}/appimage"
     environment "ARCH", appImageArch
 
     def gpgKeyId = System.getenv('GPG_KEY_ID')
@@ -447,30 +475,30 @@ task createAppImage(type: Exec, dependsOn: zipJpackageImage) {
         "--updateinformation", updateInfo]
 
     if (gpgKeyId) {
-        commandLineArgs += ["--sign", gpgKeyId]
+        commandLineArgs.addAll(["--sign", gpgKeyId])
     }
 
-    commandLine commandLineArgs
+    commandLine(commandLineArgs)
 
     doLast {
         [
-            file("$buildDir/appimage/${appImageName}"),
-            file("$buildDir/appimage/${appImageName}.zsync")
+            file("${layout.buildDirectory.get().asFile}/appimage/${appImageName}"),
+            file("${layout.buildDirectory.get().asFile}/appimage/${appImageName}.zsync")
         ].each { sourcePath ->
             copy {
                 from sourcePath
-                into "$buildDir/jpackage"
+                into "${layout.buildDirectory.get().asFile}/jpackage"
             }
         }
 
         //delete appDirBase
-        println "Created AppImage at: $buildDir/jpackage/${appImageName}"
+        println "Created AppImage at: ${layout.buildDirectory.get().asFile}/jpackage/${appImageName}"
     }
 }
 
-task printJpackageContents {
+tasks.register('printJpackageContents') {
     doLast {
-        def jpackageDir = file("$buildDir/jpackage")
+        def jpackageDir = file("${layout.buildDirectory.get().asFile}/jpackage")
         if (jpackageDir.exists() && jpackageDir.isDirectory()) {
             println "Build complete, generated binaries:"
 
@@ -485,5 +513,10 @@ task printJpackageContents {
     }
 }
 
-tasks.zipJpackageImage.finalizedBy printJpackageContents
-tasks.createAppImage.finalizedBy printJpackageContents
+tasks.named('zipJpackageImage').configure {
+    finalizedBy tasks.named('printJpackageContents')
+}
+
+tasks.named('createAppImage').configure {
+    finalizedBy tasks.named('printJpackageContents')
+}

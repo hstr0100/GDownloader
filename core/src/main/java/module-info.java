@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-module net.brlns.gdownloader {
+open module net.brlns.gdownloader {
 
     requires transitive static lombok;
 
@@ -22,7 +22,6 @@ module net.brlns.gdownloader {
     requires transitive java.desktop;
     requires transitive java.net.http;
     requires java.base;
-    requires jdk.crypto.ec;
     requires java.logging;
     requires java.management;
     requires java.naming;
@@ -87,9 +86,4 @@ module net.brlns.gdownloader {
     uses javax.imageio.spi.ImageWriterSpi;
     uses javax.imageio.spi.ImageReaderSpi;
 
-    opens net.brlns.gdownloader.ffmpeg.streams;
-    opens net.brlns.gdownloader.filters;
-    opens net.brlns.gdownloader.persistence.converter;
-    opens net.brlns.gdownloader.persistence.entity;
-    opens net.brlns.gdownloader.server.result;
 }
