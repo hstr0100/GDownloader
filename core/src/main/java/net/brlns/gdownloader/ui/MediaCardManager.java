@@ -86,6 +86,9 @@ public final class MediaCardManager {
 
         Timer mediaCardQueueTimer = new Timer(50, e -> processMediaCardQueue());
         mediaCardQueueTimer.start();
+
+        Timer visibilityCheckTimer = new Timer(150, e -> checkViewportVisibility());
+        visibilityCheckTimer.start();
     }
 
     public void initializeQueueScrollPane(JScrollPane scrollPane) {
@@ -355,6 +358,47 @@ public final class MediaCardManager {
                 } else if (currentMode != JViewport.SIMPLE_SCROLL_MODE) {
                     queueScrollPane.getViewport().setScrollMode(JViewport.SIMPLE_SCROLL_MODE);
                 }
+            }
+        });
+    }
+
+    private void checkViewportVisibility() {
+        if (queueScrollPane == null || mediaQueuePane == null) {
+            return;
+        }
+
+        runOnEDT(() -> {
+            Rectangle viewRect = queueScrollPane.getViewport().getViewRect();
+            int buffer = viewRect.height;
+
+            Rectangle expandedRect = new Rectangle(
+                viewRect.x, viewRect.y - buffer,
+                viewRect.width, viewRect.height + buffer * 2
+            );
+
+            List<Runnable> toRefresh = new ArrayList<>();
+
+            for (Component component : mediaQueuePane.getComponents()) {
+                if (!(component instanceof JPanel panel) || !component.isVisible()) {
+                    continue;
+                }
+
+                MediaCard card = (MediaCard)panel.getClientProperty("MEDIA_CARD");
+                if (card == null || card.getOnBecomeVisible() == null) {
+                    continue;
+                }
+
+                if (expandedRect.intersects(component.getBounds())) {
+                    toRefresh.add(card.getOnBecomeVisible());
+                }
+            }
+
+            if (!toRefresh.isEmpty()) {
+                GDownloader.GLOBAL_THREAD_POOL.execute(() -> {
+                    for (Runnable runnable : toRefresh) {
+                        runnable.run();
+                    }
+                });
             }
         });
     }
@@ -687,11 +731,12 @@ public final class MediaCardManager {
                             continue;
                         }
 
-                        dependents.add(RightClickMenuEntries.fromMap(selected.getRightClickMenu()));
+                        dependents.add(RightClickMenuEntries.fromMap(selected.getOnRightClick().get()));
                     }
                 }
 
-                manager.showRightClickMenu(card, RightClickMenuEntries.fromMap(mediaCard.getRightClickMenu()),
+                manager.showRightClickMenu(card,
+                    RightClickMenuEntries.fromMap(mediaCard.getOnRightClick().get()),
                     dependents, e.getX(), e.getY());
             }
         }

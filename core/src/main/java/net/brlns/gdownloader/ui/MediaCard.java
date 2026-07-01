@@ -63,8 +63,9 @@ public class MediaCard {
     private DownloadPriorityEnum downloadPriorityIconType;
     private String urlHint = "";
 
+    private Runnable onBecomeVisible;
     private Runnable onLeftClick;
-    private Map<String, IMenuEntry> rightClickMenu = new ConcurrentLinkedHashMap<>();
+    private Supplier<Map<String, IMenuEntry>> onRightClick;
     private Consumer<CloseReasonEnum> onClose;
     private Consumer<MediaCard> onSwap;
     private boolean closed;

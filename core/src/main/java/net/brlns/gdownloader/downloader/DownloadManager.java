@@ -196,7 +196,7 @@ public class DownloadManager implements IEvent, AutoCloseable {
                         QueueEntry queueEntry = QueueEntry.fromEntity(entity, mediaCard, compatibleDownloaders);
 
                         if (queueEntry.getCurrentQueueCategory() == QueueCategoryEnum.RUNNING) {
-                            queueEntry.updateStatus(DownloadStatusEnum.STOPPED, l10n("gui.download_status.not_started"));
+                            queueEntry.updateStatusQuiet(DownloadStatusEnum.STOPPED, l10n("gui.download_status.not_started"));
                         }
 
                         initializeAndEnqueueEntry(queueEntry);
@@ -529,11 +529,19 @@ public class DownloadManager implements IEvent, AutoCloseable {
             }
         });
 
+        queueEntry.getMediaCard().setOnBecomeVisible(() -> {
+            queueEntry.refreshLabelIfNeeded();
+        });
+
         queueEntry.getMediaCard().setOnLeftClick(() -> {
             queueEntry.tryOpenMediaFiles();
         });
 
-        queueEntry.createDefaultRightClick(this);
+        queueEntry.getMediaCard().setOnRightClick(() -> {
+            queueEntry.createDefaultRightClick(this);
+            updateRightClick(queueEntry, queueEntry.getCurrentQueueCategory());
+            return queueEntry.getRightClickMenu();
+        });
 
         queueEntry.getMediaCard().setOnSwap((targetCard) -> {
             Optional<QueueEntry> entryOptional = locateEntryByMediaCard(targetCard);

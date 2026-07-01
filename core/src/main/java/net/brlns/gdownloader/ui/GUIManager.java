@@ -333,7 +333,7 @@ public final class GUIManager {
             queueScrollPane.getViewport().setScrollMode(JViewport.SIMPLE_SCROLL_MODE);
             queueScrollPane.setBorder(BorderFactory.createEmptyBorder());
             queueScrollPane.setBackground(color(BACKGROUND));
-            queueScrollPane.getVerticalScrollBar().setUnitIncrement(8);
+            UIUtils.installSmoothMouseWheelScrolling(queueScrollPane);
             queueScrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
             queueScrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
             mainPanel.add(queueScrollPane, BorderLayout.CENTER);
@@ -678,24 +678,26 @@ public final class GUIManager {
                 e -> displaySettingsPanel()
             );
 
-            RightClickMenuEntries rightClickMenu = new RightClickMenuEntries();
-            // Why not add this to the same context menu as "Paste URLs," you ask?
-            // Well, it would be quite easy to click it accidentally, which would be quite annoying.
-            // Hiding it in the settings button seems like a good compromise to me.
-            //
-            // If the system tray is not initialized, it is still possible to bring
-            // the window back up by launching another instance. No sanity check needed here.
-            rightClickMenu.put(l10n("gui.minimize_to_system_tray"),
-                new RunnableMenuEntry(() -> closeAppWindow()));
+            if (/*main.getSystemTrayManager().isInitialized() && */main.getConfig().isEnableSystemTray()) {
+                RightClickMenuEntries rightClickMenu = new RightClickMenuEntries();
+                // Why not add this to the same context menu as "Paste URLs," you ask?
+                // Well, it would be quite easy to click it accidentally, which would be quite annoying.
+                // Hiding it in the settings button seems like a good compromise to me.
+                //
+                // If the system tray is not initialized, it is still possible to bring
+                // the window back up by launching another instance. No sanity check needed here.
+                rightClickMenu.put(l10n("gui.minimize_to_system_tray"),
+                    new RunnableMenuEntry(() -> closeAppWindow()));
 
-            settingsButton.addMouseListener(new MouseAdapter() {
-                @Override
-                public void mouseClicked(MouseEvent e) {
-                    if (SwingUtilities.isRightMouseButton(e)) {
-                        showRightClickMenu(settingsButton, rightClickMenu, e.getX(), e.getY());
+                settingsButton.addMouseListener(new MouseAdapter() {
+                    @Override
+                    public void mouseClicked(MouseEvent e) {
+                        if (SwingUtilities.isRightMouseButton(e)) {
+                            showRightClickMenu(settingsButton, rightClickMenu, e.getX(), e.getY());
+                        }
                     }
-                }
-            });
+                });
+            }
 
             buttonPanel.add(settingsButton);
         }

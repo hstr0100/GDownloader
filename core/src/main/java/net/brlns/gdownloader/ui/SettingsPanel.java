@@ -727,7 +727,7 @@ public class SettingsPanel {
         scrollPane.getHorizontalScrollBar().setUI(new CustomScrollBarUI());
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
         scrollPane.setBackground(color(BACKGROUND));
-        scrollPane.getVerticalScrollBar().setUnitIncrement(8);
+        UIUtils.installSmoothMouseWheelScrolling(scrollPane);
         scrollPane.setPreferredSize(new Dimension(Integer.MAX_VALUE, 200));
         scrollPane.getViewport().setScrollMode(JViewport.BACKINGSTORE_SCROLL_MODE);
 
@@ -1194,7 +1194,7 @@ public class SettingsPanel {
         scrollPane.getHorizontalScrollBar().setUI(new CustomScrollBarUI());
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
         scrollPane.setBackground(color(BACKGROUND));
-        scrollPane.getVerticalScrollBar().setUnitIncrement(8);
+        UIUtils.installSmoothMouseWheelScrolling(scrollPane);
         scrollPane.setPreferredSize(new Dimension(Integer.MAX_VALUE, 200));
         scrollPane.getViewport().setScrollMode(JViewport.BACKINGSTORE_SCROLL_MODE);
 
@@ -1223,7 +1223,7 @@ public class SettingsPanel {
         scrollPane.getHorizontalScrollBar().setUI(new CustomScrollBarUI());
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
         scrollPane.setBackground(color(BACKGROUND));
-        scrollPane.getVerticalScrollBar().setUnitIncrement(8);
+        UIUtils.installSmoothMouseWheelScrolling(scrollPane);
         scrollPane.setPreferredSize(new Dimension(Integer.MAX_VALUE, 400));
         scrollPane.getViewport().setScrollMode(JViewport.BACKINGSTORE_SCROLL_MODE);
 

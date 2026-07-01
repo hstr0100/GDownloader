@@ -19,6 +19,7 @@ package net.brlns.gdownloader.ui;
 import java.awt.*;
 import java.awt.event.AdjustmentEvent;
 import java.awt.event.AdjustmentListener;
+import java.awt.event.MouseWheelListener;
 import java.awt.image.BufferedImage;
 import java.awt.image.WritableRaster;
 import java.io.IOException;
@@ -152,6 +153,29 @@ public final class UIUtils {
 
                 return this;
             }
+        });
+    }
+
+    public static void installSmoothMouseWheelScrolling(JScrollPane scrollPane) {
+        for (MouseWheelListener listener : scrollPane.getMouseWheelListeners()) {
+            scrollPane.removeMouseWheelListener(listener);
+        }
+
+        final int pixelsPerNotch = 40;
+
+        scrollPane.addMouseWheelListener(e -> {
+            JScrollBar bar = scrollPane.getVerticalScrollBar();
+            if (bar == null || !bar.isVisible()) {
+                return;
+            }
+
+            double rotation = e.getPreciseWheelRotation();
+            int delta = (int)Math.round(rotation * pixelsPerNotch);
+
+            int newValue = bar.getValue() + delta;
+            newValue = Math.max(bar.getMinimum(), Math.min(newValue, bar.getMaximum() - bar.getVisibleAmount()));
+
+            bar.setValue(newValue);
         });
     }
 

@@ -63,6 +63,7 @@ import net.brlns.gdownloader.util.ImageUtils;
 import net.brlns.gdownloader.util.StringUtils;
 import net.brlns.gdownloader.util.URLThumbnailLoader;
 import net.brlns.gdownloader.util.URLUtils;
+import net.brlns.gdownloader.util.collection.ConcurrentLinkedHashMap;
 import net.brlns.gdownloader.util.collection.ConcurrentLinkedHashSet;
 
 import static net.brlns.gdownloader.downloader.enums.DownloadStatusEnum.*;
@@ -149,6 +150,10 @@ public class QueueEntry {
     private final AtomicBoolean lastCommandLineLoaded = new AtomicBoolean(false);
     private final AtomicBoolean errorLogLoaded = new AtomicBoolean(false);
     private final AtomicBoolean downloadLogLoaded = new AtomicBoolean(false);
+
+    private final AtomicBoolean labelNeedsRefresh = new AtomicBoolean(false);
+
+    private final Map<String, IMenuEntry> rightClickMenu = new ConcurrentLinkedHashMap<>();
 
     public AbstractUrlFilter getFilter() {
         Optional<AbstractUrlFilter> filter = main.getConfig().getUrlFilterById(filterId);
@@ -363,6 +368,27 @@ public class QueueEntry {
             .map(Optional::get)
             .findFirst()
             .orElse(null);
+    }
+
+    public void updateStatusQuiet(DownloadStatusEnum status, String text) {
+        if (!text.isEmpty()) {
+            lastStatusMessage = text;
+
+            String rawUrlTitle = url.replace("https://", "").replace("www.", "");
+
+            mediaCard.setLabel(originalFilter.getDisplayName(), rawUrlTitle, text);
+            mediaCard.setTooltip(text);
+        }
+
+        labelNeedsRefresh.set(true);
+
+        updateStatus(status);
+    }
+
+    public void refreshLabelIfNeeded() {
+        if (labelNeedsRefresh.compareAndSet(true, false)) {
+            updateStatus(downloadStatus, lastStatusMessage, false);
+        }
     }
 
     private Optional<PersistenceManager> getPersistence() {
@@ -777,19 +803,19 @@ public class QueueEntry {
     }
 
     public void addRightClick(String key, IMenuEntry entry) {
-        mediaCard.getRightClickMenu().put(key, entry);
+        rightClickMenu.put(key, entry);
     }
 
     public void addRightClick(Map<String, IMenuEntry> input) {
-        mediaCard.getRightClickMenu().putAll(input);
+        rightClickMenu.putAll(input);
     }
 
     public void removeRightClick(String key) {
-        mediaCard.getRightClickMenu().remove(key);
+        rightClickMenu.remove(key);
     }
 
     public void clearRightClick() {
-        mediaCard.getRightClickMenu().clear();
+        rightClickMenu.clear();
     }
 
     protected void createDefaultRightClick(DownloadManager manager) {
@@ -839,6 +865,10 @@ public class QueueEntry {
     }
 
     public void updateExtraRightClickOptions() {
+        if (rightClickMenu.isEmpty()) {
+            return;
+        }
+
         DownloadManager manager = main.getDownloadManager();
 
         NestedMenuEntry extrasSubmenu = new NestedMenuEntry();
@@ -929,6 +959,10 @@ public class QueueEntry {
     }
 
     public void updateMediaRightClickOptions() {
+        if (rightClickMenu.isEmpty()) {
+            return;
+        }
+
         Runnable removeAction = () -> Stream.of(
             "gui.delete_files",
             "gui.play_video",
@@ -1125,7 +1159,7 @@ public class QueueEntry {
         queueEntry.setCurrentSequence(entity.getCurrentDownloadSequence());
 
         if (entity.getDownloadStatus() != null && entity.getLastStatusMessage() != null) {
-            queueEntry.updateStatus(entity.getDownloadStatus(), entity.getLastStatusMessage(), false);
+            queueEntry.updateStatusQuiet(entity.getDownloadStatus(), entity.getLastStatusMessage());
         }
 
         queueEntry.getDownloadStarted().set(entity.isDownloadStarted());
