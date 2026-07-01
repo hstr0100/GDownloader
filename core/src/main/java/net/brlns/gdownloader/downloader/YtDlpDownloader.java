@@ -42,7 +42,6 @@ import net.brlns.gdownloader.downloader.structs.DownloadResult;
 import net.brlns.gdownloader.downloader.structs.MediaInfo;
 import net.brlns.gdownloader.ffmpeg.enums.AudioBitrateEnum;
 import net.brlns.gdownloader.filters.AbstractUrlFilter;
-import net.brlns.gdownloader.persistence.PersistenceManager;
 import net.brlns.gdownloader.process.ProcessArguments;
 import net.brlns.gdownloader.settings.QualitySettings;
 import net.brlns.gdownloader.settings.enums.AudioContainerEnum;
@@ -251,11 +250,6 @@ public class YtDlpDownloader extends AbstractDownloader {
                 manager.getMetadataManager().augmentThumbnailIfMissing(info, queueEntry.getUrl());
 
                 queueEntry.setMediaInfo(info);
-
-                PersistenceManager persistence = main.getPersistenceManager();
-                if (!queueEntry.getCancelHook().get() && persistence.isInitialized()) {
-                    persistence.getMediaInfos().addMediaInfo(info.toEntity(queueEntry.getDownloadId()));
-                }
 
                 return true;
             }

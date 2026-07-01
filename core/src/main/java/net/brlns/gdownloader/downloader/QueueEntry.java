@@ -49,6 +49,7 @@ import net.brlns.gdownloader.downloader.enums.*;
 import net.brlns.gdownloader.downloader.structs.MediaInfo;
 import net.brlns.gdownloader.filters.AbstractUrlFilter;
 import net.brlns.gdownloader.filters.GenericFilter;
+import net.brlns.gdownloader.persistence.PersistenceManager;
 import net.brlns.gdownloader.persistence.entity.QueueEntryEntity;
 import net.brlns.gdownloader.settings.enums.*;
 import net.brlns.gdownloader.ui.MediaCard;
@@ -127,20 +128,27 @@ public class QueueEntry {
     private final AtomicBoolean queried = new AtomicBoolean(false);
     private final AtomicInteger retryCounter = new AtomicInteger();
 
-    private MediaInfo mediaInfo;
-
     @Setter
     private File tmpDirectory;
     private final Set<File> finalMediaFiles = new HashSet<>();
 
-    private final List<String> thumbnailUrls = new CopyOnWriteArrayList<>();
-    private final List<String> lastCommandLine = new CopyOnWriteArrayList<>();
-
-    private final ConcurrentLinkedHashSet<String> errorLog = new ConcurrentLinkedHashSet<>();
-    private final ConcurrentLinkedHashSet<String> downloadLog = new ConcurrentLinkedHashSet<>();
-
     @Setter
     private Process process;
+
+    private final AtomicBoolean mediaInfoLoaded = new AtomicBoolean(false);
+    private final AtomicReference<Optional<MediaInfo>> optionalMediaInfo
+        = new AtomicReference<>(Optional.empty());
+
+    private final List<String> _thumbnailUrls = new CopyOnWriteArrayList<>();
+    private final List<String> _lastCommandLine = new CopyOnWriteArrayList<>();
+
+    private final ConcurrentLinkedHashSet<String> _errorLog = new ConcurrentLinkedHashSet<>();
+    private final ConcurrentLinkedHashSet<String> _downloadLog = new ConcurrentLinkedHashSet<>();
+
+    private final AtomicBoolean thumbnailUrlsLoaded = new AtomicBoolean(false);
+    private final AtomicBoolean lastCommandLineLoaded = new AtomicBoolean(false);
+    private final AtomicBoolean errorLogLoaded = new AtomicBoolean(false);
+    private final AtomicBoolean downloadLogLoaded = new AtomicBoolean(false);
 
     public AbstractUrlFilter getFilter() {
         Optional<AbstractUrlFilter> filter = main.getConfig().getUrlFilterById(filterId);
@@ -349,7 +357,7 @@ public class QueueEntry {
 
     @Nullable
     public BufferedImage getValidFullResThumbnail() {
-        return thumbnailUrls.stream()
+        return getThumbnailUrls().stream()
             .map(URLThumbnailLoader::tryLoadThumbnailFull)
             .filter(Optional::isPresent)
             .map(Optional::get)
@@ -357,8 +365,92 @@ public class QueueEntry {
             .orElse(null);
     }
 
+    private Optional<PersistenceManager> getPersistence() {
+        PersistenceManager persistence = main.getPersistenceManager();
+
+        return Optional.ofNullable(persistence.isInitialized() ? persistence : null);
+    }
+
+    @Nullable
+    public MediaInfo getMediaInfo() {
+        if (mediaInfoLoaded.compareAndSet(false, true)) {
+            getPersistence().ifPresent(persistence -> persistence.getMediaInfos().getById(this.downloadId)
+                .ifPresent(entity -> {
+                    MediaInfo mediaInfo = MediaInfo.fromEntity(entity);
+                    optionalMediaInfo.set(Optional.of(mediaInfo));
+
+                    String base64 = mediaInfo.getBase64EncodedThumbnail();
+                    if (base64 != null && !base64.isEmpty()) {
+                        BufferedImage img = ImageUtils.base64ToBufferedImage(base64);
+                        if (img != null) {
+                            mediaCard.setThumbnailAndDuration(img, mediaInfo.getDuration());
+                        }
+                    }
+                }));
+        }
+
+        return optionalMediaInfo.get().orElse(null);
+    }
+
+    public List<String> getThumbnailUrls() {
+        if (thumbnailUrlsLoaded.compareAndSet(false, true)) {
+            getPersistence().ifPresent(persistence -> {
+                List<String> urls = persistence.getQueueEntries()
+                    .loadThumbnailUrls(this.downloadId);
+
+                _thumbnailUrls.clear();
+                _thumbnailUrls.addAll(urls);
+            });
+        }
+
+        return _thumbnailUrls;
+    }
+
+    public List<String> getLastCommandLine() {
+        if (lastCommandLineLoaded.compareAndSet(false, true)) {
+            getPersistence().ifPresent(persistence -> {
+                List<String> lines = persistence.getQueueEntries()
+                    .loadLastCommandLine(this.downloadId);
+
+                _lastCommandLine.clear();
+                _lastCommandLine.addAll(lines);
+            });
+        }
+
+        return _lastCommandLine;
+    }
+
+    public ConcurrentLinkedHashSet<String> getErrorLog() {
+        if (errorLogLoaded.compareAndSet(false, true)) {
+            getPersistence().ifPresent(persistence -> {
+                List<String> logs = persistence.getQueueEntries()
+                    .loadErrorLog(this.downloadId);
+
+                _errorLog.clear();
+                _errorLog.addAll(logs);
+            });
+        }
+
+        return _errorLog;
+    }
+
+    public ConcurrentLinkedHashSet<String> getDownloadLog() {
+        if (downloadLogLoaded.compareAndSet(false, true)) {
+            getPersistence().ifPresent(persistence -> {
+                List<String> logs = persistence.getQueueEntries()
+                    .loadDownloadLog(this.downloadId);
+
+                _downloadLog.clear();
+                _downloadLog.addAll(logs);
+            });
+        }
+
+        return _downloadLog;
+    }
+
     @Nullable
     public LocalDateTime getUploadTime() {
+        MediaInfo mediaInfo = getMediaInfo();
         if (mediaInfo == null) {
             return null;
         }
@@ -377,6 +469,7 @@ public class QueueEntry {
     }
 
     public boolean isPlaylist() {
+        MediaInfo mediaInfo = getMediaInfo();
         if (mediaInfo == null) {
             return false;
         }
@@ -384,8 +477,9 @@ public class QueueEntry {
         return notNullOrEmpty(mediaInfo.getPlaylistTitle());
     }
 
-    public void setMediaInfo(MediaInfo mediaInfoIn) {
-        mediaInfo = mediaInfoIn;
+    public void setMediaInfo(MediaInfo mediaInfo) {
+        optionalMediaInfo.set(Optional.of(mediaInfo));
+        mediaInfoLoaded.set(true);
 
         markQueried();
 
@@ -455,8 +549,14 @@ public class QueueEntry {
             }
         );
 
-        mediaInfo.bestThumbnails()
-            .forEach(thumbnailUrls::add);
+        List<String> thumbnailUrls = getThumbnailUrls();
+        mediaInfo.bestThumbnails().forEach(thumbnailUrls::add);
+
+        getPersistence().ifPresent(persistence -> {
+            if (!getCancelHook().get()) {
+                persistence.getMediaInfos().addMediaInfo(mediaInfo.toEntity(getDownloadId()));
+            }
+        });
     }
 
     private String getTitle() {
@@ -465,6 +565,7 @@ public class QueueEntry {
     }
 
     private String getRawTitle() {
+        MediaInfo mediaInfo = getMediaInfo();
         if (mediaInfo != null) {
             // Give priority to playlist titles
             if (notNullOrEmpty(mediaInfo.getPlaylistTitle())) {
@@ -480,6 +581,7 @@ public class QueueEntry {
     }
 
     private Optional<String> getDisplaySize() {
+        MediaInfo mediaInfo = getMediaInfo();
         if (mediaInfo != null) {
             long size = mediaInfo.getFilesizeApprox();
 
@@ -493,6 +595,7 @@ public class QueueEntry {
     }
 
     private String getHostDisplayName() {
+        MediaInfo mediaInfo = getMediaInfo();
         if (mediaInfo != null && notNullOrEmpty(mediaInfo.getHostDisplayName())) {
             return mediaInfo.getHostDisplayName();
         } else {
@@ -618,6 +721,8 @@ public class QueueEntry {
             return;
         }
 
+        List<String> lastCommandLine = getLastCommandLine();
+
         lastCommandLine.clear();
         lastCommandLine.addAll(commandLineArguments);
 
@@ -642,6 +747,8 @@ public class QueueEntry {
             return;
         }
 
+        ConcurrentLinkedHashSet<String> errorLog = getErrorLog();
+
         if (!errorLog.isEmpty()) {
             updateExtraRightClickOptions();
         }
@@ -654,6 +761,8 @@ public class QueueEntry {
         if (output.isEmpty()) {
             return;
         }
+
+        ConcurrentLinkedHashSet<String> downloadLog = getDownloadLog();
 
         if (!downloadLog.isEmpty()) {
             updateExtraRightClickOptions();
@@ -747,16 +856,20 @@ public class QueueEntry {
                 }));
         }
 
+        List<String> lastCommandLine = getLastCommandLine();
+
         if (!lastCommandLine.isEmpty()) {
             extrasSubmenu.put(l10n("gui.copy_command_line"),
                 constructCommandLineMenu(lastCommandLine));
         }
 
+        ConcurrentLinkedHashSet<String> errorLog = getErrorLog();
         if (!errorLog.isEmpty()) {
             extrasSubmenu.put(l10n("gui.copy_error_log"),
                 constructLogMenu(errorLog));
         }
 
+        ConcurrentLinkedHashSet<String> downloadLog = getDownloadLog();
         if (!downloadLog.isEmpty()) {
             extrasSubmenu.put(l10n("gui.copy_download_log"),
                 constructLogMenu(downloadLog));
@@ -999,10 +1112,9 @@ public class QueueEntry {
             queueEntry.blackListDownloader(downloaderId);
         }
 
-        if (entity.getMediaInfo() != null) {
-            queueEntry.setMediaInfo(MediaInfo.fromEntity(entity.getMediaInfo()));
-        }
-
+//        if (entity.getMediaInfo() != null) {
+//            queueEntry.setMediaInfo(MediaInfo.fromEntity(entity.getMediaInfo()));
+//        }
         queueEntry.setForcedDownloader(entity.getForcedDownloader());
         queueEntry.setCurrentDownloader(entity.getCurrentDownloader());
         queueEntry.setCurrentDownloadType(entity.getCurrentDownloadType());
@@ -1036,17 +1148,15 @@ public class QueueEntry {
             queueEntry.getFinalMediaFiles().add(new File(path));
         }
 
-        queueEntry.getThumbnailUrls().clear();
-        queueEntry.getThumbnailUrls().addAll(entity.getThumbnailUrls());
-
-        queueEntry.setLastCommandLine(entity.getLastCommandLine());
-
-        queueEntry.getErrorLog().clear();
-        queueEntry.getErrorLog().addAll(entity.getErrorLog());
-
-        queueEntry.getDownloadLog().clear();
-        queueEntry.getDownloadLog().addAll(entity.getDownloadLog());
-
+//        queueEntry.getThumbnailUrls().clear();
+//        queueEntry.getThumbnailUrls().addAll(entity.getThumbnailUrls());
+//        queueEntry.setLastCommandLine(entity.getLastCommandLine());
+//
+//        queueEntry.getErrorLog().clear();
+//        queueEntry.getErrorLog().addAll(entity.getErrorLog());
+//
+//        queueEntry.getDownloadLog().clear();
+//        queueEntry.getDownloadLog().addAll(entity.getDownloadLog());
         return queueEntry;
     }
 }

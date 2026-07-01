@@ -16,7 +16,10 @@
  */
 package net.brlns.gdownloader.persistence.repository;
 
+import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
+import java.util.ArrayList;
+import java.util.List;
 import net.brlns.gdownloader.persistence.entity.QueueEntryEntity;
 
 /**
@@ -28,4 +31,35 @@ public class QueueEntryRepository extends PersistenceRepository<Long, QueueEntry
         super(emfIn, QueueEntryEntity.class);
     }
 
+    public List<String> loadThumbnailUrls(Long downloadId) {
+        try (EntityManager em = getEmf().createEntityManager()) {
+            QueueEntryEntity entity = em.find(QueueEntryEntity.class, downloadId);
+
+            return entity != null ? new ArrayList<>(entity.getThumbnailUrls()) : new ArrayList<>();
+        }
+    }
+
+    public List<String> loadLastCommandLine(Long downloadId) {
+        try (EntityManager em = getEmf().createEntityManager()) {
+            QueueEntryEntity entity = em.find(QueueEntryEntity.class, downloadId);
+
+            return entity != null ? new ArrayList<>(entity.getLastCommandLine()) : new ArrayList<>();
+        }
+    }
+
+    public List<String> loadErrorLog(Long downloadId) {
+        try (EntityManager em = getEmf().createEntityManager()) {
+            QueueEntryEntity entity = em.find(QueueEntryEntity.class, downloadId);
+
+            return entity != null ? new ArrayList<>(entity.getErrorLog()) : new ArrayList<>();
+        }
+    }
+
+    public List<String> loadDownloadLog(Long downloadId) {
+        try (EntityManager em = getEmf().createEntityManager()) {
+            QueueEntryEntity entity = em.find(QueueEntryEntity.class, downloadId);
+
+            return entity != null ? new ArrayList<>(entity.getDownloadLog()) : new ArrayList<>();
+        }
+    }
 }

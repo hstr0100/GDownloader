@@ -49,7 +49,7 @@ public class QueueEntryEntity implements Serializable {
     @Column(name = "last_status_message", length = 2048)
     private String lastStatusMessage;
 
-    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER, optional = true)
+    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY, optional = true)
     @JoinColumn(name = "media_info_id", referencedColumnName = "media_info_id", nullable = true)
     private MediaInfoEntity mediaInfo;// = null;
 
@@ -120,28 +120,28 @@ public class QueueEntryEntity implements Serializable {
     @Column(name = "media_file_paths", length = 4096)
     private ArrayList<String> mediaFilePaths = new ArrayList<>();
 
-    @ElementCollection(fetch = FetchType.EAGER)
+    @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(name = "thumbnail_urls", joinColumns = @JoinColumn(name = "download_id"))
     @Lob
     @OrderColumn
     @Column(name = "media_thumbnail_urls", length = 2048)
     private ArrayList<String> thumbnailUrls = new ArrayList<>();
 
-    @ElementCollection(fetch = FetchType.EAGER)
+    @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(name = "command_lines", joinColumns = @JoinColumn(name = "download_id"))
     @Lob
     @OrderColumn
     @Column(name = "last_command_line", length = 8192)
     private ArrayList<String> lastCommandLine = new ArrayList<>();
 
-    @ElementCollection(fetch = FetchType.EAGER)
+    @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(name = "error_logs", joinColumns = @JoinColumn(name = "download_id"))
     @Lob
     @OrderColumn
     @Column(name = "error_log", length = 8192)
     private ArrayList<String> errorLog = new ArrayList<>();
 
-    @ElementCollection(fetch = FetchType.EAGER)
+    @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(name = "download_logs", joinColumns = @JoinColumn(name = "download_id"))
     @Lob
     @OrderColumn

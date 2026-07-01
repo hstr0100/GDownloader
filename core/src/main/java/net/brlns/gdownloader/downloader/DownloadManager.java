@@ -148,7 +148,6 @@ public class DownloadManager implements IEvent, AutoCloseable {
             downloadIdGenerator.set(nextId);
             log.info("Current download id: {}", nextId);
 
-            // TODO: URGENT: lazy-load expensive data
             GDownloader.GLOBAL_THREAD_POOL.execute(() -> {
                 linkCaptureLock.lock();// Intentionally block url capture during the entire restoring proccess
                 try {

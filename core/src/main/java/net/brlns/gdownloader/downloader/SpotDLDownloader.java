@@ -38,7 +38,6 @@ import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.downloader.structs.DownloadResult;
 import net.brlns.gdownloader.downloader.structs.MediaInfo;
 import net.brlns.gdownloader.filters.AbstractUrlFilter;
-import net.brlns.gdownloader.persistence.PersistenceManager;
 import net.brlns.gdownloader.process.ProcessArguments;
 import net.brlns.gdownloader.util.CancelHook;
 import net.brlns.gdownloader.util.DirectoryUtils;
@@ -118,11 +117,6 @@ public class SpotDLDownloader extends AbstractDownloader {
             if (mediaInfoOptional.isPresent()) {
                 MediaInfo mediaInfo = mediaInfoOptional.get();
                 queueEntry.setMediaInfo(mediaInfo);
-
-                PersistenceManager persistence = main.getPersistenceManager();
-                if (!queueEntry.getCancelHook().get() && persistence.isInitialized()) {
-                    persistence.getMediaInfos().addMediaInfo(mediaInfo.toEntity(queueEntry.getDownloadId()));
-                }
 
                 return true;
             }

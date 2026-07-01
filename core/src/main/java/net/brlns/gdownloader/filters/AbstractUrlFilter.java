@@ -64,6 +64,7 @@ import net.brlns.gdownloader.settings.Settings;
     @JsonSubTypes.Type(value = DropoutFilter.class, name = DropoutFilter.ID),
     @JsonSubTypes.Type(value = FacebookFilter.class, name = FacebookFilter.ID),
     @JsonSubTypes.Type(value = ImgurFilter.class, name = ImgurFilter.ID),
+    @JsonSubTypes.Type(value = InstagramReelsFilter.class, name = InstagramReelsFilter.ID),
     @JsonSubTypes.Type(value = PatreonFilter.class, name = PatreonFilter.ID),
     @JsonSubTypes.Type(value = RedditFilter.class, name = RedditFilter.ID),
     @JsonSubTypes.Type(value = SpotifyFilter.class, name = SpotifyFilter.ID),
