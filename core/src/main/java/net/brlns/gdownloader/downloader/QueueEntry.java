@@ -21,8 +21,6 @@ import java.awt.Color;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.file.DirectoryNotEmptyException;
 import java.nio.file.Files;
 import java.time.LocalDate;
@@ -40,7 +38,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import javax.imageio.ImageIO;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -63,6 +60,7 @@ import net.brlns.gdownloader.util.CancelHook;
 import net.brlns.gdownloader.util.DirectoryUtils;
 import net.brlns.gdownloader.util.ImageUtils;
 import net.brlns.gdownloader.util.StringUtils;
+import net.brlns.gdownloader.util.URLThumbnailLoader;
 import net.brlns.gdownloader.util.URLUtils;
 import net.brlns.gdownloader.util.collection.ConcurrentLinkedHashSet;
 
@@ -352,7 +350,7 @@ public class QueueEntry {
     @Nullable
     public BufferedImage getValidFullResThumbnail() {
         return thumbnailUrls.stream()
-            .map(this::tryLoadThumbnail)
+            .map(URLThumbnailLoader::tryLoadThumbnailFull)
             .filter(Optional::isPresent)
             .map(Optional::get)
             .findFirst()
@@ -422,11 +420,19 @@ public class QueueEntry {
         ).or(() -> {
             return mediaInfo.supportedThumbnails()
                 .limit(5)
-                .map(this::tryLoadThumbnail)
+                .map(URLThumbnailLoader::tryLoadThumbnailCropped)
                 .filter(Optional::isPresent)
                 .map(Optional::get)
                 .findFirst();
         });
+
+        AtomicBoolean isFavicon = new AtomicBoolean();
+        if (optional.isEmpty()) {
+            optional = Optional.ofNullable(mediaInfo.getFallbackThumbnailImage())
+                .map(favicon -> ImageUtils.padWithTransparentBorder(favicon, 10));
+
+            isFavicon.set(optional.isPresent());
+        }
 
         optional.ifPresentOrElse(
             img -> {
@@ -434,8 +440,10 @@ public class QueueEntry {
                 BufferedImage downscaledImage = ImageUtils.downscaleImage(img, 240);
 
                 if (base64encoded.isEmpty()) {
+                    String format = isFavicon.get() ? "png" : "jpg";
                     mediaInfo.setBase64EncodedThumbnail(
-                        ImageUtils.bufferedImageToBase64(downscaledImage, "jpg"));
+                        ImageUtils.bufferedImageToBase64(downscaledImage, format)
+                    );
                 }
 
                 mediaCard.setThumbnailAndDuration(downscaledImage, mediaInfo.getDuration());
@@ -449,34 +457,6 @@ public class QueueEntry {
 
         mediaInfo.bestThumbnails()
             .forEach(thumbnailUrls::add);
-    }
-
-    private Optional<BufferedImage> tryLoadThumbnail(String url) {
-        try {
-            String urlWithoutQuery = URLUtils.removeQueryParameters(url);
-            if (log.isDebugEnabled()) {
-                log.debug("Trying to load thumbnail {}", urlWithoutQuery);
-            }
-
-            BufferedImage img = ImageIO.read(new URI(urlWithoutQuery).toURL());
-            if (img != null) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Thumbnail Resolution: {}x{}", img.getWidth(), img.getHeight());
-                }
-
-                img = ImageUtils.cropToSixteenByNineIfHorizontal(img);
-
-                return Optional.of(img);
-            } else if (log.isDebugEnabled()) {
-                log.error("ImageIO.read returned null for {}", url);
-            }
-        } catch (IOException | URISyntaxException e) {
-            if (log.isDebugEnabled()) {
-                log.error("ImageIO.read exception {}", url, e);
-            }
-        }
-
-        return Optional.empty();
     }
 
     private String getTitle() {

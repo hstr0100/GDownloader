@@ -150,21 +150,27 @@ public final class URLUtils {
         return queryParams;
     }
 
-    public static String removeQueryParameters(String urlString) throws URISyntaxException {
+    public static String removeQueryParameters(String urlString) {
         if (urlString == null || urlString.isEmpty()) {
             return urlString;
         }
 
-        URI uri = new URI(urlString);
-        URI uriWithoutQuery = new URI(
-            uri.getScheme(),
-            uri.getAuthority(),
-            uri.getPath(),
-            null, // remove query
-            uri.getFragment()
-        );
+        try {
+            URI uri = new URI(urlString);
+            URI uriWithoutQuery = new URI(
+                uri.getScheme(),
+                uri.getAuthority(),
+                uri.getPath(),
+                null, // remove query
+                uri.getFragment()
+            );
 
-        return uriWithoutQuery.toString();
+            return uriWithoutQuery.toString();
+        } catch (URISyntaxException e) {
+            log.error("Invalid URL: {} {}", urlString, e.getMessage());
+        }
+
+        return urlString;
     }
 
     @Nullable

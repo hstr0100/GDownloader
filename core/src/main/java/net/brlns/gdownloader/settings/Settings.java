@@ -270,15 +270,19 @@ public class Settings {
     @JsonProperty("ExitOnClose")
     private boolean exitOnClose = true;
 
+    // Defaults to true because most users are likely running Windows,
+    // which does not include Opus audio codec support by default.
+    // Without transcoding, youtube videos will play without audio unless the user
+    // installs a third-party media player or the required codecs.
     @JsonProperty("TranscodeAudioToAAC")
-    private boolean transcodeAudioToAAC = false;
+    private boolean transcodeAudioToAAC = true;
 
     @JsonProperty("DisableAACPns")
     private boolean disableAACPns = false;
 
     // TODO add more sounds
     @JsonProperty("PlaySounds")
-    private boolean playSounds = false;
+    private boolean playSounds = true;
 
     @JsonProperty("DisplayDownloadsCompleteNotification")
     private boolean displayDownloadsCompleteNotification = true;

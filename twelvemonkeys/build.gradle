@@ -17,11 +17,16 @@ dependencies {
     implementation(platform("com.twelvemonkeys.bom:bom:$twelvemonkeysVersion"))
     implementation("com.twelvemonkeys.imageio:imageio-jpeg")
     implementation("com.twelvemonkeys.imageio:imageio-webp")
-    implementation("com.twelvemonkeys.imageio:imageio-tiff")
+    implementation("com.twelvemonkeys.imageio:imageio-bmp")
 }
 
 tasks.named('shadowJar') {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     mergeServiceFiles()
+
+    filesMatching("META-INF/services/**") {
+        duplicatesStrategy = DuplicatesStrategy.INCLUDE
+    }
 }
 
 configurations {

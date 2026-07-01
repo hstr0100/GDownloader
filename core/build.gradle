@@ -127,12 +127,7 @@ extraJavaModuleInfo {
 
     module("twelvemonkeys-$twelvemonkeysVersion-all.jar", 'com.twelvemonkeys.imageio') {
         requiresStatic('java.desktop')
-
-        exports('com.twelvemonkeys.imageio.stream')
-        exports('com.twelvemonkeys.imageio.color')
-        exports('com.twelvemonkeys.imageio.plugins.jpeg')
-        exports('com.twelvemonkeys.imageio.plugins.webp')
-        exports('com.twelvemonkeys.imageio.plugins.tiff')
+        exportAllPackages()
     }
 
     automaticModule('net.java.dev.jna:jna', 'com.sun.jna') {

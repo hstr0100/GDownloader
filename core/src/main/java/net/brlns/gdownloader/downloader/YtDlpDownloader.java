@@ -244,6 +244,11 @@ public class YtDlpDownloader extends AbstractDownloader {
                 }
 
                 MediaInfo info = GDownloader.OBJECT_MAPPER.readValue(line, MediaInfo.class);
+                if (info == null) {
+                    return false;
+                }
+
+                manager.getMetadataManager().augmentThumbnailIfMissing(info, queueEntry.getUrl());
 
                 queueEntry.setMediaInfo(info);
 

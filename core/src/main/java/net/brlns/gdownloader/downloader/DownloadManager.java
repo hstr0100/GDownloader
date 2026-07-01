@@ -148,6 +148,7 @@ public class DownloadManager implements IEvent, AutoCloseable {
             downloadIdGenerator.set(nextId);
             log.info("Current download id: {}", nextId);
 
+            // TODO: URGENT: lazy-load expensive data
             GDownloader.GLOBAL_THREAD_POOL.execute(() -> {
                 linkCaptureLock.lock();// Intentionally block url capture during the entire restoring proccess
                 try {
@@ -156,13 +157,18 @@ public class DownloadManager implements IEvent, AutoCloseable {
                     // We need an ugly comparator here because of null sequence numbers.
                     // This way, we still preserve the original insertion order until a checkpoint updates the sequence.
                     List<QueueEntryEntity> entities = persistence.getQueueEntries().getAll();
-                    List<QueueEntryEntity> originalOrder = new ArrayList<>(entities);
+
+                    Map<QueueEntryEntity, Integer> originalIndex = new IdentityHashMap<>();
+                    for (int i = 0; i < entities.size(); i++) {
+                        originalIndex.put(entities.get(i), i);
+                    }
+
                     entities.sort((e1, e2) -> {
                         Long seq1 = e1.getCurrentDownloadSequence();
                         Long seq2 = e2.getCurrentDownloadSequence();
 
                         if (seq1 == null && seq2 == null) {
-                            return Integer.compare(originalOrder.indexOf(e1), originalOrder.indexOf(e2));
+                            return Integer.compare(originalIndex.get(e1), originalIndex.get(e2));
                         } else if (seq1 == null) {
                             return 1;
                         } else if (seq2 == null) {

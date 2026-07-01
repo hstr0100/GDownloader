@@ -20,6 +20,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.annotation.Nullable;
+import java.awt.image.BufferedImage;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -108,10 +109,18 @@ public class MediaInfo {
     private String base64EncodedThumbnail = "";
 
     @JsonIgnore
+    private BufferedImage fallbackThumbnailImage;
+
+    @JsonIgnore
     public boolean isValid() {
         // Not much usefulness to this if these are missing
         return title != null && !title.isEmpty()
             || thumbnail != null && !thumbnail.isEmpty();
+    }
+
+    @JsonIgnore
+    public boolean hasUsableThumbnail() {
+        return notNullOrEmpty(base64EncodedThumbnail) || supportedThumbnails().findAny().isPresent();
     }
 
     // TODO: implement

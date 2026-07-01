@@ -180,4 +180,25 @@ public final class ImageUtils {
 
         return null;
     }
+
+    public static BufferedImage padWithTransparentBorder(BufferedImage img, int borderPx) {
+        int contentSize = Math.max(img.getWidth(), img.getHeight());
+        int canvasSize = contentSize + borderPx * 2;
+
+        BufferedImage canvas = new BufferedImage(canvasSize, canvasSize, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g = canvas.createGraphics();
+        try {
+            g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+            g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+            int x = (canvasSize - img.getWidth()) / 2;
+            int y = (canvasSize - img.getHeight()) / 2;
+
+            g.drawImage(img, x, y, img.getWidth(), img.getHeight(), null);
+        } finally {
+            g.dispose();
+        }
+
+        return canvas;
+    }
 }

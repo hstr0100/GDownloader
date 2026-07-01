@@ -23,11 +23,14 @@ import java.util.Optional;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.downloader.structs.MediaInfo;
+import net.brlns.gdownloader.util.URLThumbnailLoader;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
+@Slf4j
 public final class MetadataManager {
 
     @Getter
@@ -36,6 +39,8 @@ public final class MetadataManager {
     @Getter
     @Setter
     private IMetadataExtractor defaultExtractor;
+
+    private final IMetadataExtractor faviconExtractor = new FaviconMetadataExtractor();
 
     public MetadataManager() {
         registerExtractor(new SpotifyMetadataExtractor());
@@ -47,6 +52,8 @@ public final class MetadataManager {
         for (IMetadataExtractor extractor : extractors) {
             extractor.init();
         }
+
+        faviconExtractor.init();
     }
 
     public void registerExtractor(@NonNull IMetadataExtractor extractor) {
@@ -66,10 +73,38 @@ public final class MetadataManager {
         // Fallback to default extractor
         IMetadataExtractor extractorToUse = matchedExtractor.orElse(defaultExtractor);
 
-        if (extractorToUse == null) {
-            throw new IllegalStateException("No extractor found for URL and no default extractor set");
+        Optional<MediaInfo> result = Optional.empty();
+
+        if (extractorToUse != null) {
+            try {
+                result = extractorToUse.fetchMetadata(url);
+            } catch (Exception e) {
+                log.warn("{} failed for {}, falling back to favicon: {}",
+                    extractorToUse.getClass().getSimpleName(), url, e.getMessage());
+            }
         }
 
-        return extractorToUse.fetchMetadata(url);
+        if (result.isEmpty()) {
+            result = faviconExtractor.fetchMetadata(url);
+        } else {
+            augmentThumbnailIfMissing(result.get(), url);
+        }
+
+        return result;
+    }
+
+    public void augmentThumbnailIfMissing(MediaInfo mediaInfo, String url) {
+        if (mediaInfo.hasUsableThumbnail()) {
+            return;
+        }
+
+        URLThumbnailLoader.tryLoadFavicon(url).ifPresentOrElse(
+            favicon -> {
+                mediaInfo.setFallbackThumbnailImage(favicon);
+
+                log.debug("Attached a fallback favicon image to {}; extractor produced no thumbnail", url);
+            },
+            () -> log.debug("No favicon available to augment {} either", url)
+        );
     }
 }
