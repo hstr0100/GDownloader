@@ -143,8 +143,15 @@ extraJavaModuleInfo {
         exportAllPackages()
     }
 
-    automaticModule('net.java.dev.jna:jna', 'com.sun.jna') {
-        overrideModuleName()
+    module('net.java.dev.jna:jna', 'com.sun.jna') {
+        requires('java.logging')
+        exportAllPackages()
+    }
+
+    module('net.java.dev.jna:jna-platform', 'com.sun.jna.platform') {
+        requires('com.sun.jna')
+        requires('java.desktop')
+        exportAllPackages()
     }
 }
 
@@ -248,7 +255,7 @@ jlink {
         if (os.isWindows()) {
             installerName = "${lowercaseName}-windows-${architecture}"
             installerType = 'msi'
-            //imageOptions += ['--win-console']
+            //imageOptions.addAll(['--win-console'])
             installerOptions.addAll([
                 '--win-per-user-install',
                 '--win-dir-chooser',

@@ -39,12 +39,12 @@ public class LooperTask implements Runnable {
     private void spin(Runnable action) {
         try {
             action.run();
-        } catch (Exception e) {
+        } catch (Throwable t) {
             if (failedOnce.compareAndSet(false, true)) {
-                log.error("Looper task has failed at least once: {}", e.getMessage());
+                log.error("Looper task has failed at least once: {}", t.getMessage());
 
                 if (log.isDebugEnabled()) {
-                    log.error("Exception: ", e);
+                    log.error("Exception: ", t);
                 }
             }
         }

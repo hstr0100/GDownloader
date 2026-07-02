@@ -105,7 +105,7 @@ public class FFMpegUpdater extends AbstractGitUpdater {
 
     @Override
     public String getName() {
-        return "FFMPEG";
+        return "FFmpeg";
     }
 
     @Override
