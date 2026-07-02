@@ -25,15 +25,11 @@ import java.awt.datatransfer.Transferable;
 import java.net.URI;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
@@ -107,7 +103,7 @@ public class ClipboardManager {
         if (changed) {
             triggerRevalidation();
         } else {
-            updateClipboard();
+            submitClipboardScan(null, false);
         }
     }
 
@@ -141,14 +137,23 @@ public class ClipboardManager {
     }
 
     public boolean tryHandleDnD(@Nullable Transferable transferable) {
-        return updateClipboard(transferable, true); // force is true because this is considered manual input.
+        if (clipboardBlocked.get() || main.getDownloadManager().isBlocked()) {
+            return false;
+        }
+
+        // force is true because this is considered manual input.
+        submitClipboardScan(transferable, true);
+        // accept the drop optimistically
+        return true;
     }
 
     public void pasteURLsFromClipboard() {
-        if (!main.getDownloadManager().isBlocked()) {
-            updateClipboard(null, true);
+        if (main.getDownloadManager().isBlocked()) {
+            return;
+        }
 
-            if (clipboardContainedURLs()) {
+        submitClipboardScan(null, true).thenAccept(captured -> {
+            if (captured == 0) {
                 ToastMessenger.show(Message.builder()
                     .message("gui.add_from_clipboard.toast_empty")
                     .durationMillis(3000)
@@ -163,55 +168,11 @@ public class ClipboardManager {
                     .discardDuplicates(true)
                     .build());
             }
-        }
+        });
     }
 
-    public boolean updateClipboard() {
-        return updateClipboard(null, false);
-    }
-
-    public boolean updateClipboard(@Nullable Transferable transferable, boolean force) {
-        if (clipboardBlocked.get() || main.getDownloadManager().isBlocked()) {
-            return false;
-        }
-
-        if (!main.getConfig().isMonitorClipboardForLinks() && !force) {
-            return false;
-        }
-
-        clipboardLock.lock();
-        try {
-            if (transferable == null) {
-                transferable = clipboard.getContents(null);
-            }
-
-            if (transferable == null) {
-                return false;
-            }
-
-            boolean success = false;
-            for (FlavorType flavorType : FlavorType.values()) {
-                if (transferable.isDataFlavorSupported(flavorType.getFlavor())) {
-                    try {
-                        String data = (String)transferable.getTransferData(flavorType.getFlavor());
-
-                        if (!force) {
-                            processClipboardData(flavorType, data);
-                        } else {
-                            handleClipboardInput(data, force);
-                        }
-
-                        success = true;
-                    } catch (Exception e) {
-                        log.warn("Cannot obtain {} transfer data: {}", flavorType, e.getMessage());
-                    }
-                }
-            }
-
-            return success;
-        } finally {
-            clipboardLock.unlock();
-        }
+    public void updateClipboard() {
+        submitClipboardScan(null, false);
     }
 
     public void revalidateClipboard() {
@@ -233,21 +194,8 @@ public class ClipboardManager {
                 return;
             }
 
-            for (FlavorType flavorType : FlavorType.values()) {
-                if (transferable.isDataFlavorSupported(flavorType.getFlavor())) {
-                    try {
-                        String data = (String)transferable.getTransferData(flavorType.getFlavor());
-                        lastClipboardState.put(flavorType, data);
-                    } catch (Exception e) {
-                        if (main.getConfig().isDebugMode()) {
-                            log.error("Exception while invalidating clipboard", e);
-                        }
-                    }
-                }
-            }
-
-            clipboardListeners.stream()
-                .forEach((listener) -> listener.skipFor(TimeUnit.SECONDS, 4));
+            lastClipboardState.putAll(fetchTransferableData(transferable));
+            clipboardListeners.forEach(listener -> listener.skipFor(TimeUnit.SECONDS, 4));
         } finally {
             clipboardLock.unlock();
         }
@@ -259,48 +207,129 @@ public class ClipboardManager {
             try {
                 Thread.sleep(200);
             } catch (InterruptedException e) {
-                // Ignore
+                Thread.currentThread().interrupt();
+                return;
             }
 
             revalidateClipboard();
-            updateClipboard();
+            submitClipboardScan(null, false);
         });
     }
 
-    private void handleClipboardInput(String data, boolean force) {
-        GDownloader.GLOBAL_THREAD_POOL.execute(() -> {
-            List<CompletableFuture<Boolean>> list = new ArrayList<>();
-
-            for (String url : extractUrlsFromString(data)) {
-                if (url.startsWith("http") && !urlIgnoreSet.contains(url)) {
-                    urlIgnoreSet.add(url);
-
-                    list.add(main.getDownloadManager().captureUrl(url, force));
-                }
-
-                // Small extra utility
-                if (main.getConfig().isLogMagnetLinks() && url.startsWith("magnet")) {
-                    main.logUrl("magnets", url);
+    private Map<FlavorType, String> fetchTransferableData(Transferable transferable) {
+        Map<FlavorType, String> dataMap = new EnumMap<>(FlavorType.class);
+        for (FlavorType flavorType : FlavorType.values()) {
+            if (transferable.isDataFlavorSupported(flavorType.getFlavor())) {
+                try {
+                    String data = (String)transferable.getTransferData(flavorType.getFlavor());
+                    if (data != null) {
+                        dataMap.put(flavorType, data);
+                    }
+                } catch (Exception e) {
+                    log.warn("Cannot obtain {} transfer data: {}", flavorType, e.getMessage());
                 }
             }
+        }
 
-            CompletableFuture<Void> futures = CompletableFuture.allOf(list.toArray(CompletableFuture[]::new));
+        return dataMap;
+    }
 
-            futures.thenRun(() -> {
-                List<Boolean> results = list.stream()
-                    .map(future -> {
-                        try {
-                            return future.join();
-                        } catch (CompletionException e) {
-                            GDownloader.handleException(e.getCause());
-                            return false;
-                        }
-                    })
-                    .collect(Collectors.toList());
+    private CompletableFuture<Integer> submitClipboardScan(@Nullable Transferable transferableIn, boolean force) {
+        if (clipboardBlocked.get() || main.getDownloadManager().isBlocked()) {
+            return CompletableFuture.completedFuture(0);
+        }
+
+        if (!force && !main.getConfig().isMonitorClipboardForLinks()) {
+            return CompletableFuture.completedFuture(0);
+        }
+
+        clipboardLock.lock();
+        final Map<FlavorType, String> extractedData;
+        try {
+            Transferable transferable = (transferableIn != null) ? transferableIn : clipboard.getContents(null);
+            if (transferable == null) {
+                return CompletableFuture.completedFuture(0);
+            }
+
+            extractedData = fetchTransferableData(transferable);
+        } finally {
+            clipboardLock.unlock();
+        }
+
+        CompletableFuture<Integer> result = new CompletableFuture<>();
+        GDownloader.GLOBAL_THREAD_POOL.execute(() -> {
+            try {
+                Set<String> urls = new HashSet<>();
+                for (Map.Entry<FlavorType, String> entry : extractedData.entrySet()) {
+                    FlavorType flavorType = entry.getKey();
+                    String data = entry.getValue();
+
+                    if (force || hasChanged(flavorType, data)) {
+                        urls.addAll(extractUrlsFromString(data));
+                    }
+                }
+
+                if (urls.isEmpty()) {
+                    result.complete(0);
+                    return;
+                }
+
+                captureUrls(urls, force).whenComplete((captured, ex) -> {
+                    if (ex != null) {
+                        GDownloader.handleException(ex);
+                        result.complete(0);
+                    } else {
+                        result.complete(captured);
+                    }
+                });
+            } catch (Exception e) {
+                GDownloader.handleException(e);
+                result.complete(0);
+            }
+        });
+
+        return result;
+    }
+
+    private boolean hasChanged(FlavorType flavorType, String data) {
+        clipboardLock.lock();
+        try {
+            String last = lastClipboardState.put(flavorType, data);
+
+            return last == null || !last.equals(data);
+        } finally {
+            clipboardLock.unlock();
+        }
+    }
+
+    private CompletableFuture<Integer> captureUrls(Set<String> urls, boolean force) {
+        List<CompletableFuture<Boolean>> futures = new ArrayList<>();
+
+        for (String url : urls) {
+            if (url.startsWith("http") && !urlIgnoreSet.contains(url)) {
+                urlIgnoreSet.add(url);
+
+                futures.add(main.getDownloadManager().captureUrl(url, force));
+            } else if (main.getConfig().isLogMagnetLinks() && url.startsWith("magnet")) {
+                // Small extra utility
+                main.logUrl("magnets", url);
+            }
+        }
+
+        if (futures.isEmpty()) {
+            return CompletableFuture.completedFuture(0);
+        }
+
+        return CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new))
+            .handle((ignored, ex) -> {
+                if (ex != null) {
+                    GDownloader.handleException(ex);
+                }
 
                 int captured = 0;
-                for (boolean result : results) {
-                    if (result) {
+                for (CompletableFuture<Boolean> future : futures) {
+                    if (!future.isCompletedExceptionally()
+                        && Boolean.TRUE.equals(future.getNow(false))) {
                         captured++;
                     }
                 }
@@ -315,33 +344,13 @@ public class ClipboardManager {
                             .build());
                     }
 
-                    // If notications are off, requesting focus could probably also be an undesired behavior,
+                    // If notifications are off, requesting focus could probably also be an undesired behavior,
                     // However, I think we should keep at least this one visual cue.
                     main.getGuiManager().requestFocus();
                 }
+
+                return captured;
             });
-
-            try {
-                futures.get(10l, TimeUnit.MINUTES);
-            } catch (InterruptedException | ExecutionException e) {
-                GDownloader.handleException(e);
-            } catch (TimeoutException e) {
-                log.warn("Timed out waiting for futures");
-            }
-        });
-    }
-
-    private void processClipboardData(FlavorType flavorType, String data) {
-        if (!lastClipboardState.containsKey(flavorType)) {
-            lastClipboardState.put(flavorType, "");
-        }
-
-        String last = lastClipboardState.get(flavorType);
-        if (!last.equals(data)) {
-            lastClipboardState.put(flavorType, data);
-
-            handleClipboardInput(data, false);
-        }
     }
 
     private Set<String> extractUrlsFromString(String content) {
@@ -370,44 +379,10 @@ public class ClipboardManager {
             }
         }
 
-        links.forEach((link) -> {
-            result.add(link.attr("href"));
-        });
-
-        media.forEach((src) -> {
-            result.add(src.attr("src"));
-        });
+        links.forEach(link -> result.add(link.attr("href")));
+        media.forEach(src -> result.add(src.attr("src")));
 
         return result;
-    }
-
-    /**
-     * This should be called after updateClipboard() when lastClipboardState is populated.
-     */
-    public boolean clipboardContainedURLs() {
-        DataFlavor[] flavors = clipboard.getAvailableDataFlavors();
-        if (flavors.length == 0) {
-            return true;
-        }
-
-        clipboardLock.lock();
-        try {
-            Transferable transferable = clipboard.getContents(null);
-            if (transferable == null) {
-                return true;
-            }
-
-            boolean hasUrl = false;
-            for (String data : lastClipboardState.values()) {
-                if (data.contains("http")) {
-                    hasUrl = true;
-                }
-            }
-
-            return !hasUrl;
-        } finally {
-            clipboardLock.unlock();
-        }
     }
 
     private static boolean isValidURL(String urlString) {

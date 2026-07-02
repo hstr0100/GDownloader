@@ -258,7 +258,7 @@ public final class GUIManager {
                     if ((e.getModifiersEx() & KeyEvent.CTRL_DOWN_MASK) != 0) {
                         switch (e.getKeyCode()) {
                             case KeyEvent.VK_V ->
-                                main.getClipboardManager().updateClipboard(null, true);
+                                main.getClipboardManager().pasteURLsFromClipboard();
                             case KeyEvent.VK_F -> {
                                 if (appWindow.isVisible()) {
                                     runOnEDT(() -> {
