@@ -36,7 +36,6 @@ import net.brlns.gdownloader.downloader.enums.DownloadStatusEnum;
 import net.brlns.gdownloader.downloader.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.downloader.structs.DownloadResult;
-import net.brlns.gdownloader.downloader.structs.MediaInfo;
 import net.brlns.gdownloader.filters.AbstractUrlFilter;
 import net.brlns.gdownloader.process.ProcessArguments;
 import net.brlns.gdownloader.util.CancelHook;
@@ -109,25 +108,6 @@ public class SpotDLDownloader extends AbstractDownloader {
 
     @Override
     protected boolean tryQueryMetadata(QueueEntry queueEntry) {
-        try {
-            String url = queueEntry.getUrl();
-
-            Optional<MediaInfo> mediaInfoOptional = manager.getMetadataManager().fetchMetadata(url);
-
-            if (mediaInfoOptional.isPresent()) {
-                MediaInfo mediaInfo = mediaInfoOptional.get();
-                queueEntry.setMediaInfo(mediaInfo);
-
-                return true;
-            }
-        } catch (Exception e) {
-            log.error("{} failed to query for metadata {}: {}", getDownloaderId(), queueEntry.getUrl(), e.getMessage());
-
-            if (log.isDebugEnabled()) {
-                log.error("Exception:", e);
-            }
-        }
-
         return false;
     }
 

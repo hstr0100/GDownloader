@@ -37,6 +37,7 @@ import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.downloader.enums.*;
 import net.brlns.gdownloader.downloader.extractors.MetadataManager;
 import net.brlns.gdownloader.downloader.structs.DownloadResult;
+import net.brlns.gdownloader.downloader.structs.MediaInfo;
 import net.brlns.gdownloader.event.EventDispatcher;
 import net.brlns.gdownloader.event.IEvent;
 import net.brlns.gdownloader.filters.AbstractUrlFilter;
@@ -846,6 +847,29 @@ public class DownloadManager implements IEvent, AutoCloseable {
         });
     }
 
+    protected boolean tryQueryMetadata(QueueEntry queueEntry) {
+        try {
+            String url = queueEntry.getUrl();
+
+            Optional<MediaInfo> mediaInfoOptional = getMetadataManager().fetchMetadata(url);
+
+            if (mediaInfoOptional.isPresent()) {
+                MediaInfo mediaInfo = mediaInfoOptional.get();
+                queueEntry.setMediaInfo(mediaInfo);
+
+                return true;
+            }
+        } catch (Exception e) {
+            log.error("Failed to query for metadata {}: {}", queueEntry.getUrl(), e.getMessage());
+
+            if (log.isDebugEnabled()) {
+                log.error("Exception:", e);
+            }
+        }
+
+        return false;
+    }
+
     private void queryMetadata(QueueEntry queueEntry) {
         if (!main.getConfig().isQueryMetadata() || queueEntry.getQueried().get()) {
             if (queueEntry.getDownloadStatus() == DownloadStatusEnum.QUERYING) {
@@ -872,10 +896,16 @@ public class DownloadManager implements IEvent, AutoCloseable {
                     return;
                 }
 
+                boolean handledByDownloader = false;
                 for (AbstractDownloader downloader : queueEntry.getDownloaders()) {
                     if (downloader.tryQueryMetadata(queueEntry)) {
+                        handledByDownloader = true;
                         break;
                     }
+                }
+
+                if (!handledByDownloader) {
+                    tryQueryMetadata(queueEntry);
                 }
 
                 queueEntry.markQueried();
