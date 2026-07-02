@@ -145,20 +145,18 @@ jobs:
         id: wix-cache
         uses: actions/cache@v4
         with:
-          path: C:\Program Files (x86)\WiX Toolset v3.14
-          key: ${{ runner.os }}-wix-v3.14
-          restore-keys: |
-            ${{ runner.os }}-wix-
+          path: |
+            ~\.dotnet\tools
+            ~\.wix
+          key: ${{ runner.os }}-wix5-${{ 'wix-5.0.2' }}
 
-      - name: Install WiX Toolset v3 if not cached
+      - name: Install WiX Toolset v5 if not cached
         if: steps.wix-cache.outputs.cache-hit != 'true'
         run: |
-          Invoke-WebRequest -Uri "https://github.com/wixtoolset/wix3/releases/download/wix3141rtm/wix314.exe" -OutFile wix314.exe
-          Start-Process -FilePath "wix314.exe" -ArgumentList "/quiet" -NoNewWindow -Wait
+          dotnet tool install --global wix --version 5.0.2
+          wix extension add -g WixToolset.UI.wixext/5.0.2
+          wix extension add -g WixToolset.Util.wixext/5.0.2
         shell: powershell
-
-      - name: Add WiX to PATH
-        run: echo "C:\Program Files (x86)\WiX Toolset v3.14\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
       - name: Setup Gradle cache
         uses: actions/cache@v4

@@ -156,12 +156,7 @@ public class QueueEntry {
     private final Map<String, IMenuEntry> rightClickMenu = new ConcurrentLinkedHashMap<>();
 
     public AbstractUrlFilter getFilter() {
-        Optional<AbstractUrlFilter> filter = main.getConfig().getUrlFilterById(filterId);
-        if (filter.isPresent()) {
-            return filter.get();
-        }
-
-        return originalFilter;
+        return main.getConfig().getUrlFilterById(filterId).orElse(originalFilter);
     }
 
     public void openUrl() {

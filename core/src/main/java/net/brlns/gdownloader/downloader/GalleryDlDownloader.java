@@ -16,6 +16,7 @@
  */
 package net.brlns.gdownloader.downloader;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import jakarta.annotation.Nullable;
 import jakarta.annotation.PreDestroy;
 import java.io.BufferedReader;
@@ -150,15 +151,23 @@ public class GalleryDlDownloader extends AbstractDownloader {
             genericArguments.add("--config-ignore");
         }
 
-        Optional<File> ffmpegPath = main.getFfmpegTranscoder().getFfmpegPath();
-        if (ffmpegPath.isPresent()) {
-            genericArguments.add(
-                "-o",
-                String.format(
-                    "downloader.ytdl.raw-options={\"ffmpeg-location\": \"%s\"}",
-                    ffmpegPath.get().getAbsolutePath()
-                )
-            );
+        Map<String, Object> rawOptions = new LinkedHashMap<>();
+
+        main.getFfmpegTranscoder().getFfmpegPath().ifPresent(ffmpeg
+            -> rawOptions.put("ffmpeg-location", ffmpeg.getAbsolutePath()));
+
+        YtDlpDownloader ytdlp = (YtDlpDownloader)main.getDownloadManager()
+            .getDownloader(DownloaderIdEnum.YT_DLP);// Always available
+        ytdlp.getDenoPath().ifPresent(deno
+            -> rawOptions.put("js_runtimes", Map.of("deno", Map.of("path", deno.getAbsolutePath()))));
+
+        if (!rawOptions.isEmpty()) {
+            try {
+                genericArguments.add("-o", "downloader.ytdl.raw-options="
+                    + GDownloader.OBJECT_MAPPER.writeValueAsString(rawOptions));
+            } catch (JsonProcessingException e) {
+                log.error("Failed to serialize ytdl raw-options", e);
+            }
         }
 
         genericArguments.addAll(filter.getArguments(this, ALL, manager, tmpPath, entry.getUrl()));

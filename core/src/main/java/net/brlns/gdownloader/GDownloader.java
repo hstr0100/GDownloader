@@ -1047,12 +1047,15 @@ public final class GDownloader {
                 log.warn("Please ensure libxkbcommon-x11 is installed on your system.");
             }
         } catch (Throwable e) {
-            log.error("There was a problem registering the native hook: {}", e.getMessage());
+            log.error("There was a problem registering the native hook: {}", e);
         }
 
         Thread.setDefaultUncaughtExceptionHandler((Thread t, Throwable e) -> {
             GDownloader.handleException(e);
         });
+
+        // Register WebP spi via IIORegistry
+        URLThumbnailLoader.init();
 
         GDownloader instance = new GDownloader();
         GDownloader.instance = instance;

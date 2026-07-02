@@ -32,7 +32,6 @@ import net.brlns.gdownloader.downloader.enums.DownloadPriorityEnum;
 import net.brlns.gdownloader.downloader.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.ui.custom.CustomMediaCardUI;
 import net.brlns.gdownloader.ui.menu.IMenuEntry;
-import net.brlns.gdownloader.util.collection.ConcurrentLinkedHashMap;
 
 import static net.brlns.gdownloader.ui.MediaCard.UpdateType.*;
 import static net.brlns.gdownloader.ui.UIUtils.runOnEDT;

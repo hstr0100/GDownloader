@@ -1,4 +1,7 @@
 import org.apache.tools.ant.taskdefs.condition.Os
+import org.gradle.api.file.ArchiveOperations
+import org.gradle.api.file.FileSystemOperations
+import javax.inject.Inject
 
 plugins {
     id('java')
@@ -35,6 +38,17 @@ def getArchitecture(def os) {
 
 def architecture = getArchitecture(os)
 
+interface FileOps {
+    @Inject FileSystemOperations getFs()
+    @Inject ArchiveOperations getArchives()
+}
+def fileOps = project.objects.newInstance(FileOps)
+
+def commonJvmArgs = [
+    '--add-exports=java.management/sun.management=ALL-UNNAMED',
+    '--enable-native-access=com.github.kwhat.jnativehook,net.brlns.gdownloader,com.sun.jna'
+]
+
 java {
     sourceCompatibility = JavaVersion.VERSION_25
     targetCompatibility = JavaVersion.VERSION_25
@@ -53,10 +67,7 @@ java {
 application {
     mainClass.set('net.brlns.gdownloader.GDownloader')
     mainModule.set('net.brlns.gdownloader')
-    applicationDefaultJvmArgs = [
-        '--add-exports=java.management/sun.management=ALL-UNNAMED',
-        '--enable-native-access=com.github.kwhat.jnativehook'
-    ]
+    applicationDefaultJvmArgs = commonJvmArgs
 }
 
 dependencies {
@@ -92,24 +103,21 @@ tasks.named('test') {
 
 tasks.named('run') {
     enableAssertions = true
-    jvmArgs = [
-        '-Xss5M',
-        '--add-exports=java.management/sun.management=ALL-UNNAMED',
-        '--enable-native-access=com.github.kwhat.jnativehook'
-    ]
+    jvmArgs = ['-Xss5M'] + commonJvmArgs
 }
 
 tasks.register('generateVersionFile') {
     group = 'build'
 
     def versionFile = file("src/main/resources/version.properties")
+    def currentVersion = project.version.toString()
 
-    inputs.property("version", project.version)
+    inputs.property("version", currentVersion)
     outputs.file(versionFile)
 
     doLast {
         versionFile.parentFile.mkdirs()
-        versionFile.text = "version=${project.version}"
+        versionFile.text = "version=${currentVersion}"
     }
 }
 
@@ -125,7 +133,12 @@ extraJavaModuleInfo {
     failOnMissingModuleInfo.set(true)
     deriveAutomaticModuleNamesFromFileNames.set(true)
 
-    module("twelvemonkeys-$twelvemonkeysVersion-all.jar", 'com.twelvemonkeys.imageio') {
+    module('com.adonax:audiocue', 'audiocue') {
+        requires('java.desktop')
+        exportAllPackages()
+    }
+
+    module("twelvemonkeys-${twelvemonkeysVersion}-all.jar", 'com.twelvemonkeys.imageio') {
         requiresStatic('java.desktop')
         exportAllPackages()
     }
@@ -183,7 +196,10 @@ tasks.register('zipJpackageImage', Zip) {
         ].join("\n")
     }
 
-    from("${layout.buildDirectory.get().asFile}/jpackage/${rootProject.name}")
+    from("${layout.buildDirectory.get().asFile}/jpackage/${rootProject.name}") {
+        // Completely uninvited WiX 5 stray artifact - remove it.
+        exclude "${lowercaseName}-windows-${architecture}.exe"
+    }
 }
 
 tasks.named('jpackage').configure {
@@ -194,7 +210,7 @@ tasks.named('jpackage').configure {
                        os.isLinux() ? "${rootProject.name}/lib" :
                        "${rootProject.name}.app/Contents"
 
-        project.copy {
+        fileOps.fs.copy {
             from('src/main/resources/assets/launcher')
             include('GDownloader.png')
             include('GDownloader.icns')
@@ -210,16 +226,12 @@ jlink {
 
     launcher {
         name = 'GDownloader'
-        jvmArgs = [
-            '-Xmx2G',
-            '-Xss5M',
-            '--enable-native-access=com.github.kwhat.jnativehook'
-        ]
+        jvmArgs = ['-Xmx2G', '-Xss5M'] + commonJvmArgs
         noConsole = true
     }
 
     jpackage {
-        jvmArgs = ['-Djnativehook.lib.locator=net.brlns.gdownloader.util.CustomNativeLocator']
+        jvmArgs = ['-Djnativehook.lib.locator=net.brlns.gdownloader.util.CustomNativeLocator'] + commonJvmArgs
 
         def imgType = os.isWindows() ? 'ico' : os.isMacOsX() ? 'icns' : 'png'
         icon = "src/main/resources/assets/launcher/GDownloader.$imgType"
@@ -283,11 +295,11 @@ tasks.named('jlink').configure {
         }.each { nativeJar ->
             def imgDir = jlink.imageDir.get().asFile
             def destDir = file("$imgDir/bin/native-libs")
-            delete(destDir)
-            mkdir(destDir)
+            destDir.deleteDir()
+            destDir.mkdirs()
 
-            project.copy {
-                from(zipTree(nativeJar)) {
+            fileOps.fs.copy {
+                from(fileOps.archives.zipTree(nativeJar)) {
                     include("${baseLibPath}/**")
                     eachFile { fcd ->
                         def segments = fcd.relativePath.segments
@@ -333,10 +345,10 @@ tasks.register('createAppImage', Exec) {
         def appUsrPath = "$appDir/usr"
         def appLibPath = "$appUsrPath/lib"
 
-        delete(appDirBase)
-        mkdir(appDir)
+        appDirBase.deleteDir()
+        appDir.mkdirs()
 
-        copy {
+        fileOps.fs.copy {
             from file("${layout.buildDirectory.get().asFile}/jpackage/${rootProject.name}")
             into appUsrPath
         }
@@ -355,7 +367,7 @@ tasks.register('createAppImage', Exec) {
             "${appGroup}.${lowercaseName}.metainfo.xml",
             "${appGroup}.${lowercaseName}.appdata.xml",
         ].each { destFileName ->
-            copy{
+            fileOps.fs.copy {
                 from file("src/main/resources/${lowercaseName}.appdata.xml")
                 into "$appUsrPath/share/metainfo"
                 rename { destFileName }
@@ -385,7 +397,7 @@ tasks.register('createAppImage', Exec) {
                 def libFile = file("${libDir}/libxkbcommon-x11.so.0")
 
                 if (libFile.exists()) {
-                    copy {
+                    fileOps.fs.copy {
                         from libFile
                         into "$appLibPath/runtime/bin/native-libs/linux/${nativeLibsArch}"
                     }
@@ -410,7 +422,7 @@ tasks.register('createAppImage', Exec) {
             "$appUsrPath/share/icons/hicolor/512x512/apps/${appGroup}.${lowercaseName}.png",
             "$appDir/.DirIcon"
         ].each { destPath ->
-            copy {
+            fileOps.fs.copy {
                 from iconPath
                 into file(destPath).parent
                 rename { file(destPath).name }
@@ -426,7 +438,7 @@ tasks.register('createAppImage', Exec) {
 
             parentDir.mkdirs()
 
-            copy {
+            fileOps.fs.copy {
                 from file("src/main/resources/assets/launcher/${rootProject.name}.desktop")
                 into parentDir
 
@@ -480,7 +492,7 @@ tasks.register('createAppImage', Exec) {
             file("${layout.buildDirectory.get().asFile}/appimage/${appImageName}"),
             file("${layout.buildDirectory.get().asFile}/appimage/${appImageName}.zsync")
         ].each { sourcePath ->
-            copy {
+            fileOps.fs.copy {
                 from sourcePath
                 into "${layout.buildDirectory.get().asFile}/jpackage"
             }

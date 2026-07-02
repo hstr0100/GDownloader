@@ -175,10 +175,8 @@ public class SpotDLDownloader extends AbstractDownloader {
             genericArguments.add("--config");
         }
 
-        Optional<String> ffmpegExecutable = main.getFfmpegTranscoder().getFFmpegExecutable();
-        if (ffmpegExecutable.isPresent()) {
-            genericArguments.add("--ffmpeg", ffmpegExecutable.get());
-        }
+        main.getFfmpegTranscoder().getFFmpegExecutable().ifPresent(ffmpeg
+            -> genericArguments.add("--ffmpeg", ffmpeg));
 
         genericArguments.addAll(filter.getArguments(this, ALL, manager, tmpPath, entry.getUrl()));
 

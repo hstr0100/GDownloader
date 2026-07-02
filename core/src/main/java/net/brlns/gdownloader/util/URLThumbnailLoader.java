@@ -81,6 +81,10 @@ public final class URLThumbnailLoader {
         }
     }
 
+    public static void init() {
+        // no-op
+    }
+
     private static void forceRegisterReaderSpi(String className) {
         try {
             Class<?> spiClass = Class.forName(className);
@@ -102,7 +106,7 @@ public final class URLThumbnailLoader {
                 log.debug("Force-registered ImageIO SPI: {}", className);
             }
         } catch (ClassNotFoundException e) {
-            // Not on the module path - ignore
+            log.warn("Could not resolve {} for force-registration: {}", className, e.toString());
         } catch (Exception e) {
             log.warn("Failed to force-register ImageIO SPI {}: {}", className, e.toString());
         }

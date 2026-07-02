@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -127,13 +128,13 @@ public final class SystemExecutableLocator {
             return true;  // Assume available on non-Linux systems
         }
 
-        List<Path> searchPaths = List.of(
+        List<Path> searchPaths = new ArrayList<>(List.of(
             Paths.get("/usr/lib"),
             Paths.get("/usr/local/lib"),
             Paths.get("/lib"),
             Paths.get("/lib64"),
             Paths.get(System.getProperty("user.home"), ".local/lib")
-        );
+        ));
 
         String ldLibraryPath = System.getenv("LD_LIBRARY_PATH");
         if (ldLibraryPath != null) {

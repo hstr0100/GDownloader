@@ -31,8 +31,10 @@ open module net.brlns.gdownloader {
     requires transitive jakarta.annotation;
     requires transitive jakarta.persistence;
     requires transitive org.freedesktop.dbus;
+    requires audiocue;
     requires com.fasterxml.jackson.annotation;
     requires com.fasterxml.jackson.core;
+    requires com.twelvemonkeys.imageio;
     requires eclipselink;
     requires org.hsqldb;
     requires org.jsoup;

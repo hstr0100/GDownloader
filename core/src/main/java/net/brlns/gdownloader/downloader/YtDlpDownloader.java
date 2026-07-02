@@ -129,8 +129,18 @@ public class YtDlpDownloader extends AbstractDownloader {
                 ProcessArguments arguments = new ProcessArguments(
                     executablePath.get().getAbsolutePath(),
                     "--dump-json",
-                    "--flat-playlist",
-                    queueEntry.getUrl());
+                    "--flat-playlist");
+
+                getDenoPath().ifPresent(deno -> {
+                    arguments.add(
+                        "--js-runtimes",
+                        "deno:" + deno.getAbsolutePath()
+                    );
+                });
+
+                // It likely doesn't matter whether this comes last,
+                // but the universe implodes if I don't do it in this order.
+                arguments.add(queueEntry.getUrl());
 
                 List<String> lines = main.readOutput(arguments);
                 List<String> videoUrls = new ArrayList<>();
@@ -208,8 +218,16 @@ public class YtDlpDownloader extends AbstractDownloader {
                 executablePath.get().getAbsolutePath(),
                 "--dump-json",
                 "--flat-playlist",
-                "--playlist-items", "1",
-                queueEntry.getUrl());
+                "--playlist-items", "1");
+
+            getDenoPath().ifPresent(deno -> {
+                arguments.add(
+                    "--js-runtimes",
+                    "deno:" + deno.getAbsolutePath()
+                );
+            });
+
+            arguments.add(queueEntry.getUrl());
 
             if (main.getConfig().isReadCookiesFromBrowser()) {
                 arguments.add(
@@ -287,13 +305,15 @@ public class YtDlpDownloader extends AbstractDownloader {
             executablePath.get().getAbsolutePath(),
             "-i");
 
-        Optional<File> ffmpegPath = main.getFfmpegTranscoder().getFfmpegPath();
-        if (ffmpegPath.isPresent()) {
+        getDenoPath().ifPresent(deno -> {
             genericArguments.add(
-                "--ffmpeg-location",
-                ffmpegPath.get().getAbsolutePath()
+                "--js-runtimes",
+                "deno:" + deno.getAbsolutePath()
             );
-        }
+        });
+
+        main.getFfmpegTranscoder().getFfmpegPath().ifPresent(ffmpeg
+            -> genericArguments.add("--ffmpeg-location", ffmpeg.getAbsolutePath()));
 
         if (!main.getConfig().isRespectYtDlpConfigFile()) {
             genericArguments.add("--ignore-config");
