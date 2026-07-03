@@ -54,6 +54,8 @@ import static net.brlns.gdownloader.lang.Language.l10n;
 @Slf4j
 public abstract class AbstractDownloader {
 
+    private static final int MAX_OUTPUT_LINE_LENGTH = 4096;
+
     @Getter
     protected final GDownloader main;
 
@@ -305,5 +307,13 @@ public abstract class AbstractDownloader {
         } else {
             FileUtils.setAllFileTimesTo(filePath, LocalDateTime.now());
         }
+    }
+
+    protected String truncateLine(String line) {
+        if (line.length() <= MAX_OUTPUT_LINE_LENGTH) {
+            return line;
+        }
+
+        return line.substring(0, MAX_OUTPUT_LINE_LENGTH) + "... [truncated, " + line.length() + " chars]";
     }
 }

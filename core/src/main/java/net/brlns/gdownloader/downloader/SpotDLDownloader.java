@@ -315,7 +315,7 @@ public class SpotDLDownloader extends AbstractDownloader {
 
                 if (reader.ready()) {
                     if ((line = reader.readLine()) != null) {
-                        lastOutput = line;
+                        lastOutput = truncateLine(line);
 
                         processProgress(entry, lastOutput);
 

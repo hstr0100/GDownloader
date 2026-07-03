@@ -590,7 +590,7 @@ public class YtDlpDownloader extends AbstractDownloader {
                         output.append(ch);
 
                         if (ch == '\n' || (ch == '\r' && prevChar != '\n')) {
-                            lastOutput = output.toString().replace("\n", "");
+                            lastOutput = truncateLine(output.toString().replace("\n", ""));
                             output.setLength(0);
                         }
 
