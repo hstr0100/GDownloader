@@ -206,6 +206,15 @@ tasks.register('zipJpackageImage', Zip) {
     from("${layout.buildDirectory.get().asFile}/jpackage/${rootProject.name}") {
         // Completely uninvited WiX 5 stray artifact - remove it.
         exclude "${lowercaseName}-windows-${architecture}.exe"
+
+        if (os.isLinux() || os.isMacOsX()) {
+            filePermissions {
+                unix(0755)
+            }
+            dirPermissions {
+                unix(0755)
+            }
+        }
     }
 }
 
