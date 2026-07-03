@@ -47,7 +47,13 @@ Download the latest version for your platform from the [releases page](https://g
 
 0. Ensure you have [JDK 25](https://adoptium.net/temurin/releases/) or a newer version installed.
 
-   **Windows Prerequisite:** On Windows, building requires the [WiX Toolset](https://github.com/wixtoolset/wix3/releases/latest) to be installed.
+   **Windows Prerequisite:** On Windows, building requires the [WiX Toolset](https://wixtoolset.org/) v5, installed via the .NET tool:
+   ```bash
+      dotnet tool install --global wix --version 5.0.2
+      wix extension add -g WixToolset.UI.wixext/5.0.2
+      wix extension add -g WixToolset.Util.wixext/5.0.2
+   ```
+   This requires the [.NET SDK](https://dotnet.microsoft.com/download) to be installed.
 
 1. Clone this repository:
    ```bash

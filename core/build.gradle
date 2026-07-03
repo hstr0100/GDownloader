@@ -204,9 +204,6 @@ tasks.register('zipJpackageImage', Zip) {
     }
 
     from("${layout.buildDirectory.get().asFile}/jpackage/${rootProject.name}") {
-        // Completely uninvited WiX 5 stray artifact - remove it.
-        exclude "${lowercaseName}-windows-${architecture}.exe"
-
         if (os.isLinux() || os.isMacOsX()) {
             filePermissions {
                 unix(0755)
@@ -262,7 +259,7 @@ jlink {
         ])
 
         if (os.isWindows()) {
-            installerName = "${lowercaseName}-windows-${architecture}"
+            installerName = "${rootProject.name}"
             installerType = 'msi'
             //imageOptions.addAll(['--win-console'])
             installerOptions.addAll([
@@ -536,8 +533,28 @@ tasks.register('printJpackageContents') {
     }
 }
 
+tasks.register('renameWindowsInstaller', Copy) {
+    group = 'distribution'
+    onlyIf { os.isWindows() }
+
+    dependsOn tasks.named('jpackage')
+
+    def jpackageDir = layout.buildDirectory.dir('jpackage')
+
+    from(jpackageDir) {
+        include "${rootProject.name}-${version}.msi"
+        rename { "${lowercaseName}-${version}-windows_${architecture}.msi" }
+    }
+    into jpackageDir
+
+    doLast {
+        delete file("${jpackageDir.get().asFile}/${rootProject.name}-${version}.msi")
+    }
+}
+
 tasks.named('zipJpackageImage').configure {
     finalizedBy tasks.named('printJpackageContents')
+    finalizedBy tasks.named('renameWindowsInstaller')
 }
 
 tasks.named('createAppImage').configure {

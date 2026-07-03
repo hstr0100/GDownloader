@@ -176,7 +176,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: gdownloader-windows-msi
-          path: .\core\build\jpackage\gdownloader-windows-${{ matrix.GRADLE_ARCH }}-*.msi
+          path: .\core\build\jpackage\gdownloader-*-windows_${{ matrix.GRADLE_ARCH }}.msi
           if-no-files-found: error
 
       - name: Upload portable ZIP artifact
