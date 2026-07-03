@@ -35,7 +35,9 @@ import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.downloader.enums.DownloadStatusEnum;
 import net.brlns.gdownloader.downloader.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
+import net.brlns.gdownloader.downloader.extractors.GalleryDLMetadataExtractor;
 import net.brlns.gdownloader.downloader.structs.DownloadResult;
+import net.brlns.gdownloader.downloader.structs.MediaInfo;
 import net.brlns.gdownloader.filters.AbstractUrlFilter;
 import net.brlns.gdownloader.process.ProcessArguments;
 import net.brlns.gdownloader.util.CancelHook;
@@ -60,8 +62,13 @@ public class GalleryDlDownloader extends AbstractDownloader {
     @Setter
     private Optional<File> executablePath = Optional.empty();
 
+    private final GalleryDLMetadataExtractor metadataExtractor;
+
+    @SuppressWarnings("this-escape")
     public GalleryDlDownloader(DownloadManager managerIn) {
         super(managerIn);
+
+        metadataExtractor = new GalleryDLMetadataExtractor(this);
     }
 
     @Override
@@ -107,6 +114,25 @@ public class GalleryDlDownloader extends AbstractDownloader {
 
     @Override
     protected boolean tryQueryMetadata(QueueEntry queueEntry) {
+        try {
+            String url = queueEntry.getUrl();
+
+            Optional<MediaInfo> mediaInfoOptional = metadataExtractor.fetchMetadata(url);
+
+            if (mediaInfoOptional.isPresent()) {
+                MediaInfo mediaInfo = mediaInfoOptional.get();
+                queueEntry.setMediaInfo(mediaInfo);
+
+                return true;
+            }
+        } catch (Exception e) {
+            log.error("{} failed to query for metadata {}: {}", getDownloaderId(), queueEntry.getUrl(), e.getMessage());
+
+            if (log.isDebugEnabled()) {
+                log.error("Exception:", e);
+            }
+        }
+
         return false;
     }
 

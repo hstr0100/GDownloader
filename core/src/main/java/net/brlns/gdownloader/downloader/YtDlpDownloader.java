@@ -131,12 +131,32 @@ public class YtDlpDownloader extends AbstractDownloader {
                     "--dump-json",
                     "--flat-playlist");
 
+                String proxyUrl = main.getConfig().getProxySettings().createProxyUrl();
+                if (proxyUrl != null) {
+                    arguments.add("--proxy", proxyUrl);
+                }
+
                 getDenoPath().ifPresent(deno -> {
                     arguments.add(
                         "--js-runtimes",
                         "deno:" + deno.getAbsolutePath()
                     );
                 });
+
+                if (main.getConfig().isReadCookiesFromBrowser()) {
+                    arguments.add(
+                        "--cookies-from-browser",
+                        main.getBrowserForCookies().getName()
+                    );
+                } else {
+                    File cookieJar = getCookieJarFile();
+                    if (cookieJar != null) {
+                        arguments.add(
+                            "--cookies",
+                            cookieJar.getAbsolutePath()
+                        );
+                    }
+                }
 
                 // It likely doesn't matter whether this comes last,
                 // but the universe implodes if I don't do it in this order.
@@ -220,14 +240,17 @@ public class YtDlpDownloader extends AbstractDownloader {
                 "--flat-playlist",
                 "--playlist-items", "1");
 
+            String proxyUrl = main.getConfig().getProxySettings().createProxyUrl();
+            if (proxyUrl != null) {
+                arguments.add("--proxy", proxyUrl);
+            }
+
             getDenoPath().ifPresent(deno -> {
                 arguments.add(
                     "--js-runtimes",
                     "deno:" + deno.getAbsolutePath()
                 );
             });
-
-            arguments.add(queueEntry.getUrl());
 
             if (main.getConfig().isReadCookiesFromBrowser()) {
                 arguments.add(
@@ -243,6 +266,8 @@ public class YtDlpDownloader extends AbstractDownloader {
                     );
                 }
             }
+
+            arguments.add(queueEntry.getUrl());
 
             List<String> list = main.readOutput(arguments);
 

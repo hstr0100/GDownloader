@@ -899,6 +899,7 @@ public class DownloadManager implements IEvent, AutoCloseable {
                 boolean handledByDownloader = false;
                 for (AbstractDownloader downloader : queueEntry.getDownloaders()) {
                     if (downloader.tryQueryMetadata(queueEntry)) {
+                        log.info("Metadata provided by downloader: {}", downloader.getDownloaderId());
                         handledByDownloader = true;
                         break;
                     }

@@ -30,6 +30,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.downloader.enums.DownloadStatusEnum;
@@ -53,7 +54,10 @@ import static net.brlns.gdownloader.lang.Language.l10n;
 @Slf4j
 public abstract class AbstractDownloader {
 
+    @Getter
     protected final GDownloader main;
+
+    @Getter
     protected final DownloadManager manager;
 
     public AbstractDownloader(DownloadManager managerIn) {
