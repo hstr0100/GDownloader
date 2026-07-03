@@ -88,12 +88,13 @@ public final class ImageUtils {
     }
 
     @Nullable
-    public static String bufferedImageToBase64(@NonNull BufferedImage image, String format) {
+    public static String bufferedImageToBase64(@NonNull BufferedImage image) {
+        String format = image.getColorModel().hasAlpha() ? "png" : "jpg";
+
         try (ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
             ImageIO.write(image, format, bos);
-            byte[] imageBytes = bos.toByteArray();
 
-            return Base64.getEncoder().encodeToString(imageBytes);
+            return Base64.getEncoder().encodeToString(bos.toByteArray());
         } catch (Exception e) {
             GDownloader.handleException(e);
             return null;
@@ -130,7 +131,11 @@ public final class ImageUtils {
         int newWidth = maxWidth;
         int newHeight = Math.round(maxWidth * aspectRatio);
 
-        BufferedImage resizedImage = new BufferedImage(newWidth, newHeight, originalImage.getType());
+        int type = originalImage.getType() == BufferedImage.TYPE_CUSTOM
+            ? BufferedImage.TYPE_INT_ARGB
+            : originalImage.getType();
+
+        BufferedImage resizedImage = new BufferedImage(newWidth, newHeight, type);
 
         Graphics2D g = resizedImage.createGraphics();
         g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);

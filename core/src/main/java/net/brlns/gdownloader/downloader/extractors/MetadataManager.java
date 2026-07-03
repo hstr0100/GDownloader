@@ -94,7 +94,7 @@ public final class MetadataManager {
     }
 
     public void augmentThumbnailIfMissing(MediaInfo mediaInfo, String url) {
-        if (mediaInfo.hasUsableThumbnail()) {
+        if (mediaInfo.getFallbackThumbnailImage() != null) {
             return;
         }
 

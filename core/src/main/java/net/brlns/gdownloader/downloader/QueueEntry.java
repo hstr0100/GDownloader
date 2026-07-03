@@ -530,45 +530,35 @@ public class QueueEntry {
 
         String base64encoded = mediaInfo.getBase64EncodedThumbnail();
 
-        Optional<BufferedImage> optional = Optional.ofNullable(
-            ImageUtils.base64ToBufferedImage(base64encoded)
-        ).or(() -> {
-            return mediaInfo.supportedThumbnails()
+        Optional.ofNullable(ImageUtils.base64ToBufferedImage(base64encoded))
+            .or(()
+                -> mediaInfo.supportedThumbnails()
                 .limit(5)
                 .map(URLThumbnailLoader::tryLoadThumbnailCropped)
-                .filter(Optional::isPresent)
-                .map(Optional::get)
-                .findFirst();
-        });
+                .flatMap(Optional::stream)
+                .findFirst())
+            .or(()
+                -> Optional.ofNullable(mediaInfo.getFallbackThumbnailImage())
+                .map(favicon -> ImageUtils.padWithTransparentBorder(favicon, 10)))
+            .ifPresentOrElse(
+                img -> {
+                    // Downscale thumbnails to save space and resources, we don't need the full resolution here.
+                    BufferedImage downscaledImage = ImageUtils.downscaleImage(img, 240);
 
-        AtomicBoolean isFavicon = new AtomicBoolean();
-        if (optional.isEmpty()) {
-            optional = Optional.ofNullable(mediaInfo.getFallbackThumbnailImage())
-                .map(favicon -> ImageUtils.padWithTransparentBorder(favicon, 10));
+                    if (nullOrEmpty(base64encoded)) {
+                        mediaInfo.setBase64EncodedThumbnail(
+                            ImageUtils.bufferedImageToBase64(downscaledImage)
+                        );
+                    }
 
-            isFavicon.set(optional.isPresent());
-        }
-
-        optional.ifPresentOrElse(
-            img -> {
-                // Downscale thumbnails to save space and resources, we don't need the full resolution here.
-                BufferedImage downscaledImage = ImageUtils.downscaleImage(img, 240);
-
-                if (base64encoded.isEmpty()) {
-                    String format = isFavicon.get() ? "png" : "jpg";
-                    mediaInfo.setBase64EncodedThumbnail(
-                        ImageUtils.bufferedImageToBase64(downscaledImage, format)
-                    );
+                    mediaCard.setThumbnailAndDuration(downscaledImage, mediaInfo.getDuration());
+                },
+                () -> {
+                    if (log.isDebugEnabled()) {
+                        log.error("Failed to load a valid thumbnail");
+                    }
                 }
-
-                mediaCard.setThumbnailAndDuration(downscaledImage, mediaInfo.getDuration());
-            },
-            () -> {
-                if (log.isDebugEnabled()) {
-                    log.error("Failed to load a valid thumbnail");
-                }
-            }
-        );
+            );
 
         List<String> thumbnailUrls = getThumbnailUrls();
         mediaInfo.bestThumbnails().forEach(thumbnailUrls::add);
