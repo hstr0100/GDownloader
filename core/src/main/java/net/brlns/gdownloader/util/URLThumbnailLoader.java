@@ -50,11 +50,6 @@ import org.jsoup.select.Elements;
 @Slf4j
 public final class URLThumbnailLoader {
 
-    private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
-        .followRedirects(HttpClient.Redirect.ALWAYS)
-        .connectTimeout(Duration.ofSeconds(10))
-        .build();
-
     private static final LRUCache<String, Optional<FaviconResult>> FAVICON_CACHE = new LRUCache<>(512);
 
     static {
@@ -374,7 +369,8 @@ public final class URLThumbnailLoader {
                 builder.header("Referer", referer);
             }
 
-            HttpResponse<byte[]> response = HTTP_CLIENT.send(
+            HttpClient client = GDownloader.getInstance().getHttpManager().getClient();
+            HttpResponse<byte[]> response = client.send(
                 builder.build(), HttpResponse.BodyHandlers.ofByteArray());
 
             if (response.statusCode() / 100 != 2) {

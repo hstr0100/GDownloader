@@ -55,23 +55,29 @@ public class ProxySettings {
     private String password = "";
 
     @JsonIgnore
+    public boolean hasAuthentication() {
+        return notNullOrEmpty(username) && notNullOrEmpty(password);
+    }
+
+    @JsonIgnore
     public Proxy createProxy() {
         if (!isValid() || !enabled) {
             return Proxy.NO_PROXY;
         }
 
-        Proxy proxy = new Proxy(proxyType.getType(), new InetSocketAddress(host, port));
-
-        if (notNullOrEmpty(username) && notNullOrEmpty(password)) {
+        if (hasAuthentication()) {
+            // For whatever reason, Java decided this is something that should be applied globally.
             Authenticator.setDefault(new Authenticator() {
                 @Override
                 protected PasswordAuthentication getPasswordAuthentication() {
                     return new PasswordAuthentication(username, password.toCharArray());
                 }
             });
+        } else {
+            Authenticator.setDefault(null);
         }
 
-        return proxy;
+        return new Proxy(proxyType.getType(), new InetSocketAddress(host, port));
     }
 
     @JsonIgnore

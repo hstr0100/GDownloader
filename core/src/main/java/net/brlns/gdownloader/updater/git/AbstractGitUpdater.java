@@ -62,12 +62,6 @@ import static net.brlns.gdownloader.util.LockUtils.*;
 @Slf4j
 public abstract class AbstractGitUpdater implements IUpdater {
 
-    private static final HttpClient client = HttpClient.newBuilder()
-        .followRedirects(HttpClient.Redirect.ALWAYS)
-        .connectTimeout(Duration.ofSeconds(10))
-        .version(HttpClient.Version.HTTP_2)
-        .build();
-
     protected final GDownloader main;
     protected final File workDir;
 
@@ -365,6 +359,7 @@ public abstract class AbstractGitUpdater implements IUpdater {
             .header("User-Agent", URLUtils.getGlobalUserAgent())
             .build();
 
+        HttpClient client = main.getHttpManager().getClient();
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
         //log.info(response.body());
@@ -404,6 +399,7 @@ public abstract class AbstractGitUpdater implements IUpdater {
             .header("User-Agent", URLUtils.getGlobalUserAgent())
             .build();
 
+        HttpClient client = main.getHttpManager().getClient();
         HttpResponse<InputStream> response = client.send(request, BodyHandlers.ofInputStream());
 
         if (response.statusCode() == 200) {

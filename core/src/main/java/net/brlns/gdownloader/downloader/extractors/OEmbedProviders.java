@@ -21,7 +21,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.annotation.PostConstruct;
 import java.io.*;
 import java.net.URI;
-import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.file.Files;
@@ -49,9 +48,6 @@ public class OEmbedProviders {
     private static final String PROVIDERS_URL = "https://oembed.com/providers.json";
 
     @Getter
-    private HttpClient httpClient;
-
-    @Getter
     private List<Provider> providers = new ArrayList<>();
 
     private AtomicBoolean initialized = new AtomicBoolean();
@@ -62,17 +58,12 @@ public class OEmbedProviders {
             return;
         }
 
-        httpClient = HttpClient.newBuilder()
-            .followRedirects(HttpClient.Redirect.ALWAYS)
-            .connectTimeout(Duration.ofSeconds(10))
-            .version(HttpClient.Version.HTTP_2)
-            .build();
-
         loadProviders();
     }
 
     private void loadProviders() {
-        if (!GDownloader.getInstance().getConfig().isQueryMetadata()) {
+        GDownloader main = GDownloader.getInstance();
+        if (!main.getConfig().isQueryMetadata()) {
             return;
         }
 
@@ -88,7 +79,8 @@ public class OEmbedProviders {
                     .GET()
                     .build();
 
-                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+                HttpResponse<String> response = main.getHttpManager().getClient()
+                    .send(request, HttpResponse.BodyHandlers.ofString());
                 if (response.statusCode() == 200) {
                     providers = GDownloader.OBJECT_MAPPER.readValue(response.body(),
                         GDownloader.OBJECT_MAPPER.getTypeFactory().constructCollectionType(

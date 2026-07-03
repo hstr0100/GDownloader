@@ -51,13 +51,13 @@ public class EncoderProfile implements ITranslatable {
 
     @JsonIgnore
     public boolean isDefault() {
-        return this.equals(NO_PROFILE);
+        return equals(NO_PROFILE);
     }
 
     @JsonIgnore
     @Override
     public String getDisplayName() {
-        return this.equals(NO_PROFILE)
+        return equals(NO_PROFILE)
             ? l10n("enums.transcode.profile.no_profile")
             : ffmpegProfileName;
     }

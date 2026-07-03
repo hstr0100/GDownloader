@@ -43,6 +43,7 @@ import net.brlns.gdownloader.ffmpeg.enums.AudioBitrateEnum;
 import net.brlns.gdownloader.ffmpeg.structs.FFmpegConfig;
 import net.brlns.gdownloader.filters.AbstractUrlFilter;
 import net.brlns.gdownloader.lang.ITranslatable;
+import net.brlns.gdownloader.settings.ProxySettings;
 import net.brlns.gdownloader.settings.QualitySettings;
 import net.brlns.gdownloader.settings.Settings;
 import net.brlns.gdownloader.settings.enums.*;
@@ -104,6 +105,11 @@ public class SettingsPanel {
             "settings.resolution",
             "/assets/resolution.png",
             () -> createResolutionSettings()
+        ));
+        contentPanels.add(new SettingsMenuEntry(
+            "settings.network",
+            "/assets/connection.png",
+            () -> createNetworkSettings()
         ));
     }
 
@@ -167,7 +173,7 @@ public class SettingsPanel {
             };
 
             frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-            frame.setSize(1000, 655);
+            frame.setSize(1000, 718);
             frame.setLayout(new BorderLayout());
             //frame.setResizable(false);
             frame.setLocationRelativeTo(null);
@@ -1538,6 +1544,133 @@ public class SettingsPanel {
         fillerPanel.add(filler, fillerGbc);
 
         return fillerPanel;
+    }
+
+    private JPanel createNetworkSettings() {
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setBackground(color(BACKGROUND));
+
+        addLabel(panel, "settings.network.proxy.title");
+
+        ProxySettings proxySettings = settings.getProxySettings();
+        List<JComponent> proxyFields = new ArrayList<>();
+
+        JLabel statusLabel = new JLabel("");
+        statusLabel.setForeground(color(LIGHT_TEXT));
+        statusLabel.setBorder(BorderFactory.createEmptyBorder(5, 15, 10, 5));
+
+        Runnable updateValidationState = () -> {
+            if (!proxySettings.isEnabled()) {
+                statusLabel.setText(" ");
+            } else {
+                boolean valid = proxySettings.isValid();
+                statusLabel.setText(l10n(valid
+                    ? "settings.network.proxy.status_valid"
+                    : "settings.network.proxy.status_invalid"
+                ));
+                statusLabel.setForeground(valid
+                    ? new Color(46, 204, 113)
+                    : new Color(231, 76, 60)
+                );
+            }
+        };
+
+        JPanel proxyFieldsPanel = new JPanel();
+        proxyFieldsPanel.setLayout(new BoxLayout(proxyFieldsPanel, BoxLayout.Y_AXIS));
+        proxyFieldsPanel.setBackground(color(BACKGROUND));
+        proxyFieldsPanel.setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 0));
+
+        addCheckBox(proxyFieldsPanel, CheckBoxBuilder.builder()
+            .background(resolveColor(proxyFieldsPanel))
+            .labelKey("settings.network.proxy.enabled")
+            .getter(proxySettings::isEnabled)
+            .setter(proxySettings::setEnabled)
+            .onSet(selected -> {
+                enableComponentsAndLabels(proxyFields, selected);
+                updateValidationState.run();
+            })
+            .build());
+
+        proxyFields.add(addComboBox(proxyFieldsPanel, ComboBoxBuilder.<ProxyTypeEnum>builder()
+            .background(resolveColor(proxyFieldsPanel))
+            .labelKey("settings.network.proxy.type")
+            .values(ProxyTypeEnum.values())
+            .getter(proxySettings::getProxyType)
+            .setter(proxySettings::setProxyType)
+            .onSet(val -> updateValidationState.run())
+            .build()));
+
+        proxyFields.add(addTextField(proxyFieldsPanel, TextFieldBuilder.builder()
+            .background(resolveColor(proxyFieldsPanel))
+            .labelKey("settings.network.proxy.host")
+            .getter(proxySettings::getHost)
+            .setter(proxySettings::setHost)
+            .onSet(val -> updateValidationState.run())
+            .placeholderText("127.0.0.1")
+            .build()));
+
+        proxyFields.add(addTextField(proxyFieldsPanel, TextFieldBuilder.builder()
+            .background(resolveColor(proxyFieldsPanel))
+            .labelKey("settings.network.proxy.port")
+            .getter(() -> proxySettings.getPort() == 0 ? "" : String.valueOf(proxySettings.getPort()))
+            .setter(val -> {
+                try {
+                    proxySettings.setPort(Integer.parseInt(val));
+                } catch (NumberFormatException ignored) {
+                    proxySettings.setPort(0);
+                }
+            })
+            .onSet(val -> updateValidationState.run())
+            .placeholderText("8080")
+            .build()));
+
+        proxyFields.add(addTextField(proxyFieldsPanel, TextFieldBuilder.builder()
+            .background(resolveColor(proxyFieldsPanel))
+            .placeholderText(l10n("settings.network.proxy.optional"))
+            .labelKey("settings.network.proxy.username")
+            .getter(proxySettings::getUsername)
+            .setter(proxySettings::setUsername)
+            .onSet(val -> updateValidationState.run())
+            .build()));
+
+        proxyFields.add(addTextField(proxyFieldsPanel, TextFieldBuilder.builder()
+            .background(resolveColor(proxyFieldsPanel))
+            .placeholderText(l10n("settings.network.proxy.optional"))
+            .labelKey("settings.network.proxy.password")
+            .getter(proxySettings::getPassword)
+            .setter(proxySettings::setPassword)
+            .onSet(val -> updateValidationState.run())
+            .build()));
+
+        panel.add(proxyFieldsPanel);
+
+        JPanel statusWrapper = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        statusWrapper.setBackground(color(BACKGROUND));
+        statusWrapper.setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 0));
+        statusWrapper.add(statusLabel);
+        panel.add(statusWrapper);
+
+        enableComponentsAndLabels(proxyFields, proxySettings.isEnabled());
+        updateValidationState.run();
+
+        panel.add(getFillerPanel());
+
+        JScrollPane scrollPane = new JScrollPane(panel);
+        scrollPane.getVerticalScrollBar().setUI(new CustomScrollBarUI());
+        scrollPane.getHorizontalScrollBar().setUI(new CustomScrollBarUI());
+        scrollPane.setBorder(BorderFactory.createEmptyBorder());
+        scrollPane.setBackground(color(BACKGROUND));
+        UIUtils.installSmoothMouseWheelScrolling(scrollPane);
+        scrollPane.setPreferredSize(new Dimension(Integer.MAX_VALUE, 200));
+        scrollPane.getViewport().setScrollMode(JViewport.BACKINGSTORE_SCROLL_MODE);
+
+        JPanel panelWrapper = new JPanel(new BorderLayout());
+        panelWrapper.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 5));
+        panelWrapper.setBackground(color(BACKGROUND));
+        panelWrapper.add(scrollPane, BorderLayout.CENTER);
+
+        return panelWrapper;
     }
 
     public static UIColors resolveColor(JPanel panel) {

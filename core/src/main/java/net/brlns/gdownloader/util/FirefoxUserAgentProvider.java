@@ -24,6 +24,7 @@ import java.time.Duration;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
+import net.brlns.gdownloader.GDownloader;
 
 /**
  * Generates a valid current Firefox User-Agent to appease Codeberg's creative definition of a "public" API.
@@ -53,16 +54,13 @@ public class FirefoxUserAgentProvider {
 
     private static String fetchUserAgent() {
         try {
-            HttpClient client = HttpClient.newBuilder()
-                .connectTimeout(Duration.ofSeconds(1))
-                .build();
-
             HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(MOZILLA_API_URL))
                 .timeout(Duration.ofSeconds(1))
                 .GET()
                 .build();
 
+            HttpClient client = GDownloader.getInstance().getHttpManager().getClient();
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
             Matcher matcher = VERSION_PATTERN.matcher(response.body());
 

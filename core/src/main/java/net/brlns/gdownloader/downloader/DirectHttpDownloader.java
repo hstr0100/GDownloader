@@ -273,7 +273,7 @@ public class DirectHttpDownloader extends AbstractDownloader {
         HttpURLConnection connection = null;
 
         try {
-            connection = (HttpURLConnection)fileUrl.openConnection();
+            connection = (HttpURLConnection)fileUrl.openConnection(getProxySettings());
             connection.setRequestMethod(requestType);
 
             int responseCode = connection.getResponseCode();

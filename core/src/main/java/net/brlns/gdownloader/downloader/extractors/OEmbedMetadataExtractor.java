@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.annotation.PostConstruct;
 import java.net.URI;
 import java.net.URLEncoder;
+import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
@@ -86,7 +87,8 @@ public class OEmbedMetadataExtractor implements IMetadataExtractor {
                 .GET()
                 .build();
 
-            HttpResponse<String> response = oembedProviders.getHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
+            HttpClient client = GDownloader.getInstance().getHttpManager().getClient();
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() == 200) {
                 String body = response.body();
                 if (body.isEmpty() || !body.startsWith("{")) {

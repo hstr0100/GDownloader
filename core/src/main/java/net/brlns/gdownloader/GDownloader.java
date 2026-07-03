@@ -61,8 +61,10 @@ import net.brlns.gdownloader.persistence.PersistenceManager;
 import net.brlns.gdownloader.process.ProcessMonitor;
 import net.brlns.gdownloader.server.AppClient;
 import net.brlns.gdownloader.server.AppServer;
+import net.brlns.gdownloader.settings.ProxySettings;
 import net.brlns.gdownloader.settings.Settings;
 import net.brlns.gdownloader.settings.enums.BrowserEnum;
+import net.brlns.gdownloader.system.HttpManager;
 import net.brlns.gdownloader.system.NetworkConnectivityListener;
 import net.brlns.gdownloader.system.ShutdownRegistry;
 import net.brlns.gdownloader.system.StartupManager;
@@ -180,6 +182,8 @@ public final class GDownloader {
     private Settings config;
 
     @Getter
+    private final HttpManager httpManager;
+    @Getter
     private final SystemTrayManager systemTrayManager;
     @Getter
     private final ClipboardManager clipboardManager;
@@ -251,6 +255,7 @@ public final class GDownloader {
             handleException(e);
         }
 
+        httpManager = new HttpManager(this);
         updateManager = new UpdateManager(this);
         ffmpegTranscoder = closeable(new FFmpegTranscoder(processMonitor));
         clipboardManager = new ClipboardManager(this);
@@ -586,6 +591,11 @@ public final class GDownloader {
         try {
             JsonNode jsonNode = OBJECT_MAPPER.valueToTree(configIn);
 
+            ProxySettings proxySettings = configIn.getProxySettings();
+            if (proxySettings.isEnabled() && !proxySettings.isValid()) {
+                proxySettings.setEnabled(false);
+            }
+
             OBJECT_MAPPER.readerForUpdating(config).readValue(jsonNode);
 
             OBJECT_MAPPER.writerWithDefaultPrettyPrinter().writeValue(configFile, configIn);
@@ -599,6 +609,10 @@ public final class GDownloader {
             }
 
             LoggerUtils.setDebugLogLevel(configIn.isDebugMode());
+
+            if (httpManager != null) {
+                httpManager.updateProxySettings(proxySettings);
+            }
 
             EventDispatcher.dispatch(SettingsChangeEvent.builder()
                 .settings(configIn)

@@ -56,13 +56,13 @@ public class EncoderPreset implements ITranslatable {
 
     @JsonIgnore
     public boolean isDefault() {
-        return this.equals(NO_PRESET);
+        return equals(NO_PRESET);
     }
 
     @JsonIgnore
     @Override
     public String getDisplayName() {
-        return this.equals(NO_PRESET)
+        return equals(NO_PRESET)
             ? l10n("enums.transcode.speed_preset.no_preset")
             : ffmpegPresetName;
     }
