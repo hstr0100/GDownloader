@@ -82,18 +82,15 @@ public final class CustomMediaCardUI {
         card = new JPanel() {
             @Override
             protected void paintComponent(Graphics g) {
-                Graphics2D g2d = null;
+                Graphics2D g2d = (Graphics2D)g.create();
                 try {
-                    g2d = (Graphics2D)g.create();
-
-                    int arcSize = 10;
+                    g2d.setColor(color(BACKGROUND));
+                    g2d.fillRect(0, 0, getWidth(), getHeight());
                     g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                     g2d.setColor(getBackground());
-                    g2d.fillRoundRect(5, 5, getWidth() - 10, getHeight() - 10, arcSize, arcSize);
+                    g2d.fillRoundRect(5, 5, getWidth() - 10, getHeight() - 10, 10, 10);
                 } finally {
-                    if (g2d != null) {
-                        g2d.dispose();
-                    }
+                    g2d.dispose();
                 }
             }
 
@@ -104,7 +101,7 @@ public final class CustomMediaCardUI {
             }
         };
 
-        card.setOpaque(false);
+        card.setOpaque(true);
         card.setLayout(new GridBagLayout());
         card.setBorder(BorderFactory.createLineBorder(color(BACKGROUND), 5));
         card.setBackground(color(MEDIA_CARD));

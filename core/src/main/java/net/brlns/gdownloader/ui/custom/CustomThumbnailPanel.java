@@ -136,88 +136,89 @@ public class CustomThumbnailPanel extends JPanel {
     protected void paintComponent(Graphics g) {
         Graphics2D g2d = (Graphics2D)g.create();
 
-        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-        g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+        try {
+            g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+            g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
 
-        int width = getWidth();
-        int height = getHeight();
+            int width = getWidth();
+            int height = getHeight();
 
-        int arcSize = 10;
-        RoundRectangle2D roundedRect = new RoundRectangle2D.Float(
-            0, 0, width, height, arcSize, arcSize);
+            int arcSize = 10;
+            RoundRectangle2D roundedRect = new RoundRectangle2D.Float(
+                0, 0, width, height, arcSize, arcSize);
 
-        g2d.setColor(getBackground());
-        g2d.fill(roundedRect);
+            g2d.setColor(getBackground());
+            g2d.fill(roundedRect);
+            g2d.clip(roundedRect);
 
-        g2d.setClip(roundedRect);
+            int panelWidth = getWidth();
+            int panelHeight = getHeight();
 
-        int panelWidth = getWidth();
-        int panelHeight = getHeight();
-
-        if (image == null && priorityIcon != null) {
-            drawPriorityIcon(g2d, panelWidth, panelHeight);
-        }
-
-        if (image != null) {
-            int imageWidth = image.getWidth();
-            int imageHeight = image.getHeight();
-
-            // 2px overflow on each side to account for slight antialiasing artifacts
-            double scaleX = (double)(panelWidth + 4) / imageWidth;
-            double scaleY = (double)(panelHeight + 4) / imageHeight;
-
-            double scale = Math.min(scaleX, scaleY);
-
-            int scaledWidth = (int)(imageWidth * scale);
-            int scaledHeight = (int)(imageHeight * scale);
-
-            // Center the image, shift left by 2px
-            int x = (panelWidth - scaledWidth) / 2 - 2;
-            int y = (panelHeight - scaledHeight) / 2;
-
-            g2d.drawImage(image, x, y, scaledWidth, scaledHeight, this);
-
-            if (priorityIcon != null) {
+            if (image == null && priorityIcon != null) {
                 drawPriorityIcon(g2d, panelWidth, panelHeight);
             }
 
-            if (durationText != null) {
-                g2d.setFont(FONT);
-                g2d.setColor(Color.WHITE);
+            if (image != null) {
+                int imageWidth = image.getWidth();
+                int imageHeight = image.getHeight();
 
-                FontMetrics fm = g2d.getFontMetrics();
-                int textWidth = fm.stringWidth(durationText);
-                int textHeight = fm.getHeight();
-                int vPadding = 3;
-                int hPadding = 5;
+                // 2px overflow on each side to account for slight antialiasing artifacts
+                double scaleX = (double)(panelWidth + 4) / imageWidth;
+                double scaleY = (double)(panelHeight + 4) / imageHeight;
 
-                x = panelWidth - scaledWidth;
+                double scale = Math.min(scaleX, scaleY);
 
-                int rectX = x + scaledWidth - textWidth - hPadding * 2;
-                int rectY = y + scaledHeight - textHeight - vPadding * 2;
+                int scaledWidth = (int)(imageWidth * scale);
+                int scaledHeight = (int)(imageHeight * scale);
 
-                arcSize = 8;
-                RoundRectangle2D durationRect = new RoundRectangle2D.Float(
-                    rectX, rectY, textWidth + hPadding * 2, textHeight + vPadding * 2,
-                    arcSize, arcSize);
+                // Center the image, shift left by 2px
+                int x = (panelWidth - scaledWidth) / 2 - 2;
+                int y = (panelHeight - scaledHeight) / 2;
 
-                g2d.setColor(new Color(0, 0, 0, 190));
-                g2d.fill(durationRect);
+                g2d.drawImage(image, x, y, scaledWidth, scaledHeight, this);
 
-                g2d.setColor(Color.WHITE);
-                int textX = rectX + hPadding;
-                int textY = rectY + vPadding + fm.getAscent();
-                g2d.drawString(durationText, textX, textY);
+                if (priorityIcon != null) {
+                    drawPriorityIcon(g2d, panelWidth, panelHeight);
+                }
+
+                if (durationText != null) {
+                    g2d.setFont(FONT);
+                    g2d.setColor(Color.WHITE);
+
+                    FontMetrics fm = g2d.getFontMetrics();
+                    int textWidth = fm.stringWidth(durationText);
+                    int textHeight = fm.getHeight();
+                    int vPadding = 3;
+                    int hPadding = 5;
+
+                    x = panelWidth - scaledWidth;
+
+                    int rectX = x + scaledWidth - textWidth - hPadding * 2;
+                    int rectY = y + scaledHeight - textHeight - vPadding * 2;
+
+                    arcSize = 8;
+                    RoundRectangle2D durationRect = new RoundRectangle2D.Float(
+                        rectX, rectY, textWidth + hPadding * 2, textHeight + vPadding * 2,
+                        arcSize, arcSize);
+
+                    g2d.setColor(new Color(0, 0, 0, 190));
+                    g2d.fill(durationRect);
+
+                    g2d.setColor(Color.WHITE);
+                    int textX = rectX + hPadding;
+                    int textY = rectY + vPadding + fm.getAscent();
+                    g2d.drawString(durationText, textX, textY);
+                }
+            } else if (placeholderIcon != null) {
+                Component[] components = getComponents();
+                if (components.length > 0 && components[0] instanceof JLabel) {
+                    components[0].paint(g2d);
+                }
             }
-        } else if (placeholderIcon != null) {
-            Component[] components = getComponents();
-            if (components.length > 0 && components[0] instanceof JLabel) {
-                components[0].paint(g2d);
-            }
+        } finally {
+            g2d.dispose();
         }
-
-        g2d.dispose();
     }
 
     private void drawPriorityIcon(Graphics2D g2d, int panelWidth, int panelHeight) {

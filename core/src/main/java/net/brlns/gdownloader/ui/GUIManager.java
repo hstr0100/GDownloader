@@ -282,7 +282,6 @@ public final class GUIManager {
             adjustWindowSize();
 
             JPanel mainPanel = new JPanel(new BorderLayout());
-            // TODO: bug: this border leaves thumbnail artifacts behind every time the window is brought back from system tray
             mainPanel.setBorder(BorderFactory.createLineBorder(color(BACKGROUND), 5));
             mainPanel.setBackground(color(BACKGROUND));
 

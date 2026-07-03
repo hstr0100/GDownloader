@@ -103,7 +103,7 @@ public final class MediaCardManager {
         mediaQueuePane = new JPanel();
         mediaQueuePane.setLayout(new BoxLayout(mediaQueuePane, BoxLayout.Y_AXIS));
         mediaQueuePane.setBackground(color(BACKGROUND));
-        mediaQueuePane.setOpaque(false);
+        mediaQueuePane.setOpaque(true);
         mediaQueuePane.addMouseListener(manager.getDefaultMouseAdapter());
 
         InputMap inputMap = mediaQueuePane.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
