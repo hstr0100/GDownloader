@@ -121,7 +121,7 @@ public class PriorityVirtualThreadExecutor {
 
         @Override
         public int compareTo(PriorityTask<V> o) {
-            return Integer.compare(o.priority, this.priority);
+            return Integer.compare(o.priority, priority);
         }
     }
 

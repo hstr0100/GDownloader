@@ -140,12 +140,12 @@ public class CustomProgressBar extends JPanel {
 
     public void setValue(int valueIn) {
         synchronized (activeReferences) {
-            if (this.value == -1 && valueIn != -1) {
+            if (value == -1 && valueIn != -1) {
                 activeReferences.remove(this);
                 if (activeReferences.isEmpty()) {
                     bounceTimer.stop();
                 }
-            } else if (this.value != -1 && valueIn == -1) {
+            } else if (value != -1 && valueIn == -1) {
                 activeReferences.add(this);
                 if (activeReferences.size() == 1) {
                     bounceTimer.start();

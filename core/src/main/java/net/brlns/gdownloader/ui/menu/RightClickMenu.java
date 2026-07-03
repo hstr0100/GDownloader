@@ -51,8 +51,8 @@ public class RightClickMenu {
     private final Map<Integer, JWindow> openSubmenus = new HashMap<>();
     private boolean alwaysOnTop = false;
 
-    public RightClickMenu(boolean alwaysOnTop) {
-        this.alwaysOnTop = alwaysOnTop;
+    public RightClickMenu(boolean alwaysOnTopIn) {
+        alwaysOnTop = alwaysOnTopIn;
     }
 
     public void showMenu(Component parentComponent, RightClickMenuEntries actions,

@@ -332,7 +332,7 @@ public final class URLThumbnailLoader {
 
         private IconCandidate(Element linkEl) {
             // absUrl resolves relative/protocol-relative/root-relative hrefs against the doc's base URI
-            this.href = linkEl.absUrl("href");
+            href = linkEl.absUrl("href");
 
             String rel = linkEl.attr("rel").toLowerCase();
             int s = 0;
@@ -350,7 +350,7 @@ public final class URLThumbnailLoader {
                 s += 1000;
             }
 
-            this.score = s;
+            score = s;
         }
     }
 

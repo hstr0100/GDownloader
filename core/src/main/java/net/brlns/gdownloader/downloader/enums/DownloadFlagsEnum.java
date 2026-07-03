@@ -36,8 +36,8 @@ public enum DownloadFlagsEnum {
 
     private final byte flag;
 
-    private DownloadFlagsEnum(byte flag) {
-        this.flag = flag;
+    private DownloadFlagsEnum(byte flagIn) {
+        flag = flagIn;
     }
 
     public boolean isSet(BitSet bitSet) {

@@ -395,7 +395,7 @@ public class QueueEntry {
     @Nullable
     public MediaInfo getMediaInfo() {
         if (mediaInfoLoaded.compareAndSet(false, true)) {
-            getPersistence().ifPresent(persistence -> persistence.getMediaInfos().getById(this.downloadId)
+            getPersistence().ifPresent(persistence -> persistence.getMediaInfos().getById(downloadId)
                 .ifPresent(entity -> {
                     MediaInfo mediaInfo = MediaInfo.fromEntity(entity);
                     optionalMediaInfo.set(Optional.of(mediaInfo));
@@ -417,7 +417,7 @@ public class QueueEntry {
         if (thumbnailUrlsLoaded.compareAndSet(false, true)) {
             getPersistence().ifPresent(persistence -> {
                 List<String> urls = persistence.getQueueEntries()
-                    .loadThumbnailUrls(this.downloadId);
+                    .loadThumbnailUrls(downloadId);
 
                 _thumbnailUrls.clear();
                 _thumbnailUrls.addAll(urls);
@@ -431,7 +431,7 @@ public class QueueEntry {
         if (lastCommandLineLoaded.compareAndSet(false, true)) {
             getPersistence().ifPresent(persistence -> {
                 List<String> lines = persistence.getQueueEntries()
-                    .loadLastCommandLine(this.downloadId);
+                    .loadLastCommandLine(downloadId);
 
                 _lastCommandLine.clear();
                 _lastCommandLine.addAll(lines);
@@ -445,7 +445,7 @@ public class QueueEntry {
         if (errorLogLoaded.compareAndSet(false, true)) {
             getPersistence().ifPresent(persistence -> {
                 List<String> logs = persistence.getQueueEntries()
-                    .loadErrorLog(this.downloadId);
+                    .loadErrorLog(downloadId);
 
                 _errorLog.clear();
                 _errorLog.addAll(logs);
@@ -459,7 +459,7 @@ public class QueueEntry {
         if (downloadLogLoaded.compareAndSet(false, true)) {
             getPersistence().ifPresent(persistence -> {
                 List<String> logs = persistence.getQueueEntries()
-                    .loadDownloadLog(this.downloadId);
+                    .loadDownloadLog(downloadId);
 
                 _downloadLog.clear();
                 _downloadLog.addAll(logs);

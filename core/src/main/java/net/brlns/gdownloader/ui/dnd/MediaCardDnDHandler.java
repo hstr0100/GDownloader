@@ -86,8 +86,8 @@ public class MediaCardDnDHandler implements IDnDHandler {
 
         private final MediaCard card;
 
-        public MediaCardTransferable(MediaCard card) {
-            this.card = card;
+        public MediaCardTransferable(MediaCard cardIn) {
+            card = cardIn;
         }
 
         @Override

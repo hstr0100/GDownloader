@@ -31,17 +31,17 @@ public class ConcurrentRearrangeableDeque<T> extends ArrayDeque<T> {
         lock.writeLock().lock();
 
         try {
-            if (!this.contains(item)) {
+            if (!contains(item)) {
                 throw new IllegalArgumentException("Item not found in the deque.");
             }
 
-            this.remove(item);
+            remove(item);
 
-            if (newPosition < 0 || newPosition > this.size()) {
+            if (newPosition < 0 || newPosition > size()) {
                 throw new IndexOutOfBoundsException("New position out of bounds.");
             }
 
-            Iterator<T> it = this.iterator();
+            Iterator<T> it = iterator();
             ArrayDeque<T> tempDeque = new ArrayDeque<>();
 
             int index = 0;
@@ -54,12 +54,12 @@ public class ConcurrentRearrangeableDeque<T> extends ArrayDeque<T> {
                 index++;
             }
 
-            if (newPosition == this.size()) {
+            if (newPosition == size()) {
                 tempDeque.add(item);
             }
 
-            this.clear();
-            this.addAll(tempDeque);
+            clear();
+            addAll(tempDeque);
         } finally {
             lock.writeLock().unlock();
         }
@@ -69,7 +69,7 @@ public class ConcurrentRearrangeableDeque<T> extends ArrayDeque<T> {
         lock.writeLock().lock();
 
         try {
-            if (!this.contains(item1) || !this.contains(item2)) {
+            if (!contains(item1) || !contains(item2)) {
                 throw new IllegalArgumentException("One or both items not found in the deque.");
             }
 
@@ -85,8 +85,8 @@ public class ConcurrentRearrangeableDeque<T> extends ArrayDeque<T> {
                 }
             }
 
-            this.clear();
-            this.addAll(tempDeque);
+            clear();
+            addAll(tempDeque);
         } finally {
             lock.writeLock().unlock();
         }

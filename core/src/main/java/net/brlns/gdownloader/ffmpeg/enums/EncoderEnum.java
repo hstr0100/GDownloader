@@ -82,7 +82,7 @@ public enum EncoderEnum implements ISettingsEnum {
     }
 
     public boolean isAutomatic() {
-        return this.getEncoderType() == AUTO;
+        return getEncoderType() == AUTO;
     }
 
     public boolean isDefault() {
