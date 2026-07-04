@@ -284,7 +284,7 @@ public final class MediaCardManager {
                             }
 
                             removeMediaCard(mediaCard.getId(), CloseReasonEnum.MANUAL);
-                        });
+                        }, mediaCard.getOnInfoClick());
 
                         mediaCard.setUi(ui);
 
@@ -295,6 +295,22 @@ public final class MediaCardManager {
                         card.addMouseListener(listener);
                         ui.getDragLabel().addMouseListener(listener);
                         ui.getMediaNameLabel().addMouseListener(listener);
+
+                        ui.getInfoButton().addMouseListener(new MouseAdapter() {
+                            @Override
+                            public void mouseEntered(MouseEvent e) {
+                                if (mediaCard.getOnInfoHover() != null) {
+                                    mediaCard.getOnInfoHover().accept(true);
+                                }
+                            }
+
+                            @Override
+                            public void mouseExited(MouseEvent e) {
+                                if (mediaCard.getOnInfoHover() != null) {
+                                    mediaCard.getOnInfoHover().accept(false);
+                                }
+                            }
+                        });
 
                         card.putClientProperty("MEDIA_CARD", mediaCard);
 

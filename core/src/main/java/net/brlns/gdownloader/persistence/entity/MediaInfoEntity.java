@@ -18,6 +18,8 @@ package net.brlns.gdownloader.persistence.entity;
 
 import jakarta.persistence.*;
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -93,6 +95,101 @@ public class MediaInfoEntity implements Serializable {
     @Column(name = "fps")
     private int fps;
 
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "media_info_tags", joinColumns = @JoinColumn(name = "media_info_id"))
+    @Column(name = "tag", length = 512)
+    private List<String> tags = new ArrayList<>();
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "media_info_categories", joinColumns = @JoinColumn(name = "media_info_id"))
+    @Column(name = "category", length = 512)
+    private List<String> categories = new ArrayList<>();
+
+    @Column(name = "uploader", length = 2048)
+    private String uploader;
+
+    @Column(name = "uploader_id", length = 2048)
+    private String uploaderId;
+
+    @Column(name = "uploader_url", length = 2048)
+    private String uploaderUrl;
+
+    @Column(name = "channel", length = 2048)
+    private String channel;
+
+    @Column(name = "channel_follower_count")
+    private Long channelFollowerCount;
+
+    @Column(name = "channel_is_verified")
+    private boolean channelIsVerified;
+
+    @Column(name = "like_count")
+    private Long likeCount;
+
+    @Column(name = "comment_count")
+    private Long commentCount;
+
+    @Column(name = "average_rating")
+    private Double averageRating;
+
+    @Column(name = "age_limit")
+    private int ageLimit;
+
+    @Column(name = "live_status", length = 48)
+    private String liveStatus;
+
+    @Column(name = "is_live")
+    private boolean isLive;
+
+    @Column(name = "was_live")
+    private boolean wasLive;
+
+    @Column(name = "availability", length = 48)
+    private String availability;
+
+    @Column(name = "webpage_url", length = 2048)
+    private String webpageUrl;
+
+    @Column(name = "original_url", length = 2048)
+    private String originalUrl;
+
+    @Column(name = "duration_string", length = 48)
+    private String durationString;
+
+    @Column(name = "release_year")
+    private Integer releaseYear;
+
+    @Column(name = "selected_vcodec", length = 128)
+    private String selectedVcodec;
+
+    @Column(name = "selected_acodec", length = 128)
+    private String selectedAcodec;
+
+    @Column(name = "dynamic_range", length = 48)
+    private String dynamicRange;
+
+    @Column(name = "selected_tbr")
+    private Double selectedTbr;
+
+    @Column(name = "selected_vbr")
+    private Double selectedVbr;
+
+    @Column(name = "selected_abr")
+    private Double selectedAbr;
+
+    @Column(name = "selected_asr")
+    private Integer selectedAsr;
+
+    @Column(name = "selected_audio_channels")
+    private Integer selectedAudioChannels;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(
+        name = "media_info_formats",
+        joinColumns = @JoinColumn(name = "media_info_id")
+    )
+    private List<FormatInfoEmbeddable> formats = new ArrayList<>();
+
     @Override
     public String toString() {
         return "MediaInfoEntity{"
@@ -100,11 +197,15 @@ public class MediaInfoEntity implements Serializable {
             + ", id='" + id + '\''
             + ", title='" + title + '\''
             + ", playlistTitle='" + playlistTitle + '\''
+            + ", uploader='" + uploader + '\''
+            + ", channel='" + channel + '\''
             + ", channelId='" + channelId + '\''
             + ", channelUrl='" + channelUrl + '\''
             + ", hostDisplayName='" + hostDisplayName + '\''
             + ", duration=" + duration
             + ", viewCount=" + viewCount
+            + ", likeCount=" + likeCount
+            + ", commentCount=" + commentCount
             + ", uploadDate='" + uploadDate + '\''
             + ", timestamp=" + timestamp
             + ", width=" + width
@@ -112,6 +213,8 @@ public class MediaInfoEntity implements Serializable {
             + ", resolution='" + resolution + '\''
             + ", filesizeApprox=" + filesizeApprox
             + ", fps=" + fps
+            + ", liveStatus='" + liveStatus + '\''
+            + ", availability='" + availability + '\''
             + '}';
     }
 

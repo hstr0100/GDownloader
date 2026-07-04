@@ -34,6 +34,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import net.brlns.gdownloader.persistence.PersistenceManager;
 import net.brlns.gdownloader.persistence.entity.MediaInfoEntity;
+import net.brlns.gdownloader.util.StringUtils;
 
 import static net.brlns.gdownloader.util.StringUtils.notNullOrEmpty;
 
@@ -104,6 +105,95 @@ public class MediaInfo {
 
     @JsonProperty("fps")
     private int fps;
+
+    @JsonProperty("formats")
+    private List<FormatInfo> formats = new ArrayList<>();
+
+    @JsonProperty("uploader")
+    private String uploader = "";
+
+    @JsonProperty("uploader_id")
+    private String uploaderId = "";
+
+    @JsonProperty("uploader_url")
+    private String uploaderUrl = "";
+
+    // Display name of the channel
+    @JsonProperty("channel")
+    private String channel = "";
+
+    @JsonProperty("channel_follower_count")
+    private Long channelFollowerCount;
+
+    @JsonProperty("channel_is_verified")
+    private boolean channelIsVerified;
+
+    @JsonProperty("like_count")
+    private Long likeCount;
+
+    @JsonProperty("comment_count")
+    private Long commentCount;
+
+    @JsonProperty("average_rating")
+    private Double averageRating;
+
+    // Content classification
+    @JsonProperty("age_limit")
+    private int ageLimit;
+
+    @JsonProperty("categories")
+    private List<String> categories = new ArrayList<>();
+
+    @JsonProperty("tags")
+    private List<String> tags = new ArrayList<>();
+
+    @JsonProperty("live_status")
+    private String liveStatus = "";
+
+    @JsonProperty("is_live")
+    private boolean isLive;
+
+    @JsonProperty("was_live")
+    private boolean wasLive;
+
+    @JsonProperty("availability")
+    private String availability = "";
+
+    @JsonProperty("webpage_url")
+    private String webpageUrl = "";
+
+    @JsonProperty("original_url")
+    private String originalUrl = "";
+
+    @JsonProperty("duration_string")
+    private String durationString = "";
+
+    @JsonProperty("release_year")
+    private Integer releaseYear;
+
+    @JsonProperty("vcodec")
+    private String selectedVcodec;
+
+    @JsonProperty("acodec")
+    private String selectedAcodec;
+
+    @JsonProperty("dynamic_range")
+    private String dynamicRange;
+
+    @JsonProperty("tbr")
+    private Double selectedTbr;
+
+    @JsonProperty("vbr")
+    private Double selectedVbr;
+
+    @JsonProperty("abr")
+    private Double selectedAbr;
+
+    @JsonProperty("asr")
+    private Integer selectedAsr;
+
+    @JsonProperty("audio_channels")
+    private Integer selectedAudioChannels;
 
     @JsonIgnore
     private String base64EncodedThumbnail = "";
@@ -189,6 +279,29 @@ public class MediaInfo {
         }
 
         return builder.build();
+    }
+
+    @JsonIgnore
+    public boolean isCurrentlyLive() {
+        return isLive || "is_live".equals(liveStatus);
+    }
+
+    @JsonIgnore
+    public boolean wasLiveStream() {
+        return wasLive || "was_live".equals(liveStatus);
+    }
+
+    @JsonIgnore
+    public String getDisplayDuration() {
+        if (notNullOrEmpty(durationString)) {
+            return durationString;
+        }
+
+        if (duration <= 0) {
+            return "";
+        }
+
+        return StringUtils.formatVideoDuration(duration);
     }
 
     /**

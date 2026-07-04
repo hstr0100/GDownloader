@@ -405,6 +405,7 @@ public class QueueEntry {
                         BufferedImage img = ImageUtils.base64ToBufferedImage(base64);
                         if (img != null) {
                             mediaCard.setThumbnailAndDuration(img, mediaInfo.getDuration());
+                            mediaCard.setLive(mediaInfo.isCurrentlyLive());
                         }
                     }
                 }));
@@ -501,6 +502,8 @@ public class QueueEntry {
     public void setMediaInfo(MediaInfo mediaInfo) {
         optionalMediaInfo.set(Optional.of(mediaInfo));
         mediaInfoLoaded.set(true);
+
+        mediaCard.setLive(mediaInfo.isCurrentlyLive());
 
         markQueried();
 

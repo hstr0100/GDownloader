@@ -74,6 +74,10 @@ public class DarkTheme extends AbstractTheme {
         put(SETTINGS_ROW_BACKGROUND_LIGHT, new Color(68, 68, 68));
         put(SETTINGS_ROW_BACKGROUND_DARK, new Color(64, 64, 64));
         put(LINK_COLOR, new Color(64, 196, 255));
+        put(LIVE_COLOR, new Color(220, 53, 69));
+        put(VERIFIED_COLOR, new Color(29, 155, 240));
+        put(WARN_COLOR, new Color(240, 173, 78));
+        put(CHIP_BG, new Color(255, 255, 255, 20));
     }
 
     @Override

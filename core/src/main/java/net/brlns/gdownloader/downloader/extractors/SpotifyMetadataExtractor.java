@@ -75,6 +75,7 @@ public class SpotifyMetadataExtractor extends OEmbedMetadataExtractor {
             mediaInfo.setThumbnail("https://storage.googleapis.com/pr-newsroom-wp/1/2023/05/Spotify_Primary_Logo_RGB_Green.png");
             mediaInfo.setPlaylistTitle(specialUrlName);
             mediaInfo.setTitle(specialUrlName);
+            mediaInfo.setOriginalUrl(spotifyUrl);
 
             return mediaInfo;
         }

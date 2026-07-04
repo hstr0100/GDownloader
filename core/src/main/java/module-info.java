@@ -28,6 +28,7 @@ open module net.brlns.gdownloader {
 
     requires transitive com.github.kwhat.jnativehook;
     requires transitive com.fasterxml.jackson.databind;
+    requires transitive eclipselink;
     requires transitive jakarta.annotation;
     requires transitive jakarta.persistence;
     requires transitive org.freedesktop.dbus;
@@ -35,7 +36,6 @@ open module net.brlns.gdownloader {
     requires com.fasterxml.jackson.annotation;
     requires com.fasterxml.jackson.core;
     requires com.twelvemonkeys.imageio;
-    requires eclipselink;
     requires org.hsqldb;
     requires org.jsoup;
     requires org.slf4j;

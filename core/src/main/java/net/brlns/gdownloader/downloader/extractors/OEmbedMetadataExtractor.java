@@ -166,6 +166,8 @@ public class OEmbedMetadataExtractor implements IMetadataExtractor {
             mediaInfo.setHeight(response.getHeight());
         }
 
+        mediaInfo.setOriginalUrl(urlIn);
+
         return mediaInfo;
     }
 

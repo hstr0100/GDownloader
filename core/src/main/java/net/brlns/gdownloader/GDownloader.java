@@ -112,7 +112,6 @@ import static net.brlns.gdownloader.util.StringUtils.notNullOrEmpty;
 // TODO NTFS File path length workaround for gallery-dl
 // TODO Split main window from GUIManager
 // TODO Fastutil collections
-// TODO Proxy settings should be add to the UI, fields should be validated on the fly
 // TODO Tabs in settings for the different downloaders
 // TODO Crawl for valid links that can be consumed by direct-http
 // TODO Fix notification line wrapping

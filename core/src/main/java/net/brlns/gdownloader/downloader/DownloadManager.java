@@ -54,6 +54,7 @@ import net.brlns.gdownloader.system.taskbar.ITaskbarManager.TaskbarState;
 import net.brlns.gdownloader.system.taskbar.TaskbarManager;
 import net.brlns.gdownloader.ui.GUIManager;
 import net.brlns.gdownloader.ui.MediaCard;
+import net.brlns.gdownloader.ui.MediaInfoPopup;
 import net.brlns.gdownloader.ui.message.Message;
 import net.brlns.gdownloader.ui.message.MessageTypeEnum;
 import net.brlns.gdownloader.ui.message.PopupMessenger;
@@ -542,6 +543,18 @@ public class DownloadManager implements IEvent, AutoCloseable {
             queueEntry.createDefaultRightClick(this);
             updateRightClick(queueEntry, queueEntry.getCurrentQueueCategory());
             return queueEntry.getRightClickMenu();
+        });
+
+        queueEntry.getMediaCard().setOnInfoClick(() -> {
+            MediaInfoPopup.showDetails(main.getGuiManager(), queueEntry);
+        });
+
+        queueEntry.getMediaCard().setOnInfoHover((hovering) -> {
+            if (hovering) {
+                MediaInfoPopup.showPreview(main.getGuiManager(), queueEntry);
+            } else {
+                MediaInfoPopup.hidePreview(main.getGuiManager(), queueEntry);
+            }
         });
 
         queueEntry.getMediaCard().setOnSwap((targetCard) -> {

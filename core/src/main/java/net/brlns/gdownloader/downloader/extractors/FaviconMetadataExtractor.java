@@ -59,6 +59,7 @@ public class FaviconMetadataExtractor implements IMetadataExtractor {
         FaviconResult favicon = resultOptional.get();
 
         MediaInfo mediaInfo = new MediaInfo();
+        mediaInfo.setOriginalUrl(urlIn);
         mediaInfo.setDescription(urlIn);
 
         favicon.titleOptional().ifPresent(mediaInfo::setTitle);

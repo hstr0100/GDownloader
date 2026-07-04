@@ -22,6 +22,7 @@ import java.security.MessageDigest;
 import java.text.DecimalFormat;
 import java.time.Duration;
 import java.util.List;
+import java.util.Locale;
 import java.util.stream.Collectors;
 import lombok.SneakyThrows;
 
@@ -52,6 +53,10 @@ public final class StringUtils {
         return String.format("%.1f%s", size, units[unitIndex]);
     }
 
+    public static String formatBitrate(double kbps) {
+        return formatBitrate((int)kbps);
+    }
+
     public static String formatBitrate(int kbps) {
         if (kbps < 1000) {
             return kbps + " Kbps";
@@ -67,7 +72,51 @@ public final class StringUtils {
         }
     }
 
-    public static String convertTime(long timeInMillis) {
+    public static String formatCount(long n) {
+        if (n < 1_000) {
+            return String.valueOf(n);
+        }
+
+        if (n < 1_000_000) {
+            return String.format("%.1fK", n / 1_000d);
+        }
+
+        if (n < 1_000_000_000) {
+            return String.format("%.1fM", n / 1_000_000d);
+        }
+
+        return String.format("%.1fB", n / 1_000_000_000d);
+    }
+
+    public static String formatFileSize(long bytes) {
+        if (bytes < 1024) {
+            return bytes + " B";
+        }
+
+        double kb = bytes / 1024.0;
+        if (kb < 1024) {
+            return String.format("%.0f KB", kb);
+        }
+
+        double mb = kb / 1024.0;
+        if (mb < 1024) {
+            return String.format("%.1f MB", mb);
+        }
+
+        return String.format("%.2f GB", mb / 1024.0);
+    }
+
+    public static String formatVideoDuration(long duration) {
+        long h = duration / 3600;
+        long m = (duration % 3600) / 60;
+        long s = duration % 60;
+
+        return h > 0
+            ? String.format("%d:%02d:%02d", h, m, s)
+            : String.format("%d:%02d", m, s);
+    }
+
+    public static String formatETATime(long timeInMillis) {
         // If the time exceeds 24 hours, return "n/a". Tough luck buddy
         if (timeInMillis >= Duration.ofDays(1).toMillis()) {
             return "n/a";
@@ -120,11 +169,26 @@ public final class StringUtils {
     }
 
     public static boolean nullOrEmpty(@Nullable String input) {
-        return input == null || input.isEmpty();
+        return input == null || input.isBlank();
     }
 
     public static boolean notNullOrEmpty(@Nullable String input) {
-        return input != null && !input.trim().isEmpty();
+        return input != null && !input.isBlank();
+    }
+
+    @Nullable
+    public static String firstNonEmpty(String... values) {
+        for (String v : values) {
+            if (notNullOrEmpty(v)) {
+                return v;
+            }
+        }
+
+        return null;
+    }
+
+    public static boolean containsIgnoreCase(String haystack, String needle) {
+        return haystack != null && haystack.toLowerCase(Locale.ROOT).contains(needle);
     }
 
     public static String escapeAndBuildCommandLine(List<String> arguments) {

@@ -60,7 +60,6 @@ import static net.brlns.gdownloader.downloader.enums.DownloadTypeEnum.DIRECT;
 import static net.brlns.gdownloader.util.FileUtils.relativize;
 
 // TODO: Resume chunked
-// TODO: Add proxy settings to UI as a floating window that validates fields.
 // TODO: Do not consume unsupported urls
 // TODO: Clipboard: deep scan current webpage for valid download urls. Add settings to configure scan depth and external links
 // TODO: ftp
@@ -161,7 +160,7 @@ public class DirectHttpDownloader extends AbstractDownloader {
 
                     String fmTotal = StringUtils.getHumanReadableFileSize(total);
                     String fmSpeed = StringUtils.getHumanReadableFileSize(speed);
-                    String fmRemaingTime = StringUtils.convertTime(remainingTime);
+                    String fmRemaingTime = StringUtils.formatETATime(remainingTime);
 
                     entry.updateStatus(DownloadStatusEnum.DOWNLOADING,
                         String.format("%s%% of %s at %s/s ETA: %s chks %d",

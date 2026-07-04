@@ -43,6 +43,7 @@ public final class CustomMediaCardUI {
     private final GUIManager manager;
     private final JFrame parent;
     private final Runnable onClose;
+    private final Runnable onInfoClick;
 
     @Getter
     private JPanel card;
@@ -57,10 +58,15 @@ public final class CustomMediaCardUI {
     private WindowStateListener windowStateListener;
     private ComponentAdapter componentResizeListener;
 
-    public CustomMediaCardUI(GUIManager managerIn, JFrame parentIn, Runnable onCloseIn) {
+    @Getter
+    private JButton infoButton;
+
+    public CustomMediaCardUI(GUIManager managerIn, JFrame parentIn,
+        Runnable onCloseIn, Runnable onInfoClickIn) {
         manager = managerIn;
         parent = parentIn;
         onClose = onCloseIn;
+        onInfoClick = onInfoClickIn;
 
         initComponents();
     }
@@ -181,12 +187,34 @@ public final class CustomMediaCardUI {
         gbc.fill = GridBagConstraints.BOTH;
         card.add(progressBar, gbc);
 
+        JPanel controlPanel = new JPanel();
+        controlPanel.setOpaque(false);
+        controlPanel.setLayout(new BoxLayout(controlPanel, BoxLayout.Y_AXIS));
+
+        infoButton = createIconButton(
+            loadIcon("/assets/toast-info.png", ICON, 16),
+            loadIcon("/assets/toast-info.png", ICON_ACTIVE, 16),
+            "gui.view_media_info.tooltip",
+            e -> {
+                if (onInfoClick != null) {
+                    onInfoClick.run();
+                }
+            });
+
+        infoButton.setPreferredSize(new Dimension(16, 16));
+        infoButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+
         JButton closeButton = createIconButton(
             loadIcon("/assets/x-mark.png", ICON, 16),
             loadIcon("/assets/x-mark.png", ICON_CLOSE, 16),
             "gui.remove_from_queue.tooltip",
             e -> onClose.run());
         closeButton.setPreferredSize(new Dimension(16, 16));
+        closeButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        controlPanel.add(infoButton);
+        controlPanel.add(Box.createVerticalStrut(8));
+        controlPanel.add(closeButton);
 
         gbc.gridx = 3;
         gbc.gridy = 0;
@@ -194,7 +222,7 @@ public final class CustomMediaCardUI {
         gbc.weightx = 0;
         gbc.weighty = 0;
         gbc.anchor = GridBagConstraints.CENTER;
-        card.add(closeButton, gbc);
+        card.add(controlPanel, gbc);
 
         windowStateListener = (WindowEvent e) -> {
             updateScale(calculateScale(parent.getWidth()));
@@ -246,6 +274,11 @@ public final class CustomMediaCardUI {
     public void updatePriorityIcon(DownloadPriorityEnum downloadPriority) {
         assert SwingUtilities.isEventDispatchThread();
         thumbnailPanel.setPriorityIcon(downloadPriority);
+    }
+
+    public void updateLiveStatus(boolean live) {
+        assert SwingUtilities.isEventDispatchThread();
+        thumbnailPanel.setLive(live);
     }
 
     public void updateScale(double factor) {

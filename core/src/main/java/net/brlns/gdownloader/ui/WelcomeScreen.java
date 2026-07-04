@@ -69,7 +69,7 @@ public class WelcomeScreen {
                 return;
             }
 
-            frame = new JFrame(l10n("gui.welcome-screen.title")) {
+            frame = new JFrame(l10n("gui.welcome_screen.title")) {
                 @Override
                 public void dispose() {
                     frame = null;
@@ -142,7 +142,7 @@ public class WelcomeScreen {
         textPanel.setBackground(color(BACKGROUND));
         textPanel.setAlignmentY(Component.TOP_ALIGNMENT);
 
-        JLabel titleLabel = new JLabel(l10n("gui.welcome-screen.title"));
+        JLabel titleLabel = new JLabel(l10n("gui.welcome_screen.title"));
         titleLabel.setFont(titleLabel.getFont().deriveFont(24f));
         titleLabel.setForeground(color(FOREGROUND));
         titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -154,7 +154,7 @@ public class WelcomeScreen {
         textPanel.add(descriptionPane);
         textPanel.add(Box.createRigidArea(new Dimension(0, 20)));
         textPanel.add(createLink(
-            l10n("gui.welcome-screen.visit-homepage"),
+            l10n("gui.welcome_screen.visit_homepage"),
             "https://github.com/hstr0100/GDownloader"
         ));
 
@@ -170,7 +170,7 @@ public class WelcomeScreen {
         descriptionPane.setBorder(null);
         descriptionPane.setForeground(color(FOREGROUND));
 
-        String descriptionHtml = buildDescriptionHtml(l10n("gui.welcome-screen.description"));
+        String descriptionHtml = buildDescriptionHtml(l10n("gui.welcome_screen.description"));
         descriptionPane.setText(descriptionHtml);
 
         descriptionPane.addHyperlinkListener((e) -> {
@@ -276,7 +276,7 @@ public class WelcomeScreen {
         textContainer.setOpaque(false);
         textContainer.setAlignmentY(Component.CENTER_ALIGNMENT);
 
-        String[] lines = l10n("gui.welcome-screen.network_required").split("\n");
+        String[] lines = l10n("gui.welcome_screen.network_required").split("\n");
         for (int i = 0; i < lines.length; i++) {
             if (i > 0) {
                 textContainer.add(Box.createRigidArea(new Dimension(0, 5)));
@@ -311,7 +311,7 @@ public class WelcomeScreen {
             settings::setSpotDLEnabled);
 
         JCheckBox autoUpdateCheckbox = new JCheckBox(
-            l10n("gui.welcome-screen.allow_automatic_updates"));
+            l10n("gui.welcome_screen.allow_automatic_updates"));
         customizeCheckBox(autoUpdateCheckbox,
             settings::isAutomaticUpdates,
             settings::setAutomaticUpdates);
@@ -336,7 +336,7 @@ public class WelcomeScreen {
         ffmpegWarningLabel = createFFmpegWarningLabel();
 
         JButton continueButton = createDialogButton(
-            l10n("gui.welcome-screen.continue"),
+            l10n("gui.welcome_screen.continue"),
             BUTTON_BACKGROUND,
             BUTTON_FOREGROUND,
             BUTTON_HOVER

@@ -163,6 +163,7 @@ public class GalleryDLMetadataExtractor implements IMetadataExtractor {
         try {
             MediaInfo info = parseGalleryDlRoot(rootOpt.get());
             if (info != null) {
+                info.setOriginalUrl(urlIn);
                 downloader.getManager().getMetadataManager().augmentThumbnailIfMissing(info, urlIn);
 
                 return Optional.of(info);

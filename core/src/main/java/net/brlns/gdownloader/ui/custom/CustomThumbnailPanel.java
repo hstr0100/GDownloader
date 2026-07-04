@@ -27,6 +27,7 @@ import net.brlns.gdownloader.downloader.enums.DownloadPriorityEnum;
 import net.brlns.gdownloader.downloader.enums.DownloadTypeEnum;
 
 import static net.brlns.gdownloader.downloader.enums.DownloadTypeEnum.*;
+import static net.brlns.gdownloader.lang.Language.l10n;
 import static net.brlns.gdownloader.ui.UIUtils.loadIcon;
 import static net.brlns.gdownloader.ui.themes.UIColors.ICON;
 
@@ -42,6 +43,7 @@ public class CustomThumbnailPanel extends JPanel {
     private ImageIcon priorityIcon;
 
     private String durationText;
+    private boolean live;
 
     @SuppressWarnings("this-escape")
     public CustomThumbnailPanel() {
@@ -112,6 +114,20 @@ public class CustomThumbnailPanel extends JPanel {
         image = imageIn;
 
         repaint();
+    }
+
+    public void setLive(boolean liveIn) {
+        if (live == liveIn) {
+            return;
+        }
+
+        live = liveIn;
+
+        repaint();
+    }
+
+    public boolean isLive() {
+        return live;
     }
 
     public void setImageAndDuration(BufferedImage imageIn, long durationIn) {
@@ -216,9 +232,50 @@ public class CustomThumbnailPanel extends JPanel {
                     components[0].paint(g2d);
                 }
             }
+
+            if (live) {
+                drawLiveBadge(g2d);
+            }
         } finally {
             g2d.dispose();
         }
+    }
+
+    private void drawLiveBadge(Graphics2D g2d) {
+        String liveText = l10n("gui.status.live");
+
+        g2d.setFont(FONT);
+        FontMetrics fm = g2d.getFontMetrics();
+        int textWidth = fm.stringWidth(liveText);
+        int textHeight = fm.getHeight();
+
+        int dotSize = 6;
+        int dotPadding = 5;
+        int hPadding = 6;
+        int vPadding = 3;
+
+        int badgeWidth = dotSize + dotPadding + textWidth + hPadding * 2;
+        int badgeHeight = Math.max(textHeight, dotSize) + vPadding * 2;
+
+        int badgeX = 5;
+        int badgeY = 5;
+
+        int arcSize = 8;
+        RoundRectangle2D liveRect = new RoundRectangle2D.Float(
+            badgeX, badgeY, badgeWidth, badgeHeight, arcSize, arcSize);
+
+        g2d.setColor(new Color(210, 30, 30));
+        g2d.fill(liveRect);
+
+        int dotX = badgeX + hPadding;
+        int dotY = badgeY + (badgeHeight - dotSize) / 2;
+
+        g2d.setColor(Color.WHITE);
+        g2d.fillOval(dotX, dotY, dotSize, dotSize);
+
+        int textX = dotX + dotSize + dotPadding;
+        int textY = badgeY + vPadding + fm.getAscent();
+        g2d.drawString(liveText, textX, textY);
     }
 
     private void drawPriorityIcon(Graphics2D g2d, int panelWidth, int panelHeight) {

@@ -60,10 +60,13 @@ public class MediaCard {
     private long thumbnailDuration;
     private DownloadTypeEnum placeholderIconType;
     private DownloadPriorityEnum downloadPriorityIconType;
+    private boolean live;
     private String urlHint = "";
 
     private Runnable onBecomeVisible;
     private Runnable onLeftClick;
+    private Runnable onInfoClick;
+    private Consumer<Boolean> onInfoHover;
     private Supplier<Map<String, IMenuEntry>> onRightClick;
     private Consumer<CloseReasonEnum> onClose;
     private Consumer<MediaCard> onSwap;
@@ -108,6 +111,11 @@ public class MediaCard {
     public void setPriorityIcon(DownloadPriorityEnum downloadPriorityIn) {
         downloadPriorityIconType = downloadPriorityIn;
         updateUI(PRIORITY_ICON);
+    }
+
+    public void setLive(boolean liveIn) {
+        live = liveIn;
+        updateUI(LIVE_STATUS);
     }
 
     public void setTooltip(String tooltipTextIn) {
@@ -206,6 +214,9 @@ public class MediaCard {
                         ui.updatePriorityIcon(downloadPriorityIconType);
                     }
                 }
+                case LIVE_STATUS -> {
+                    ui.updateLiveStatus(live);
+                }
             }
         });
     }
@@ -219,6 +230,7 @@ public class MediaCard {
         PROGRESS_BAR,
         THUMBNAIL_IMAGE,
         PLACEHOLDER_ICON,
-        PRIORITY_ICON
+        PRIORITY_ICON,
+        LIVE_STATUS
     }
 }
