@@ -47,6 +47,8 @@ import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.downloader.enums.*;
 import net.brlns.gdownloader.downloader.structs.MediaInfo;
+import net.brlns.gdownloader.event.EventDispatcher;
+import net.brlns.gdownloader.event.EventDispatcher.LambdaHandler;
 import net.brlns.gdownloader.filters.AbstractUrlFilter;
 import net.brlns.gdownloader.filters.GenericFilter;
 import net.brlns.gdownloader.persistence.PersistenceManager;
@@ -155,6 +157,9 @@ public class QueueEntry {
 
     private final Map<String, IMenuEntry> rightClickMenu = new ConcurrentLinkedHashMap<>();
 
+    private final AtomicReference<LambdaHandler<DownloadManager>> startButtonEventHandler
+        = new AtomicReference<>();
+
     public AbstractUrlFilter getFilter() {
         return main.getConfig().getUrlFilterById(filterId).orElse(originalFilter);
     }
@@ -233,6 +238,10 @@ public class QueueEntry {
         }
     }
 
+    public void setStartButtonEventHandler(LambdaHandler<DownloadManager> handler) {
+        startButtonEventHandler.set(handler);
+    }
+
     public void recreateQueueEntry() {
         dispose(CloseReasonEnum.MANUAL);
 
@@ -309,6 +318,11 @@ public class QueueEntry {
 
     public void close(CloseReasonEnum reason) {
         cancelHook.set(true);
+
+        LambdaHandler<DownloadManager> startHandler = startButtonEventHandler.getAndSet(null);
+        if (startHandler != null) {
+            EventDispatcher.unregister(startHandler);
+        }
 
         if (process != null) {
             process.destroy();

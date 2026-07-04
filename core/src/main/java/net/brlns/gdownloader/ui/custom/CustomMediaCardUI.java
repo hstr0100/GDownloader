@@ -20,11 +20,15 @@ import jakarta.annotation.PreDestroy;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
+import java.util.concurrent.atomic.AtomicReference;
 import javax.swing.*;
+import javax.swing.plaf.basic.BasicButtonUI;
+import lombok.Data;
 import lombok.Getter;
 import net.brlns.gdownloader.downloader.enums.DownloadPriorityEnum;
 import net.brlns.gdownloader.downloader.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.ui.GUIManager;
+import net.brlns.gdownloader.ui.MediaCard.StartButtonMode;
 
 import static net.brlns.gdownloader.lang.Language.l10n;
 import static net.brlns.gdownloader.ui.GUIManager.createIconButton;
@@ -44,6 +48,7 @@ public final class CustomMediaCardUI {
     private final JFrame parent;
     private final Runnable onClose;
     private final Runnable onInfoClick;
+    private final Runnable onStartClick;
 
     @Getter
     private JPanel card;
@@ -61,12 +66,18 @@ public final class CustomMediaCardUI {
     @Getter
     private JButton infoButton;
 
+    @Getter
+    private JButton startButton;
+
+    private final AtomicReference<StartButtonState> startButtonState = new AtomicReference<>();
+
     public CustomMediaCardUI(GUIManager managerIn, JFrame parentIn,
-        Runnable onCloseIn, Runnable onInfoClickIn) {
+        Runnable onCloseIn, Runnable onInfoClickIn, Runnable onStartClickIn) {
         manager = managerIn;
         parent = parentIn;
         onClose = onCloseIn;
         onInfoClick = onInfoClickIn;
+        onStartClick = onStartClickIn;
 
         initComponents();
     }
@@ -212,15 +223,60 @@ public final class CustomMediaCardUI {
         closeButton.setPreferredSize(new Dimension(16, 16));
         closeButton.setAlignmentX(Component.CENTER_ALIGNMENT);
 
+        StartButtonState defaultButtonState = new StartButtonState(
+            loadIcon("/assets/play.png", ICON, 16),
+            loadIcon("/assets/play.png", QUEUE_ACTIVE_ICON, 16),
+            "gui.force_download_start");
+        startButtonState.set(defaultButtonState);
+
+        startButton = new JButton(defaultButtonState.getIcon());
+        startButton.setUI(new BasicButtonUI());
+        startButton.setFocusPainted(false);
+        startButton.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+        startButton.setContentAreaFilled(false);
+        startButton.setBorderPainted(false);
+        startButton.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                StartButtonState state = startButtonState.get();
+                startButton.setIcon(state.getHoverIcon());
+                startButton.setToolTipText(l10n(state.getTooltipKey()));
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                StartButtonState state = startButtonState.get();
+                startButton.setIcon(state.getIcon());
+                startButton.setToolTipText(l10n(state.getTooltipKey()));
+            }
+        });
+        startButton.addActionListener(e -> {
+            if (onStartClick != null) {
+                onStartClick.run();
+            }
+        });
+
+        CustomToolTip startButtonToolTipUi = new CustomToolTip();
+        startButtonToolTipUi.setComponent(startButton);
+        startButtonToolTipUi.setToolTipText(l10n(defaultButtonState.getTooltipKey()));
+
+        startButton.setPreferredSize(new Dimension(16, 16));
+        startButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        controlPanel.add(Box.createVerticalGlue());
         controlPanel.add(infoButton);
-        controlPanel.add(Box.createVerticalStrut(8));
+        controlPanel.add(Box.createVerticalStrut(20));
         controlPanel.add(closeButton);
+        controlPanel.add(Box.createVerticalStrut(20));
+        controlPanel.add(startButton);
+        controlPanel.add(Box.createVerticalGlue());
 
         gbc.gridx = 3;
         gbc.gridy = 0;
-        gbc.gridheight = 2;
+        gbc.gridheight = 3;
         gbc.weightx = 0;
         gbc.weighty = 0;
+        gbc.fill = GridBagConstraints.VERTICAL;
         gbc.anchor = GridBagConstraints.CENTER;
         card.add(controlPanel, gbc);
 
@@ -296,6 +352,34 @@ public final class CustomMediaCardUI {
         thumbnailPanel.setMinimumSize(thumbDimension);
     }
 
+    public void updateStartButtonMode(StartButtonMode mode) {
+        assert SwingUtilities.isEventDispatchThread();
+
+        switch (mode) {
+            case START -> {
+                startButtonState.set(new StartButtonState(
+                    loadIcon("/assets/play.png", ICON, 16),
+                    loadIcon("/assets/play.png", QUEUE_ACTIVE_ICON, 16),
+                    "gui.force_download_start"));
+            }
+            case STOP -> {
+                startButtonState.set(new StartButtonState(
+                    loadIcon("/assets/pause.png", ICON, 16),
+                    loadIcon("/assets/pause.png", QUEUE_PAUSE_ICON, 16),
+                    "gui.stop_download"));
+            }
+            case RESTART -> {
+                startButtonState.set(new StartButtonState(
+                    loadIcon("/assets/action-redo.png", ICON, 16),
+                    loadIcon("/assets/action-redo.png", QUEUE_PAUSE_ICON, 16),
+                    "gui.restart_download"));
+            }
+        }
+
+        startButton.setIcon(startButtonState.get().getIcon());
+        startButton.setToolTipText(l10n(startButtonState.get().getTooltipKey()));
+    }
+
     private double calculateScale(int panelWidth) {
         GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
         GraphicsDevice gs = ge.getDefaultScreenDevice();
@@ -306,5 +390,13 @@ public final class CustomMediaCardUI {
         double scaleFactor = (panelWidth >= targetWidth) ? 1.2 : 1;
 
         return scaleFactor;
+    }
+
+    @Data
+    public static class StartButtonState {
+
+        private final ImageIcon icon;
+        private final ImageIcon hoverIcon;
+        private final String tooltipKey;
     }
 }

@@ -30,6 +30,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -54,6 +55,7 @@ import net.brlns.gdownloader.system.taskbar.ITaskbarManager.TaskbarState;
 import net.brlns.gdownloader.system.taskbar.TaskbarManager;
 import net.brlns.gdownloader.ui.GUIManager;
 import net.brlns.gdownloader.ui.MediaCard;
+import net.brlns.gdownloader.ui.MediaCard.StartButtonMode;
 import net.brlns.gdownloader.ui.MediaInfoPopup;
 import net.brlns.gdownloader.ui.message.Message;
 import net.brlns.gdownloader.ui.message.MessageTypeEnum;
@@ -275,6 +277,22 @@ public class DownloadManager implements IEvent, AutoCloseable {
         return downloaders.stream()
             .filter(downloader -> downloader.getDownloaderId() == downloaderId)
             .findFirst().get();
+    }
+
+    private StartButtonMode resolveStartButtonMode(QueueEntry entry) {
+        QueueCategoryEnum category = entry.getCurrentQueueCategory();
+        if (category == null) {
+            return StartButtonMode.START;
+        }
+
+        return switch (entry.getCurrentQueueCategory()) {
+            case RUNNING ->
+                StartButtonMode.STOP;
+            case COMPLETED, FAILED ->
+                StartButtonMode.RESTART;
+            default ->
+                StartButtonMode.START;
+        };
     }
 
     public CompletableFuture<Boolean> captureUrl(@Nullable String inputUrl, boolean force) {
@@ -547,6 +565,33 @@ public class DownloadManager implements IEvent, AutoCloseable {
 
         queueEntry.getMediaCard().setOnInfoClick(() -> {
             MediaInfoPopup.showDetails(main.getGuiManager(), queueEntry);
+        });
+
+        Consumer<DownloadManager> startButtonUpdater = (downloadManager) -> {
+            MediaCard mediaCard = queueEntry.getMediaCard();
+            if (!mediaCard.isClosed()) {
+                mediaCard.setStartButtonMode(resolveStartButtonMode(queueEntry));
+            }
+        };
+
+        // set initial state
+        startButtonUpdater.accept(this);
+
+        queueEntry.setStartButtonEventHandler(
+            EventDispatcher.registerEDT(DownloadManager.class, startButtonUpdater));
+
+        queueEntry.getMediaCard().setOnStartClick(() -> {
+            switch (resolveStartButtonMode(queueEntry)) {
+                case STOP ->
+                    stopSingleDownload(queueEntry);
+                case RESTART ->
+                    stopDownload(queueEntry, () -> {
+                        resetDownload(queueEntry);
+                        submitDownloadTask(queueEntry, true);
+                    });
+                case START ->
+                    submitDownloadTask(queueEntry, true);
+            }
         });
 
         queueEntry.getMediaCard().setOnInfoHover((hovering) -> {
@@ -987,6 +1032,17 @@ public class DownloadManager implements IEvent, AutoCloseable {
         }).exceptionally(e -> {
             GDownloader.handleException(e);
             return null;
+        });
+    }
+
+    public void stopSingleDownload(QueueEntry entry) {
+        if (entry.getCurrentQueueCategory() != RUNNING) {
+            return;
+        }
+
+        stopDownload(entry, () -> {
+            entry.updateStatus(DownloadStatusEnum.STOPPED, l10n("gui.download_status.not_started"));
+            offerTo(QUEUED, entry);
         });
     }
 

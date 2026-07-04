@@ -66,11 +66,14 @@ public class MediaCard {
     private Runnable onBecomeVisible;
     private Runnable onLeftClick;
     private Runnable onInfoClick;
+    private Runnable onStartClick;
     private Consumer<Boolean> onInfoHover;
     private Supplier<Map<String, IMenuEntry>> onRightClick;
     private Consumer<CloseReasonEnum> onClose;
     private Consumer<MediaCard> onSwap;
     private boolean closed;
+
+    private StartButtonMode startButtonMode = StartButtonMode.START;
 
     private Supplier<Boolean> dropTargetValidator;
 
@@ -160,6 +163,13 @@ public class MediaCard {
         updateUI(THUMBNAIL_IMAGE);
     }
 
+    public void setStartButtonMode(StartButtonMode modeIn) {
+        if (startButtonMode != modeIn) {
+            startButtonMode = modeIn;
+            updateUI(START_BUTTON_MODE);
+        }
+    }
+
     public void updateUI(UpdateType updateType) {
         if (ui == null) {
             return; // No UI available, skip updates
@@ -217,6 +227,9 @@ public class MediaCard {
                 case LIVE_STATUS -> {
                     ui.updateLiveStatus(live);
                 }
+                case START_BUTTON_MODE -> {
+                    ui.updateStartButtonMode(startButtonMode);
+                }
             }
         });
     }
@@ -231,6 +244,14 @@ public class MediaCard {
         THUMBNAIL_IMAGE,
         PLACEHOLDER_ICON,
         PRIORITY_ICON,
-        LIVE_STATUS
+        LIVE_STATUS,
+        START_BUTTON_MODE
     }
+
+    public enum StartButtonMode {
+        START,
+        STOP,
+        RESTART
+    }
+
 }

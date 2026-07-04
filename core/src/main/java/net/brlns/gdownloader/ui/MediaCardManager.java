@@ -284,7 +284,7 @@ public final class MediaCardManager {
                             }
 
                             removeMediaCard(mediaCard.getId(), CloseReasonEnum.MANUAL);
-                        }, mediaCard.getOnInfoClick());
+                        }, mediaCard.getOnInfoClick(), mediaCard.getOnStartClick());
 
                         mediaCard.setUi(ui);
 
