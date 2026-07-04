@@ -160,6 +160,8 @@ public class QueueEntry {
     private final AtomicReference<LambdaHandler<DownloadManager>> startButtonEventHandler
         = new AtomicReference<>();
 
+    private final AtomicBoolean startedFromQueueProcessor = new AtomicBoolean(false);
+
     public AbstractUrlFilter getFilter() {
         return main.getConfig().getUrlFilterById(filterId).orElse(originalFilter);
     }

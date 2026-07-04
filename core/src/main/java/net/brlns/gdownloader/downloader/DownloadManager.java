@@ -1040,10 +1040,14 @@ public class DownloadManager implements IEvent, AutoCloseable {
             return;
         }
 
-        stopDownload(entry, () -> {
-            entry.updateStatus(DownloadStatusEnum.STOPPED, l10n("gui.download_status.not_started"));
-            offerTo(QUEUED, entry);
-        });
+        if (entry.getStartedFromQueueProcessor().get()) {
+            setSkipDownload(entry, true);
+        } else {
+            stopDownload(entry, () -> {
+                entry.updateStatus(DownloadStatusEnum.STOPPED, l10n("gui.download_status.not_started"));
+                offerTo(QUEUED, entry);
+            });
+        }
     }
 
     protected void submitDownloadTask(QueueEntry entry, boolean force) {
@@ -1051,6 +1055,8 @@ public class DownloadManager implements IEvent, AutoCloseable {
         if (mediaCard.isClosed()) {
             return;
         }
+
+        entry.getStartedFromQueueProcessor().set(!force);
 
         if (entry.getCurrentQueueCategory() != RUNNING) {
             offerTo(RUNNING, entry, false);
