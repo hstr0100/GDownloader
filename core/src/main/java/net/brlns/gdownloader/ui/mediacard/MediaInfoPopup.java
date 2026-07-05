@@ -26,6 +26,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -33,6 +34,7 @@ import java.util.Set;
 import java.util.WeakHashMap;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+import lombok.Data;
 import net.brlns.gdownloader.downloader.QueueEntry;
 import net.brlns.gdownloader.downloader.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.downloader.structs.FormatInfo;
@@ -71,6 +73,9 @@ public final class MediaInfoPopup {
 
     private static final int FORMAT_SELECTOR_MIN_WIDTH = 600;
     private static final int FORMAT_SELECTOR_DEFAULT_HEIGHT = 480;
+
+    private static final int TABLE_ROW_VPAD = 9;
+    private static final int TABLE_ROW_HPAD_RIGHT = 22;
 
     private static final Map<GUIManager, MediaInfoPopup> _instances
         = Collections.synchronizedMap(new WeakHashMap<>());
@@ -123,6 +128,10 @@ public final class MediaInfoPopup {
             closeFormatSelector();
 
             JDialog dialog = buildFormatSelectorDialog(entry, info);
+            if (dialog == null) {
+                return;
+            }
+
             openWindows.add(dialog);
             activeFormatSelector = dialog;
 
@@ -130,6 +139,7 @@ public final class MediaInfoPopup {
         });
     }
 
+    @Nullable
     private JDialog buildFormatSelectorDialog(QueueEntry entry, MediaInfo info) {
         JDialog dialog = new JDialog(manager.getAppWindow(),
             l10n("gui.media_info.section.formats"),
@@ -166,9 +176,14 @@ public final class MediaInfoPopup {
             }
         });
 
+        JComponent formatSelectorPanel = buildFormatSelectorPanel(entry, info);
+        if (formatSelectorPanel == null) {
+            return null;
+        }
+
         JPanel root = new JPanel(new BorderLayout());
         root.setBackground(color(BACKGROUND));
-        root.add(buildFormatsTable(entry, info), BorderLayout.CENTER);
+        root.add(formatSelectorPanel, BorderLayout.CENTER);
 
         dialog.setContentPane(root);
 
@@ -181,9 +196,7 @@ public final class MediaInfoPopup {
             ? Math.max(naturalWidth, dialog.getWidth())
             : naturalWidth;
 
-        int height = formatSelectorHeight;
-
-        dialog.setSize(width, height);
+        dialog.setSize(width, formatSelectorHeight);
         dialog.setMinimumSize(new Dimension(500, 200));
 
         if (formatSelectorLocation != null) {
@@ -635,9 +648,9 @@ public final class MediaInfoPopup {
         addSection(content, "gui.media_info.section.statistics", buildStatisticsGrid(info));
         addSection(content, "gui.media_info.section.technical", buildTechnicalGrid(info));
 
-        JComponent formatsTable = buildFormatsTable(entry, info);
-        if (formatsTable != null) {
-            addCollapsibleSection(content, "gui.media_info.section.formats", formatsTable);
+        JComponent formatSelectorPanel = buildFormatSelectorPanel(entry, info);
+        if (formatSelectorPanel != null) {
+            addCollapsibleSection(content, "gui.media_info.section.formats", formatSelectorPanel);
         }
 
         JPanel wrapper = new JPanel(new BorderLayout());
@@ -840,7 +853,99 @@ public final class MediaInfoPopup {
         return grid.buildOrNull();
     }
 
-    private JComponent buildFormatsTable(QueueEntry entry, MediaInfo info) {
+    @Nullable
+    private JComponent buildFormatSelectorPanel(QueueEntry entry, MediaInfo info) {
+        Map<String, FormatRow> rows = new LinkedHashMap<>();
+        JPanel summaryHolder = transparentPanel(new BorderLayout());
+
+        Runnable onQueueChanged = () -> refreshFormatsUI(entry, rows, summaryHolder);
+
+        JComponent table = buildFormatsTable(entry, info, rows, onQueueChanged);
+        if (table == null) {
+            return null;
+        }
+
+        JPanel wrapper = new JPanel(new BorderLayout());
+        wrapper.setOpaque(false);
+        wrapper.add(table, BorderLayout.CENTER);
+        wrapper.add(summaryHolder, BorderLayout.SOUTH);
+
+        refreshFormatsUI(entry, rows, summaryHolder);
+
+        return wrapper;
+    }
+
+    private void refreshFormatsUI(QueueEntry entry, Map<String, FormatRow> rows, JPanel summaryHolder) {
+        summaryHolder.removeAll();
+
+        JComponent summary = buildQueuedFormatsSummary(entry, () -> refreshFormatsUI(entry, rows, summaryHolder));
+        if (summary != null) {
+            summaryHolder.add(summary, BorderLayout.CENTER);
+        }
+
+        summaryHolder.revalidate();
+        summaryHolder.repaint();
+
+        for (FormatRow row : rows.values()) {
+            row.holder.removeAll();
+            row.holder.add(
+                buildFormatActionPanel(entry, row.format, row.rowBg,
+                    () -> refreshFormatsUI(entry, rows, summaryHolder)),
+                BorderLayout.CENTER);
+            row.holder.revalidate();
+            row.holder.repaint();
+        }
+    }
+
+    @Nullable
+    private JComponent buildQueuedFormatsSummary(QueueEntry entry, Runnable onChange) {
+        List<String> queued = entry.snapshotPendingFormats();
+        if (queued.isEmpty()) {
+            return null;
+        }
+
+        JPanel panel = transparentPanel(new BorderLayout());
+        panel.setBorder(new EmptyBorder(4, 10, 10, 10));
+
+        JComponent label = buildSelectableLabel(
+            l10n("gui.media_info.queued_formats_label").toUpperCase(),
+            color(FOREGROUND).darker(), Font.BOLD, 11f);
+        panel.add(label, BorderLayout.NORTH);
+
+        JPanel chipsRow = transparentPanel(new CustomWrapLayout(FlowLayout.LEFT, 6, 4));
+        chipsRow.setBorder(new EmptyBorder(4, 0, 0, 0));
+
+        int position = 1;
+        for (String formatId : queued) {
+            JPanel chipWrapper = transparentPanel(new FlowLayout(FlowLayout.LEFT, 2, 0));
+            chipWrapper.add(new CustomChip(position + ". " + formatId,
+                color(CHIP_BG), color(FOREGROUND)));
+
+            JButton removeButton = createIconButton(
+                loadIcon("/assets/x-mark.png", ICON, 12),
+                loadIcon("/assets/x-mark.png", ICON_HOVER, 12),
+                "gui.media_info.remove_from_queue",
+                e -> {
+                    manager.getMain().getDownloadManager().dequeueSpecificFormat(entry, formatId);
+                    onChange.run();
+                });
+
+            removeButton.setPreferredSize(new Dimension(12, 12));
+            chipWrapper.add(removeButton);
+
+            chipsRow.add(chipWrapper);
+            position++;
+        }
+
+        panel.add(chipsRow, BorderLayout.CENTER);
+
+        return panel;
+    }
+
+    @Nullable
+    private JComponent buildFormatsTable(QueueEntry entry, MediaInfo info,
+        Map<String, FormatRow> rows, Runnable onQueueChanged) {
+
         List<FormatInfo> formats = info.getFormats().stream()
             .filter(f -> f != null && !f.isStoryboard())
             .toList();
@@ -934,38 +1039,15 @@ public final class MediaInfoPopup {
             gbc.fill = GridBagConstraints.BOTH;
             gbc.weightx = 1.0;
 
-            JPanel actionPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
-            actionPanel.setOpaque(true);
-            actionPanel.setBackground(color(rowBg));
-            actionPanel.setBorder(BorderFactory.createEmptyBorder(6, 8, 6, 16));
+            JPanel actionPanelHolder = new JPanel(new BorderLayout());
+            actionPanelHolder.setOpaque(false);
+            actionPanelHolder.add(
+                buildFormatActionPanel(entry, format, rowBg, onQueueChanged),
+                BorderLayout.CENTER);
 
-            JButton downloadButton = createIconButton(
-                loadIcon("/assets/download-icon.png", ICON, 16),
-                loadIcon("/assets/download-icon.png", ICON_HOVER, 16),
-                "gui.media_info.download_this_format",
-                e -> {
-                    manager.getMain().getDownloadManager().downloadSpecificFormat(entry, format);
-                    Optional.ofNullable(SwingUtilities.getWindowAncestor(table))
-                        .filter(JDialog.class::isInstance)
-                        .map(JDialog.class::cast)
-                        .ifPresent(JDialog::dispose);
-                });
+            rows.put(format.getFormatId(), new FormatRow(actionPanelHolder, format, rowBg));
 
-            downloadButton.setPreferredSize(new Dimension(16, 16));
-            downloadButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-            actionPanel.add(downloadButton);
-
-            JButton queueButton = createIconButton(
-                loadIcon("/assets/add.png", ICON, 16),
-                loadIcon("/assets/add.png", ICON_HOVER, 16),
-                "gui.media_info.queue_this_format",
-                e -> manager.getMain().getDownloadManager().queueSpecificFormat(entry, format));
-
-            queueButton.setPreferredSize(new Dimension(16, 16));
-            queueButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-            actionPanel.add(queueButton);
-
-            table.add(actionPanel, gbc);
+            table.add(actionPanelHolder, gbc);
 
             row++;
         }
@@ -984,7 +1066,7 @@ public final class MediaInfoPopup {
             public Dimension getPreferredSize() {
                 Dimension originalPref = super.getPreferredSize();
                 Dimension tablePref = table.getPreferredSize();
-                originalPref.width = Math.min(originalPref.width, tablePref.width + 10);
+                originalPref.width = Math.min(originalPref.width, tablePref.width + 5);
 
                 return originalPref;
             }
@@ -1016,6 +1098,66 @@ public final class MediaInfoPopup {
         return tableScroll;
     }
 
+    private JPanel buildFormatActionPanel(QueueEntry entry, FormatInfo format, UIColors rowBg, Runnable onQueueChanged) {
+        String formatId = format.getFormatId();
+        List<String> pending = entry.snapshotPendingFormats();
+        boolean queued = pending.contains(formatId);
+
+        JPanel actionPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        actionPanel.setOpaque(true);
+        actionPanel.setBackground(color(rowBg));
+        actionPanel.setBorder(BorderFactory.createEmptyBorder(6, 8, 6, TABLE_ROW_HPAD_RIGHT));
+
+        JButton downloadButton = createIconButton(
+            loadIcon("/assets/download-icon.png", ICON, 16),
+            loadIcon("/assets/download-icon.png", ICON_HOVER, 16),
+            "gui.media_info.download_this_format",
+            e -> {
+                manager.getMain().getDownloadManager().downloadSpecificFormat(entry, format);
+
+                Optional.ofNullable(SwingUtilities.getWindowAncestor(actionPanel))
+                    .filter(JDialog.class::isInstance)
+                    .map(JDialog.class::cast)
+                    .ifPresent(JDialog::dispose);
+            });
+
+        downloadButton.setPreferredSize(new Dimension(16, 16));
+        downloadButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+        actionPanel.add(downloadButton);
+
+        JButton queueButton = queued
+            ? createIconButton(
+                loadIcon("/assets/x-mark.png", ICON, 16),
+                loadIcon("/assets/x-mark.png", ICON_HOVER, 16),
+                "gui.media_info.remove_from_queue",
+                e -> {
+                    manager.getMain().getDownloadManager().dequeueSpecificFormat(entry, formatId);
+                    onQueueChanged.run();
+                })
+            : createIconButton(
+                loadIcon("/assets/add.png", ICON, 16),
+                loadIcon("/assets/add.png", ICON_HOVER, 16),
+                "gui.media_info.queue_this_format",
+                e -> {
+                    manager.getMain().getDownloadManager().queueSpecificFormat(entry, format);
+                    onQueueChanged.run();
+                });
+
+        queueButton.setPreferredSize(new Dimension(16, 16));
+        queueButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+        actionPanel.add(queueButton);
+
+        if (queued) {
+            int position = pending.indexOf(formatId) + 1;
+            actionPanel.add(new CustomChip("#" + position, color(LIVE_COLOR), Color.WHITE));
+        } else {
+            Dimension reservedSize = new CustomChip("#99", color(LIVE_COLOR), Color.WHITE).getPreferredSize();
+            actionPanel.add(Box.createRigidArea(reservedSize));
+        }
+
+        return actionPanel;
+    }
+
     private static JComponent buildTableCell(String text, Color foreground, int style, float size, UIColors bgColor) {
         JTextField field = new JTextField(text != null ? text : "");
         field.setEditable(false);
@@ -1024,7 +1166,8 @@ public final class MediaInfoPopup {
         field.setBackground(color(bgColor));
         field.setForeground(foreground);
         field.setFont(field.getFont().deriveFont(style, size));
-        field.setBorder(BorderFactory.createEmptyBorder(6, 8, 6, 16));
+        field.setBorder(BorderFactory.createEmptyBorder(
+            TABLE_ROW_VPAD, 8, TABLE_ROW_VPAD, TABLE_ROW_HPAD_RIGHT));
         field.setAlignmentX(Component.LEFT_ALIGNMENT);
         field.setCaretPosition(0);
 
@@ -1380,5 +1523,14 @@ public final class MediaInfoPopup {
         private JComponent buildOrNull() {
             return row > 0 ? panel : null;
         }
+    }
+
+    @Data
+    private static final class FormatRow {
+
+        private final JPanel holder;
+        private final FormatInfo format;
+        private final UIColors rowBg;
+
     }
 }

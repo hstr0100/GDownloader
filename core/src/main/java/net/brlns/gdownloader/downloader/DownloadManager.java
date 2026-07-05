@@ -796,6 +796,17 @@ public class DownloadManager implements IEvent, AutoCloseable {
         }
     }
 
+    public void dequeueSpecificFormat(QueueEntry entry, String formatId) {
+        if (entry.dequeueFormat(formatId)) {
+            ToastMessenger.show(Message.builder()
+                .message("gui.media_info.format_dequeued", formatId, entry.getQueuedFormatCount())
+                .durationMillis(3000)
+                .messageType(MessageTypeEnum.INFO)
+                .discardDuplicates(true)
+                .build());
+        }
+    }
+
     public void processQueue() {
         int maxDownloads = main.getConfig().getMaxSimultaneousDownloads();
 

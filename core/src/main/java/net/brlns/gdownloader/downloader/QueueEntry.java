@@ -271,6 +271,15 @@ public class QueueEntry {
         return false;
     }
 
+    public boolean dequeueFormat(String formatId) {
+        if (uniquePendingFormats.remove(formatId)) {
+            pendingFormatQueue.remove(formatId);
+            return true;
+        }
+
+        return false;
+    }
+
     @Nullable
     public String pollNextQueuedFormat() {
         String formatId = pendingFormatQueue.poll();
