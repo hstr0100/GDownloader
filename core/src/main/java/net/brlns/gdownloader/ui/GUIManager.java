@@ -620,6 +620,13 @@ public final class GUIManager {
                     if (SwingUtilities.isRightMouseButton(e)) {
                         RightClickMenuEntries rightClickMenu = new RightClickMenuEntries();
 
+                        rightClickMenu.put(
+                            l10n("gui.start_all_downloads"),
+                            new RunnableMenuEntry(() -> {
+                                main.getDownloadManager().startDownloads();
+                            })
+                        );
+
                         for (AbstractDownloader downloader : main.getDownloadManager().getEnabledDownloaders()) {
                             DownloaderIdEnum downloaderId = downloader.getDownloaderId();
                             rightClickMenu.put(
