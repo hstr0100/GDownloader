@@ -28,7 +28,8 @@ import lombok.Getter;
 import net.brlns.gdownloader.downloader.enums.DownloadPriorityEnum;
 import net.brlns.gdownloader.downloader.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.ui.GUIManager;
-import net.brlns.gdownloader.ui.MediaCard.StartButtonMode;
+import net.brlns.gdownloader.ui.mediacard.MediaCard.StartButtonMode;
+import net.brlns.gdownloader.ui.menu.RightClickMenu;
 
 import static net.brlns.gdownloader.lang.Language.l10n;
 import static net.brlns.gdownloader.ui.GUIManager.createIconButton;
@@ -49,6 +50,7 @@ public final class CustomMediaCardUI {
     private final Runnable onClose;
     private final Runnable onInfoClick;
     private final Runnable onStartClick;
+    private final Runnable onFormatsClick;
 
     @Getter
     private JPanel card;
@@ -69,15 +71,25 @@ public final class CustomMediaCardUI {
     @Getter
     private JButton startButton;
 
+    @Getter
+    private JButton formatsButton;
+
+    @Getter
+    private JButton moreButton;
+
+    private JWindow moreOptionsWindow;
+
     private final AtomicReference<StartButtonState> startButtonState = new AtomicReference<>();
 
     public CustomMediaCardUI(GUIManager managerIn, JFrame parentIn,
-        Runnable onCloseIn, Runnable onInfoClickIn, Runnable onStartClickIn) {
+        Runnable onCloseIn, Runnable onInfoClickIn,
+        Runnable onStartClickIn, Runnable onFormatsClickIn) {
         manager = managerIn;
         parent = parentIn;
         onClose = onCloseIn;
         onInfoClick = onInfoClickIn;
         onStartClick = onStartClickIn;
+        onFormatsClick = onFormatsClickIn;
 
         initComponents();
     }
@@ -204,16 +216,36 @@ public final class CustomMediaCardUI {
 
         infoButton = createIconButton(
             loadIcon("/assets/toast-info.png", ICON, 16),
-            loadIcon("/assets/toast-info.png", ICON_ACTIVE, 16),
-            "gui.view_media_info.tooltip",
+            loadIcon("/assets/toast-info.png", ICON_HOVER, 16),
+            null,
             e -> {
+                closeMoreOptionsMenu();
                 if (onInfoClick != null) {
                     onInfoClick.run();
                 }
             });
+        buildMenuRow(infoButton, "gui.view_media_info");
 
-        infoButton.setPreferredSize(new Dimension(16, 16));
-        infoButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+        formatsButton = createIconButton(
+            loadIcon("/assets/formats.png", ICON, 16),
+            loadIcon("/assets/formats.png", ICON_HOVER, 16),
+            null,
+            e -> {
+                closeMoreOptionsMenu();
+                if (onFormatsClick != null) {
+                    onFormatsClick.run();
+                }
+            });
+        buildMenuRow(formatsButton, "gui.view_available_formats");
+
+        moreButton = createIconButton(
+            loadIcon("/assets/more.png", ICON, 16),
+            loadIcon("/assets/more.png", ICON_ACTIVE, 16),
+            "gui.more_options",
+            e -> showMoreOptionsMenu());
+
+        moreButton.setPreferredSize(new Dimension(16, 16));
+        moreButton.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         JButton closeButton = createIconButton(
             loadIcon("/assets/x-mark.png", ICON, 16),
@@ -264,10 +296,10 @@ public final class CustomMediaCardUI {
         startButton.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         controlPanel.add(Box.createVerticalGlue());
-        controlPanel.add(infoButton);
-        controlPanel.add(Box.createVerticalStrut(20));
+        controlPanel.add(moreButton);
+        controlPanel.add(Box.createVerticalStrut(22));
         controlPanel.add(closeButton);
-        controlPanel.add(Box.createVerticalStrut(20));
+        controlPanel.add(Box.createVerticalStrut(22));
         controlPanel.add(startButton);
         controlPanel.add(Box.createVerticalGlue());
 
@@ -292,6 +324,66 @@ public final class CustomMediaCardUI {
             }
         };
         parent.addComponentListener(componentResizeListener);
+    }
+
+    private void buildMenuRow(JButton button, String labelKey) {
+        button.setText(" " + l10n(labelKey));
+        button.setHorizontalAlignment(SwingConstants.LEFT);
+        button.setIconTextGap(10);
+        button.setForeground(color(FOREGROUND));
+        button.setBackground(color(MEDIA_CARD));
+        button.setOpaque(true);
+        button.setContentAreaFilled(true);
+        button.setBorderPainted(false);
+        button.setBorder(BorderFactory.createEmptyBorder(8, 12, 8, 18));
+        button.setAlignmentX(Component.LEFT_ALIGNMENT);
+        button.setMaximumSize(new Dimension(Integer.MAX_VALUE, button.getPreferredSize().height));
+
+        button.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                button.setBackground(color(MEDIA_CARD_THUMBNAIL));
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                button.setBackground(color(MEDIA_CARD));
+            }
+        });
+    }
+
+    private void showMoreOptionsMenu() {
+        if (moreOptionsWindow == null) {
+            JPanel panel = new JPanel();
+            panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+            panel.setOpaque(true);
+            panel.setBackground(color(MEDIA_CARD));
+            panel.setBorder(BorderFactory.createLineBorder(color(BACKGROUND), 1));
+            panel.add(infoButton);
+            panel.add(formatsButton);
+
+            moreOptionsWindow = new JWindow(parent);
+            moreOptionsWindow.setBackground(color(MEDIA_CARD));
+            moreOptionsWindow.setLayout(new BorderLayout());
+            moreOptionsWindow.add(panel, BorderLayout.CENTER);
+            moreOptionsWindow.pack();
+        }
+
+        RightClickMenu.positionPopupOnScreen(moreOptionsWindow,
+            moreButton, -moreOptionsWindow.getWidth(), 0);
+        RightClickMenu.attachAutoDismiss(moreOptionsWindow);
+        moreOptionsWindow.setVisible(true);
+
+        SwingUtilities.invokeLater(() -> {
+            moreOptionsWindow.revalidate();
+            moreOptionsWindow.repaint();
+        });
+    }
+
+    private void closeMoreOptionsMenu() {
+        if (moreOptionsWindow != null) {
+            moreOptionsWindow.setVisible(false);
+        }
     }
 
     public void updateLabel(String... labelText) {

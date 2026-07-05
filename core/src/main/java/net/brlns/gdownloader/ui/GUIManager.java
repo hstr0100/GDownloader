@@ -23,6 +23,7 @@ import java.awt.dnd.DropTarget;
 import java.awt.event.*;
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -51,6 +52,7 @@ import net.brlns.gdownloader.system.taskbar.TaskbarManager;
 import net.brlns.gdownloader.ui.custom.*;
 import net.brlns.gdownloader.ui.dnd.WindowDragSourceListener;
 import net.brlns.gdownloader.ui.dnd.WindowDropTargetListener;
+import net.brlns.gdownloader.ui.mediacard.MediaCardManager;
 import net.brlns.gdownloader.ui.menu.NestedMenuEntry;
 import net.brlns.gdownloader.ui.menu.RightClickMenu;
 import net.brlns.gdownloader.ui.menu.RightClickMenuEntries;
@@ -113,6 +115,8 @@ public final class GUIManager {
     private JTextField searchField;
     private JLabel matchCountLabel;
     private Timer searchDebounceTimer;
+
+    private final AtomicBoolean initialQueueRenderComplete = new AtomicBoolean();
 
     public GUIManager(GDownloader mainIn) {
         main = mainIn;
@@ -793,7 +797,7 @@ public final class GUIManager {
     }
 
     public static JButton createIconButton(ImageIcon icon, ImageIcon hoverIcon,
-        String tooltipText, ActionListener actionListener) {
+        @Nullable String tooltipText, ActionListener actionListener) {
         JButton button = new JButton(icon);
         button.setUI(new BasicButtonUI());
         button.setFocusPainted(false);
@@ -804,21 +808,29 @@ public final class GUIManager {
             @Override
             public void mouseEntered(MouseEvent e) {
                 button.setIcon(hoverIcon);
-                button.setToolTipText(l10n(tooltipText));
+
+                if (tooltipText != null) {
+                    button.setToolTipText(l10n(tooltipText));
+                }
             }
 
             @Override
             public void mouseExited(MouseEvent e) {
                 button.setIcon(icon);
-                button.setToolTipText(l10n(tooltipText));
+
+                if (tooltipText != null) {
+                    button.setToolTipText(l10n(tooltipText));
+                }
             }
         });
 
         button.addActionListener(actionListener);
 
-        CustomToolTip ui = new CustomToolTip();
-        ui.setComponent(button);
-        ui.setToolTipText(l10n(tooltipText));
+        if (tooltipText != null) {
+            CustomToolTip ui = new CustomToolTip();
+            ui.setComponent(button);
+            ui.setToolTipText(l10n(tooltipText));
+        }
 
         return button;
     }
@@ -837,7 +849,7 @@ public final class GUIManager {
         return button;
     }
 
-    protected void updateContentPane() {
+    public void updateContentPane() {
         runOnEDT(() -> {
             if (main.getDownloadManager().isBlocked()) {
                 switchContentPane(ContentPane.UPDATER);
@@ -850,6 +862,15 @@ public final class GUIManager {
             }
 
             if (!mediaCardManager.isEmpty()) {
+                if (!initialQueueRenderComplete.get()) {
+                    if (mediaCardManager.hasPendingUIUpdates()) {
+                        switchContentPane(ContentPane.LOADING_QUEUE);
+                        return;
+                    }
+
+                    initialQueueRenderComplete.set(true);
+                }
+
                 switchContentPane(ContentPane.MAIN_QUEUE);
             } else {
                 switchContentPane(ContentPane.EMPTY_QUEUE);

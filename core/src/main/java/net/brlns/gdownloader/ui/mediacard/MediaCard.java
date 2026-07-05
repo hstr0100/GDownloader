@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package net.brlns.gdownloader.ui;
+package net.brlns.gdownloader.ui.mediacard;
 
 import jakarta.annotation.Nullable;
 import java.awt.Color;
@@ -33,8 +33,8 @@ import net.brlns.gdownloader.downloader.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.ui.custom.CustomMediaCardUI;
 import net.brlns.gdownloader.ui.menu.IMenuEntry;
 
-import static net.brlns.gdownloader.ui.MediaCard.UpdateType.*;
 import static net.brlns.gdownloader.ui.UIUtils.runOnEDT;
+import static net.brlns.gdownloader.ui.mediacard.MediaCard.UpdateType.*;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -67,6 +67,7 @@ public class MediaCard {
     private Runnable onLeftClick;
     private Runnable onInfoClick;
     private Runnable onStartClick;
+    private Runnable onFormatsClick;
     private Consumer<Boolean> onInfoHover;
     private Supplier<Map<String, IMenuEntry>> onRightClick;
     private Consumer<CloseReasonEnum> onClose;

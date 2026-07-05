@@ -302,6 +302,20 @@ public final class UIUtils {
     }
 
     /**
+     * Mitigates the flashbang caused by Swing's vintage rendering behavior.
+     */
+    public static void showWindowSafely(Window window) {
+        window.setVisible(true);
+
+        Toolkit.getDefaultToolkit().sync();
+
+        SwingUtilities.invokeLater(() -> {
+            window.revalidate();
+            window.repaint();
+        });
+    }
+
+    /**
      * Executes the given {@link Runnable} on the Event Dispatch Thread (EDT).
      * If the current thread is the EDT, the {@code runnable} will be executed immediately.
      * Otherwise, it will be scheduled to run later on the EDT using {@link SwingUtilities#invokeLater}.

@@ -80,11 +80,8 @@ public class RightClickMenu {
         popupWindow.add(popupPanel, BorderLayout.CENTER);
         popupWindow.pack();
 
-        setPopupLocation(popupWindow, parentComponent, sourceX, sourceY);
-
-        MenuWindowAdapter windowAdapter = new MenuWindowAdapter(popupWindow);
-        windowAdapter.register();
-        popupWindow.addWindowListener(windowAdapter);
+        positionPopupOnScreen(popupWindow, parentComponent, sourceX, sourceY);
+        attachAutoDismiss(popupWindow);
 
         popupWindow.setVisible(true);
     }
@@ -188,7 +185,7 @@ public class RightClickMenu {
         return popupPanel;
     }
 
-    private void setPopupLocation(JWindow popupWindow, Component parentComponent, int x, int y) {
+    public static void positionPopupOnScreen(JWindow popupWindow, Component parentComponent, int x, int y) {
         Point locationOnScreen = parentComponent.getLocationOnScreen();
         int choosenX = locationOnScreen.x + x;
         int choosenY = locationOnScreen.y + y;
@@ -216,8 +213,14 @@ public class RightClickMenu {
         popupWindow.setLocation(popupX, popupY);
     }
 
+    public static void attachAutoDismiss(JWindow popupWindow) {
+        MenuWindowAdapter windowAdapter = new MenuWindowAdapter(popupWindow);
+        windowAdapter.register();
+        popupWindow.addWindowListener(windowAdapter);
+    }
+
     @Nullable
-    private GraphicsDevice findContainingScreen(Point point) {
+    private static GraphicsDevice findContainingScreen(Point point) {
         GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
         GraphicsDevice[] screens = ge.getScreenDevices();
 

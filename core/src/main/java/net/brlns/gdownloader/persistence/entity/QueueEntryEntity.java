@@ -146,6 +146,5 @@ public class QueueEntryEntity implements Serializable {
     @Lob
     @OrderColumn
     @Column(name = "download_log", length = 8192)
-    // TODO: check if this is really necessary
     private ArrayList<String> downloadLog = new ArrayList<>();
 }

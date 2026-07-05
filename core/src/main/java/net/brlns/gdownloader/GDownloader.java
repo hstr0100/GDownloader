@@ -95,7 +95,6 @@ import static net.brlns.gdownloader.util.StringUtils.notNullOrEmpty;
 // FEEDBACK Should choose to download video and audio independently on each card
 // DROPPED check updates on a timer, but do not ever restart when anything is in the queue.
 // TODO --no-playlist when single video option is active
-// TODO Artifacting seems to be happening on the scroll pane with any video card
 // TODO open a window asking which videos in a playlist to download or not
 // TODO Better visual eye candy for when dragging cards
 // TODO Javadoc, a whole lot of it.
@@ -103,8 +102,6 @@ import static net.brlns.gdownloader.util.StringUtils.notNullOrEmpty;
 // TODO Split GUI into a different subproject from core logic.
 // TODO Investigate screen reader support (https:// www.nvaccess.org/download/)
 // TODO Send notifications when a NO_METHOD is triggered, explaining why it was triggered.
-// TODO Test downloading sections of a livestream (currently it gets stuck on status PREPARING). Note: it also leaves a zombie ffmpeg process behind dealing with the hls stream.
-// TODO The issue above is a yt-dlp bug https:// github.com/yt-dlp/yt-dlp/issues/7927
 // TODO Notify the user whenever a setting that requires restart was changed.
 // TODO Add an url ignore list / Allow filters to be disabled
 // TODO Add option to clear all installed updates and start fresh. (Tackling certain issues where failed updates could break downloads)
@@ -120,7 +117,6 @@ import static net.brlns.gdownloader.util.StringUtils.notNullOrEmpty;
 // TODO About page
 // TODO Confirm dialog before clearing DL queue
 // TODO Move config files, downloaders and their respective data to subfolders
-// TODO ctrl+z to undo removals
 // TODO implement remuxing to mkv
 // TODO System/provided binary selection should be individually configurable per downloader
 // TODO display number in download queue
@@ -131,13 +127,11 @@ import static net.brlns.gdownloader.util.StringUtils.notNullOrEmpty;
 // TODO Direct-HTTP: user-agent
 // TODO Tags/Filtering
 // TODO Remove ffmpeg requirement by omitting transcoding arguments
-// TODO Investigate issue where video files get downloaded with audio name pattern applied
 // TODO Implement plugin API, create example plugin, create more events.
 // prio
 // TODO save last window size in config
 // TODO right-click > set download location
 // TODO when changing download path, move the cache directory to the new location. Need to take available space into consideration
-// TODO when expanded, display video info in the media cards
 // TODO button to cancel update check
 // TODO run transcoder for audio-only downloads
 /**

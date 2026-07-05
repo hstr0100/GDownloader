@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-package net.brlns.gdownloader.ui;
+package net.brlns.gdownloader.ui.mediacard;
 
 import jakarta.annotation.Nullable;
 import java.awt.*;
@@ -37,30 +37,40 @@ import net.brlns.gdownloader.downloader.QueueEntry;
 import net.brlns.gdownloader.downloader.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.downloader.structs.FormatInfo;
 import net.brlns.gdownloader.downloader.structs.MediaInfo;
+import net.brlns.gdownloader.ui.GUIManager;
 import net.brlns.gdownloader.ui.custom.CustomChip;
 import net.brlns.gdownloader.ui.custom.CustomMediaCardUI;
 import net.brlns.gdownloader.ui.custom.CustomScrollBarUI;
 import net.brlns.gdownloader.ui.custom.CustomThumbnailPanel;
 import net.brlns.gdownloader.ui.custom.CustomWrapLayout;
+import net.brlns.gdownloader.ui.message.Message;
+import net.brlns.gdownloader.ui.message.MessageTypeEnum;
+import net.brlns.gdownloader.ui.message.ToastMessenger;
+import net.brlns.gdownloader.ui.themes.UIColors;
 
 import static net.brlns.gdownloader.lang.Language.l10n;
 import static net.brlns.gdownloader.ui.GUIManager.createDialogButton;
+import static net.brlns.gdownloader.ui.GUIManager.createIconButton;
+import static net.brlns.gdownloader.ui.UIUtils.loadIcon;
 import static net.brlns.gdownloader.ui.UIUtils.runOnEDT;
+import static net.brlns.gdownloader.ui.UIUtils.showWindowSafely;
 import static net.brlns.gdownloader.ui.themes.ThemeProvider.color;
 import static net.brlns.gdownloader.ui.themes.UIColors.*;
 import static net.brlns.gdownloader.util.StringUtils.*;
 
 /**
- * TODO: relocate to .mediacard
- *
  * @author Gabriel / hstr0100 / vertx010
  */
 public final class MediaInfoPopup {
 
-    private static final int PREVIEW_HIDE_DELAY_MS = 300;
+    // TODO: For today, I'm hardcoding these, check later
+    private static final int PREVIEW_HIDE_DELAY_MS = 100;
 
     private static final int DETAILS_DEFAULT_WIDTH = 780;
     private static final int DETAILS_DEFAULT_HEIGHT = 550;
+
+    private static final int FORMAT_SELECTOR_DEFAULT_WIDTH = 1100;
+    private static final int FORMAT_SELECTOR_DEFAULT_HEIGHT = 480;
 
     private static final Map<GUIManager, MediaInfoPopup> _instances
         = Collections.synchronizedMap(new WeakHashMap<>());
@@ -78,12 +88,106 @@ public final class MediaInfoPopup {
     private JDialog activeDetails;
     private Rectangle detailsBounds;
 
+    private JDialog activeFormatSelector;
+    private Rectangle formatSelectorBounds;
+
     private MediaInfoPopup(GUIManager managerIn) {
         manager = managerIn;
     }
 
     private static MediaInfoPopup getInstance(GUIManager manager) {
         return _instances.computeIfAbsent(manager, MediaInfoPopup::new);
+    }
+
+    public static void showFormatSelector(GUIManager manager, QueueEntry entry) {
+        getInstance(manager).doShowFormatSelector(entry);
+    }
+
+    private void doShowFormatSelector(QueueEntry entry) {
+        runOnEDT(() -> {
+            MediaInfo info = entry.getMediaInfo();
+            if (info == null || !info.isValid() || info.getFormats().isEmpty()) {
+                ToastMessenger.show(Message.builder()
+                    .message("gui.media_info.no_formats_available")
+                    .durationMillis(3000)
+                    .messageType(MessageTypeEnum.INFO)
+                    .discardDuplicates(true)
+                    .build());
+
+                return;
+            }
+
+            ensureGlobalWindowListener();
+            closeFormatSelector();
+
+            JDialog dialog = buildFormatSelectorDialog(entry, info);
+            openWindows.add(dialog);
+            activeFormatSelector = dialog;
+
+            showWindowSafely(dialog);
+        });
+    }
+
+    private JDialog buildFormatSelectorDialog(QueueEntry entry, MediaInfo info) {
+        JDialog dialog = new JDialog(manager.getAppWindow(),
+            l10n("gui.media_info.section.formats"),
+            Dialog.ModalityType.MODELESS);
+
+        dialog.setIconImage(manager.getAppIcon());
+        dialog.setResizable(true);
+        dialog.getContentPane().setBackground(color(BACKGROUND));
+        dialog.setBackground(color(BACKGROUND));
+        dialog.setAlwaysOnTop(manager.isFullScreen());
+
+        dialog.addComponentListener(new ComponentAdapter() {
+            @Override
+            public void componentMoved(ComponentEvent e) {
+                formatSelectorBounds = dialog.getBounds();
+            }
+
+            @Override
+            public void componentResized(ComponentEvent e) {
+                formatSelectorBounds = dialog.getBounds();
+            }
+        });
+
+        dialog.addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosed(WindowEvent e) {
+                openWindows.remove(dialog);
+
+                if (activeFormatSelector == dialog) {
+                    activeFormatSelector = null;
+                }
+            }
+        });
+
+        JPanel root = new JPanel(new BorderLayout());
+        root.setBackground(color(BACKGROUND));
+        root.setBorder(new EmptyBorder(10, 10, 10, 10));
+        root.add(buildFormatsTable(entry, info), BorderLayout.CENTER);
+
+        dialog.setContentPane(root);
+
+        Optional.ofNullable(formatSelectorBounds).ifPresentOrElse(
+            dialog::setBounds,
+            () -> {
+                dialog.setSize(FORMAT_SELECTOR_DEFAULT_WIDTH, FORMAT_SELECTOR_DEFAULT_HEIGHT);
+                dialog.setMinimumSize(new Dimension(200, 200));
+                dialog.setLocationRelativeTo(null);
+            }
+        );
+
+        return dialog;
+    }
+
+    private void closeFormatSelector() {
+        if (activeFormatSelector != null) {
+            openWindows.remove(activeFormatSelector);
+
+            activeFormatSelector.dispose();
+            activeFormatSelector = null;
+        }
     }
 
     public static void showPreview(GUIManager manager, QueueEntry queueEntry) {
@@ -130,7 +234,7 @@ public final class MediaInfoPopup {
                 .orElse(manager.getAppWindow());
 
             positionRelativeTo(dialog, anchor);
-            dialog.setVisible(true);
+            showWindowSafely(dialog);
 
             activePreview = dialog;
             activePreviewEntry = queueEntry;
@@ -163,6 +267,13 @@ public final class MediaInfoPopup {
 
             MediaInfo info = entry.getMediaInfo();
             if (info == null || !info.isValid()) {
+                ToastMessenger.show(Message.builder()
+                    .message("gui.media_info.no_media_info_available")
+                    .durationMillis(3000)
+                    .messageType(MessageTypeEnum.INFO)
+                    .discardDuplicates(true)
+                    .build());
+
                 return;
             }
 
@@ -172,7 +283,7 @@ public final class MediaInfoPopup {
             JDialog dialog = buildDetailsDialog(entry, info);
             openWindows.add(dialog);
             activeDetails = dialog;
-            dialog.setVisible(true);
+            showWindowSafely(dialog);
         });
     }
 
@@ -262,14 +373,12 @@ public final class MediaInfoPopup {
         }
 
         JDialog dialog = new JDialog(manager.getAppWindow(), Dialog.ModalityType.MODELESS);
+        dialog.getContentPane().setBackground(color(BACKGROUND));
+        dialog.setBackground(color(BACKGROUND));
         dialog.setUndecorated(true);
         dialog.setFocusableWindowState(false);
         dialog.setType(Window.Type.POPUP);
         dialog.setAlwaysOnTop(manager.isFullScreen());
-
-        if (isTranslucencySupported()) {
-            dialog.setBackground(new Color(0, 0, 0, 0));
-        }
 
         JPanel panel = new RoundedPanel(14);
         panel.setOpaque(false);
@@ -349,9 +458,10 @@ public final class MediaInfoPopup {
             info.getTitle(), entry.getUrl(), l10n("gui.media_info.untitled"));
 
         JDialog dialog = new JDialog(manager.getAppWindow(), titleText, Dialog.ModalityType.MODELESS);
+        dialog.getContentPane().setBackground(color(BACKGROUND));
+        dialog.setBackground(color(BACKGROUND));
         dialog.setIconImage(manager.getAppIcon());
         dialog.setResizable(true);
-        dialog.getContentPane().setBackground(color(BACKGROUND));
         dialog.setAlwaysOnTop(manager.isFullScreen());
 
         dialog.addComponentListener(new ComponentAdapter() {
@@ -383,18 +493,18 @@ public final class MediaInfoPopup {
         JPanel header = buildDetailsHeader(entry, info);
         header.setOpaque(true);
         header.setBackground(color(SIDE_PANEL_SELECTED));
-        header.setBorder(new EmptyBorder(14, 14, 14, 14));
+        header.setBorder(new EmptyBorder(10, 10, 10, 10));
 
         JPanel centerWrapper = new JPanel(new BorderLayout());
         centerWrapper.setOpaque(true);
         centerWrapper.setBackground(color(BACKGROUND));
-        centerWrapper.setBorder(new EmptyBorder(14, 14, 14, 14));
-        centerWrapper.add(buildDetailsScrollArea(info), BorderLayout.CENTER);
+        centerWrapper.setBorder(new EmptyBorder(10, 10, 10, 10));
+        centerWrapper.add(buildDetailsScrollArea(entry, info), BorderLayout.CENTER);
 
         JPanel footer = buildDetailsFooter(entry, info, dialog);
         footer.setOpaque(true);
         footer.setBackground(color(SIDE_PANEL_SELECTED));
-        footer.setBorder(new EmptyBorder(14, 14, 14, 14));
+        footer.setBorder(new EmptyBorder(10, 10, 10, 10));
 
         root.add(header, BorderLayout.NORTH);
         root.add(centerWrapper, BorderLayout.CENTER);
@@ -407,6 +517,7 @@ public final class MediaInfoPopup {
             dialog::setBounds,
             () -> {
                 dialog.setSize(DETAILS_DEFAULT_WIDTH, DETAILS_DEFAULT_HEIGHT);
+                dialog.setMinimumSize(new Dimension(200, 200));
                 dialog.setLocationRelativeTo(null);
             }
         );
@@ -490,7 +601,7 @@ public final class MediaInfoPopup {
         return thumbnailPanel;
     }
 
-    private JScrollPane buildDetailsScrollArea(MediaInfo info) {
+    private JScrollPane buildDetailsScrollArea(QueueEntry entry, MediaInfo info) {
         JPanel content = new JPanel();
         content.setOpaque(false);
         content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
@@ -502,7 +613,7 @@ public final class MediaInfoPopup {
         addSection(content, "gui.media_info.section.statistics", buildStatisticsGrid(info));
         addSection(content, "gui.media_info.section.technical", buildTechnicalGrid(info));
 
-        JComponent formatsTable = buildFormatsTable(info);
+        JComponent formatsTable = buildFormatsTable(entry, info);
         if (formatsTable != null) {
             addCollapsibleSection(content, "gui.media_info.section.formats", formatsTable);
         }
@@ -707,8 +818,7 @@ public final class MediaInfoPopup {
         return grid.buildOrNull();
     }
 
-    @Nullable
-    private static JComponent buildFormatsTable(MediaInfo info) {
+    private JComponent buildFormatsTable(QueueEntry entry, MediaInfo info) {
         List<FormatInfo> formats = info.getFormats().stream()
             .filter(f -> f != null && !f.isStoryboard())
             .toList();
@@ -717,7 +827,7 @@ public final class MediaInfoPopup {
             return null;
         }
 
-        List<String> columns = List.of(
+        List<String> columns = new ArrayList<>(List.of(
             "gui.media_info.column.id",
             "gui.media_info.column.ext",
             "gui.media_info.column.resolution",
@@ -726,29 +836,39 @@ public final class MediaInfoPopup {
             "gui.media_info.column.acodec",
             "gui.media_info.column.fps",
             "gui.media_info.column.bitrate",
-            "gui.media_info.column.size"
-        );
+            "gui.media_info.column.size",
+            ""// DL Icon
+        ));
 
-        JPanel table = transparentPanel(new GridBagLayout());
+        JPanel table = new JPanel(new GridBagLayout());
+        table.setOpaque(true);
+        table.setBackground(color(BACKGROUND));
         table.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        GridBagConstraints headerGbc = new GridBagConstraints();
-        headerGbc.gridy = 0;
-        headerGbc.anchor = GridBagConstraints.WEST;
-        headerGbc.insets = new Insets(0, 0, 6, 16);
-
+        int row = 0;
         for (int col = 0; col < columns.size(); col++) {
-            headerGbc.gridx = col;
-            JComponent header = buildSelectableLabel(l10n(columns.get(col)), color(FOREGROUND).darker(), Font.BOLD, 12f);
-            table.add(header, headerGbc);
+            GridBagConstraints gbc = new GridBagConstraints();
+            gbc.gridx = col;
+            gbc.gridy = row;
+            gbc.fill = GridBagConstraints.BOTH;
+            gbc.anchor = GridBagConstraints.NORTHWEST;
+            gbc.weightx = (col == columns.size() - 1) ? 1.0 : 0.0;
+
+            String text = columns.get(col).isEmpty() ? "" : l10n(columns.get(col));
+            JComponent header = buildTableCell(
+                text,
+                color(FOREGROUND),
+                Font.BOLD,
+                12f,
+                SIDE_PANEL_HEADER_FOOTER);
+
+            table.add(header, gbc);
         }
 
-        int row = 1;
+        row++;
+
         for (FormatInfo format : formats) {
-            GridBagConstraints gbc = new GridBagConstraints();
-            gbc.gridy = row;
-            gbc.anchor = GridBagConstraints.WEST;
-            gbc.insets = new Insets(3, 0, 3, 16);
+            UIColors rowBg = (row % 2 == 0) ? SETTINGS_ROW_BACKGROUND_DARK : SETTINGS_ROW_BACKGROUND_LIGHT;
 
             String type = format.isAudioOnly()
                 ? l10n("gui.media_info.format.audio")
@@ -770,13 +890,62 @@ public final class MediaInfoPopup {
             );
 
             for (int col = 0; col < values.size(); col++) {
+                GridBagConstraints gbc = new GridBagConstraints();
                 gbc.gridx = col;
-                JComponent cell = buildSelectableLabel(values.get(col), color(FOREGROUND), Font.PLAIN, 12f);
+                gbc.gridy = row;
+                gbc.fill = GridBagConstraints.BOTH;
+                gbc.anchor = GridBagConstraints.NORTHWEST;
+
+                JComponent cell = buildTableCell(
+                    values.get(col),
+                    color(FOREGROUND),
+                    Font.PLAIN,
+                    12f,
+                    rowBg);
+
                 table.add(cell, gbc);
             }
 
+            GridBagConstraints gbc = new GridBagConstraints();
+            gbc.gridx = values.size();
+            gbc.gridy = row;
+            gbc.fill = GridBagConstraints.BOTH;
+            gbc.weightx = 1.0;
+
+            JPanel actionPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+            actionPanel.setOpaque(true);
+            actionPanel.setBackground(color(rowBg));
+            actionPanel.setBorder(BorderFactory.createEmptyBorder(6, 8, 6, 16));
+
+            JButton downloadButton = createIconButton(
+                loadIcon("/assets/download-icon.png", ICON, 16),
+                loadIcon("/assets/download-icon.png", ICON_HOVER, 16),
+                "gui.media_info.download_this_format",
+                e -> {
+                    manager.getMain().getDownloadManager().downloadSpecificFormat(entry, format);
+                    Optional.ofNullable(SwingUtilities.getWindowAncestor(table))
+                        .filter(JDialog.class::isInstance)
+                        .map(JDialog.class::cast)
+                        .ifPresent(JDialog::dispose);
+                });
+
+            downloadButton.setPreferredSize(new Dimension(16, 16));
+            downloadButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+            actionPanel.add(downloadButton);
+
+            table.add(actionPanel, gbc);
+
             row++;
         }
+
+        GridBagConstraints fillerGbc = new GridBagConstraints();
+        fillerGbc.gridx = 0;
+        fillerGbc.gridy = row;
+        fillerGbc.gridwidth = columns.size();
+        fillerGbc.weightx = 1.0;
+        fillerGbc.weighty = 1.0;
+        fillerGbc.fill = GridBagConstraints.BOTH;
+        table.add(Box.createGlue(), fillerGbc);
 
         JScrollPane tableScroll = new JScrollPane(table) {
             @Override
@@ -794,8 +963,12 @@ public final class MediaInfoPopup {
         tableScroll.setBorder(BorderFactory.createEmptyBorder());
         tableScroll.getHorizontalScrollBar().setUI(new CustomScrollBarUI());
         tableScroll.getHorizontalScrollBar().setUnitIncrement(16);
+        tableScroll.getVerticalScrollBar().setUI(new CustomScrollBarUI());
+        tableScroll.getVerticalScrollBar().setUnitIncrement(16);
         tableScroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-        tableScroll.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER);
+        tableScroll.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
+
+        tableScroll.getViewport().setScrollMode(JViewport.BACKINGSTORE_SCROLL_MODE);
 
         tableScroll.addMouseWheelListener(e -> {
             if (e.isShiftDown()) {
@@ -809,7 +982,21 @@ public final class MediaInfoPopup {
         });
 
         return tableScroll;
+    }
 
+    private static JComponent buildTableCell(String text, Color foreground, int style, float size, UIColors bgColor) {
+        JTextField field = new JTextField(text != null ? text : "");
+        field.setEditable(false);
+        field.setFocusable(true);
+        field.setOpaque(true);
+        field.setBackground(color(bgColor));
+        field.setForeground(foreground);
+        field.setFont(field.getFont().deriveFont(style, size));
+        field.setBorder(BorderFactory.createEmptyBorder(6, 8, 6, 16));
+        field.setAlignmentX(Component.LEFT_ALIGNMENT);
+        field.setCaretPosition(0);
+
+        return field;
     }
 
     private static String codecOrDash(String codec) {
@@ -1046,12 +1233,6 @@ public final class MediaInfoPopup {
         });
 
         return area;
-    }
-
-    private static boolean isTranslucencySupported() {
-        return GraphicsEnvironment.getLocalGraphicsEnvironment()
-            .getDefaultScreenDevice()
-            .isWindowTranslucencySupported(GraphicsDevice.WindowTranslucency.PERPIXEL_TRANSLUCENT);
     }
 
     private static void applyRoundedShape(JDialog dialog, int arc) {

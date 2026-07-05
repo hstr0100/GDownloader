@@ -213,7 +213,6 @@ public class MediaInfo {
         return notNullOrEmpty(base64EncodedThumbnail) || supportedThumbnails().findAny().isPresent();
     }
 
-    // TODO: implement
     @JsonIgnore
     @Nullable
     public LocalDate getUploadDateAsLocalDate() {

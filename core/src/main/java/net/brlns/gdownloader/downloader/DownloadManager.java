@@ -38,6 +38,7 @@ import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.downloader.enums.*;
 import net.brlns.gdownloader.downloader.extractors.MetadataManager;
 import net.brlns.gdownloader.downloader.structs.DownloadResult;
+import net.brlns.gdownloader.downloader.structs.FormatInfo;
 import net.brlns.gdownloader.downloader.structs.MediaInfo;
 import net.brlns.gdownloader.event.EventDispatcher;
 import net.brlns.gdownloader.event.IEvent;
@@ -54,9 +55,9 @@ import net.brlns.gdownloader.system.ShutdownRegistry.CloseBefore;
 import net.brlns.gdownloader.system.taskbar.ITaskbarManager.TaskbarState;
 import net.brlns.gdownloader.system.taskbar.TaskbarManager;
 import net.brlns.gdownloader.ui.GUIManager;
-import net.brlns.gdownloader.ui.MediaCard;
-import net.brlns.gdownloader.ui.MediaCard.StartButtonMode;
-import net.brlns.gdownloader.ui.MediaInfoPopup;
+import net.brlns.gdownloader.ui.mediacard.MediaCard;
+import net.brlns.gdownloader.ui.mediacard.MediaCard.StartButtonMode;
+import net.brlns.gdownloader.ui.mediacard.MediaInfoPopup;
 import net.brlns.gdownloader.ui.message.Message;
 import net.brlns.gdownloader.ui.message.MessageTypeEnum;
 import net.brlns.gdownloader.ui.message.PopupMessenger;
@@ -64,6 +65,7 @@ import net.brlns.gdownloader.ui.message.ToastMessenger;
 import net.brlns.gdownloader.util.CancelHook;
 import net.brlns.gdownloader.util.MathUtils;
 import net.brlns.gdownloader.util.collection.ExpiringSet;
+import net.brlns.gdownloader.util.collection.LRUCache;
 
 import static net.brlns.gdownloader.downloader.enums.DownloadFlagsEnum.*;
 import static net.brlns.gdownloader.downloader.enums.QueueCategoryEnum.*;
@@ -117,6 +119,8 @@ public class DownloadManager implements IEvent, AutoCloseable {
     private final String _restartKey = l10n("gui.restart_download");
 
     private final DownloadIntervalometer intervalometer = new DownloadIntervalometer(30, 60);
+
+    private final LRUCache<String, Long> recentlyDeletedUrls = new LRUCache<>(1000);
 
     @SuppressWarnings("this-escape")
     public DownloadManager(GDownloader mainIn) {
@@ -489,7 +493,10 @@ public class DownloadManager implements IEvent, AutoCloseable {
             if (capturedLinks.add(filteredUrl)) {
                 capturedLinks.add(inputUrl);
 
-                log.info("Captured {}", inputUrl);
+                // Silencing this for performance reasons, even though its quite useful.
+                if (log.isDebugEnabled()) {
+                    log.debug("Captured {}", inputUrl);
+                }
 
                 MediaCard mediaCard = main.getGuiManager()
                     .getMediaCardManager().addMediaCard(filteredUrl);
@@ -547,6 +554,10 @@ public class DownloadManager implements IEvent, AutoCloseable {
             if (reason != CloseReasonEnum.SHUTDOWN) {
                 deleteCheckpoint(queueEntry);
             }
+
+            if (reason == CloseReasonEnum.MANUAL) {
+                recentlyDeletedUrls.put(queueEntry.getOriginalUrl(), System.currentTimeMillis());
+            }
         });
 
         queueEntry.getMediaCard().setOnBecomeVisible(() -> {
@@ -600,6 +611,10 @@ public class DownloadManager implements IEvent, AutoCloseable {
             } else {
                 MediaInfoPopup.hidePreview(main.getGuiManager(), queueEntry);
             }
+        });
+
+        queueEntry.getMediaCard().setOnFormatsClick(() -> {
+            MediaInfoPopup.showFormatSelector(main.getGuiManager(), queueEntry);
         });
 
         queueEntry.getMediaCard().setOnSwap((targetCard) -> {
@@ -741,6 +756,15 @@ public class DownloadManager implements IEvent, AutoCloseable {
     public void requeueEntry(QueueEntry entry, boolean cleanDirectories) {
         resetDownload(entry, cleanDirectories);
         offerTo(QUEUED, entry);
+    }
+
+    // TODO: reinsert card at the correct spot / undo history
+    public void undoLastDelete() {
+        String url = recentlyDeletedUrls.pollNewest();
+
+        if (url != null) {
+            captureUrl(url, true);
+        }
     }
 
     public void processQueue() {
@@ -957,7 +981,7 @@ public class DownloadManager implements IEvent, AutoCloseable {
                 boolean handledByDownloader = false;
                 for (AbstractDownloader downloader : queueEntry.getDownloaders()) {
                     if (downloader.tryQueryMetadata(queueEntry)) {
-                        log.info("Metadata provided by downloader: {}", downloader.getDownloaderId());
+                        log.debug("Metadata provided by downloader: {}", downloader.getDownloaderId());
                         handledByDownloader = true;
                         break;
                     }
@@ -1272,6 +1296,11 @@ public class DownloadManager implements IEvent, AutoCloseable {
             } finally {
                 entry.getRunning().set(false);
 
+                if (entry.getForcedFormatId() != null) {
+                    entry.setForcedFormatId(null);
+                    entry.setForcedDownloader(null);
+                }
+
                 if (entry.getCurrentQueueCategory() == RUNNING
                     && sequencer.contains(entry)) {
                     log.error("Unexpected RUNNING download state, switching to QUEUED");
@@ -1279,6 +1308,28 @@ public class DownloadManager implements IEvent, AutoCloseable {
                     offerTo(QUEUED, entry);
                 }
             }
+        });
+    }
+
+    public void downloadSpecificFormat(QueueEntry entry, FormatInfo format) {
+        if (format == null || format.getFormatId() == null) {
+            return;
+        }
+
+        boolean ytDlpCompatible = entry.getDownloaders().stream()
+            .anyMatch(downloader -> downloader.getDownloaderId() == DownloaderIdEnum.YT_DLP);
+
+        if (!ytDlpCompatible) {
+            log.warn("Cannot download a specific format for a non yt-dlp compatible entry: {}", entry.getUrl());
+            return;
+        }
+
+        entry.setForcedFormatId(format.getFormatId());
+        entry.setForcedDownloader(DownloaderIdEnum.YT_DLP);
+
+        stopDownload(entry, () -> {
+            resetDownload(entry);
+            submitDownloadTask(entry, true);
         });
     }
 

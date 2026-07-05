@@ -43,6 +43,24 @@ public class LRUCache<K, V> {
         };
     }
 
+    public K pollNewest() {
+        lock.writeLock().lock();
+        try {
+            K newest = null;
+            for (K key : backingMap.keySet()) {
+                newest = key;
+            }
+
+            if (newest != null) {
+                backingMap.remove(newest);
+            }
+
+            return newest;
+        } finally {
+            lock.writeLock().unlock();
+        }
+    }
+
     public V get(K key) {
         lock.readLock().lock();
         try {

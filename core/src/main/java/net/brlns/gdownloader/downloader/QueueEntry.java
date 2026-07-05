@@ -54,7 +54,7 @@ import net.brlns.gdownloader.filters.GenericFilter;
 import net.brlns.gdownloader.persistence.PersistenceManager;
 import net.brlns.gdownloader.persistence.entity.QueueEntryEntity;
 import net.brlns.gdownloader.settings.enums.*;
-import net.brlns.gdownloader.ui.MediaCard;
+import net.brlns.gdownloader.ui.mediacard.MediaCard;
 import net.brlns.gdownloader.ui.menu.*;
 import net.brlns.gdownloader.ui.message.Message;
 import net.brlns.gdownloader.ui.message.MessageTypeEnum;
@@ -162,6 +162,8 @@ public class QueueEntry {
 
     private final AtomicBoolean startedFromQueueProcessor = new AtomicBoolean(false);
 
+    private final AtomicReference<String> forcedFormatId = new AtomicReference<>(null);
+
     public AbstractUrlFilter getFilter() {
         return main.getConfig().getUrlFilterById(filterId).orElse(originalFilter);
     }
@@ -242,6 +244,16 @@ public class QueueEntry {
 
     public void setStartButtonEventHandler(LambdaHandler<DownloadManager> handler) {
         startButtonEventHandler.set(handler);
+    }
+
+    // TODO: add an "Add to queue" option.
+    @Nullable
+    public String getForcedFormatId() {
+        return forcedFormatId.get();
+    }
+
+    public void setForcedFormatId(@Nullable String formatId) {
+        forcedFormatId.set(formatId);
     }
 
     public void recreateQueueEntry() {
@@ -877,6 +889,16 @@ public class QueueEntry {
 
         NestedMenuEntry extrasSubmenu = new NestedMenuEntry();
 
+        if (mediaCard.getOnInfoClick() != null) {
+            extrasSubmenu.put(l10n("gui.view_media_info"),
+                new RunnableMenuEntry(() -> mediaCard.getOnInfoClick().run()));
+        }
+
+        if (mediaCard.getOnFormatsClick() != null) {
+            extrasSubmenu.put(l10n("gui.view_available_formats"),
+                new RunnableMenuEntry(() -> mediaCard.getOnFormatsClick().run()));
+        }
+
         if (mediaCard.getThumbnailImage() != null) {
             extrasSubmenu.put(l10n("gui.view_thumbnail"),
                 new RunnableMenuEntry(() -> {
@@ -945,7 +967,7 @@ public class QueueEntry {
         }
 
         if (!extrasSubmenu.isEmpty()) {
-            addRightClick(l10n("gui.more_options"),
+            addRightClick(l10n("gui.more_options") + ":",
                 extrasSubmenu);
         }
     }

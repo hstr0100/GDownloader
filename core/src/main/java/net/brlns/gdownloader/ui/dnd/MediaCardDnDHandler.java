@@ -26,7 +26,7 @@ import javax.swing.TransferHandler;
 import javax.swing.TransferHandler.TransferSupport;
 import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.ui.GUIManager;
-import net.brlns.gdownloader.ui.MediaCard;
+import net.brlns.gdownloader.ui.mediacard.MediaCard;
 
 /**
  * @author Gabriel / hstr0100 / vertx010

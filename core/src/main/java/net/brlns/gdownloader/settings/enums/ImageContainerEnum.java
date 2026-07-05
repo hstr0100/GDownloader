@@ -33,7 +33,8 @@ public enum ImageContainerEnum implements ISettingsEnum, IContainerEnum {
     BMP,
     GIF,
     PSD,
-    WEBP;// TODO: add more
+    WEBP,
+    AVIF;// TODO: add more
 
     @Override
     public String getValue() {

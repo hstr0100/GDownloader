@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package net.brlns.gdownloader.ui;
+package net.brlns.gdownloader.ui.mediacard;
 
 import jakarta.annotation.Nullable;
 import java.awt.Component;
@@ -44,6 +44,7 @@ import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.downloader.enums.CloseReasonEnum;
+import net.brlns.gdownloader.ui.GUIManager;
 import net.brlns.gdownloader.ui.custom.CustomMediaCardUI;
 import net.brlns.gdownloader.ui.dnd.WindowTransferHandler;
 import net.brlns.gdownloader.ui.menu.RightClickMenuEntries;
@@ -122,6 +123,13 @@ public final class MediaCardManager {
                 deleteSelectedMediaCards();
             }
         });
+        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_Z, KeyEvent.CTRL_DOWN_MASK), "undoDelete");
+        actionMap.put("undoDelete", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                main.getDownloadManager().undoLastDelete();
+            }
+        });
 
         KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(e -> {
             if (e.getID() == KeyEvent.KEY_RELEASED) {
@@ -166,6 +174,10 @@ public final class MediaCardManager {
 
     public boolean isEmpty() {
         return mediaCards.isEmpty();
+    }
+
+    public boolean hasPendingUIUpdates() {
+        return !mediaCardUIUpdateQueue.isEmpty() || currentlyUpdatingMediaCards.get();
     }
 
     public boolean isMediaCardSelected(MediaCard card) {
@@ -259,14 +271,13 @@ public final class MediaCardManager {
             }
 
             currentlyUpdatingMediaCards.set(true);
-            mediaQueuePane.setIgnoreRepaint(true);
 
             boolean scrollToBottom = false;
 
             try {
                 int count = 0;
                 while (!mediaCardUIUpdateQueue.isEmpty()) {
-                    if (++count == 256) {// Process in batches of 255 items every 100ms
+                    if (++count == 40) {// Process in batches of 40 items every 100ms
                         break;
                     }
 
@@ -284,7 +295,10 @@ public final class MediaCardManager {
                             }
 
                             removeMediaCard(mediaCard.getId(), CloseReasonEnum.MANUAL);
-                        }, mediaCard.getOnInfoClick(), mediaCard.getOnStartClick());
+                        },
+                            mediaCard.getOnInfoClick(),
+                            mediaCard.getOnStartClick(),
+                            mediaCard.getOnFormatsClick());
 
                         mediaCard.setUi(ui);
 
@@ -322,8 +336,6 @@ public final class MediaCardManager {
 
                         mediaQueuePane.add(card);
 
-                        manager.updateContentPane();
-
                         scrollToBottom = true;
                     } else if (entry.getUpdateType() == CARD_REMOVE) {
                         CustomMediaCardUI ui = mediaCard.getUi();
@@ -331,8 +343,6 @@ public final class MediaCardManager {
                             try {
                                 if (mediaCards.isEmpty()) {
                                     mediaQueuePane.removeAll();
-
-                                    manager.updateContentPane();
                                 } else {
                                     mediaQueuePane.remove(ui.getCard());
                                 }
@@ -352,18 +362,15 @@ public final class MediaCardManager {
                 lastMediaCardQueueUpdate.set(System.currentTimeMillis());
                 currentlyUpdatingMediaCards.set(false);
 
-                if (mediaCardUIUpdateQueue.isEmpty()) {
-                    mediaQueuePane.setIgnoreRepaint(false);
+                mediaQueuePane.revalidate();
+                mediaQueuePane.repaint();
 
-                    mediaQueuePane.revalidate();
-                    mediaQueuePane.repaint();
+                manager.updateContentPane();
 
-                    // TODO: setting for this. if the window is hidden it should remain hidden
-                    //if (!manager.getAppWindow().isVisible()) {
-                    //    manager.getAppWindow().setVisible(true);
-                    //}
-                }
-
+                // TODO: setting for this. if the window is hidden it should remain hidden
+                //if (!manager.getAppWindow().isVisible()) {
+                //    manager.getAppWindow().setVisible(true);
+                //}
                 if (main.getConfig().isAutoScrollToBottom() && scrollToBottom) {
                     scrollPaneToBottom(queueScrollPane);
                 }
@@ -385,7 +392,7 @@ public final class MediaCardManager {
 
         runOnEDT(() -> {
             Rectangle viewRect = queueScrollPane.getViewport().getViewRect();
-            int buffer = viewRect.height;
+            int buffer = (int)(viewRect.height * 2.5);
 
             Rectangle expandedRect = new Rectangle(
                 viewRect.x, viewRect.y - buffer,
@@ -464,7 +471,7 @@ public final class MediaCardManager {
 
     @Nullable
     private MediaCard getMediaCardAt(int index) {
-        if (index < 0 || index > mediaQueuePane.getComponents().length) {
+        if (index < 0 || index >= mediaQueuePane.getComponents().length) {
             log.error("Index {} is out of bounds", index);
             return null;
         }

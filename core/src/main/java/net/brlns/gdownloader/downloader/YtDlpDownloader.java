@@ -39,6 +39,7 @@ import net.brlns.gdownloader.downloader.enums.DownloadStatusEnum;
 import net.brlns.gdownloader.downloader.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.downloader.structs.DownloadResult;
+import net.brlns.gdownloader.downloader.structs.FormatInfo;
 import net.brlns.gdownloader.downloader.structs.MediaInfo;
 import net.brlns.gdownloader.ffmpeg.enums.AudioBitrateEnum;
 import net.brlns.gdownloader.filters.AbstractUrlFilter;
@@ -307,20 +308,6 @@ public class YtDlpDownloader extends AbstractDownloader {
     protected DownloadResult tryDownload(QueueEntry entry) throws Exception {
         AbstractUrlFilter filter = entry.getFilter();
 
-        boolean downloadAudio = main.getConfig().isDownloadAudio();
-        boolean downloadVideo = main.getConfig().isDownloadVideo();
-
-        if (!downloadAudio && !downloadVideo) {
-            return new DownloadResult(combineFlags(FLAG_NO_METHOD, FLAG_NO_METHOD_VIDEO));
-        }
-
-        QualitySettings quality = filter.getActiveQualitySettings(main.getConfig());
-        AudioBitrateEnum audioBitrate = quality.getAudioBitrate();
-
-        if (!downloadVideo && downloadAudio && audioBitrate == AudioBitrateEnum.NO_AUDIO) {
-            return new DownloadResult(combineFlags(FLAG_NO_METHOD, FLAG_NO_METHOD_AUDIO));
-        }
-
         File finalPath = main.getOrCreateDownloadsDirectory();
 
         File tmpPath = DirectoryUtils.getOrCreate(finalPath, GDownloader.CACHE_DIRETORY_NAME, String.valueOf(entry.getDownloadId()));
@@ -345,6 +332,26 @@ public class YtDlpDownloader extends AbstractDownloader {
         }
 
         genericArguments.addAll(filter.getArguments(this, ALL, manager, tmpPath, entry.getUrl()));
+
+        // The user asked for one exact file, so give them that file.
+        String forcedFormatId = entry.getForcedFormatId();
+        if (forcedFormatId != null) {
+            return tryForcedFormatDownload(entry, tmpPath, genericArguments, forcedFormatId);
+        }
+
+        boolean downloadAudio = main.getConfig().isDownloadAudio();
+        boolean downloadVideo = main.getConfig().isDownloadVideo();
+
+        if (!downloadAudio && !downloadVideo) {
+            return new DownloadResult(combineFlags(FLAG_NO_METHOD, FLAG_NO_METHOD_VIDEO));
+        }
+
+        QualitySettings quality = filter.getActiveQualitySettings(main.getConfig());
+        AudioBitrateEnum audioBitrate = quality.getAudioBitrate();
+
+        if (!downloadVideo && downloadAudio && audioBitrate == AudioBitrateEnum.NO_AUDIO) {
+            return new DownloadResult(combineFlags(FLAG_NO_METHOD, FLAG_NO_METHOD_AUDIO));
+        }
 
         boolean success = false;
         String lastOutput = "";
@@ -424,6 +431,58 @@ public class YtDlpDownloader extends AbstractDownloader {
         }
 
         return new DownloadResult(success ? FLAG_SUCCESS : FLAG_UNSUPPORTED, lastOutput);
+    }
+
+    private DownloadResult tryForcedFormatDownload(QueueEntry entry, File tmpPath,
+        ProcessArguments arguments, String formatId) throws Exception {
+
+        AbstractUrlFilter filter = entry.getFilter();
+
+        Optional<FormatInfo> matchedFormat = Optional.ofNullable(entry.getMediaInfo())
+            .map(MediaInfo::getFormats)
+            .flatMap(formats -> formats.stream()
+            .filter(f -> f != null && formatId.equals(f.getFormatId()))
+            .findFirst());
+
+        boolean audioOnly = matchedFormat.map(FormatInfo::isAudioOnly).orElse(false);
+
+        entry.setCurrentDownloadType(audioOnly ? AUDIO : VIDEO);
+
+        String namePattern;
+        if (audioOnly) {
+            String bitrateLabel = matchedFormat
+                .map(f -> f.getAbr() != null && f.getAbr() > 0 ? f.getAbr() : f.getTbr())
+                .filter(bitrate -> bitrate != null && bitrate > 0)
+                .map(bitrate -> Math.round(bitrate) + "kbps")
+                .orElse("unknown");
+
+            namePattern = filter.getAudioNamePattern().replace("%(audio_bitrate)s", bitrateLabel);
+        } else {
+            namePattern = filter.getVideoNamePattern();
+        }
+
+        arguments.add(
+            "-o", tmpPath.getAbsolutePath() + File.separator + namePattern,
+            "-f", formatId
+        );
+
+        Pair<Integer, String> result = processDownload(entry, arguments);
+
+        if (result == null || entry.getCancelHook().get()) {
+            return new DownloadResult(FLAG_STOPPED);
+        }
+
+        String lastOutput = result.getValue();
+
+        if (result.getKey() != 0) {
+            if (lastOutput.contains("Unsupported URL")) {
+                return new DownloadResult(FLAG_UNSUPPORTED, lastOutput);
+            }
+
+            return new DownloadResult(FLAG_MAIN_CATEGORY_FAILED, lastOutput);
+        }
+
+        return new DownloadResult(FLAG_SUCCESS, lastOutput);
     }
 
     @Override
