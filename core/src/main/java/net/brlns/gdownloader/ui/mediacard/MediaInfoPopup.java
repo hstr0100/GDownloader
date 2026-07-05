@@ -89,7 +89,9 @@ public final class MediaInfoPopup {
     private Rectangle detailsBounds;
 
     private JDialog activeFormatSelector;
-    private Rectangle formatSelectorBounds;
+    private Point formatSelectorLocation;
+    private int formatSelectorHeight = FORMAT_SELECTOR_DEFAULT_HEIGHT;
+    private boolean formatSelectorUserResized = false;
 
     private MediaInfoPopup(GUIManager managerIn) {
         manager = managerIn;
@@ -142,12 +144,14 @@ public final class MediaInfoPopup {
         dialog.addComponentListener(new ComponentAdapter() {
             @Override
             public void componentMoved(ComponentEvent e) {
-                formatSelectorBounds = dialog.getBounds();
+                formatSelectorLocation = dialog.getLocation();
             }
 
             @Override
             public void componentResized(ComponentEvent e) {
-                formatSelectorBounds = dialog.getBounds();
+                formatSelectorHeight = dialog.getHeight();
+                formatSelectorUserResized = true;
+                formatSelectorLocation = dialog.getLocation();
             }
         });
 
@@ -168,19 +172,25 @@ public final class MediaInfoPopup {
 
         dialog.setContentPane(root);
 
-        Optional.ofNullable(formatSelectorBounds).ifPresentOrElse(
-            dialog::setBounds,
-            () -> {
-                dialog.pack();
+        dialog.pack();
 
-                int width = clampToScreenWidth(dialog,
-                    Math.max(dialog.getWidth(), FORMAT_SELECTOR_MIN_WIDTH));
+        int naturalWidth = clampToScreenWidth(dialog,
+            Math.max(dialog.getWidth() + 10, FORMAT_SELECTOR_MIN_WIDTH));
 
-                dialog.setSize(width, FORMAT_SELECTOR_DEFAULT_HEIGHT);
-                dialog.setMinimumSize(new Dimension(200, 200));
-                dialog.setLocationRelativeTo(null);
-            }
-        );
+        int width = formatSelectorUserResized
+            ? Math.max(naturalWidth, dialog.getWidth())
+            : naturalWidth;
+
+        int height = formatSelectorHeight;
+
+        dialog.setSize(width, height);
+        dialog.setMinimumSize(new Dimension(500, 200));
+
+        if (formatSelectorLocation != null) {
+            dialog.setLocation(formatSelectorLocation);
+        } else {
+            dialog.setLocationRelativeTo(null);
+        }
 
         return dialog;
     }
@@ -528,7 +538,8 @@ public final class MediaInfoPopup {
             dialog::setBounds,
             () -> {
                 dialog.setSize(DETAILS_DEFAULT_WIDTH, DETAILS_DEFAULT_HEIGHT);
-                dialog.setMinimumSize(new Dimension(200, 200));
+                dialog.setMinimumSize(new Dimension(
+                    DETAILS_DEFAULT_WIDTH - 100, DETAILS_DEFAULT_HEIGHT - 100));
                 dialog.setLocationRelativeTo(null);
             }
         );
@@ -923,7 +934,7 @@ public final class MediaInfoPopup {
             gbc.fill = GridBagConstraints.BOTH;
             gbc.weightx = 1.0;
 
-            JPanel actionPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
+            JPanel actionPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
             actionPanel.setOpaque(true);
             actionPanel.setBackground(color(rowBg));
             actionPanel.setBorder(BorderFactory.createEmptyBorder(6, 8, 6, 16));

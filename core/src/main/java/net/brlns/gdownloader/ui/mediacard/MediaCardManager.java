@@ -73,6 +73,8 @@ public final class MediaCardManager {
     private final Queue<MediaCardUIUpdateEntry> mediaCardUIUpdateQueue = new ConcurrentLinkedQueue<>();
     private final Map<Integer, MediaCard> mediaCards = new ConcurrentHashMap<>();
 
+    private final AtomicReference<JPanel> hoveredCardPanel = new AtomicReference<>();
+
     private final ConcurrentLinkedHashSet<Integer> selectedMediaCards = new ConcurrentLinkedHashSet<>();
     private final AtomicReference<MediaCard> lastSelectedMediaCard = new AtomicReference<>(null);
     private final AtomicBoolean isMultiSelectMode = new AtomicBoolean();
@@ -94,6 +96,20 @@ public final class MediaCardManager {
 
     public void initializeQueueScrollPane(JScrollPane scrollPane) {
         queueScrollPane = scrollPane;
+
+        queueScrollPane.getViewport().addChangeListener(e -> onViewportScrolled());
+    }
+
+    private void onViewportScrolled() {
+        JPanel hovered = hoveredCardPanel.getAndSet(null);
+        if (hovered != null) {
+            MediaCard card = (MediaCard)hovered.getClientProperty("MEDIA_CARD");
+            if (card != null && !isMediaCardSelected(card)) {
+                hovered.setBackground(color(MEDIA_CARD));
+            }
+        }
+
+        queueScrollPane.getViewport().repaint();
     }
 
     public JPanel getOrCreateMediaQueuePanel() {
@@ -335,6 +351,9 @@ public final class MediaCardManager {
                         }
 
                         mediaQueuePane.add(card);
+
+                        card.revalidate();
+                        ui.getMediaNameLabel().updateTruncatedText();
 
                         scrollToBottom = true;
                     } else if (entry.getUpdateType() == CARD_REMOVE) {
@@ -766,6 +785,8 @@ public final class MediaCardManager {
 
         @Override
         public void mouseEntered(MouseEvent e) {
+            hoveredCardPanel.set(card);
+
             if (!isMediaCardSelected(mediaCard) && !isMultiSelectMode.get()) {
                 card.setBackground(color(MEDIA_CARD_HOVER));
             }
@@ -773,6 +794,8 @@ public final class MediaCardManager {
 
         @Override
         public void mouseExited(MouseEvent e) {
+            hoveredCardPanel.compareAndSet(card, null);
+
             if (!isMediaCardSelected(mediaCard) && !isMultiSelectMode.get()) {
                 card.setBackground(color(MEDIA_CARD));
             }

@@ -134,6 +134,7 @@ public final class CustomMediaCardUI {
         card.setLayout(new GridBagLayout());
         card.setBorder(BorderFactory.createLineBorder(color(BACKGROUND), 5));
         card.setBackground(color(MEDIA_CARD));
+        card.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         int fontSize = manager.getMain().getConfig().getFontSize();
         cardMaximumSize = new Dimension(0, fontSize >= 15 ? 150 + (fontSize - 15) * 3 : 135);

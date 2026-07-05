@@ -134,6 +134,7 @@ import static net.brlns.gdownloader.util.StringUtils.notNullOrEmpty;
 // TODO when changing download path, move the cache directory to the new location. Need to take available space into consideration
 // TODO button to cancel update check
 // TODO run transcoder for audio-only downloads
+// TODO transcode specific-format downloads if requested by user
 /**
  * GDownloader - GUI wrapper for yt-dlp
  *
