@@ -135,6 +135,7 @@ import static net.brlns.gdownloader.util.StringUtils.notNullOrEmpty;
 // TODO button to cancel update check
 // TODO run transcoder for audio-only downloads
 // TODO transcode specific-format downloads if requested by user
+// TODO fetch first playlist item for metadata, then fetch the full playlist for individual filtering/processing/state tracking
 /**
  * GDownloader - GUI wrapper for yt-dlp
  *
