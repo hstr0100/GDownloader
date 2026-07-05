@@ -69,7 +69,7 @@ public final class MediaInfoPopup {
     private static final int DETAILS_DEFAULT_WIDTH = 780;
     private static final int DETAILS_DEFAULT_HEIGHT = 550;
 
-    private static final int FORMAT_SELECTOR_DEFAULT_WIDTH = 1100;
+    private static final int FORMAT_SELECTOR_MIN_WIDTH = 600;
     private static final int FORMAT_SELECTOR_DEFAULT_HEIGHT = 480;
 
     private static final Map<GUIManager, MediaInfoPopup> _instances
@@ -164,7 +164,6 @@ public final class MediaInfoPopup {
 
         JPanel root = new JPanel(new BorderLayout());
         root.setBackground(color(BACKGROUND));
-        root.setBorder(new EmptyBorder(10, 10, 10, 10));
         root.add(buildFormatsTable(entry, info), BorderLayout.CENTER);
 
         dialog.setContentPane(root);
@@ -172,13 +171,26 @@ public final class MediaInfoPopup {
         Optional.ofNullable(formatSelectorBounds).ifPresentOrElse(
             dialog::setBounds,
             () -> {
-                dialog.setSize(FORMAT_SELECTOR_DEFAULT_WIDTH, FORMAT_SELECTOR_DEFAULT_HEIGHT);
+                dialog.pack();
+
+                int width = clampToScreenWidth(dialog,
+                    Math.max(dialog.getWidth(), FORMAT_SELECTOR_MIN_WIDTH));
+
+                dialog.setSize(width, FORMAT_SELECTOR_DEFAULT_HEIGHT);
                 dialog.setMinimumSize(new Dimension(200, 200));
                 dialog.setLocationRelativeTo(null);
             }
         );
 
         return dialog;
+    }
+
+    private static int clampToScreenWidth(Window window, int desiredWidth) {
+        Rectangle screen = window.getGraphicsConfiguration() != null
+            ? window.getGraphicsConfiguration().getBounds()
+            : new Rectangle(Toolkit.getDefaultToolkit().getScreenSize());
+
+        return Math.min(desiredWidth, screen.width - 40);
     }
 
     private void closeFormatSelector() {
@@ -223,7 +235,6 @@ public final class MediaInfoPopup {
 
             JDialog dialog = buildPreviewDialog(queueEntry, info);
             if (dialog == null) {
-                // Nothing worth showing
                 return;
             }
 
@@ -837,7 +848,7 @@ public final class MediaInfoPopup {
             "gui.media_info.column.fps",
             "gui.media_info.column.bitrate",
             "gui.media_info.column.size",
-            ""// DL Icon
+            "gui.media_info.column.download"
         ));
 
         JPanel table = new JPanel(new GridBagLayout());
@@ -912,7 +923,7 @@ public final class MediaInfoPopup {
             gbc.fill = GridBagConstraints.BOTH;
             gbc.weightx = 1.0;
 
-            JPanel actionPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+            JPanel actionPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
             actionPanel.setOpaque(true);
             actionPanel.setBackground(color(rowBg));
             actionPanel.setBorder(BorderFactory.createEmptyBorder(6, 8, 6, 16));
@@ -932,6 +943,16 @@ public final class MediaInfoPopup {
             downloadButton.setPreferredSize(new Dimension(16, 16));
             downloadButton.setAlignmentX(Component.CENTER_ALIGNMENT);
             actionPanel.add(downloadButton);
+
+            JButton queueButton = createIconButton(
+                loadIcon("/assets/add.png", ICON, 16),
+                loadIcon("/assets/add.png", ICON_HOVER, 16),
+                "gui.media_info.queue_this_format",
+                e -> manager.getMain().getDownloadManager().queueSpecificFormat(entry, format));
+
+            queueButton.setPreferredSize(new Dimension(16, 16));
+            queueButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+            actionPanel.add(queueButton);
 
             table.add(actionPanel, gbc);
 

@@ -123,12 +123,24 @@ tasks.register('generateVersionFile') {
     }
 }
 
+tasks.register('formatLangFiles') {
+    group = 'build'
+
+    doLast {
+        fileTree('src/main/resources/lang').files.each { file ->
+            def (top, regular) = file.readLines().findAll { it.trim() }.split { it.startsWith('_') }
+            file.text = (top.sort() + regular.sort()).join('\n') + '\n'
+        }
+    }
+}
+
 tasks.named('compileJava').configure {
     dependsOn tasks.named('generateVersionFile')
 }
 
 tasks.named('processResources').configure {
     dependsOn tasks.named('generateVersionFile')
+    dependsOn tasks.named('formatLangFiles')
 }
 
 extraJavaModuleInfo {

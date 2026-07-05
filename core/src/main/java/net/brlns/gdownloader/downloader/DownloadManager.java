@@ -767,6 +767,35 @@ public class DownloadManager implements IEvent, AutoCloseable {
         }
     }
 
+    public void queueSpecificFormat(QueueEntry entry, FormatInfo format) {
+        if (format == null || format.getFormatId() == null) {
+            return;
+        }
+
+        boolean ytDlpCompatible = entry.getDownloaders().stream()
+            .anyMatch(downloader -> downloader.getDownloaderId() == DownloaderIdEnum.YT_DLP);
+
+        if (!ytDlpCompatible) {
+            log.warn("Cannot queue a specific format for a non yt-dlp compatible entry: {}", entry.getUrl());
+            return;
+        }
+
+        entry.queueFormatForDownload(format.getFormatId());
+
+        ToastMessenger.show(Message.builder()
+            .message("gui.media_info.format_queued", format.getFormatId(), entry.getQueuedFormatCount())
+            .durationMillis(3000)
+            .messageType(MessageTypeEnum.INFO)
+            .discardDuplicates(true)
+            .build());
+
+        QueueCategoryEnum category = entry.getCurrentQueueCategory();
+        if (category == COMPLETED || category == FAILED) {
+            // Nudge back into the queue
+            requeueEntry(entry, false);
+        }
+    }
+
     public void processQueue() {
         int maxDownloads = main.getConfig().getMaxSimultaneousDownloads();
 
@@ -1080,6 +1109,18 @@ public class DownloadManager implements IEvent, AutoCloseable {
             return;
         }
 
+        if (entry.getForcedFormatId() == null && entry.hasQueuedFormats()) {
+            String nextFormatId = entry.pollNextQueuedFormat();
+            if (nextFormatId != null) {
+                entry.setForcedFormatId(nextFormatId);
+                // unless someone with more time and patience than me wants to implement and maintain individual Java bindings for every single gallery-dl extractor
+                // gallery-dl support is basic at best and crippled until proper universal metadata extraction through the CLI (or better yet, sockets/http) is possible
+                // until then, we mostly default to YT_DLP, which exposes a mature, standardized JSON object we can actually rely on
+                // no matter what URL we throw at it, the fields we need are exactly where they're supposed to be
+                entry.setForcedDownloader(DownloaderIdEnum.YT_DLP);
+            }
+        }
+
         entry.getStartedFromQueueProcessor().set(!force);
 
         if (entry.getCurrentQueueCategory() != RUNNING) {
@@ -1253,6 +1294,15 @@ public class DownloadManager implements IEvent, AutoCloseable {
                                 l10n("gui.download_status.finished"));
                             entry.cleanDirectories();
 
+                            if (entry.hasQueuedFormats()) {
+                                stopDownload(entry, () -> {
+                                    resetDownload(entry);
+                                    submitDownloadTask(entry, false);
+                                });
+
+                                return;
+                            }
+
                             offerTo(COMPLETED, entry);
 
                             if (main.getConfig().isRemoveSuccessfulDownloads()) {
@@ -1302,7 +1352,8 @@ public class DownloadManager implements IEvent, AutoCloseable {
                 }
 
                 if (entry.getCurrentQueueCategory() == RUNNING
-                    && sequencer.contains(entry)) {
+                    && sequencer.contains(entry)
+                    && !entry.hasQueuedFormats()) {
                     log.error("Unexpected RUNNING download state, switching to QUEUED");
 
                     offerTo(QUEUED, entry);

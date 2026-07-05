@@ -69,6 +69,15 @@ public class QueueEntryEntity implements Serializable {
     @Column(name = "forced_downloader")
     private DownloaderIdEnum forcedDownloader;
 
+    @Column(name = "forced_format_id", length = 128)
+    private String forcedFormatId;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "pending_formats", joinColumns = @JoinColumn(name = "download_id"))
+    @OrderColumn
+    @Column(name = "format_id", length = 128)
+    private ArrayList<String> pendingFormats = new ArrayList<>();
+
     @Enumerated(EnumType.STRING)
     @Column(name = "current_downloader")
     private DownloaderIdEnum currentDownloader;

@@ -31,7 +31,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -164,6 +167,9 @@ public class QueueEntry {
 
     private final AtomicReference<String> forcedFormatId = new AtomicReference<>(null);
 
+    private final Queue<String> pendingFormatQueue = new ConcurrentLinkedQueue<>();
+    private final Set<String> uniquePendingFormats = ConcurrentHashMap.newKeySet();
+
     public AbstractUrlFilter getFilter() {
         return main.getConfig().getUrlFilterById(filterId).orElse(originalFilter);
     }
@@ -246,7 +252,6 @@ public class QueueEntry {
         startButtonEventHandler.set(handler);
     }
 
-    // TODO: add an "Add to queue" option.
     @Nullable
     public String getForcedFormatId() {
         return forcedFormatId.get();
@@ -254,6 +259,38 @@ public class QueueEntry {
 
     public void setForcedFormatId(@Nullable String formatId) {
         forcedFormatId.set(formatId);
+    }
+
+    public boolean queueFormatForDownload(String formatId) {
+        if (uniquePendingFormats.add(formatId)) {
+            pendingFormatQueue.add(formatId);
+
+            return true;
+        }
+
+        return false;
+    }
+
+    @Nullable
+    public String pollNextQueuedFormat() {
+        String formatId = pendingFormatQueue.poll();
+        if (formatId != null) {
+            uniquePendingFormats.remove(formatId);
+        }
+
+        return formatId;
+    }
+
+    public boolean hasQueuedFormats() {
+        return !pendingFormatQueue.isEmpty();
+    }
+
+    public int getQueuedFormatCount() {
+        return uniquePendingFormats.size();
+    }
+
+    public List<String> snapshotPendingFormats() {
+        return new ArrayList<>(pendingFormatQueue);
     }
 
     public void recreateQueueEntry() {
@@ -1119,6 +1156,8 @@ public class QueueEntry {
         }
 
         entity.setForcedDownloader(getForcedDownloader());
+        entity.setForcedFormatId(getForcedFormatId());
+        entity.setPendingFormats(new ArrayList<>(snapshotPendingFormats()));
 
         entity.setCurrentDownloader(getCurrentDownloader());
         entity.setCurrentDownloadType(getCurrentDownloadType());
@@ -1176,6 +1215,11 @@ public class QueueEntry {
 //            queueEntry.setMediaInfo(MediaInfo.fromEntity(entity.getMediaInfo()));
 //        }
         queueEntry.setForcedDownloader(entity.getForcedDownloader());
+        queueEntry.setForcedFormatId(entity.getForcedFormatId());
+        for (String formatId : entity.getPendingFormats()) {
+            queueEntry.queueFormatForDownload(formatId);
+        }
+
         queueEntry.setCurrentDownloader(entity.getCurrentDownloader());
         queueEntry.setCurrentDownloadType(entity.getCurrentDownloadType());
         queueEntry.setCurrentQueueCategory(entity.getCurrentQueueCategory());
