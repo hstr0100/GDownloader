@@ -158,6 +158,14 @@ public class SpotDLDownloader extends AbstractDownloader {
         main.getFfmpegTranscoder().getFFmpegExecutable().ifPresent(ffmpeg
             -> genericArguments.add("--ffmpeg", ffmpeg));
 
+        YtDlpDownloader ytdlp = (YtDlpDownloader)main.getDownloadManager()
+            .getDownloader(DownloaderIdEnum.YT_DLP);
+        ytdlp.getDenoPath().ifPresent(deno -> {
+            genericArguments.add(
+                "--yt-dlp-args",
+                "--js-runtimes deno:" + deno.getAbsolutePath());
+        });
+
         genericArguments.addAll(filter.getArguments(this, ALL, manager, tmpPath, entry.getUrl()));
 
         boolean success = false;
