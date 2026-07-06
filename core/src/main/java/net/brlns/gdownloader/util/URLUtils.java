@@ -296,15 +296,13 @@ public final class URLUtils {
             // Strip out any query parameters or fragments
             int queryIndex = path.indexOf('?');
             int fragmentIndex = path.indexOf('#');
-            if (queryIndex != -1) {
-                path = path.substring(0, queryIndex);
-            }
-            if (fragmentIndex != -1 && fragmentIndex < path.length()) {
-                path = path.substring(0, fragmentIndex);
-            }
+            int endIndex = Math.min(
+                queryIndex == -1 ? path.length() : queryIndex,
+                fragmentIndex == -1 ? path.length() : fragmentIndex
+            );
 
             // Decode URL to remove any encoded characters
-            String decodedPath = URLDecoder.decode(path, StandardCharsets.UTF_8);
+            String decodedPath = URLDecoder.decode(path.substring(0, endIndex), StandardCharsets.UTF_8);
 
             // Split path to get the last segment
             String[] pathSegments = decodedPath.split("/");
