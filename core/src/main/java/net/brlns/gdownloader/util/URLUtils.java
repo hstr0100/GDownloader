@@ -23,6 +23,7 @@ import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -292,18 +293,18 @@ public final class URLUtils {
         try {
             String path = url.getPath();
 
+            // Strip out any query parameters or fragments
+            int queryIndex = path.indexOf('?');
+            int fragmentIndex = path.indexOf('#');
+            if (queryIndex != -1) {
+                path = path.substring(0, queryIndex);
+            }
+            if (fragmentIndex != -1 && fragmentIndex < path.length()) {
+                path = path.substring(0, fragmentIndex);
+            }
+
             // Decode URL to remove any encoded characters
             String decodedPath = URLDecoder.decode(path, StandardCharsets.UTF_8);
-
-            // Strip out any query parameters or fragments
-            int queryIndex = decodedPath.indexOf('?');
-            int fragmentIndex = decodedPath.indexOf('#');
-            if (queryIndex != -1) {
-                decodedPath = decodedPath.substring(0, queryIndex);
-            }
-            if (fragmentIndex != -1) {
-                decodedPath = decodedPath.substring(0, fragmentIndex);
-            }
 
             // Split path to get the last segment
             String[] pathSegments = decodedPath.split("/");
@@ -316,4 +317,98 @@ public final class URLUtils {
             return null;
         }
     }
+
+    @Nullable
+    public static String getHost(String url) {
+        try {
+            String host = URI.create(url).getHost();
+            return host != null ? host.toLowerCase(Locale.ROOT) : null;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    public static boolean isHttpUrl(String url) {
+        String lower = url.toLowerCase(Locale.ROOT);
+
+        return lower.startsWith("http://") || lower.startsWith("https://");
+    }
+
+    @Nullable
+    public static String getExtension(String url) {
+        int queryIndex = url.indexOf('?');
+        int hashIndex = url.indexOf('#');
+        int end = url.length();
+
+        if (queryIndex != -1) {
+            end = queryIndex;
+        }
+        if (hashIndex != -1 && hashIndex < end) {
+            end = hashIndex;
+        }
+
+        String path = url.substring(0, end);
+        int lastDot = path.lastIndexOf('.');
+        int lastSlash = path.lastIndexOf('/');
+
+        if (lastDot == -1 || lastDot <= lastSlash) {
+            return null;
+        }
+
+        String extension = path.substring(lastDot + 1).toLowerCase(Locale.ROOT);
+        return extension.isEmpty() ? null : extension;
+    }
+
+    public static String stripFragment(String url) {
+        int hashIndex = url.indexOf('#');
+
+        return hashIndex == -1 ? url : url.substring(0, hashIndex);
+    }
+
+    @Nullable
+    public static String resolve(String baseUrl, @Nullable String possiblyRelative) {
+        if (possiblyRelative == null || possiblyRelative.isBlank()) {
+            return null;
+        }
+
+        try {
+            return URI.create(baseUrl.trim()).resolve(possiblyRelative.trim()).toString();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    public static String resolveFetchSite(URL target, @Nullable String referer) {
+        if (referer == null) {
+            return "none";
+        }
+
+        String refererHost = URLUtils.getHost(referer);
+        String targetHost = target.getHost() != null
+            ? target.getHost().toLowerCase(Locale.ROOT) : null;
+
+        if (refererHost == null || targetHost == null) {
+            return "cross-site";
+        }
+
+        if (refererHost.equalsIgnoreCase(targetHost)) {
+            return "same-origin";
+        }
+
+        String refererRoot = rootDomain(refererHost);
+        String targetRoot = rootDomain(targetHost);
+
+        if (refererRoot != null && refererRoot.equalsIgnoreCase(targetRoot)) {
+            return "same-site";
+        }
+
+        return "cross-site";
+    }
+
+    private static String rootDomain(String host) {
+        String[] parts = host.split("\\.");
+
+        return parts.length < 2 ? host : parts[parts.length - 2] + "." + parts[parts.length - 1];
+    }
+
 }

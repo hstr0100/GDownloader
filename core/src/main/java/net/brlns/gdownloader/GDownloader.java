@@ -110,7 +110,6 @@ import static net.brlns.gdownloader.util.StringUtils.notNullOrEmpty;
 // TODO Split main window from GUIManager
 // TODO Fastutil collections
 // TODO Tabs in settings for the different downloaders
-// TODO Crawl for valid links that can be consumed by direct-http
 // TODO Fix notification line wrapping
 // TODO Downloader priority settings
 // TODO Notifications are appearing below the main window when in fullscreen mode.

@@ -31,6 +31,7 @@ import net.brlns.gdownloader.ffmpeg.enums.AudioCodecEnum;
 import net.brlns.gdownloader.ffmpeg.structs.FFmpegConfig;
 import net.brlns.gdownloader.filters.AbstractUrlFilter;
 import net.brlns.gdownloader.filters.GenericFilter;
+import net.brlns.gdownloader.settings.downloader.*;
 import net.brlns.gdownloader.settings.enums.BrowserEnum;
 import net.brlns.gdownloader.settings.enums.LanguageEnum;
 import net.brlns.gdownloader.settings.enums.PlayListOptionEnum;
@@ -45,7 +46,7 @@ import net.brlns.gdownloader.settings.enums.WebFilterEnum;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class Settings {
 
-    public static final int CONFIG_VERSION = 35;
+    public static final int CONFIG_VERSION = 36;
 
     @JsonProperty("ConfigVersion")
     private int configVersion = CONFIG_VERSION;
@@ -82,22 +83,12 @@ public class Settings {
     @JsonProperty("RestoreSessionAfterRestart")
     private boolean restoreSessionAfterRestart = true;
 
-    @JsonProperty("MissingFormatsWorkaround")
-    private boolean missingFormatsWorkaround = false;
-
-    @JsonProperty("MergeAllAudioTracks")
-    private boolean mergeAllAudioTracks = false;
-
     @JsonProperty("KeepRawMediaFilesAfterTranscode")
     private boolean keepRawMediaFilesAfterTranscode = false;
 
     // Disable by default until NVENC is properly tested
     @JsonProperty("FailDownloadsOnTranscodingFailures")
     private boolean failDownloadsOnTranscodingFailures = false;
-
-    @Deprecated
-    @JsonProperty("ReadCookies")
-    private boolean readCookies = false;
 
     @JsonProperty("ReadCookiesFromBrowser")
     private boolean readCookiesFromBrowser = false;
@@ -114,57 +105,26 @@ public class Settings {
     @JsonProperty("QueryMetadata")
     private boolean queryMetadata = true;
 
-    @JsonProperty("DownloadYoutubeChannels")
-    private boolean downloadYoutubeChannels = false;
-
     @JsonProperty("RecordToDownloadArchive")
     private boolean recordToDownloadArchive = false;
 
     @JsonProperty("RemoveFromDownloadArchive")
     private boolean removeFromDownloadArchive = true;
 
-    @JsonProperty("RespectYtDlpConfigFile")
-    private boolean respectYtDlpConfigFile = false;
-
-    // TODO ui
-    @JsonProperty("YtDlpTranscoding")
-    private boolean ytDlpTranscoding = true;
-
-    @JsonProperty("GalleryDlDeduplication")
-    private boolean galleryDlDeduplication = true;
-
-    @JsonProperty("GalleryDlTranscoding")
-    private boolean galleryDlTranscoding = false;
-
     @JsonProperty("UseUploadTimeAsFileTime")
     private boolean useUploadTimeAsFileTime = true;
 
-    @JsonProperty("GalleryDlEnabled")
-    // gallery-dl appears to be unsigned
-    // let's leave it off by default on Windows to avoid any possible issues with that
-    private boolean galleryDlEnabled = !GDownloader.isWindows();
+    @JsonProperty("YtDlpSettings")
+    private YtDlpSettings ytDlpSettings = new YtDlpSettings();
 
-    @JsonProperty("SpotDLEnabled")
-    private boolean spotDLEnabled = !GDownloader.isWindows();
+    @JsonProperty("GalleryDLSettings")
+    private GalleryDLSettings galleryDLSettings = new GalleryDLSettings();
 
-    @JsonProperty("DirectHttpEnabled")
-    private boolean directHttpEnabled = false;
+    @JsonProperty("SpotDLSettings")
+    private SpotDLSettings spotDLSettings = new SpotDLSettings();
 
-    // TODO ui
-    @JsonProperty("DirectHttpTranscoding")
-    private boolean directHttpTranscoding = true;
-
-    @JsonProperty("DirectHttpMaxDownloadChunks")
-    private int directHttpMaxDownloadChunks = 5;
-
-    @JsonProperty("RespectGalleryDlConfigFile")
-    private boolean respectGalleryDlConfigFile = true;
-
-    @JsonProperty("GalleryDlUseOriginalFilenames")
-    private boolean GalleryDlUseOriginalFilenames = false;
-
-    @JsonProperty("RespectSpotDLConfigFile")
-    private boolean respectSpotDLConfigFile = true;
+    @JsonProperty("DirectHttpSettings")
+    private DirectHttpSettings directHttpSettings = new DirectHttpSettings();
 
     @JsonProperty("DownloadsPath")
     private String downloadsPath = "";
@@ -191,19 +151,6 @@ public class Settings {
     @JsonProperty("EnableExtraArguments")
     private boolean enableExtraArguments = false;
 
-    /**
-     * These arguments are intended for quick, ad-hoc flags.For more granular control and per-download-type arguments,
-     * see {@link net.brlns.gdownloader.filters.AbstractUrlFilter}
-     */
-    @JsonProperty("ExtraYtDlpArguments")
-    private String extraYtDlpArguments = "";
-
-    @JsonProperty("ExtraGalleryDlArguments")
-    private String extraGalleryDlArguments = "";
-
-    @JsonProperty("ExtraSpotDLArguments")
-    private String extraSpotDLArguments = "";
-
     @JsonProperty("LastSettingsExportDirectory")
     private String lastSettingsExportDirectory = "";
 
@@ -222,35 +169,18 @@ public class Settings {
     @JsonProperty("DownloadVideo")
     private boolean downloadVideo = true;
 
-    @JsonProperty("DownloadSubtitles")
-    private boolean downloadSubtitles = false;
-
-    @JsonProperty("DownloadAutoGeneratedSubtitles")
-    private boolean downloadAutoGeneratedSubtitles = false;
-
-    @JsonProperty("DownloadThumbnails")
-    private boolean downloadThumbnails = false;
-
     @JsonProperty("AutoDownloadStart")
     private boolean autoDownloadStart = false;
-
-    @JsonProperty("DownloadDescription")
-    private boolean downloadDescription = false;
 
     @JsonProperty("EnableSystemTray")
     private boolean enableSystemTray = true;
 
-    @JsonProperty("SaveDescriptionFileAsTxt")
-    private boolean saveDescriptionFileAsTxt = true;
-
+    // TODO: configure ranges
     @JsonProperty("RandomIntervalBetweenDownloads")
     private boolean randomIntervalBetweenDownloads = false;
 
     @JsonProperty("DisplayLinkCaptureNotifications")
     private boolean displayLinkCaptureNotifications = true;
-
-    @JsonProperty("UseSponsorBlock")
-    private boolean useSponsorBlock = false;
 
     @JsonProperty("KeepWindowAlwaysOnTop")
     private boolean keepWindowAlwaysOnTop = false;
@@ -293,12 +223,13 @@ public class Settings {
     @JsonProperty("AutoDownloadRetry")
     private boolean autoDownloadRetry = true;
 
+    // TODO: wire up, dynamically throttle downloaders when starting new tasks based on best-effort bandwidth allocation stategy.
+    // we can calculate this based on max simultaneous downloads, or active downloads if the queue processor is MIA.
+    @JsonProperty("GlobalMaxDownloadSpeedBytesPerSecond")
+    private long globalMaxDownloadSpeedBytesPerSecond = 0l;
+
     @JsonProperty("ProxySettings")
     private ProxySettings proxySettings = new ProxySettings();
-
-    @Deprecated
-    @JsonProperty("QualitySettings")
-    private Map<WebFilterEnum, QualitySettings> qualitySettings = new TreeMap<>();
 
     @JsonProperty("UrlFilters")
     private List<AbstractUrlFilter> urlFilters = new ArrayList<>();
@@ -393,6 +324,141 @@ public class Settings {
             }
         }
 
+        if (getConfigVersion() < 36) {
+            directHttpSettings.setEnabled(isDirectHttpEnabled());
+            directHttpSettings.setMediaTranscoding(isDirectHttpTranscoding());
+            directHttpSettings.setMaxDownloadChunks(getDirectHttpMaxDownloadChunks());
+
+            galleryDLSettings.setEnabled(isGalleryDlEnabled());
+            galleryDLSettings.setFileDeduplication(isGalleryDlDeduplication());
+            galleryDLSettings.setMediaTranscoding(isGalleryDlTranscoding());
+            galleryDLSettings.setRespectConfigFile(isRespectGalleryDlConfigFile());
+            galleryDLSettings.setUseOriginalFilenames(isGalleryDlUseOriginalFilenames());
+            galleryDLSettings.setExtraCommandLineArguments(getExtraGalleryDlArguments());
+
+            ytDlpSettings.setExtraCommandLineArguments(getExtraYtDlpArguments());
+            ytDlpSettings.setRespectConfigFile(isRespectYtDlpConfigFile());
+            ytDlpSettings.setMissingFormatsWorkaround(isMissingFormatsWorkaround());
+            ytDlpSettings.setMergeAllAudioTracks(isMergeAllAudioTracks());
+            ytDlpSettings.setDownloadYoutubeChannels(isDownloadYoutubeChannels());
+            ytDlpSettings.setMediaTranscoding(isYtDlpTranscoding());
+            ytDlpSettings.setUseSponsorBlock(isUseSponsorBlock());
+            ytDlpSettings.setDownloadSubtitles(isDownloadSubtitles());
+            ytDlpSettings.setDownloadAutoGeneratedSubtitles(isDownloadAutoGeneratedSubtitles());
+            ytDlpSettings.setDownloadThumbnails(isDownloadThumbnails());
+            ytDlpSettings.setDownloadDescription(isDownloadDescription());
+            ytDlpSettings.setSaveDescriptionFileAsTxt(isSaveDescriptionFileAsTxt());
+
+            spotDLSettings.setEnabled(isSpotDLEnabled());
+            spotDLSettings.setExtraCommandLineArguments(getExtraSpotDLArguments());
+            spotDLSettings.setRespectConfigFile(isRespectSpotDLConfigFile());
+        }
+
         setConfigVersion(CONFIG_VERSION);
     }
+
+    // Graveyard Area
+    @Deprecated
+    @JsonProperty(value = "DownloadSubtitles", access = JsonProperty.Access.WRITE_ONLY)
+    private boolean downloadSubtitles = false;
+
+    @Deprecated
+    @JsonProperty(value = "DownloadAutoGeneratedSubtitles", access = JsonProperty.Access.WRITE_ONLY)
+    private boolean downloadAutoGeneratedSubtitles = false;
+
+    @Deprecated
+    @JsonProperty(value = "DownloadThumbnails", access = JsonProperty.Access.WRITE_ONLY)
+    private boolean downloadThumbnails = false;
+
+    @Deprecated
+    @JsonProperty(value = "DownloadDescription", access = JsonProperty.Access.WRITE_ONLY)
+    private boolean downloadDescription = false;
+
+    @Deprecated
+    @JsonProperty(value = "SaveDescriptionFileAsTxt", access = JsonProperty.Access.WRITE_ONLY)
+    private boolean saveDescriptionFileAsTxt = true;
+
+    @Deprecated
+    @JsonProperty(value = "MissingFormatsWorkaround", access = JsonProperty.Access.WRITE_ONLY)
+    private boolean missingFormatsWorkaround = false;
+
+    @Deprecated
+    @JsonProperty(value = "MergeAllAudioTracks", access = JsonProperty.Access.WRITE_ONLY)
+    private boolean mergeAllAudioTracks = false;
+
+    @Deprecated
+    @JsonProperty(value = "DownloadYoutubeChannels", access = JsonProperty.Access.WRITE_ONLY)
+    private boolean downloadYoutubeChannels = false;
+
+    @Deprecated
+    @JsonProperty(value = "YtDlpTranscoding", access = JsonProperty.Access.WRITE_ONLY)
+    private boolean ytDlpTranscoding = true;
+
+    @Deprecated
+    @JsonProperty(value = "UseSponsorBlock", access = JsonProperty.Access.WRITE_ONLY)
+    private boolean useSponsorBlock = false;
+
+    @Deprecated
+    @JsonProperty(value = "RespectYtDlpConfigFile", access = JsonProperty.Access.WRITE_ONLY)
+    private boolean respectYtDlpConfigFile = false;
+
+    @Deprecated
+    @JsonProperty(value = "RespectSpotDLConfigFile", access = JsonProperty.Access.WRITE_ONLY)
+    private boolean respectSpotDLConfigFile = true;
+
+    @Deprecated
+    @JsonProperty(value = "SpotDLEnabled", access = JsonProperty.Access.WRITE_ONLY)
+    private boolean spotDLEnabled = !GDownloader.isWindows();
+
+    @Deprecated
+    @JsonProperty(value = "ExtraYtDlpArguments", access = JsonProperty.Access.WRITE_ONLY)
+    private String extraYtDlpArguments = "";
+
+    @Deprecated
+    @JsonProperty(value = "ExtraGalleryDlArguments", access = JsonProperty.Access.WRITE_ONLY)
+    private String extraGalleryDlArguments = "";
+
+    @Deprecated
+    @JsonProperty(value = "ExtraSpotDLArguments", access = JsonProperty.Access.WRITE_ONLY)
+    private String extraSpotDLArguments = "";
+
+    @Deprecated
+    @JsonProperty(value = "GalleryDlDeduplication", access = JsonProperty.Access.WRITE_ONLY)
+    private boolean galleryDlDeduplication = true;
+
+    @Deprecated
+    @JsonProperty(value = "GalleryDlTranscoding", access = JsonProperty.Access.WRITE_ONLY)
+    private boolean galleryDlTranscoding = false;
+
+    @Deprecated
+    @JsonProperty(value = "GalleryDlEnabled", access = JsonProperty.Access.WRITE_ONLY)
+    private boolean galleryDlEnabled = !GDownloader.isWindows();
+
+    @Deprecated
+    @JsonProperty(value = "RespectGalleryDlConfigFile", access = JsonProperty.Access.WRITE_ONLY)
+    private boolean respectGalleryDlConfigFile = true;
+
+    @Deprecated
+    @JsonProperty(value = "GalleryDlUseOriginalFilenames", access = JsonProperty.Access.WRITE_ONLY)
+    private boolean galleryDlUseOriginalFilenames = false;
+
+    @Deprecated
+    @JsonProperty(value = "DirectHttpEnabled", access = JsonProperty.Access.WRITE_ONLY)
+    private boolean directHttpEnabled = false;
+
+    @Deprecated
+    @JsonProperty(value = "DirectHttpTranscoding", access = JsonProperty.Access.WRITE_ONLY)
+    private boolean directHttpTranscoding = true;
+
+    @Deprecated
+    @JsonProperty(value = "DirectHttpMaxDownloadChunks", access = JsonProperty.Access.WRITE_ONLY)
+    private int directHttpMaxDownloadChunks = 5;
+
+    @Deprecated
+    @JsonProperty(value = "ReadCookies", access = JsonProperty.Access.WRITE_ONLY)
+    private boolean readCookies = false;
+
+    @Deprecated
+    @JsonProperty(value = "QualitySettings", access = JsonProperty.Access.WRITE_ONLY)
+    private Map<WebFilterEnum, QualitySettings> qualitySettings = new TreeMap<>();
 }

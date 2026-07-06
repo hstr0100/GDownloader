@@ -792,6 +792,10 @@ public class QueueEntry {
                     mediaCard.setPercentage(100);
                     mediaCard.setProgressBarTextAndColors(status.getDisplayName(), Color.RED);
                 }
+                case SCANNING -> {
+                    mediaCard.setPercentage(100);
+                    mediaCard.setProgressBarTextAndColors(status.getDisplayName(), new Color(0, 188, 212));
+                }
                 default ->
                     throw new RuntimeException("Unhandled status: " + status);
             }

@@ -45,6 +45,7 @@ import net.brlns.gdownloader.ffmpeg.enums.AudioBitrateEnum;
 import net.brlns.gdownloader.filters.AbstractUrlFilter;
 import net.brlns.gdownloader.process.ProcessArguments;
 import net.brlns.gdownloader.settings.QualitySettings;
+import net.brlns.gdownloader.settings.downloader.YtDlpSettings;
 import net.brlns.gdownloader.settings.enums.AudioContainerEnum;
 import net.brlns.gdownloader.settings.enums.DescriptionContainerEnum;
 import net.brlns.gdownloader.settings.enums.PlayListOptionEnum;
@@ -80,6 +81,11 @@ public class YtDlpDownloader extends AbstractDownloader {
 
     public YtDlpDownloader(DownloadManager managerIn) {
         super(managerIn);
+    }
+
+    @Override
+    public YtDlpSettings settings() {
+        return main.getConfig().getYtDlpSettings();
     }
 
     @Override
@@ -211,7 +217,7 @@ public class YtDlpDownloader extends AbstractDownloader {
     protected boolean canConsumeUrl(String inputUrl) {
         // If SpotDL is disabled, try to consume url with yt-dlp instead (Not currently supported)
         boolean isSpotifyUrl = inputUrl.contains("spotify.com/") || inputUrl.contains("spotify.link/");
-        boolean spotDlEnabled = main.getConfig().isSpotDLEnabled();
+        boolean spotDlEnabled = main.getConfig().getSpotDLSettings().isEnabled();
 
         // Check if it's not a garbage URL
         boolean isNotGarbageUrl = !(inputUrl.contains("ytimg")
@@ -327,7 +333,7 @@ public class YtDlpDownloader extends AbstractDownloader {
         main.getFfmpegTranscoder().getFfmpegPath().ifPresent(ffmpeg
             -> genericArguments.add("--ffmpeg-location", ffmpeg.getAbsolutePath()));
 
-        if (!main.getConfig().isRespectYtDlpConfigFile()) {
+        if (!settings().isRespectConfigFile()) {
             genericArguments.add("--ignore-config");
         }
 
@@ -364,9 +370,9 @@ public class YtDlpDownloader extends AbstractDownloader {
             if (!supported
                 || type == VIDEO && !downloadVideo
                 || type == AUDIO && !main.getConfig().isDownloadAudio()
-                || type == SUBTITLES && (alreadyDownloaded || !main.getConfig().isDownloadSubtitles())
-                || type == THUMBNAILS && (alreadyDownloaded || !main.getConfig().isDownloadThumbnails())
-                || type == DESCRIPTION && (alreadyDownloaded || !main.getConfig().isDownloadDescription())) {
+                || type == SUBTITLES && (alreadyDownloaded || !settings().isDownloadSubtitles())
+                || type == THUMBNAILS && (alreadyDownloaded || !settings().isDownloadThumbnails())
+                || type == DESCRIPTION && (alreadyDownloaded || !settings().isDownloadDescription())) {
                 continue;
             }
 
@@ -392,7 +398,7 @@ public class YtDlpDownloader extends AbstractDownloader {
                 if (type == VIDEO || type == AUDIO) {
                     // Non-zero output for a playlist likely means one or more items were unavailable.
                     if (lastOutput.contains("Finished downloading playlist")) {
-                        if (type == VIDEO && main.getConfig().isYtDlpTranscoding()) {
+                        if (type == VIDEO && settings().isMediaTranscoding()) {
                             DownloadResult transcodeResult = transcodeMediaFiles(entry);
 
                             if (main.getConfig().isFailDownloadsOnTranscodingFailures()
@@ -413,7 +419,7 @@ public class YtDlpDownloader extends AbstractDownloader {
                     log.error("Failed to download {}: {}", type, lastOutput);
                 }
             } else {
-                if (type == VIDEO && main.getConfig().isYtDlpTranscoding()) {
+                if (type == VIDEO && settings().isMediaTranscoding()) {
                     DownloadResult transcodeResult = transcodeMediaFiles(entry);
 
                     if (main.getConfig().isFailDownloadsOnTranscodingFailures()
@@ -523,7 +529,8 @@ public class YtDlpDownloader extends AbstractDownloader {
                 if (!Files.isDirectory(path)) {
                     Path targetPath = determineTargetPath(tmpPath, finalPath, path, quality);
 
-                    if (DescriptionContainerEnum.isFileType(path) && main.getConfig().isSaveDescriptionFileAsTxt()) {
+                    if (DescriptionContainerEnum.isFileType(path)
+                        && settings().isSaveDescriptionFileAsTxt()) {
                         File derivedDescription = FileUtils.deriveFile(targetPath.toFile(), "", "txt");
                         targetPath = derivedDescription.toPath();
                     }
@@ -602,9 +609,9 @@ public class YtDlpDownloader extends AbstractDownloader {
         boolean isDescription = DescriptionContainerEnum.isFileType(path);
 
         if (isAudio || isVideo
-            || (isSubtitle && main.getConfig().isDownloadSubtitles())
-            || (isThumbnail && main.getConfig().isDownloadThumbnails())
-            || (isDescription && main.getConfig().isDownloadDescription())) {
+            || (isSubtitle && settings().isDownloadSubtitles())
+            || (isThumbnail && settings().isDownloadThumbnails())
+            || (isDescription && settings().isDownloadDescription())) {
             return relativize(tmpPath, finalPath, path);
         }
 

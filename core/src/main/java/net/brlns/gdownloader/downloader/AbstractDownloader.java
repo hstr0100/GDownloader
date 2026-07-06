@@ -41,6 +41,7 @@ import net.brlns.gdownloader.ffmpeg.enums.AudioBitrateEnum;
 import net.brlns.gdownloader.ffmpeg.enums.AudioCodecEnum;
 import net.brlns.gdownloader.ffmpeg.structs.FFmpegConfig;
 import net.brlns.gdownloader.settings.QualitySettings;
+import net.brlns.gdownloader.settings.downloader.AbstractDownloaderSettings;
 import net.brlns.gdownloader.settings.enums.VideoContainerEnum;
 import net.brlns.gdownloader.util.CancelHook;
 import net.brlns.gdownloader.util.FileUtils;
@@ -66,6 +67,8 @@ public abstract class AbstractDownloader {
         main = managerIn.getMain();
         manager = managerIn;
     }
+
+    public abstract AbstractDownloaderSettings settings();
 
     public abstract boolean isEnabled();
 

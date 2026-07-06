@@ -88,6 +88,11 @@ public class DenoUpdater extends AbstractGitUpdater {
     }
 
     @Override
+    public boolean isPreferSystemExecutable() {
+        return main.getConfig().isPreferSystemExecutables();// TODO: decouple setting
+    }
+
+    @Override
     protected void setExecutablePath(File executablePath) {
         // TODO: generics
         YtDlpDownloader ytDlpDownloader = (YtDlpDownloader)main.getDownloadManager().getDownloader(DownloaderIdEnum.YT_DLP);

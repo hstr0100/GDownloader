@@ -246,7 +246,8 @@ public final class UIUtils {
     }
 
     public static String wrapTextInHtml(UIColors fontColor, boolean bold, boolean centerText, String... lines) {
-        String textColorHex = Integer.toHexString(color(fontColor).getRGB()).substring(2);
+        Color c = color(fontColor);
+        String textColorHex = String.format("%02x%02x%02x", c.getRed(), c.getGreen(), c.getBlue());
 
         Font baseFont = UIManager.getFont("Label.font");
         int fontSize = baseFont.getSize();

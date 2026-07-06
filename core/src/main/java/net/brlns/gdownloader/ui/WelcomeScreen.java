@@ -301,14 +301,20 @@ public class WelcomeScreen {
         JCheckBox galleryDlCheckbox = new JCheckBox(
             l10n("settings.downloader.gallery_dl.enabled").replace(":", ""));
         customizeCheckBox(galleryDlCheckbox,
-            settings::isGalleryDlEnabled,
-            settings::setGalleryDlEnabled);
+            settings.getGalleryDLSettings()::isEnabled,
+            settings.getGalleryDLSettings()::setEnabled);
 
         JCheckBox spotDlCheckbox = new JCheckBox(
             l10n("settings.downloader.spotdl.enabled").replace(":", ""));
         customizeCheckBox(spotDlCheckbox,
-            settings::isSpotDLEnabled,
-            settings::setSpotDLEnabled);
+            settings.getSpotDLSettings()::isEnabled,
+            settings.getSpotDLSettings()::setEnabled);
+
+        JCheckBox directHttpCheckbox = new JCheckBox(
+            l10n("settings.downloader.direct_http.enabled").replace(":", ""));
+        customizeCheckBox(directHttpCheckbox,
+            settings.getDirectHttpSettings()::isEnabled,
+            settings.getDirectHttpSettings()::setEnabled);
 
         JCheckBox autoUpdateCheckbox = new JCheckBox(
             l10n("gui.welcome_screen.allow_automatic_updates"));
@@ -320,6 +326,9 @@ public class WelcomeScreen {
         optionsPanel.add(galleryDlCheckbox);
         optionsPanel.add(Box.createRigidArea(new Dimension(0, 10)));
         optionsPanel.add(spotDlCheckbox);
+        optionsPanel.add(Box.createRigidArea(new Dimension(0, 10)));
+        optionsPanel.add(directHttpCheckbox);
+
         optionsPanel.add(Box.createRigidArea(new Dimension(0, 20)));
         optionsPanel.add(autoUpdateCheckbox);
 

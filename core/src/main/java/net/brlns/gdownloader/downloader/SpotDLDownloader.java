@@ -38,6 +38,7 @@ import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.downloader.structs.DownloadResult;
 import net.brlns.gdownloader.filters.AbstractUrlFilter;
 import net.brlns.gdownloader.process.ProcessArguments;
+import net.brlns.gdownloader.settings.downloader.SpotDLSettings;
 import net.brlns.gdownloader.util.CancelHook;
 import net.brlns.gdownloader.util.DirectoryUtils;
 import net.brlns.gdownloader.util.FileUtils;
@@ -68,9 +69,13 @@ public class SpotDLDownloader extends AbstractDownloader {
     }
 
     @Override
+    public SpotDLSettings settings() {
+        return main.getConfig().getSpotDLSettings();
+    }
+
+    @Override
     public boolean isEnabled() {
-        return getExecutablePath().isPresent()
-            && main.getConfig().isSpotDLEnabled();
+        return getExecutablePath().isPresent() && settings().isEnabled();
     }
 
     @Override
@@ -135,7 +140,7 @@ public class SpotDLDownloader extends AbstractDownloader {
     protected DownloadResult tryDownload(QueueEntry entry) throws Exception {
         AbstractUrlFilter filter = entry.getFilter();
 
-        if (!main.getConfig().isSpotDLEnabled()) {
+        if (!settings().isEnabled()) {
             return new DownloadResult(FLAG_DOWNLOADER_DISABLED);
         }
 
@@ -150,7 +155,7 @@ public class SpotDLDownloader extends AbstractDownloader {
         //, "--log-level", "DEBUG"
         );
 
-        if (main.getConfig().isRespectSpotDLConfigFile()) {
+        if (settings().isRespectConfigFile()) {
             // We can't specify config location for spotDL, our only choice is to copy or symlink it.
             genericArguments.add("--config");
         }
@@ -177,7 +182,7 @@ public class SpotDLDownloader extends AbstractDownloader {
             if (!supported || type != SPOTIFY
                 // TODO: Verify if it makes sense to respect the audio toggle when the platform is strictly audio-only.
                 //|| !main.getConfig().isDownloadAudio()
-                || !main.getConfig().isSpotDLEnabled()) {
+                || !settings().isEnabled()) {
                 continue;
             }
 

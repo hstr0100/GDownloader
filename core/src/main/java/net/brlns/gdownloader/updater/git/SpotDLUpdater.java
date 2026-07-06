@@ -77,7 +77,13 @@ public class SpotDLUpdater extends AbstractGitUpdater {
 
     @Override
     public boolean isEnabled() {
-        return main.getConfig().isSpotDLEnabled();
+        return main.getConfig().getSpotDLSettings().isEnabled();
+    }
+
+    @Override
+    public boolean isPreferSystemExecutable() {
+        return main.getConfig().getSpotDLSettings().isPreferSystemExecutable()
+            || main.getConfig().isPreferSystemExecutables();
     }
 
     @Override

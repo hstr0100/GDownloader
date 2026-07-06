@@ -39,6 +39,7 @@ public enum DownloadStatusEnum implements ISettingsEnum {
     COMPLETE("enums.download_status.complete"),
     TRANSCODING("enums.download_status.transcoding"),
     FAILED("enums.download_status.failed"),
+    SCANNING("enums.download_status.scanning"),
     NO_METHOD("enums.download_status.no_method");
 
     private final String translationKey;

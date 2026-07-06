@@ -40,6 +40,7 @@ import net.brlns.gdownloader.downloader.structs.DownloadResult;
 import net.brlns.gdownloader.downloader.structs.MediaInfo;
 import net.brlns.gdownloader.filters.AbstractUrlFilter;
 import net.brlns.gdownloader.process.ProcessArguments;
+import net.brlns.gdownloader.settings.downloader.GalleryDLSettings;
 import net.brlns.gdownloader.util.CancelHook;
 import net.brlns.gdownloader.util.DirectoryDeduplicator;
 import net.brlns.gdownloader.util.DirectoryUtils;
@@ -72,9 +73,13 @@ public class GalleryDlDownloader extends AbstractDownloader {
     }
 
     @Override
+    public GalleryDLSettings settings() {
+        return main.getConfig().getGalleryDLSettings();
+    }
+
+    @Override
     public boolean isEnabled() {
-        return getExecutablePath().isPresent()
-            && main.getConfig().isGalleryDlEnabled();
+        return getExecutablePath().isPresent() && settings().isEnabled();
     }
 
     @Override
@@ -138,7 +143,7 @@ public class GalleryDlDownloader extends AbstractDownloader {
 
     @Override
     protected DownloadResult tryDownload(QueueEntry entry) throws Exception {
-        if (!main.getConfig().isGalleryDlEnabled()) {
+        if (!settings().isEnabled()) {
             return new DownloadResult(FLAG_DOWNLOADER_DISABLED);
         }
 
@@ -153,7 +158,7 @@ public class GalleryDlDownloader extends AbstractDownloader {
             executablePath.get().getAbsolutePath(),
             "--no-colors");
 
-        if (!main.getConfig().isRespectGalleryDlConfigFile()) {
+        if (!settings().isRespectConfigFile()) {
             genericArguments.add("--config-ignore");
         }
 
@@ -184,8 +189,7 @@ public class GalleryDlDownloader extends AbstractDownloader {
         for (DownloadTypeEnum type : DownloadTypeEnum.values()) {
             boolean supported = getDownloadTypes().contains(type);
 
-            if (!supported || type != GALLERY
-                || !main.getConfig().isGalleryDlEnabled()) {
+            if (!supported || type != GALLERY || !settings().isEnabled()) {
                 continue;
             }
 
@@ -211,7 +215,7 @@ public class GalleryDlDownloader extends AbstractDownloader {
                 return new DownloadResult(FLAG_MAIN_CATEGORY_FAILED, lastOutput);
             } else {
                 // TODO: consider moving after the deduplicator
-                if (main.getConfig().isGalleryDlTranscoding()) {
+                if (settings().isMediaTranscoding()) {
                     DownloadResult transcodeResult = transcodeMediaFiles(entry);
 
                     if (main.getConfig().isFailDownloadsOnTranscodingFailures()
@@ -287,7 +291,7 @@ public class GalleryDlDownloader extends AbstractDownloader {
                 File deepestFile = deepestDir.toFile();
                 entry.getFinalMediaFiles().add(deepestFile);
 
-                if (main.getConfig().isGalleryDlDeduplication()) {
+                if (settings().isFileDeduplication()) {
                     entry.updateStatus(DownloadStatusEnum.DEDUPLICATING, l10n("gui.deduplication.deduplicating"));
 
                     DirectoryDeduplicator.deduplicateDirectory(deepestFile);

@@ -129,10 +129,14 @@ public class DownloadManager implements IEvent, AutoCloseable {
         persistence = main.getPersistenceManager();
         metadataManager = new MetadataManager();
 
-        downloaders.add(new YtDlpDownloader(this));
-        downloaders.add(new GalleryDlDownloader(this));
-        downloaders.add(new SpotDLDownloader(this));
-        downloaders.add(new DirectHttpDownloader(this));
+        registerDownloader(new YtDlpDownloader(this));
+        registerDownloader(new GalleryDlDownloader(this));
+        registerDownloader(new SpotDLDownloader(this));
+        registerDownloader(new DirectHttpDownloader(this));
+    }
+
+    public final void registerDownloader(AbstractDownloader downloader) {
+        downloaders.add(downloader);
     }
 
     @PostConstruct
@@ -1365,9 +1369,14 @@ public class DownloadManager implements IEvent, AutoCloseable {
                 if (entry.getCurrentQueueCategory() == RUNNING
                     && sequencer.contains(entry)
                     && !entry.hasQueuedFormats()) {
-                    log.error("Unexpected RUNNING download state, switching to QUEUED");
 
-                    offerTo(QUEUED, entry);
+                    if (entry.getCancelHook().get()) {
+                        log.debug("Download {} left in RUNNING pending a manual stop", entry.getDownloadId());
+                    } else {
+                        log.error("Unexpected RUNNING download state, switching to QUEUED");
+
+                        offerTo(QUEUED, entry);
+                    }
                 }
             }
         });

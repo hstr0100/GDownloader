@@ -74,7 +74,13 @@ public class GalleryDlUpdater extends CodebergUpdater {
 
     @Override
     public boolean isEnabled() {
-        return main.getConfig().isGalleryDlEnabled();
+        return main.getConfig().getGalleryDLSettings().isEnabled();
+    }
+
+    @Override
+    public boolean isPreferSystemExecutable() {
+        return main.getConfig().getGalleryDLSettings().isPreferSystemExecutable()
+            || main.getConfig().isPreferSystemExecutables();
     }
 
     @Override

@@ -98,6 +98,11 @@ public class SelfUpdater extends AbstractGitUpdater {
     }
 
     @Override
+    public boolean isPreferSystemExecutable() {
+        return false;
+    }
+
+    @Override
     public String getName() {
         return "GDownloader";
     }

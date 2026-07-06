@@ -51,6 +51,7 @@ open module net.brlns.gdownloader {
     exports net.brlns.gdownloader.downloader.enums;
     exports net.brlns.gdownloader.downloader.extractors;
     exports net.brlns.gdownloader.downloader.structs;
+    exports net.brlns.gdownloader.downloader.webscanner;
     exports net.brlns.gdownloader.event;
     exports net.brlns.gdownloader.event.impl;
     exports net.brlns.gdownloader.ffmpeg;
@@ -67,6 +68,7 @@ open module net.brlns.gdownloader {
     exports net.brlns.gdownloader.server;
     exports net.brlns.gdownloader.server.result;
     exports net.brlns.gdownloader.settings;
+    exports net.brlns.gdownloader.settings.downloader;
     exports net.brlns.gdownloader.settings.enums;
     exports net.brlns.gdownloader.system;
     exports net.brlns.gdownloader.system.taskbar;

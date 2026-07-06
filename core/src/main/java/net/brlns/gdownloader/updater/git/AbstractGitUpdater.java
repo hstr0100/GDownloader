@@ -116,6 +116,9 @@ public abstract class AbstractGitUpdater implements IUpdater {
     public abstract boolean isEnabled();
 
     @Override
+    public abstract boolean isPreferSystemExecutable();
+
+    @Override
     public abstract String getName();
 
     protected abstract void setExecutablePath(File executablePath);
@@ -187,7 +190,7 @@ public abstract class AbstractGitUpdater implements IUpdater {
 
         notifyProgress(CHECKING, 0);
 
-        if (main.getConfig().isPreferSystemExecutables()) {
+        if (isPreferSystemExecutable()) {
             File systemFallback = SystemExecutableLocator.locateExecutable(getSystemBinaryName());
             if (systemFallback != null) {
                 finishUpdate(systemFallback);

@@ -104,6 +104,11 @@ public class FFMpegUpdater extends AbstractGitUpdater {
     }
 
     @Override
+    public boolean isPreferSystemExecutable() {
+        return main.getConfig().isPreferSystemExecutables();// TODO: decoupled setting
+    }
+
+    @Override
     public String getName() {
         return "FFmpeg";
     }

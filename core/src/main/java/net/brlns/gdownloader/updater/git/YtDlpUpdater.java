@@ -78,6 +78,12 @@ public class YtDlpUpdater extends AbstractGitUpdater {
     }
 
     @Override
+    public boolean isPreferSystemExecutable() {
+        return main.getConfig().getYtDlpSettings().isPreferSystemExecutable()
+            || main.getConfig().isPreferSystemExecutables();
+    }
+
+    @Override
     protected void setExecutablePath(File executablePath) {
         main.getDownloadManager().setExecutablePath(DownloaderIdEnum.YT_DLP, executablePath);
     }

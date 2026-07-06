@@ -96,7 +96,8 @@ public class GenericFilter extends AbstractUrlFilter {
                 switch (typeEnum) {
                     case ALL -> {
                         if (config.isEnableExtraArguments()) {
-                            for (String arg : config.getExtraYtDlpArguments().split(" ")) {
+                            for (String arg : config.getYtDlpSettings()
+                                .getExtraCommandLineArguments().split(" ")) {
                                 if (!arg.trim().isEmpty()) {
                                     arguments.add(arg);
                                 }
@@ -143,7 +144,7 @@ public class GenericFilter extends AbstractUrlFilter {
                             }
                         }
 
-                        if (cookiesRead && manager.getMain().getConfig().isMissingFormatsWorkaround()) {
+                        if (cookiesRead && config.getYtDlpSettings().isMissingFormatsWorkaround()) {
                             arguments.add(
                                 "--extractor-args",
                                 "youtube:player_client=web_safari"
@@ -164,7 +165,7 @@ public class GenericFilter extends AbstractUrlFilter {
 
                         String qualitySelector = quality.buildQualitySelector();
 
-                        if (config.isMergeAllAudioTracks()) {
+                        if (config.getYtDlpSettings().isMergeAllAudioTracks()) {
                             // TODO: Update this once the following yt-dlp feature request is addressed:
                             // https://github.com/yt-dlp/yt-dlp/issues/1176
                             // Currently, it merges ALL the best audio tracks - including duplicates.
@@ -306,7 +307,8 @@ public class GenericFilter extends AbstractUrlFilter {
                 switch (typeEnum) {
                     case ALL -> {
                         if (config.isEnableExtraArguments()) {
-                            for (String arg : config.getExtraGalleryDlArguments().split(" ")) {
+                            for (String arg : config.getGalleryDLSettings()
+                                .getExtraCommandLineArguments().split(" ")) {
                                 if (!arg.trim().isEmpty()) {
                                     arguments.add(arg);
                                 }
@@ -354,7 +356,7 @@ public class GenericFilter extends AbstractUrlFilter {
                             "-D", savePath.getAbsolutePath() + (fileName != null ? File.separator + fileName : "")
                         );
 
-                        if (config.isGalleryDlUseOriginalFilenames()) {
+                        if (config.getGalleryDLSettings().isUseOriginalFilenames()) {
                             arguments.add("-o", "filename=\"{filename}.{extension}\"");
                         }
                     }
@@ -374,7 +376,8 @@ public class GenericFilter extends AbstractUrlFilter {
                 switch (typeEnum) {
                     case ALL -> {
                         if (config.isEnableExtraArguments()) {
-                            for (String arg : config.getExtraSpotDLArguments().split(" ")) {
+                            for (String arg : config.getSpotDLSettings()
+                                .getExtraCommandLineArguments().split(" ")) {
                                 if (!arg.trim().isEmpty()) {
                                     arguments.add(arg);
                                 }
@@ -384,7 +387,7 @@ public class GenericFilter extends AbstractUrlFilter {
                         arguments.add(
                             "--max-retries", config.getMaxDownloadRetries());
 
-                        if (config.isUseSponsorBlock()) {
+                        if (config.getYtDlpSettings().isUseSponsorBlock()) {
                             arguments.add("--sponsor-block");
                         }
 

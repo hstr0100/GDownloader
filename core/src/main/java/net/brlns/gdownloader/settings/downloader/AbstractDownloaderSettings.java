@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 hstr0100
+ * Copyright (C) 2026 hstr0100
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,31 +14,11 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package net.brlns.gdownloader.updater;
+package net.brlns.gdownloader.settings.downloader;
 
 /**
- * @see {@link net.brlns.gdownloader.updater.git.AbstractGitUpdater} for an example implementation.
- *
  * @author Gabriel / hstr0100 / vertx010
  */
-public interface IUpdater {
+public abstract class AbstractDownloaderSettings {
 
-    void registerListener(UpdateProgressListener listener);
-
-    void unregisterListener(UpdateProgressListener listener);
-
-    String getName();
-
-    boolean isEnabled();
-
-    /**
-     * @return true if an update was successfully performed.
-     */
-    boolean isUpdated();
-
-    boolean isRestartRequired();
-
-    boolean isPreferSystemExecutable();
-
-    void check(boolean forceInstall) throws Exception;
 }
