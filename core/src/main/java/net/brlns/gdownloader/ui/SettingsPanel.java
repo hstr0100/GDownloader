@@ -178,7 +178,7 @@ public class SettingsPanel {
             };
 
             frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-            frame.setSize(1000, 718);
+            frame.setSize(1010, 718);
             frame.setLayout(new BorderLayout());
             //frame.setResizable(false);
             frame.setLocationRelativeTo(null);

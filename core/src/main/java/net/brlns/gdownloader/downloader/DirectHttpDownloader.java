@@ -1135,6 +1135,7 @@ public class DirectHttpDownloader extends AbstractDownloader {
         private BandwidthThrottle throttle;
     }
 
+    // TODO: Handle in-flight updates
     private static final class BandwidthThrottle {
 
         private final Object lock = new Object();
