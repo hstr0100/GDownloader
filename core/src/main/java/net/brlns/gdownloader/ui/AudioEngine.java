@@ -97,7 +97,7 @@ public class AudioEngine {
                     }
                 }
             }
-        }).exceptionally(e -> {
+        }, GDownloader.GLOBAL_THREAD_POOL).exceptionally(e -> {
             GDownloader.handleException(e);
             return null;
         });

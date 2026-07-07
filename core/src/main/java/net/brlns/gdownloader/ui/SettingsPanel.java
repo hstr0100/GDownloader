@@ -38,7 +38,6 @@ import javax.swing.event.DocumentListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.plaf.basic.BasicButtonUI;
 import lombok.Data;
-import lombok.Getter;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
@@ -57,6 +56,7 @@ import net.brlns.gdownloader.ui.builder.LongFieldBuilder;
 import net.brlns.gdownloader.ui.builder.SliderBuilder;
 import net.brlns.gdownloader.ui.builder.TextFieldBuilder;
 import net.brlns.gdownloader.ui.custom.CustomScrollBarUI;
+import net.brlns.gdownloader.ui.custom.CustomTabButton;
 import net.brlns.gdownloader.ui.custom.CustomTranscodePanel;
 import net.brlns.gdownloader.ui.message.Message;
 import net.brlns.gdownloader.ui.message.MessageTypeEnum;
@@ -800,18 +800,18 @@ public class SettingsPanel {
         tabBar.setMinimumSize(new Dimension(0, 60));
         tabBar.setBorder(BorderFactory.createEmptyBorder(2, 2, 2, 2));
 
-        List<DownloadTabButton> tabButtons = new ArrayList<>();
+        List<CustomTabButton> tabButtons = new ArrayList<>();
 
         int i = 0;
         for (SettingsMenuEntry entry : downloadTabs) {
             int index = i;
 
-            DownloadTabButton tabButton = createDownloadTabButton(
+            CustomTabButton tabButton = createDownloadTabButton(
                 entry.getDisplayName(), entry.getIcon(), index == 0);
             tabButton.addActionListener((ActionEvent e) -> {
                 downloadTabLayout.show(downloadTabContent, String.valueOf(index));
 
-                for (DownloadTabButton other : tabButtons) {
+                for (CustomTabButton other : tabButtons) {
                     updateDownloadTabButtonState(other, other == tabButton);
                 }
             });
@@ -830,9 +830,9 @@ public class SettingsPanel {
         return wrapperPanel;
     }
 
-    private DownloadTabButton createDownloadTabButton(
+    private CustomTabButton createDownloadTabButton(
         String displayName, String iconPath, boolean selected) {
-        DownloadTabButton button = new DownloadTabButton(displayName);
+        CustomTabButton button = new CustomTabButton(displayName);
 
         button.setUI(new BasicButtonUI());
         button.setHorizontalAlignment(SwingConstants.CENTER);
@@ -847,32 +847,18 @@ public class SettingsPanel {
         button.setIcon(loadIcon(iconPath, ICON, 22));
         button.setFont(button.getFont().deriveFont(Font.BOLD));
 
+        button.setColors(
+            color(SETTINGS_TAB_BAR_BACKGROUND),
+            color(SETTINGS_TAB_SELECTED_BACKGROUND),
+            color(SETTINGS_TAB_HOVER));
+
         updateDownloadTabButtonState(button, selected);
-
-        button.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                if (!button.isSelected()) {
-                    button.setBackground(color(SETTINGS_TAB_HOVER));
-                    button.setHoveringState(true);
-                }
-            }
-
-            @Override
-            public void mouseExited(MouseEvent e) {
-                button.setHoveringState(false);
-            }
-        });
 
         return button;
     }
 
-    private void updateDownloadTabButtonState(DownloadTabButton button, boolean selected) {
+    private void updateDownloadTabButtonState(CustomTabButton button, boolean selected) {
         button.setForeground(color(selected ? FOREGROUND : LIGHT_TEXT));
-        button.setBackground(selected
-            ? color(SETTINGS_TAB_SELECTED_BACKGROUND)
-            : color(SETTINGS_TAB_BAR_BACKGROUND));
-
         button.setSelectedState(selected);
     }
 
@@ -1086,6 +1072,15 @@ public class SettingsPanel {
             .setter(settings::setQueryMetadata)
             .build());
 
+        addSlider(panel, SliderBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.maximum_simultaneous_query_metadata_tasks")
+            .min(1).max(10).majorTickSpacing(1)
+            .snapToTicks(true)
+            .getter(settings::getMaxSimultaneousQueryMetadataTasks)
+            .setter(settings::setMaxSimultaneousQueryMetadataTasks)
+            .build());
+
         return wrapInScrollableSettingsPanel(panel);
     }
 
@@ -1192,6 +1187,21 @@ public class SettingsPanel {
             .setter(settings.getYtDlpSettings()::setMissingFormatsWorkaround)
             .build());
 
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.settings.prefer_system_executable")
+            .getter(settings.getYtDlpSettings()::isPreferSystemExecutable)
+            .setter(settings.getYtDlpSettings()::setPreferSystemExecutable)
+            .requiresRestart(true)
+            .build());
+
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.downloader.direct_http.media_transcoding")
+            .getter(settings.getYtDlpSettings()::isMediaTranscoding)
+            .setter(settings.getYtDlpSettings()::setMediaTranscoding)
+            .build());
+
         return wrapInScrollableSettingsPanel(panel);
     }
 
@@ -1236,6 +1246,14 @@ public class SettingsPanel {
             .setter(settings.getGalleryDLSettings()::setMediaTranscoding)
             .build());
 
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.settings.prefer_system_executable")
+            .getter(settings.getGalleryDLSettings()::isPreferSystemExecutable)
+            .setter(settings.getGalleryDLSettings()::setPreferSystemExecutable)
+            .requiresRestart(true)
+            .build());
+
         return wrapInScrollableSettingsPanel(panel);
     }
 
@@ -1257,6 +1275,14 @@ public class SettingsPanel {
             .labelKey("settings.downloader.spotdl.respect_config_file")
             .getter(settings.getSpotDLSettings()::isRespectConfigFile)
             .setter(settings.getSpotDLSettings()::setRespectConfigFile)
+            .build());
+
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.settings.prefer_system_executable")
+            .getter(settings.getSpotDLSettings()::isPreferSystemExecutable)
+            .setter(settings.getSpotDLSettings()::setPreferSystemExecutable)
+            .requiresRestart(true)
             .build());
 
         return wrapInScrollableSettingsPanel(panel);
@@ -2338,61 +2364,6 @@ public class SettingsPanel {
         panel.add(rowPanel);
 
         return label;
-    }
-
-    @Getter
-    private static final class DownloadTabButton extends JButton {
-
-        private boolean selected;
-        private boolean hovering;
-
-        private DownloadTabButton(String displayName) {
-            super(displayName);
-        }
-
-        private void setSelectedState(boolean selectedIn) {
-            selected = selectedIn;
-            hovering = false;
-
-            repaint();
-        }
-
-        private void setHoveringState(boolean hoveringIn) {
-            hovering = hoveringIn;
-
-            repaint();
-        }
-
-        @Override
-        protected void paintComponent(Graphics g) {
-            Graphics2D g2d = (Graphics2D)g.create();
-            try {
-                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
-                if (selected) {
-                    int padY = 2;
-                    int padX = padY / 2;
-                    int arc = 14;
-
-                    g2d.setColor(new Color(0, 0, 0, 35));
-                    g2d.fillRoundRect(padX, padY + 2, getWidth() - padX * 2, getHeight() - padY * 2, arc, arc);
-
-                    g2d.setColor(getBackground());
-                    g2d.fillRoundRect(padX, padY, getWidth() - padX * 2, getHeight() - padY * 2, arc, arc);
-                } else if (hovering) {
-                    int padY = 3;
-                    int padX = padY / 2;
-                    int arc = 12;
-
-                    g2d.setColor(getBackground());
-                    g2d.fillRoundRect(padX, padY, getWidth() - padX * 2, getHeight() - padY * 2, arc, arc);
-                }
-            } finally {
-                g2d.dispose();
-            }
-
-            super.paintComponent(g);
-        }
     }
 
     @Data

@@ -829,7 +829,7 @@ public class DownloadManager implements IEvent, AutoCloseable {
         }
 
         if (!metadataQueryQueue.isEmpty()) {
-            if (currentlyQueryingCount.get() < 2) {
+            if (currentlyQueryingCount.get() < main.getConfig().getMaxSimultaneousQueryMetadataTasks()) {
                 QueueEntry entry = metadataQueryQueue.poll();
 
                 if (!entry.getCancelHook().get()) {
@@ -1091,7 +1091,7 @@ public class DownloadManager implements IEvent, AutoCloseable {
                     return;
                 }
             }
-        }).thenRun(() -> {
+        }, GDownloader.GLOBAL_THREAD_POOL).thenRun(() -> {
             if (!entry.getMediaCard().isClosed()) {
                 entry.getCancelHook().set(false);
 

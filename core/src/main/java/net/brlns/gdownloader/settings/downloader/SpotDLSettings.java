@@ -35,7 +35,6 @@ public class SpotDLSettings extends AbstractDownloaderSettings {
     @JsonProperty("Enabled")
     private boolean enabled = !GDownloader.isWindows();
 
-    // TODO ui
     @JsonProperty("PreferSystemExecutable")
     private boolean preferSystemExecutable = false;
 

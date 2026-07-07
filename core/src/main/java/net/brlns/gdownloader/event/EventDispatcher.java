@@ -162,7 +162,7 @@ public class EventDispatcher {
         };
 
         if (async) {
-            CompletableFuture.runAsync(eventRunnable);
+            CompletableFuture.runAsync(eventRunnable, GDownloader.GLOBAL_THREAD_POOL);
         } else {
             eventRunnable.run();
         }

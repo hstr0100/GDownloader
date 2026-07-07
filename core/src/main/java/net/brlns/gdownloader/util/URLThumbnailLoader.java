@@ -202,8 +202,15 @@ public final class URLThumbnailLoader {
 
         String origin = originOpt.get();
 
-        return FAVICON_CACHE.computeIfAbsent(origin,
-            key -> resolveFavicon(originalUrl, origin));
+        Optional<FaviconResult> cached = FAVICON_CACHE.get(origin);
+        if (cached != null) {
+            return cached;
+        }
+
+        Optional<FaviconResult> resolved = resolveFavicon(originalUrl, origin);
+        FAVICON_CACHE.put(origin, resolved);
+
+        return resolved;
     }
 
     private static Optional<FaviconResult> resolveFavicon(String originalUrl, String origin) {

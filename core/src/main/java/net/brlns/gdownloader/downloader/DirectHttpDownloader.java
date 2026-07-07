@@ -639,7 +639,8 @@ public class DirectHttpDownloader extends AbstractDownloader {
             return true;
         }
 
-        BandwidthThrottle throttle = new BandwidthThrottle(settings().getMaxDownloadSpeedBytesPerSecond());
+        BandwidthThrottle throttle = new BandwidthThrottle(
+            () -> settings().getMaxDownloadSpeedBytesPerSecond());
         boolean attemptChunking = supportsRanges;
 
         while (true) {
@@ -1050,6 +1051,28 @@ public class DirectHttpDownloader extends AbstractDownloader {
         chunkThreadPool.shutdownNow();
     }
 
+    private long parseRetryAfterMillis(HttpURLConnection connection) {
+        String header = connection.getHeaderField("Retry-After");
+        if (header == null || header.isBlank()) {
+            return -1;
+        }
+
+        try {
+            long seconds = Long.parseLong(header.trim());
+
+            return Math.max(0, Math.min(seconds * 1000, MAX_RETRY_AFTER_MILLIS));
+        } catch (NumberFormatException e) {
+            try {
+                ZonedDateTime retryDate = ZonedDateTime.parse(header.trim(), DateTimeFormatter.RFC_1123_DATE_TIME);
+                long millis = Duration.between(ZonedDateTime.now(retryDate.getZone()), retryDate).toMillis();
+
+                return Math.max(0, Math.min(millis, MAX_RETRY_AFTER_MILLIS));
+            } catch (Exception ex) {
+                return -1;
+            }
+        }
+    }
+
     private void markHostRateLimited(URL url, long cooldownMillis) {
         String host = normalizeHost(url);
         long until = System.currentTimeMillis() + cooldownMillis;
@@ -1094,7 +1117,7 @@ public class DirectHttpDownloader extends AbstractDownloader {
         }
     }
 
-    private long computeBackoffMillis(int attempt) {
+    private static long computeBackoffMillis(int attempt) {
         long exp = BASE_BACKOFF_MILLIS * (1L << Math.min(attempt, 16)); // avoids overflow
         long capped = Math.min(exp, MAX_BACKOFF_MILLIS);
 
@@ -1105,6 +1128,31 @@ public class DirectHttpDownloader extends AbstractDownloader {
         long jitterWindow = Math.max(250, baseMillis / 4);
 
         return baseMillis + ThreadLocalRandom.current().nextLong(jitterWindow);
+    }
+
+    private static void closeQuietly(@Nullable HttpURLConnection connection) {
+        if (connection == null) {
+            return;
+        }
+
+        try {
+            int code = connection.getResponseCode();
+            if (code / 100 == 2) {
+                try (InputStream inputStream = connection.getInputStream()) {
+                    byte[] buffer = new byte[BUFFER_SIZE];
+                    int totalRead = 0;
+                    int bytesRead;
+
+                    while (totalRead < MAX_DRAIN_BYTES && (bytesRead = inputStream.read(buffer)) != -1) {
+                        totalRead += bytesRead;
+                    }
+                }
+            }
+        } catch (IOException e) {
+            log.debug("Failed to drain response body before closing: {}", e.getMessage());
+        } finally {
+            connection.disconnect();
+        }
     }
 
     @FunctionalInterface
@@ -1135,30 +1183,25 @@ public class DirectHttpDownloader extends AbstractDownloader {
         private BandwidthThrottle throttle;
     }
 
-    // TODO: Handle in-flight updates
     private static final class BandwidthThrottle {
 
         private final Object lock = new Object();
-        private final AtomicLong bytesPerSecond = new AtomicLong();
+        private final Supplier<Long> bytesPerSecond;
         private long availableTokens;
         private long lastRefillNanos;
 
-        private BandwidthThrottle(long bytesPerSecondIn) {
-            bytesPerSecond.set(bytesPerSecondIn);
-            availableTokens = bytesPerSecondIn;
+        private BandwidthThrottle(Supplier<Long> bytesPerSecondIn) {
+            bytesPerSecond = bytesPerSecondIn;
+            availableTokens = Math.max(0, bytesPerSecond.get());
             lastRefillNanos = System.nanoTime();
         }
 
-        private boolean isUnlimited() {
-            return bytesPerSecond.get() <= 0;
-        }
-
         private void acquire(int bytes, Supplier<Boolean> aliveCheck) {
-            if (isUnlimited()) {
-                return;
-            }
-
             synchronized (lock) {
+                if (bytesPerSecond.get() <= 0) {
+                    return;
+                }
+
                 refillLocked();
 
                 while (availableTokens < bytes) {
@@ -1166,8 +1209,13 @@ public class DirectHttpDownloader extends AbstractDownloader {
                         return;
                     }
 
+                    long currentLimit = bytesPerSecond.get();
+                    if (currentLimit <= 0) {
+                        return;
+                    }
+
                     long deficit = bytes - availableTokens;
-                    long waitMillis = Math.max(1, (long)(deficit / (double)bytesPerSecond.get() * 1000));
+                    long waitMillis = Math.max(1, (long)(deficit / (double)currentLimit * 1000));
                     waitMillis = Math.min(waitMillis, 200L);
 
                     try {
@@ -1186,63 +1234,24 @@ public class DirectHttpDownloader extends AbstractDownloader {
 
         // Caller must hold the lock.
         private void refillLocked() {
+            long currentLimit = bytesPerSecond.get();
+            if (currentLimit <= 0) {
+                return;
+            }
+
             long now = System.nanoTime();
             long elapsedNanos = now - lastRefillNanos;
 
             if (elapsedNanos > 0) {
-                long refill = (long)(elapsedNanos / 1e9 * bytesPerSecond.get());
+                long refill = (long)(elapsedNanos / 1e9 * currentLimit);
                 if (refill > 0) {
-                    availableTokens = Math.min(bytesPerSecond.get(), availableTokens + refill);
+                    if (availableTokens < currentLimit) {
+                        availableTokens = Math.min(currentLimit, availableTokens + refill);
+                    }
+
                     lastRefillNanos = now;
                 }
             }
-        }
-    }
-
-    private long parseRetryAfterMillis(HttpURLConnection connection) {
-        String header = connection.getHeaderField("Retry-After");
-        if (header == null || header.isBlank()) {
-            return -1;
-        }
-
-        try {
-            long seconds = Long.parseLong(header.trim());
-
-            return Math.max(0, Math.min(seconds * 1000, MAX_RETRY_AFTER_MILLIS));
-        } catch (NumberFormatException e) {
-            try {
-                ZonedDateTime retryDate = ZonedDateTime.parse(header.trim(), DateTimeFormatter.RFC_1123_DATE_TIME);
-                long millis = Duration.between(ZonedDateTime.now(retryDate.getZone()), retryDate).toMillis();
-
-                return Math.max(0, Math.min(millis, MAX_RETRY_AFTER_MILLIS));
-            } catch (Exception ex) {
-                return -1;
-            }
-        }
-    }
-
-    private static void closeQuietly(@Nullable HttpURLConnection connection) {
-        if (connection == null) {
-            return;
-        }
-
-        try {
-            int code = connection.getResponseCode();
-            if (code / 100 == 2) {
-                try (InputStream inputStream = connection.getInputStream()) {
-                    byte[] buffer = new byte[BUFFER_SIZE];
-                    int totalRead = 0;
-                    int bytesRead;
-
-                    while (totalRead < MAX_DRAIN_BYTES && (bytesRead = inputStream.read(buffer)) != -1) {
-                        totalRead += bytesRead;
-                    }
-                }
-            }
-        } catch (IOException e) {
-            log.debug("Failed to drain response body before closing: {}", e.getMessage());
-        } finally {
-            connection.disconnect();
         }
     }
 

@@ -42,7 +42,7 @@ public class YtDlpSettings extends AbstractDownloaderSettings {
 
     @JsonProperty("RespectConfigFile")
     private boolean respectConfigFile = false;
-    // TODO ui
+
     @JsonProperty("MediaTranscoding")
     private boolean mediaTranscoding = true;
 
@@ -64,7 +64,6 @@ public class YtDlpSettings extends AbstractDownloaderSettings {
     @JsonProperty("SaveDescriptionFileAsTxt")
     private boolean saveDescriptionFileAsTxt = true;
 
-    // TODO ui
     @JsonProperty("PreferSystemExecutable")
     private boolean preferSystemExecutable = false;
 

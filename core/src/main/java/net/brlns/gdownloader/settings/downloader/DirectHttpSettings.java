@@ -34,10 +34,6 @@ public class DirectHttpSettings extends AbstractDownloaderSettings {
     @JsonProperty("Enabled")
     private boolean enabled = false;
 
-    // TODO ui
-    @JsonProperty("PreferSystemExecutable")
-    private boolean preferSystemExecutable = false;
-
     @JsonProperty("MediaTranscoding")
     private boolean mediaTranscoding = true;
 

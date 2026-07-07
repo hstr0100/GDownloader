@@ -105,6 +105,9 @@ public class Settings {
     @JsonProperty("QueryMetadata")
     private boolean queryMetadata = true;
 
+    @JsonProperty("MaxSimultaneousQueryMetadataTasks")
+    private int maxSimultaneousQueryMetadataTasks = 2;
+
     @JsonProperty("RecordToDownloadArchive")
     private boolean recordToDownloadArchive = false;
 
