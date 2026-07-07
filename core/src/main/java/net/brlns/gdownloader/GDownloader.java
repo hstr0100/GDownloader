@@ -109,7 +109,6 @@ import static net.brlns.gdownloader.util.StringUtils.notNullOrEmpty;
 // TODO NTFS File path length workaround for gallery-dl
 // TODO Split main window from GUIManager
 // TODO Fastutil collections
-// TODO Tabs in settings for the different downloaders
 // TODO Fix notification line wrapping
 // TODO Downloader priority settings
 // TODO Notifications are appearing below the main window when in fullscreen mode.
@@ -117,13 +116,12 @@ import static net.brlns.gdownloader.util.StringUtils.notNullOrEmpty;
 // TODO Confirm dialog before clearing DL queue
 // TODO Move config files, downloaders and their respective data to subfolders
 // TODO implement remuxing to mkv
-// TODO System/provided binary selection should be individually configurable per downloader
+// TODO System/provided binary selection should be configurable for FFMPEG and Deno
 // TODO display number in download queue
 // TODO automatic ui sorting
 // TODO Manually mark downloads as complete, correctly move files to final directory
 // TODO Make download paths for the different downloaders customizable
 // TODO Fetch favicons for url filters
-// TODO Direct-HTTP: user-agent
 // TODO Tags/Filtering
 // TODO Remove ffmpeg requirement by omitting transcoding arguments
 // TODO Implement plugin API, create example plugin, create more events.
@@ -259,7 +257,7 @@ public final class GDownloader {
         guiManager = new GUIManager(this);
         systemTrayManager = new SystemTrayManager(this);
 
-        connectivityListener = closeable(new NetworkConnectivityListener());
+        connectivityListener = closeable(new NetworkConnectivityListener(() -> config.getProxySettings()));
 
         // Java doesn't natively support detecting a click outside of the program window,
         // Which we would need for our custom context menus

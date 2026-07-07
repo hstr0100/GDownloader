@@ -26,7 +26,6 @@ import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.downloader.DownloadManager;
 import net.brlns.gdownloader.event.EventDispatcher;
 import net.brlns.gdownloader.event.impl.PerformUpdateCheckEvent;
-import net.brlns.gdownloader.system.NetworkConnectivityListener;
 import net.brlns.gdownloader.ui.message.Message;
 import net.brlns.gdownloader.ui.message.MessageTypeEnum;
 import net.brlns.gdownloader.ui.message.PopupMessenger;
@@ -104,7 +103,7 @@ public final class UpdateManager {
 
         GLOBAL_THREAD_POOL.execute(() -> {
             try {
-                NetworkConnectivityListener.waitForConnectivity();
+                main.getConnectivityListener().waitForConnectivity();
 
                 EventDispatcher.dispatch(PerformUpdateCheckEvent.builder()
                     .checking(true)

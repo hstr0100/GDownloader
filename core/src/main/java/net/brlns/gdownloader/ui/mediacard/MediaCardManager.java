@@ -30,6 +30,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -312,9 +313,13 @@ public final class MediaCardManager {
 
                             removeMediaCard(mediaCard.getId(), CloseReasonEnum.MANUAL);
                         },
-                            mediaCard.getOnInfoClick(),
-                            mediaCard.getOnStartClick(),
-                            mediaCard.getOnFormatsClick());
+                            () -> Optional.of(mediaCard.getOnInfoClick())
+                                .ifPresent(runnable -> runnable.run()),
+                            () -> Optional.of(mediaCard.getOnStartClick())
+                                .ifPresent(runnable -> runnable.run()),
+                            () -> Optional.of(mediaCard.getOnFormatsClick())
+                                .ifPresent(runnable -> runnable.run())
+                        );
 
                         mediaCard.setUi(ui);
 

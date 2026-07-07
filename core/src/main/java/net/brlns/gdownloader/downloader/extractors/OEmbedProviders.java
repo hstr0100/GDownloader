@@ -36,7 +36,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
-import net.brlns.gdownloader.system.NetworkConnectivityListener;
 import net.brlns.gdownloader.util.URLUtils;
 
 /**
@@ -68,7 +67,7 @@ public class OEmbedProviders {
         }
 
         GDownloader.GLOBAL_THREAD_POOL.execute(() -> {
-            NetworkConnectivityListener.waitForConnectivity();
+            main.getConnectivityListener().waitForConnectivity();
 
             try {
                 HttpRequest request = HttpRequest.newBuilder()

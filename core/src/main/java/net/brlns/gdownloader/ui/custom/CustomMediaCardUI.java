@@ -25,6 +25,7 @@ import javax.swing.*;
 import javax.swing.plaf.basic.BasicButtonUI;
 import lombok.Data;
 import lombok.Getter;
+import lombok.NonNull;
 import net.brlns.gdownloader.downloader.enums.DownloadPriorityEnum;
 import net.brlns.gdownloader.downloader.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.ui.GUIManager;
@@ -82,8 +83,8 @@ public final class CustomMediaCardUI {
     private final AtomicReference<StartButtonState> startButtonState = new AtomicReference<>();
 
     public CustomMediaCardUI(GUIManager managerIn, JFrame parentIn,
-        Runnable onCloseIn, Runnable onInfoClickIn,
-        Runnable onStartClickIn, Runnable onFormatsClickIn) {
+        @NonNull Runnable onCloseIn, @NonNull Runnable onInfoClickIn,
+        @NonNull Runnable onStartClickIn, @NonNull Runnable onFormatsClickIn) {
         manager = managerIn;
         parent = parentIn;
         onClose = onCloseIn;
@@ -221,9 +222,7 @@ public final class CustomMediaCardUI {
             null,
             e -> {
                 closeMoreOptionsMenu();
-                if (onInfoClick != null) {
-                    onInfoClick.run();
-                }
+                onInfoClick.run();
             });
         buildMenuRow(infoButton, "gui.view_media_info");
 
@@ -233,9 +232,7 @@ public final class CustomMediaCardUI {
             null,
             e -> {
                 closeMoreOptionsMenu();
-                if (onFormatsClick != null) {
-                    onFormatsClick.run();
-                }
+                onFormatsClick.run();
             });
         buildMenuRow(formatsButton, "gui.view_available_formats");
 
@@ -283,11 +280,7 @@ public final class CustomMediaCardUI {
                 startButton.setToolTipText(l10n(state.getTooltipKey()));
             }
         });
-        startButton.addActionListener(e -> {
-            if (onStartClick != null) {
-                onStartClick.run();
-            }
-        });
+        startButton.addActionListener(e -> onStartClick.run());
 
         CustomToolTip startButtonToolTipUi = new CustomToolTip();
         startButtonToolTipUi.setComponent(startButton);

@@ -19,12 +19,15 @@ package net.brlns.gdownloader.system;
 import jakarta.annotation.PreDestroy;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.Proxy;
 import java.net.Socket;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.event.EventDispatcher;
 import net.brlns.gdownloader.event.impl.ConnectivityStatusEvent;
+import net.brlns.gdownloader.settings.ProxySettings;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -58,10 +61,15 @@ public class NetworkConnectivityListener implements AutoCloseable {
     private static final int RESTORATION_CHECK_INTERVAL_SECONDS = 6;
 
     private final AtomicBoolean shutdown = new AtomicBoolean();
+    private final Supplier<ProxySettings> proxyProvider;
 
-    private static boolean checkDnsConnectivity() {
+    public NetworkConnectivityListener(Supplier<ProxySettings> proxyProviderIn) {
+        proxyProvider = proxyProviderIn;
+    }
+
+    private boolean checkDnsConnectivity(Proxy proxy) {
         for (String host : TARGET_HOSTS) {
-            try (Socket socket = new Socket()) {
+            try (Socket socket = new Socket(proxy)) {
                 socket.connect(new InetSocketAddress(host, DNS_PORT), DNS_TIMEOUT_MS);
                 return true;
             } catch (IOException e) {
@@ -72,13 +80,13 @@ public class NetworkConnectivityListener implements AutoCloseable {
         return false;
     }
 
-    private static boolean checkAlternativeConnectivity() {
+    private boolean checkAlternativeConnectivity(Proxy proxy) {
         for (String host : ALTERNATIVE_HOSTS) {
-            try (Socket socket = new Socket()) {
+            try (Socket socket = new Socket(proxy)) {
                 socket.connect(new InetSocketAddress(host, HTTPS_PORT), ALTERNATIVE_TIMEOUT_MS);
                 return true;
             } catch (IOException e) {
-                try (Socket httpSocket = new Socket()) {
+                try (Socket httpSocket = new Socket(proxy)) {
                     httpSocket.connect(new InetSocketAddress(host, HTTP_PORT), ALTERNATIVE_TIMEOUT_MS);
                     return true;
                 } catch (IOException httpEx) {
@@ -90,15 +98,13 @@ public class NetworkConnectivityListener implements AutoCloseable {
         return false;
     }
 
-    private static boolean isNetworkAvailable() {
-        if (checkDnsConnectivity()) {
-            return true;
-        }
+    private boolean isNetworkAvailable() {
+        Proxy proxy = proxyProvider.get().createProxy();
 
-        return checkAlternativeConnectivity();
+        return checkDnsConnectivity(proxy) || checkAlternativeConnectivity(proxy);
     }
 
-    public static void waitForConnectivity() {
+    public void waitForConnectivity() {
         log.info("Checking for network connectivity...");
 
         while (!isNetworkAvailable()) {
