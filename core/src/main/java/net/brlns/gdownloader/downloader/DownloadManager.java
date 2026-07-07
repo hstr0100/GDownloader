@@ -966,6 +966,10 @@ public class DownloadManager implements IEvent, AutoCloseable {
             if (shouldSkip) {
                 queueEntry.updateStatus(DownloadStatusEnum.SKIPPED,
                     l10n("gui.download_status.skipped"));
+
+                if (queueEntry.getCurrentQueueCategory() == RUNNING) {
+                    offerTo(QUEUED, queueEntry);
+                }
             } else if (queueEntry.getDownloadStatus() == DownloadStatusEnum.SKIPPED) {
                 queueEntry.updateStatus(DownloadStatusEnum.QUEUED,
                     l10n("gui.download_status.not_started"));
