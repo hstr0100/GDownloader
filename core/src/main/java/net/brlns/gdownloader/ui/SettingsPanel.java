@@ -1189,7 +1189,7 @@ public class SettingsPanel {
 
         addCheckBox(panel, CheckBoxBuilder.builder()
             .background(resolveColor(panel))
-            .labelKey("settings.settings.prefer_system_executable")
+            .labelKey("settings.prefer_system_executable")
             .getter(settings.getYtDlpSettings()::isPreferSystemExecutable)
             .setter(settings.getYtDlpSettings()::setPreferSystemExecutable)
             .requiresRestart(true)
@@ -1248,7 +1248,7 @@ public class SettingsPanel {
 
         addCheckBox(panel, CheckBoxBuilder.builder()
             .background(resolveColor(panel))
-            .labelKey("settings.settings.prefer_system_executable")
+            .labelKey("settings.prefer_system_executable")
             .getter(settings.getGalleryDLSettings()::isPreferSystemExecutable)
             .setter(settings.getGalleryDLSettings()::setPreferSystemExecutable)
             .requiresRestart(true)
@@ -1279,7 +1279,7 @@ public class SettingsPanel {
 
         addCheckBox(panel, CheckBoxBuilder.builder()
             .background(resolveColor(panel))
-            .labelKey("settings.settings.prefer_system_executable")
+            .labelKey("settings.prefer_system_executable")
             .getter(settings.getSpotDLSettings()::isPreferSystemExecutable)
             .setter(settings.getSpotDLSettings()::setPreferSystemExecutable)
             .requiresRestart(true)
