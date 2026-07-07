@@ -38,6 +38,7 @@ import javax.swing.event.DocumentListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.plaf.basic.BasicButtonUI;
 import lombok.Data;
+import lombok.Getter;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
@@ -760,6 +761,142 @@ public class SettingsPanel {
     }
 
     private JPanel createDownloadSettings() {
+        JPanel wrapperPanel = new JPanel(new BorderLayout());
+        wrapperPanel.setBackground(color(BACKGROUND));
+
+        List<SettingsMenuEntry> downloadTabs = new ArrayList<>();
+        downloadTabs.add(new SettingsMenuEntry(
+            "settings.general",
+            "/assets/download.png",// TODO: exclusive icon
+            () -> createGeneralDownloadSettingsTab()));
+        downloadTabs.add(new SettingsMenuEntry(
+            "settings.downloader.yt_dlp",
+            "/assets/video.png",
+            () -> createYtDlpSettingsTab()));
+        downloadTabs.add(new SettingsMenuEntry(
+            "settings.downloader.gallery_dl",
+            "/assets/picture.png",
+            () -> createGalleryDLSettingsTab()));
+        downloadTabs.add(new SettingsMenuEntry(
+            "settings.downloader.spotdl",
+            "/assets/music.png",
+            () -> createSpotDLSettingsTab()));
+        downloadTabs.add(new SettingsMenuEntry(
+            "settings.downloader.direct_http",
+            "/assets/internet.png",
+            () -> createDirectHttpSettingsTab()));
+        downloadTabs.add(new SettingsMenuEntry(
+            "settings.label.advanced",
+            "/assets/wrench.png",// TODO: exclusive icon
+            () -> createAdvancedDownloadSettingsTab()));
+
+        CardLayout downloadTabLayout = new CardLayout();
+        JPanel downloadTabContent = new JPanel(downloadTabLayout);
+        downloadTabContent.setBackground(color(BACKGROUND));
+
+        JPanel tabBar = new JPanel(new GridLayout(1, downloadTabs.size(), 2, 0));
+        tabBar.setBackground(color(SETTINGS_TAB_BAR_BACKGROUND));
+        tabBar.setPreferredSize(new Dimension(0, 60));
+        tabBar.setMinimumSize(new Dimension(0, 60));
+        tabBar.setBorder(BorderFactory.createEmptyBorder(2, 2, 2, 2));
+
+        List<DownloadTabButton> tabButtons = new ArrayList<>();
+
+        int i = 0;
+        for (SettingsMenuEntry entry : downloadTabs) {
+            int index = i;
+
+            DownloadTabButton tabButton = createDownloadTabButton(
+                entry.getDisplayName(), entry.getIcon(), index == 0);
+            tabButton.addActionListener((ActionEvent e) -> {
+                downloadTabLayout.show(downloadTabContent, String.valueOf(index));
+
+                for (DownloadTabButton other : tabButtons) {
+                    updateDownloadTabButtonState(other, other == tabButton);
+                }
+            });
+
+            tabButtons.add(tabButton);
+            tabBar.add(tabButton);
+
+            downloadTabContent.add(entry.getPanel().get(), String.valueOf(index));
+
+            i++;
+        }
+
+        wrapperPanel.add(tabBar, BorderLayout.NORTH);
+        wrapperPanel.add(downloadTabContent, BorderLayout.CENTER);
+
+        return wrapperPanel;
+    }
+
+    private DownloadTabButton createDownloadTabButton(
+        String displayName, String iconPath, boolean selected) {
+        DownloadTabButton button = new DownloadTabButton(displayName);
+
+        button.setUI(new BasicButtonUI());
+        button.setHorizontalAlignment(SwingConstants.CENTER);
+        button.setIconTextGap(8);
+        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        button.setFocusPainted(false);
+        button.setBorderPainted(false);
+        button.setContentAreaFilled(false);
+        button.setOpaque(false);
+        button.setBorder(BorderFactory.createEmptyBorder());
+        button.setForeground(color(FOREGROUND));
+        button.setIcon(loadIcon(iconPath, ICON, 22));
+        button.setFont(button.getFont().deriveFont(Font.BOLD));
+
+        updateDownloadTabButtonState(button, selected);
+
+        button.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                if (!button.isSelected()) {
+                    button.setBackground(color(SETTINGS_TAB_HOVER));
+                    button.setHoveringState(true);
+                }
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                button.setHoveringState(false);
+            }
+        });
+
+        return button;
+    }
+
+    private void updateDownloadTabButtonState(DownloadTabButton button, boolean selected) {
+        button.setForeground(color(selected ? FOREGROUND : LIGHT_TEXT));
+        button.setBackground(selected
+            ? color(SETTINGS_TAB_SELECTED_BACKGROUND)
+            : color(SETTINGS_TAB_BAR_BACKGROUND));
+
+        button.setSelectedState(selected);
+    }
+
+    private JPanel wrapInScrollableSettingsPanel(JPanel panel) {
+        panel.add(getFillerPanel());
+
+        JScrollPane scrollPane = new JScrollPane(panel);
+        scrollPane.getVerticalScrollBar().setUI(new CustomScrollBarUI());
+        scrollPane.getHorizontalScrollBar().setUI(new CustomScrollBarUI());
+        scrollPane.setBorder(BorderFactory.createEmptyBorder());
+        scrollPane.setBackground(color(BACKGROUND));
+        UIUtils.installSmoothMouseWheelScrolling(scrollPane);
+        scrollPane.setPreferredSize(new Dimension(Integer.MAX_VALUE, 200));
+        scrollPane.getViewport().setScrollMode(JViewport.BACKINGSTORE_SCROLL_MODE);
+
+        JPanel panelWrapper = new JPanel(new BorderLayout());
+        panelWrapper.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 5));
+        panelWrapper.setBackground(color(BACKGROUND));
+        panelWrapper.add(scrollPane, BorderLayout.CENTER);
+
+        return panelWrapper;
+    }
+
+    private JPanel createGeneralDownloadSettingsTab() {
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         panel.setBackground(color(BACKGROUND));
@@ -949,8 +1086,13 @@ public class SettingsPanel {
             .setter(settings::setQueryMetadata)
             .build());
 
-        // TODO: tabbed settings, things are getting a little out of hand here.
-        addLabel(panel, "settings.downloader.yt_dlp");
+        return wrapInScrollableSettingsPanel(panel);
+    }
+
+    private JPanel createYtDlpSettingsTab() {
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setBackground(color(BACKGROUND));
 
         addComboBox(panel, ComboBoxBuilder.<PlayListOptionEnum>builder()
             .background(resolveColor(panel))
@@ -1050,7 +1192,13 @@ public class SettingsPanel {
             .setter(settings.getYtDlpSettings()::setMissingFormatsWorkaround)
             .build());
 
-        addLabel(panel, "settings.downloader.gallery_dl");
+        return wrapInScrollableSettingsPanel(panel);
+    }
+
+    private JPanel createGalleryDLSettingsTab() {
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setBackground(color(BACKGROUND));
 
         addCheckBox(panel, CheckBoxBuilder.builder()
             .background(resolveColor(panel))
@@ -1088,7 +1236,13 @@ public class SettingsPanel {
             .setter(settings.getGalleryDLSettings()::setMediaTranscoding)
             .build());
 
-        addLabel(panel, "settings.downloader.spotdl");
+        return wrapInScrollableSettingsPanel(panel);
+    }
+
+    private JPanel createSpotDLSettingsTab() {
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setBackground(color(BACKGROUND));
 
         addCheckBox(panel, CheckBoxBuilder.builder()
             .background(resolveColor(panel))
@@ -1105,7 +1259,13 @@ public class SettingsPanel {
             .setter(settings.getSpotDLSettings()::setRespectConfigFile)
             .build());
 
-        addLabel(panel, "settings.downloader.direct_http");
+        return wrapInScrollableSettingsPanel(panel);
+    }
+
+    private JPanel createDirectHttpSettingsTab() {
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setBackground(color(BACKGROUND));
 
         addCheckBox(panel, CheckBoxBuilder.builder()
             .background(resolveColor(panel))
@@ -1272,7 +1432,13 @@ public class SettingsPanel {
                 .build()));
         }
 
-        addLabel(panel, "settings.label.advanced");
+        return wrapInScrollableSettingsPanel(panel);
+    }
+
+    private JPanel createAdvancedDownloadSettingsTab() {
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setBackground(color(BACKGROUND));
 
         addSlider(panel, SliderBuilder.builder()
             .background(resolveColor(panel))
@@ -1356,24 +1522,7 @@ public class SettingsPanel {
             .placeholderText(l10n("gui.example") + " --proxy http://example.com:1234")
             .build()));
 
-        panel.add(getFillerPanel());
-
-        JScrollPane scrollPane = new JScrollPane(panel);
-        scrollPane.getVerticalScrollBar().setUI(new CustomScrollBarUI());
-        scrollPane.getHorizontalScrollBar().setUI(new CustomScrollBarUI());
-        scrollPane.setBorder(BorderFactory.createEmptyBorder());
-        scrollPane.setBackground(color(BACKGROUND));
-        UIUtils.installSmoothMouseWheelScrolling(scrollPane);
-        scrollPane.setPreferredSize(new Dimension(Integer.MAX_VALUE, 200));
-        scrollPane.getViewport().setScrollMode(JViewport.BACKINGSTORE_SCROLL_MODE);
-
-        JPanel panelWrapper = new JPanel(new BorderLayout());
-        panelWrapper.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 5));
-        panelWrapper.setBackground(color(BACKGROUND));
-
-        panelWrapper.add(scrollPane, BorderLayout.CENTER);
-
-        return panelWrapper;
+        return wrapInScrollableSettingsPanel(panel);
     }
 
     private JPanel createResolutionSettings() {
@@ -2189,6 +2338,61 @@ public class SettingsPanel {
         panel.add(rowPanel);
 
         return label;
+    }
+
+    @Getter
+    private static final class DownloadTabButton extends JButton {
+
+        private boolean selected;
+        private boolean hovering;
+
+        private DownloadTabButton(String displayName) {
+            super(displayName);
+        }
+
+        private void setSelectedState(boolean selectedIn) {
+            selected = selectedIn;
+            hovering = false;
+
+            repaint();
+        }
+
+        private void setHoveringState(boolean hoveringIn) {
+            hovering = hoveringIn;
+
+            repaint();
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            Graphics2D g2d = (Graphics2D)g.create();
+            try {
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                if (selected) {
+                    int padY = 2;
+                    int padX = padY / 2;
+                    int arc = 14;
+
+                    g2d.setColor(new Color(0, 0, 0, 35));
+                    g2d.fillRoundRect(padX, padY + 2, getWidth() - padX * 2, getHeight() - padY * 2, arc, arc);
+
+                    g2d.setColor(getBackground());
+                    g2d.fillRoundRect(padX, padY, getWidth() - padX * 2, getHeight() - padY * 2, arc, arc);
+                } else if (hovering) {
+                    int padY = 3;
+                    int padX = padY / 2;
+                    int arc = 12;
+
+                    g2d.setColor(getBackground());
+                    g2d.fillRoundRect(padX, padY, getWidth() - padX * 2, getHeight() - padY * 2, arc, arc);
+                }
+            } finally {
+                g2d.dispose();
+            }
+
+            super.paintComponent(g);
+        }
     }
 
     @Data

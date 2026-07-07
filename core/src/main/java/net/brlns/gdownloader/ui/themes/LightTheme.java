@@ -78,6 +78,9 @@ public class LightTheme extends AbstractTheme {
         put(VERIFIED_COLOR, new Color(29, 155, 240));
         put(WARN_COLOR, new Color(240, 173, 78));
         put(CHIP_BG, new Color(255, 255, 255, 20));
+        put(SETTINGS_TAB_BAR_BACKGROUND, new Color(251, 251, 251));
+        put(SETTINGS_TAB_SELECTED_BACKGROUND, new Color(218, 218, 218));
+        put(SETTINGS_TAB_HOVER, new Color(242, 242, 242));
     }
 
     @Override

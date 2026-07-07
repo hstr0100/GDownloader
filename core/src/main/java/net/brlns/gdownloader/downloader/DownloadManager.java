@@ -1374,13 +1374,13 @@ public class DownloadManager implements IEvent, AutoCloseable {
                     && sequencer.contains(entry)
                     && !entry.hasQueuedFormats()) {
 
-                    if (entry.getCancelHook().get()) {
-                        log.debug("Download {} left in RUNNING pending a manual stop", entry.getDownloadId());
-                    } else {
+                    if (!entry.getCancelHook().get()) {
                         log.error("Unexpected RUNNING download state, switching to QUEUED");
-
-                        offerTo(QUEUED, entry);
+                    } else {
+                        log.debug("Download {} left in RUNNING pending a manual stop, recovering to QUEUED", entry.getDownloadId());
                     }
+
+                    offerTo(QUEUED, entry);
                 }
             }
         });

@@ -78,6 +78,9 @@ public class DarkTheme extends AbstractTheme {
         put(VERIFIED_COLOR, new Color(29, 155, 240));
         put(WARN_COLOR, new Color(240, 173, 78));
         put(CHIP_BG, new Color(255, 255, 255, 20));
+        put(SETTINGS_TAB_BAR_BACKGROUND, new Color(72, 72, 72));
+        put(SETTINGS_TAB_SELECTED_BACKGROUND, new Color(96, 96, 96));
+        put(SETTINGS_TAB_HOVER, new Color(84, 84, 84));
     }
 
     @Override
