@@ -1122,14 +1122,6 @@ public class SettingsPanel {
             .setter(settings.getDirectHttpSettings()::setMediaTranscoding)
             .build());
 
-        addSlider(panel, SliderBuilder.builder()
-            .background(resolveColor(panel))
-            .labelKey("settings.downloader.direct_http.max_download_chunks")
-            .min(1).max(15).majorTickSpacing(1)
-            .getter(settings.getDirectHttpSettings()::getMaxDownloadChunks)
-            .setter(settings.getDirectHttpSettings()::setMaxDownloadChunks)
-            .build());
-
         {
             UIColors background = resolveColor(panel);
             JLabel label = createLabel("settings.downloader.direct_http.max_download_speed", LIGHT_TEXT);
@@ -1200,6 +1192,14 @@ public class SettingsPanel {
 
         addSlider(panel, SliderBuilder.builder()
             .background(resolveColor(panel))
+            .labelKey("settings.downloader.direct_http.max_download_chunks")
+            .min(1).max(15).majorTickSpacing(1)
+            .getter(settings.getDirectHttpSettings()::getMaxDownloadChunks)
+            .setter(settings.getDirectHttpSettings()::setMaxDownloadChunks)
+            .build());
+
+        addSlider(panel, SliderBuilder.builder()
+            .background(resolveColor(panel))
             .labelKey("settings.downloader.direct_http.max_connections_per_host")
             .min(1).max(20).majorTickSpacing(1)
             .getter(settings.getDirectHttpSettings()::getMaxConnectionsPerHost)
@@ -1227,6 +1227,14 @@ public class SettingsPanel {
                 })
                 .build());
 
+            scannerFields.add(addCheckBox(panel, CheckBoxBuilder.builder()
+                .background(resolveColor(panel))
+                .labelKey("settings.downloader.direct_http.web_scanner_strict_host")
+                .getter(settings.getDirectHttpSettings()::isWebScannerStrictHost)
+                .setter(settings.getDirectHttpSettings()::setWebScannerStrictHost)
+                .enabled(settings.getDirectHttpSettings().isWebScannerEnabled())
+                .build()));
+
             scannerFields.add(addSlider(panel, SliderBuilder.builder()
                 .background(resolveColor(panel))
                 .labelKey("settings.downloader.direct_http.web_scanner_max_depth")
@@ -1234,14 +1242,6 @@ public class SettingsPanel {
                 .snapToTicks(true)
                 .getter(settings.getDirectHttpSettings()::getWebScannerMaxDepth)
                 .setter(settings.getDirectHttpSettings()::setWebScannerMaxDepth)
-                .enabled(settings.getDirectHttpSettings().isWebScannerEnabled())
-                .build()));
-
-            scannerFields.add(addCheckBox(panel, CheckBoxBuilder.builder()
-                .background(resolveColor(panel))
-                .labelKey("settings.downloader.direct_http.web_scanner_strict_host")
-                .getter(settings.getDirectHttpSettings()::isWebScannerStrictHost)
-                .setter(settings.getDirectHttpSettings()::setWebScannerStrictHost)
                 .enabled(settings.getDirectHttpSettings().isWebScannerEnabled())
                 .build()));
 

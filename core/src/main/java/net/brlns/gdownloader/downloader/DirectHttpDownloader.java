@@ -1230,7 +1230,7 @@ public class DirectHttpDownloader extends AbstractDownloader {
             int code = connection.getResponseCode();
             if (code / 100 == 2) {
                 try (InputStream inputStream = connection.getInputStream()) {
-                    byte[] buffer = new byte[8192];
+                    byte[] buffer = new byte[BUFFER_SIZE];
                     int totalRead = 0;
                     int bytesRead;
 
