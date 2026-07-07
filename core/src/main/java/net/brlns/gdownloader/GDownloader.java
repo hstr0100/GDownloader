@@ -33,10 +33,12 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Duration;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -772,14 +774,34 @@ public final class GDownloader {
         FileUtils.logToFile(getOrCreateDownloadsDirectory(), fileName, text, replacements);
     }
 
-    public List<String> readOutput(String... command)
-        throws IOException, InterruptedException {
+    public List<String> readOutput(String... command) throws IOException, InterruptedException {
         return readOutput(Arrays.asList(command));
     }
 
-    public List<String> readOutput(List<String> command)
+    public List<String> readOutput(List<String> command) throws IOException, InterruptedException {
+        return readOutput(command, null);
+    }
+
+    public List<String> readOutput(List<String> command, @Nullable Duration timeout)
         throws IOException, InterruptedException {
         Process process = processMonitor.startProcess(command);
+
+        Future<?> watchdog = null;
+        if (timeout != null) {
+            watchdog = GLOBAL_THREAD_POOL.submit(() -> {
+                try {
+                    boolean finished = process.waitFor(timeout.toMillis(), TimeUnit.MILLISECONDS);
+                    if (!finished) {
+                        log.warn("CLI read task exceeded {}s, killing process: {}",
+                            timeout.getSeconds(), StringUtils.escapeAndBuildCommandLine(command));
+
+                        process.destroyForcibly();
+                    }
+                } catch (InterruptedException e) {
+                    // Ignore
+                }
+            });
+        }
 
         List<String> list = new ArrayList<>();
         try (
@@ -788,6 +810,10 @@ public final class GDownloader {
             String line;
             while ((line = in.readLine()) != null) {
                 list.add(line);
+            }
+        } finally {
+            if (watchdog != null) {
+                watchdog.cancel(true);
             }
         }
 

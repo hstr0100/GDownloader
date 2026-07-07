@@ -28,6 +28,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.time.Duration;
 import java.util.*;
 import java.util.stream.Collectors;
 import lombok.Getter;
@@ -169,7 +170,8 @@ public class YtDlpDownloader extends AbstractDownloader {
                 // but the universe implodes if I don't do it in this order.
                 arguments.add(queueEntry.getUrl());
 
-                List<String> lines = main.readOutput(arguments);
+                // yt-dlp very much likes to take its time sometimes
+                List<String> lines = main.readOutput(arguments, Duration.ofMinutes(5));
                 List<String> videoUrls = new ArrayList<>();
 
                 for (String line : lines) {
@@ -276,7 +278,7 @@ public class YtDlpDownloader extends AbstractDownloader {
 
             arguments.add(queueEntry.getUrl());
 
-            List<String> list = main.readOutput(arguments);
+            List<String> list = main.readOutput(arguments, Duration.ofSeconds(60));
 
             if (main.getConfig().isDebugMode()) {
                 long what = System.currentTimeMillis() - start;

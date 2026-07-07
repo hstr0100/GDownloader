@@ -20,6 +20,7 @@ package net.brlns.gdownloader.downloader.extractors;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.io.File;
+import java.time.Duration;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -130,7 +131,8 @@ public class GalleryDLMetadataExtractor implements IMetadataExtractor {
 
         List<String> rawLines;
         try {
-            rawLines = downloader.getMain().readOutput(arguments);
+            // gallery-dl is a fallback metadata provider. If it hangs, drop it and move on.
+            rawLines = downloader.getMain().readOutput(arguments, Duration.ofSeconds(15));
         } catch (Exception e) {
             log.warn("gallery-dl process failed to run for {}: {}", urlIn, e.toString());
 

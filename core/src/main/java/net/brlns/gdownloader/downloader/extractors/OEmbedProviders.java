@@ -28,11 +28,16 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
@@ -46,10 +51,11 @@ public class OEmbedProviders {
 
     private static final String PROVIDERS_URL = "https://oembed.com/providers.json";
 
-    @Getter
-    private List<Provider> providers = new ArrayList<>();
+    private final AtomicReference<List<Provider>> providers = new AtomicReference<>(Collections.emptyList());
 
-    private AtomicBoolean initialized = new AtomicBoolean();
+    private final AtomicBoolean initialized = new AtomicBoolean();
+
+    private final CompletableFuture<Void> loadedSignal = new CompletableFuture<>();
 
     @PostConstruct
     public void init() {
@@ -60,9 +66,22 @@ public class OEmbedProviders {
         loadProviders();
     }
 
+    public List<Provider> getProviders() {
+        try {
+            loadedSignal.get(5, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        } catch (Exception e) {
+            log.debug("Error waiting for oEmbed providers to load: {}", e.toString());
+        }
+
+        return providers.get();
+    }
+
     private void loadProviders() {
         GDownloader main = GDownloader.getInstance();
         if (!main.getConfig().isQueryMetadata()) {
+            loadedSignal.complete(null);
             return;
         }
 
@@ -81,22 +100,31 @@ public class OEmbedProviders {
                 HttpResponse<String> response = main.getHttpManager().getClient()
                     .send(request, HttpResponse.BodyHandlers.ofString());
                 if (response.statusCode() == 200) {
-                    providers = GDownloader.OBJECT_MAPPER.readValue(response.body(),
+                    List<Provider> loadedProviders = GDownloader.OBJECT_MAPPER.readValue(response.body(),
                         GDownloader.OBJECT_MAPPER.getTypeFactory().constructCollectionType(
                             List.class, Provider.class));
 
+                    providers.set(Collections.unmodifiableList(loadedProviders));
+
                     saveProvidersToCache(response.body());
 
-                    log.info("Loaded {} oEmbed providers", providers.size());
+                    log.info("Loaded {} oEmbed providers", loadedProviders.size());
                     return;
                 } else {
                     log.error("Failed to load oEmbed providers. Status code: {}", response.statusCode());
                 }
-            } catch (IOException | InterruptedException e) {
-                log.error("Error loading oEmbed providers", e);
-            }
 
-            loadProvidersFromCache();
+                loadProvidersFromCache();
+            } catch (IOException | InterruptedException e) {
+                if (e instanceof InterruptedException) {
+                    Thread.currentThread().interrupt();
+                }
+
+                log.error("Error loading oEmbed providers", e);
+                loadProvidersFromCache();
+            } finally {
+                loadedSignal.complete(null);
+            }
         });
     }
 
@@ -123,10 +151,13 @@ public class OEmbedProviders {
 
         try {
             String fileContent = Files.readString(filePath);
-            providers = GDownloader.OBJECT_MAPPER.readValue(fileContent,
+            List<Provider> cachedProviders = GDownloader.OBJECT_MAPPER.readValue(fileContent,
                 GDownloader.OBJECT_MAPPER.getTypeFactory().constructCollectionType(
                     List.class, Provider.class));
-            log.info("Loaded {} oEmbed providers from cache", providers.size());
+
+            providers.set(Collections.unmodifiableList(cachedProviders));
+
+            log.info("Loaded {} oEmbed providers from cache", cachedProviders.size());
 
             return true;
         } catch (IOException e) {

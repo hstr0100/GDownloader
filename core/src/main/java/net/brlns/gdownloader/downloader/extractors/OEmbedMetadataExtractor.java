@@ -9,6 +9,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.List;
 import java.util.Optional;
 import java.util.regex.Pattern;
 import lombok.AllArgsConstructor;
@@ -57,6 +58,14 @@ public class OEmbedMetadataExtractor implements IMetadataExtractor {
         return "^" + Pattern.quote(scheme)
             .replace("*", "\\E.*\\Q")
             .replace("\\Q\\E", "") + "$";
+    }
+
+    protected Optional<OEmbedDTO> fetchOEmbedDTOFromFixedEndpoint(String url, String endpointUrl, String providerName) {
+        Endpoint endpoint = new Endpoint();
+        endpoint.setUrl(endpointUrl);
+        endpoint.setFormats(List.of("json"));
+
+        return fetchOEmbedDTO(url, endpoint, providerName);
     }
 
     private Optional<OEmbedDTO> fetchOEmbedDTO(String url, Endpoint endpoint, String providerName) {

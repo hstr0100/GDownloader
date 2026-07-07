@@ -364,7 +364,7 @@ public final class URLThumbnailLoader {
         try {
             HttpRequest.Builder builder = HttpRequest.newBuilder()
                 .uri(URI.create(url))
-                .timeout(Duration.ofSeconds(15))
+                .timeout(Duration.ofSeconds(1)) // Zero patience for slow endpoints. Gotta move, move, move
                 .header("User-Agent", URLUtils.getGlobalUserAgent())
                 // TODO: AVIF support
                 .header("Accept", "image/avif,image/webp,image/apng,image/*,*/*;q=0.8")

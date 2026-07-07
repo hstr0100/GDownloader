@@ -34,6 +34,8 @@ import static net.brlns.gdownloader.lang.Language.l10n;
 @Slf4j
 public class SpotifyMetadataExtractor extends OEmbedMetadataExtractor {
 
+    private static final String SPOTIFY_OEMBED_ENDPOINT = "https://open.spotify.com/oembed";
+
     private static final Map<String, String> SPECIAL_URLS = new HashMap<>(3);
 
     static {
@@ -58,7 +60,17 @@ public class SpotifyMetadataExtractor extends OEmbedMetadataExtractor {
             return Optional.of(specialMediaInfo);
         }
 
-        return super.fetchMetadata(urlIn);
+        // Spotify was removed from oembed.com's providers.json for unknown reasons.
+        // This could be temporary, but it sets a precedent for providers randomly disappearing.
+        Optional<OEmbedDTO> dtoOptional = fetchOEmbedDTOFromFixedEndpoint(urlIn, SPOTIFY_OEMBED_ENDPOINT, "Spotify");
+        if (dtoOptional.isPresent()) {
+            MediaInfo mediaInfo = convertToMediaInfo(dtoOptional.get(), urlIn);
+            if (mediaInfo.isValid()) {
+                return Optional.of(mediaInfo);
+            }
+        }
+
+        return Optional.empty();
     }
 
     @Nullable
