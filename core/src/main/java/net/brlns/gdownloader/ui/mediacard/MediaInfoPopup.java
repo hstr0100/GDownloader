@@ -40,6 +40,7 @@ import net.brlns.gdownloader.downloader.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.downloader.structs.FormatInfo;
 import net.brlns.gdownloader.downloader.structs.MediaInfo;
 import net.brlns.gdownloader.ui.GUIManager;
+import net.brlns.gdownloader.ui.SmoothScroller;
 import net.brlns.gdownloader.ui.custom.CustomChip;
 import net.brlns.gdownloader.ui.custom.CustomMediaCardUI;
 import net.brlns.gdownloader.ui.custom.CustomScrollBarUI;
@@ -658,11 +659,12 @@ public final class MediaInfoPopup {
         wrapper.add(content, BorderLayout.NORTH);
 
         JScrollPane scroll = new JScrollPane(wrapper);
+        scroll.getVerticalScrollBar().setUI(new CustomScrollBarUI());
+        //scroll.getHorizontalScrollBar().setUI(new CustomScrollBarUI());
         scroll.setOpaque(false);
         scroll.getViewport().setOpaque(false);
         scroll.setBorder(BorderFactory.createEmptyBorder());
-        scroll.getVerticalScrollBar().setUI(new CustomScrollBarUI());
-        scroll.getVerticalScrollBar().setUnitIncrement(16);
+        SmoothScroller.install(scroll);
 
         // Prevent layout shifts, Swing would love to do that if given the chance.
         scroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
@@ -1076,11 +1078,10 @@ public final class MediaInfoPopup {
         tableScroll.getViewport().setOpaque(false);
         tableScroll.setBorder(BorderFactory.createEmptyBorder());
         tableScroll.getHorizontalScrollBar().setUI(new CustomScrollBarUI());
-        tableScroll.getHorizontalScrollBar().setUnitIncrement(16);
         tableScroll.getVerticalScrollBar().setUI(new CustomScrollBarUI());
-        tableScroll.getVerticalScrollBar().setUnitIncrement(16);
         tableScroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
         tableScroll.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
+        SmoothScroller.install(tableScroll);
 
         tableScroll.getViewport().setScrollMode(JViewport.BACKINGSTORE_SCROLL_MODE);
 

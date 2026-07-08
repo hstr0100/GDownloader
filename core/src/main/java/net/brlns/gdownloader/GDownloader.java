@@ -786,38 +786,56 @@ public final class GDownloader {
         throws IOException, InterruptedException {
         Process process = processMonitor.startProcess(command);
 
-        Future<?> watchdog = null;
-        if (timeout != null) {
-            watchdog = GLOBAL_THREAD_POOL.submit(() -> {
-                try {
-                    boolean finished = process.waitFor(timeout.toMillis(), TimeUnit.MILLISECONDS);
-                    if (!finished) {
-                        log.warn("CLI read task exceeded {}s, killing process: {}",
-                            timeout.getSeconds(), StringUtils.escapeAndBuildCommandLine(command));
-
-                        process.destroyForcibly();
-                    }
-                } catch (InterruptedException e) {
-                    // Ignore
-                }
-            });
-        }
+        long deadline = timeout != null ? System.nanoTime() + timeout.toNanos() : -1L;
+        boolean timedOut = false;
 
         List<String> list = new ArrayList<>();
-        try (
-            BufferedReader in = new BufferedReader(
-                new InputStreamReader(process.getInputStream()))) {
-            String line;
-            while ((line = in.readLine()) != null) {
-                list.add(line);
+        StringBuilder lineBuilder = new StringBuilder();
+        char[] buffer = new char[1024];
+
+        try (BufferedReader in = new BufferedReader(
+            new InputStreamReader(process.getInputStream()))) {
+
+            while (true) {
+                if (in.ready()) {
+                    int charsRead = in.read(buffer, 0, buffer.length);
+                    if (charsRead == -1) {
+                        break; // EOF
+                    }
+
+                    for (int i = 0; i < charsRead; i++) {
+                        char c = buffer[i];
+                        if (c == '\n') {
+                            list.add(lineBuilder.toString().replace("\r", ""));
+                            lineBuilder.setLength(0);
+                        } else {
+                            lineBuilder.append(c);
+                        }
+                    }
+                } else if (!process.isAlive() && !in.ready()) {
+                    break;
+                } else if (deadline > 0 && System.nanoTime() >= deadline) {
+                    log.warn("CLI read task exceeded {}s, killing process: {}",
+                        timeout.getSeconds(), StringUtils.escapeAndBuildCommandLine(command));
+
+                    timedOut = true;
+                    process.destroyForcibly();
+                    break;
+                } else {
+                    Thread.sleep(20);
+                }
             }
-        } finally {
-            if (watchdog != null) {
-                watchdog.cancel(true);
-            }
+        }
+
+        if (!timedOut && lineBuilder.length() > 0) {
+            list.add(lineBuilder.toString().replace("\r", ""));
         }
 
         int exitCode = process.waitFor();
+        if (timedOut) {
+            return Collections.emptyList();
+        }
+
         if (exitCode != 0) {
             log.warn("Command failed, exit code: {} args: {}", exitCode,
                 StringUtils.escapeAndBuildCommandLine(command));

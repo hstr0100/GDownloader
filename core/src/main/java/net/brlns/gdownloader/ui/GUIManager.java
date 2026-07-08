@@ -337,9 +337,9 @@ public final class GUIManager {
             queueScrollPane.getViewport().setScrollMode(JViewport.SIMPLE_SCROLL_MODE);
             queueScrollPane.setBorder(BorderFactory.createEmptyBorder());
             queueScrollPane.setBackground(color(BACKGROUND));
-            UIUtils.installSmoothMouseWheelScrolling(queueScrollPane);
             queueScrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
             queueScrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
+            SmoothScroller.install(queueScrollPane);
             mainPanel.add(queueScrollPane, BorderLayout.CENTER);
 
             mediaCardManager.initializeQueueScrollPane(queueScrollPane);

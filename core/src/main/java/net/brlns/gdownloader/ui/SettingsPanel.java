@@ -756,9 +756,9 @@ public class SettingsPanel {
         scrollPane.getHorizontalScrollBar().setUI(new CustomScrollBarUI());
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
         scrollPane.setBackground(color(BACKGROUND));
-        UIUtils.installSmoothMouseWheelScrolling(scrollPane);
         scrollPane.setPreferredSize(new Dimension(Integer.MAX_VALUE, 200));
         scrollPane.getViewport().setScrollMode(JViewport.BACKINGSTORE_SCROLL_MODE);
+        SmoothScroller.install(scrollPane);
 
         JPanel panelWrapper = new JPanel(new BorderLayout());
         panelWrapper.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 5));
@@ -879,9 +879,9 @@ public class SettingsPanel {
         scrollPane.getHorizontalScrollBar().setUI(new CustomScrollBarUI());
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
         scrollPane.setBackground(color(BACKGROUND));
-        UIUtils.installSmoothMouseWheelScrolling(scrollPane);
         scrollPane.setPreferredSize(new Dimension(Integer.MAX_VALUE, 200));
         scrollPane.getViewport().setScrollMode(JViewport.BACKINGSTORE_SCROLL_MODE);
+        SmoothScroller.install(scrollPane);
 
         JPanel panelWrapper = new JPanel(new BorderLayout());
         panelWrapper.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 5));
@@ -1576,9 +1576,9 @@ public class SettingsPanel {
         scrollPane.getHorizontalScrollBar().setUI(new CustomScrollBarUI());
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
         scrollPane.setBackground(color(BACKGROUND));
-        UIUtils.installSmoothMouseWheelScrolling(scrollPane);
         scrollPane.setPreferredSize(new Dimension(Integer.MAX_VALUE, 400));
         scrollPane.getViewport().setScrollMode(JViewport.BACKINGSTORE_SCROLL_MODE);
+        SmoothScroller.install(scrollPane);
 
         JPanel panelWrapper = new JPanel(new BorderLayout());
         panelWrapper.setBackground(color(BACKGROUND));
@@ -2005,9 +2005,9 @@ public class SettingsPanel {
         scrollPane.getHorizontalScrollBar().setUI(new CustomScrollBarUI());
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
         scrollPane.setBackground(color(BACKGROUND));
-        UIUtils.installSmoothMouseWheelScrolling(scrollPane);
         scrollPane.setPreferredSize(new Dimension(Integer.MAX_VALUE, 200));
         scrollPane.getViewport().setScrollMode(JViewport.BACKINGSTORE_SCROLL_MODE);
+        SmoothScroller.install(scrollPane);
 
         JPanel panelWrapper = new JPanel(new BorderLayout());
         panelWrapper.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 5));

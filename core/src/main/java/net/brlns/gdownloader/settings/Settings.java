@@ -254,10 +254,6 @@ public class Settings {
             .findFirst();
     }
 
-    public int getMaxDownloadQueueColumns() {
-        return Math.clamp(maxDownloadQueueColumns, 0, 10);
-    }
-
     @JsonIgnore
     @SuppressWarnings("deprecation")
     public void doMigration() {
