@@ -17,10 +17,15 @@
 package net.brlns.gdownloader.ui.mediacard;
 
 import jakarta.annotation.Nullable;
+import jakarta.annotation.PreDestroy;
+import java.awt.AWTEvent;
 import java.awt.Component;
+import java.awt.IllegalComponentStateException;
 import java.awt.KeyboardFocusManager;
 import java.awt.Point;
 import java.awt.Rectangle;
+import java.awt.Toolkit;
+import java.awt.event.AWTEventListener;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
@@ -77,6 +82,8 @@ public final class MediaCardManager {
     private final Map<Integer, MediaCard> mediaCards = new ConcurrentHashMap<>();
 
     private final AtomicReference<JPanel> hoveredCardPanel = new AtomicReference<>();
+    private final AtomicReference<Point> lastMouseScreenPoint = new AtomicReference<>();
+    private AWTEventListener globalMouseListener;
 
     private final ConcurrentLinkedHashSet<Integer> selectedMediaCards = new ConcurrentLinkedHashSet<>();
     private final AtomicReference<MediaCard> lastSelectedMediaCard = new AtomicReference<>(null);
@@ -110,18 +117,131 @@ public final class MediaCardManager {
         queueScrollPane = scrollPane;
 
         queueScrollPane.getViewport().addChangeListener(e -> onViewportScrolled());
+
+        installGlobalHoverTracking();
+    }
+
+    private void installGlobalHoverTracking() {
+        if (globalMouseListener != null) {
+            return;
+        }
+
+        globalMouseListener = event -> {
+            if (!(event instanceof MouseEvent mouseEvent)) {
+                return;
+            }
+
+            int id = mouseEvent.getID();
+            if (id != MouseEvent.MOUSE_MOVED && id != MouseEvent.MOUSE_DRAGGED
+                && id != MouseEvent.MOUSE_EXITED) {
+                return;
+            }
+
+            Component source = mouseEvent.getComponent();
+            if (source == null
+                || SwingUtilities.getWindowAncestor(source) != manager.getAppWindow()) {
+                return;
+            }
+
+            try {
+                lastMouseScreenPoint.set(mouseEvent.getLocationOnScreen());
+            } catch (IllegalComponentStateException e) {
+                lastMouseScreenPoint.set(null);
+            }
+
+            recomputeHover();
+        };
+
+        Toolkit.getDefaultToolkit().addAWTEventListener(globalMouseListener,
+            AWTEvent.MOUSE_EVENT_MASK | AWTEvent.MOUSE_MOTION_EVENT_MASK);
+    }
+
+    @PreDestroy
+    public void removeListeners() {
+        if (globalMouseListener != null) {
+            Toolkit.getDefaultToolkit().removeAWTEventListener(globalMouseListener);
+
+            globalMouseListener = null;
+        }
     }
 
     private void onViewportScrolled() {
-        JPanel hovered = hoveredCardPanel.getAndSet(null);
-        if (hovered != null) {
-            MediaCard card = (MediaCard)hovered.getClientProperty("MEDIA_CARD");
-            if (card != null && !isMediaCardSelected(card)) {
-                hovered.setBackground(color(MEDIA_CARD));
+        SwingUtilities.invokeLater(this::recomputeHover);
+    }
+
+    private void recomputeHover() {
+        assert SwingUtilities.isEventDispatchThread();
+        if (mediaQueuePane == null || queueScrollPane == null) {
+            return;
+        }
+
+        JPanel newHovered = null;
+        Point screenPoint = lastMouseScreenPoint.get();
+
+        if (screenPoint != null && queueScrollPane.isShowing()) {
+            try {
+                Rectangle viewportScreenBounds = new Rectangle(
+                    queueScrollPane.getViewport().getLocationOnScreen(),
+                    queueScrollPane.getViewport().getSize());
+
+                if (viewportScreenBounds.contains(screenPoint)) {
+                    Point localPoint = new Point(screenPoint);
+                    SwingUtilities.convertPointFromScreen(localPoint, mediaQueuePane);
+
+                    Component deepest = SwingUtilities.getDeepestComponentAt(
+                        mediaQueuePane, localPoint.x, localPoint.y);
+                    newHovered = findEnclosingCard(deepest);
+                }
+            } catch (IllegalComponentStateException e) {
+                return;
             }
         }
 
-        queueScrollPane.getViewport().repaint();
+        applyHover(newHovered);
+    }
+
+    private void applyHover(@Nullable JPanel newHovered) {
+        JPanel oldHovered = hoveredCardPanel.get();
+        if (oldHovered == newHovered) {
+            return;
+        }
+
+        hoveredCardPanel.set(newHovered);
+
+        if (oldHovered != null) {
+            MediaCard oldCard = (MediaCard)oldHovered.getClientProperty("MEDIA_CARD");
+            if (oldCard != null && !isMediaCardSelected(oldCard) && !isMultiSelectMode.get()) {
+                oldHovered.setBackground(color(MEDIA_CARD));
+                oldHovered.repaint();
+            }
+        }
+
+        if (newHovered != null) {
+            MediaCard newCard = (MediaCard)newHovered.getClientProperty("MEDIA_CARD");
+            if (newCard != null && !isMediaCardSelected(newCard) && !isMultiSelectMode.get()) {
+                newHovered.setBackground(color(MEDIA_CARD_HOVER));
+                newHovered.repaint();
+            }
+        }
+
+        if (queueScrollPane.getViewport().getScrollMode() == JViewport.BACKINGSTORE_SCROLL_MODE) {
+            queueScrollPane.getViewport().repaint();
+        }
+    }
+
+    @Nullable
+    private JPanel findEnclosingCard(@Nullable Component component) {
+        Component current = component;
+        while (current != null && current != mediaQueuePane) {
+            if (current instanceof JPanel panel
+                && panel.getClientProperty("MEDIA_CARD") != null) {
+                return panel;
+            }
+
+            current = current.getParent();
+        }
+
+        return null;
     }
 
     public void setColumnLayoutPreference(int columns) {
@@ -390,6 +510,8 @@ public final class MediaCardManager {
                     } else if (entry.getUpdateType() == CARD_REMOVE) {
                         CustomMediaCardUI ui = mediaCard.getUi();
                         if (ui != null) {
+                            hoveredCardPanel.compareAndSet(ui.getCard(), null);
+
                             try {
                                 if (mediaCards.isEmpty()) {
                                     mediaQueuePane.removeAll();
@@ -811,24 +933,6 @@ public final class MediaCardManager {
                 manager.showRightClickMenu(card,
                     RightClickMenuEntries.fromMap(mediaCard.getOnRightClick().get()),
                     dependents, e.getX(), e.getY());
-            }
-        }
-
-        @Override
-        public void mouseEntered(MouseEvent e) {
-            hoveredCardPanel.set(card);
-
-            if (!isMediaCardSelected(mediaCard) && !isMultiSelectMode.get()) {
-                card.setBackground(color(MEDIA_CARD_HOVER));
-            }
-        }
-
-        @Override
-        public void mouseExited(MouseEvent e) {
-            hoveredCardPanel.compareAndSet(card, null);
-
-            if (!isMediaCardSelected(mediaCard) && !isMultiSelectMode.get()) {
-                card.setBackground(color(MEDIA_CARD));
             }
         }
     }

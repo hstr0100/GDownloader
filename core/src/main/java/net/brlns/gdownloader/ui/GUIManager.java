@@ -182,17 +182,17 @@ public final class GUIManager {
 
             appWindow.setVisible(true);
 
+            if ((appWindow.getExtendedState() & Frame.ICONIFIED) == 1) {
+                appWindow.setExtendedState(JFrame.ICONIFIED);
+                appWindow.setExtendedState(JFrame.NORMAL);
+            }
+
             // Java 25 frozen-until-clicked workaround
             appWindow.repaint();
             SwingUtilities.invokeLater(() -> {
                 appWindow.revalidate();
                 appWindow.repaint();
             });
-
-            if ((appWindow.getExtendedState() & Frame.ICONIFIED) == 1) {
-                appWindow.setExtendedState(JFrame.ICONIFIED);
-                appWindow.setExtendedState(JFrame.NORMAL);
-            }
         });
     }
 
