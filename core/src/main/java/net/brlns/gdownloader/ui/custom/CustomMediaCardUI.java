@@ -97,8 +97,6 @@ public final class CustomMediaCardUI {
 
     @PreDestroy
     public void removeListeners() {
-        parent.removeComponentListener(mediaNameLabel.getListener());
-
         if (windowStateListener != null) {
             parent.removeWindowStateListener(windowStateListener);
         }
@@ -161,7 +159,7 @@ public final class CustomMediaCardUI {
         gbc.gridy = 0;
         gbc.gridheight = 2;
         gbc.weightx = 0;
-        gbc.weighty = 0;
+        gbc.weighty = 1;
         card.add(dragPanel, gbc);
 
         // Thumbnail
@@ -179,7 +177,7 @@ public final class CustomMediaCardUI {
         gbc.gridy = 0;
         gbc.gridheight = 2;
         gbc.weightx = 0;
-        gbc.weighty = 0;
+        gbc.weighty = 1;
         card.add(thumbnailPanel, gbc);
 
         mediaNameLabel = new CustomDynamicLabel();
@@ -189,11 +187,9 @@ public final class CustomMediaCardUI {
         gbc.gridy = 0;
         gbc.gridheight = 1;
         gbc.weightx = 1;
+        gbc.weighty = 1;
         gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.weighty = 0;
         card.add(mediaNameLabel, gbc);
-
-        parent.addComponentListener(mediaNameLabel.getListener());
 
         progressBar = new CustomProgressBar(Color.WHITE);
         progressBar.setValue(100);
@@ -208,7 +204,7 @@ public final class CustomMediaCardUI {
         gbc.gridx = 2;
         gbc.gridy = 1;
         gbc.weightx = 1;
-        gbc.weighty = 0;
+        gbc.weighty = 1;
         gbc.fill = GridBagConstraints.BOTH;
         card.add(progressBar, gbc);
 
@@ -299,9 +295,9 @@ public final class CustomMediaCardUI {
 
         gbc.gridx = 3;
         gbc.gridy = 0;
-        gbc.gridheight = 3;
+        gbc.gridheight = 2;
         gbc.weightx = 0;
-        gbc.weighty = 0;
+        gbc.weighty = 1;
         gbc.fill = GridBagConstraints.VERTICAL;
         gbc.anchor = GridBagConstraints.CENTER;
         card.add(controlPanel, gbc);

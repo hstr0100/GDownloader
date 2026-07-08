@@ -724,6 +724,15 @@ public class SettingsPanel {
             .setter(settings::setAutoScrollToBottom)
             .build());
 
+        addSlider(panel, SliderBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.maximum_download_queue_columns")
+            .min(0).max(10).majorTickSpacing(1)
+            .snapToTicks(true)
+            .getter(settings::getMaxDownloadQueueColumns)
+            .setter(settings::setMaxDownloadQueueColumns)
+            .build());
+
         addCheckBox(panel, CheckBoxBuilder.builder()
             .background(resolveColor(panel))
             .labelKey("settings.enable_system_tray")

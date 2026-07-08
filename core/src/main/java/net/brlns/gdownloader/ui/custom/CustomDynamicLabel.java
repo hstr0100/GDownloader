@@ -22,9 +22,10 @@ import java.awt.FontMetrics;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicLong;
 import javax.swing.JLabel;
 import javax.swing.SwingUtilities;
-import lombok.Getter;
+import javax.swing.Timer;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
@@ -37,13 +38,10 @@ import static net.brlns.gdownloader.ui.themes.UIColors.FOREGROUND;
 @Slf4j
 public class CustomDynamicLabel extends JLabel {
 
-    @Getter
-    private final ComponentAdapter listener = new ComponentAdapter() {
-        @Override
-        public void componentResized(ComponentEvent e) {
-            updateTruncatedText();
-        }
-    };
+    private static final int THROTTLE_MS = 80;
+
+    private final Timer debounceTimer;
+    private final AtomicLong lastUpdateTime = new AtomicLong();
 
     @Setter
     private boolean lineWrapping = false;
@@ -63,6 +61,9 @@ public class CustomDynamicLabel extends JLabel {
     @SuppressWarnings("this-escape")
     public CustomDynamicLabel() {
         super();
+
+        debounceTimer = new Timer(THROTTLE_MS, e -> doUpdateTruncatedText());
+        debounceTimer.setRepeats(false);
 
         addComponentListener(new ComponentAdapter() {
             @Override
@@ -99,6 +100,19 @@ public class CustomDynamicLabel extends JLabel {
     }
 
     public void updateTruncatedText() {
+        assert SwingUtilities.isEventDispatchThread();
+
+        long now = System.currentTimeMillis();
+
+        if (now - lastUpdateTime.get() >= THROTTLE_MS) {
+            lastUpdateTime.set(now);
+            doUpdateTruncatedText();
+        }
+
+        debounceTimer.restart();
+    }
+
+    private void doUpdateTruncatedText() {
         assert SwingUtilities.isEventDispatchThread();
 
         if (fullText == null || fullText.length == 0) {

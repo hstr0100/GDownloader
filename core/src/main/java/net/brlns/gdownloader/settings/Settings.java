@@ -166,6 +166,9 @@ public class Settings {
     @JsonProperty("MaxFragmentRetries")
     private int maxFragmentRetries = 10;
 
+    @JsonProperty("MaxDownloadQueueColumns")
+    private int maxDownloadQueueColumns = 0;
+
     @JsonProperty("DownloadAudio")
     private boolean downloadAudio = true;
 
@@ -249,6 +252,10 @@ public class Settings {
         return urlFilters.stream()
             .filter(savedFilter -> savedFilter.getId().equals(filterId))
             .findFirst();
+    }
+
+    public int getMaxDownloadQueueColumns() {
+        return Math.clamp(maxDownloadQueueColumns, 0, 10);
     }
 
     @JsonIgnore

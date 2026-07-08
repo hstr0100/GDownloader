@@ -45,6 +45,8 @@ import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.downloader.enums.CloseReasonEnum;
+import net.brlns.gdownloader.event.EventDispatcher;
+import net.brlns.gdownloader.event.impl.SettingsChangeEvent;
 import net.brlns.gdownloader.ui.GUIManager;
 import net.brlns.gdownloader.ui.custom.CustomMediaCardUI;
 import net.brlns.gdownloader.ui.dnd.WindowTransferHandler;
@@ -67,7 +69,7 @@ public final class MediaCardManager {
 
     private final AtomicInteger mediaCardId = new AtomicInteger();
 
-    private JPanel mediaQueuePane;
+    private ScrollableQueuePanel mediaQueuePane;
 
     private final AtomicBoolean currentlyUpdatingMediaCards = new AtomicBoolean();
     private final AtomicLong lastMediaCardQueueUpdate = new AtomicLong();
@@ -79,6 +81,8 @@ public final class MediaCardManager {
     private final ConcurrentLinkedHashSet<Integer> selectedMediaCards = new ConcurrentLinkedHashSet<>();
     private final AtomicReference<MediaCard> lastSelectedMediaCard = new AtomicReference<>(null);
     private final AtomicBoolean isMultiSelectMode = new AtomicBoolean();
+
+    private final MediaCardGridLayout mediaCardGridLayout = new MediaCardGridLayout();
 
     private final AtomicReference<String> currentSearchQuery = new AtomicReference<>("");
 
@@ -93,6 +97,13 @@ public final class MediaCardManager {
 
         Timer visibilityCheckTimer = new Timer(150, e -> checkViewportVisibility());
         visibilityCheckTimer.start();
+
+        EventDispatcher.registerEDT(SettingsChangeEvent.class, (event) -> {
+            int newPreference = event.getSettings().getMaxDownloadQueueColumns();
+            if (newPreference != mediaCardGridLayout.getColumnPreference()) {
+                setColumnLayoutPreference(newPreference);
+            }
+        });
     }
 
     public void initializeQueueScrollPane(JScrollPane scrollPane) {
@@ -113,13 +124,28 @@ public final class MediaCardManager {
         queueScrollPane.getViewport().repaint();
     }
 
+    public void setColumnLayoutPreference(int columns) {
+        mediaCardGridLayout.setColumnPreference(columns);
+
+        runOnEDT(() -> {
+            if (mediaQueuePane != null) {
+                mediaQueuePane.revalidate();
+                mediaQueuePane.repaint();
+            }
+        });
+    }
+
+    public int getColumnLayoutPreference() {
+        return mediaCardGridLayout.getColumnPreference();
+    }
+
     public JPanel getOrCreateMediaQueuePanel() {
         if (mediaQueuePane != null) {
             return mediaQueuePane;
         }
 
-        mediaQueuePane = new JPanel();
-        mediaQueuePane.setLayout(new BoxLayout(mediaQueuePane, BoxLayout.Y_AXIS));
+        mediaQueuePane = new ScrollableQueuePanel();
+        mediaQueuePane.setLayout(mediaCardGridLayout);
         mediaQueuePane.setBackground(color(BACKGROUND));
         mediaQueuePane.setOpaque(true);
         mediaQueuePane.addMouseListener(manager.getDefaultMouseAdapter());

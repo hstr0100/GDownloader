@@ -53,6 +53,7 @@ import net.brlns.gdownloader.ui.custom.*;
 import net.brlns.gdownloader.ui.dnd.WindowDragSourceListener;
 import net.brlns.gdownloader.ui.dnd.WindowDropTargetListener;
 import net.brlns.gdownloader.ui.mediacard.MediaCardManager;
+import net.brlns.gdownloader.ui.mediacard.ScrollableQueuePanel;
 import net.brlns.gdownloader.ui.menu.NestedMenuEntry;
 import net.brlns.gdownloader.ui.menu.RightClickMenu;
 import net.brlns.gdownloader.ui.menu.RightClickMenuEntries;
@@ -317,7 +318,7 @@ public final class GUIManager {
             headerPanel.add(createSearchBar());
             mainPanel.add(headerPanel, BorderLayout.NORTH);
 
-            queuePanel = new JPanel(new BorderLayout());
+            queuePanel = new ScrollableQueuePanel(new BorderLayout());
             queuePanel.setBackground(color(BACKGROUND));
             queuePanel.addMouseListener(defaultMouseAdapter);
             queuePanel.setOpaque(true);

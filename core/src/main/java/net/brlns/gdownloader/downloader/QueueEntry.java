@@ -941,12 +941,12 @@ public class QueueEntry {
 
         if (mediaCard.getOnInfoClick() != null) {
             extrasSubmenu.put(l10n("gui.view_media_info"),
-                new RunnableMenuEntry(() -> mediaCard.getOnInfoClick().run()));
+                new SingleActionMenuEntry(() -> mediaCard.getOnInfoClick().run()));
         }
 
         if (mediaCard.getOnFormatsClick() != null) {
             extrasSubmenu.put(l10n("gui.view_available_formats"),
-                new RunnableMenuEntry(() -> mediaCard.getOnFormatsClick().run()));
+                new SingleActionMenuEntry(() -> mediaCard.getOnFormatsClick().run()));
         }
 
         if (mediaCard.getThumbnailImage() != null) {
