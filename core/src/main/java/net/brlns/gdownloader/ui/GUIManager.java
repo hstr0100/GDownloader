@@ -182,6 +182,13 @@ public final class GUIManager {
 
             appWindow.setVisible(true);
 
+            // Java 25 frozen-until-clicked workaround
+            appWindow.repaint();
+            SwingUtilities.invokeLater(() -> {
+                appWindow.revalidate();
+                appWindow.repaint();
+            });
+
             if ((appWindow.getExtendedState() & Frame.ICONIFIED) == 1) {
                 appWindow.setExtendedState(JFrame.ICONIFIED);
                 appWindow.setExtendedState(JFrame.NORMAL);
@@ -363,7 +370,7 @@ public final class GUIManager {
     private void adjustWindowSize() {
         assert SwingUtilities.isEventDispatchThread();
 
-        appWindow.setSize(675, 370);
+        appWindow.setSize(675, 352);
         appWindow.setMinimumSize(new Dimension(appWindow.getWidth(), 225));
 
         Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();

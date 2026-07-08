@@ -38,7 +38,6 @@ import java.util.*;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -837,8 +836,10 @@ public final class GDownloader {
         }
 
         if (exitCode != 0) {
-            log.warn("Command failed, exit code: {} args: {}", exitCode,
-                StringUtils.escapeAndBuildCommandLine(command));
+            if (log.isDebugEnabled()) {
+                log.warn("Command failed, exit code: {} args: {}", exitCode,
+                    StringUtils.escapeAndBuildCommandLine(command));
+            }
         }
 
         return Collections.unmodifiableList(list);

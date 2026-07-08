@@ -432,6 +432,9 @@ public final class CustomMediaCardUI {
         card.setMaximumSize(cardDimension);
         thumbnailPanel.setPreferredSize(thumbDimension);
         thumbnailPanel.setMinimumSize(thumbDimension);
+
+        card.revalidate();
+        card.repaint();
     }
 
     public void updateStartButtonMode(StartButtonMode mode) {

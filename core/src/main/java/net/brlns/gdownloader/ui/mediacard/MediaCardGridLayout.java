@@ -152,10 +152,8 @@ public class MediaCardGridLayout implements LayoutManager {
         maxThatFit = Math.min(maxThatFit, MAX_COLUMNS);
 
         int preference = columnPreference.get();
-        if (preference == 0) {
-            return maxThatFit;
-        }
+        int desired = (preference == 0) ? maxThatFit : Math.min(preference, maxThatFit);
 
-        return Math.min(preference, maxThatFit);
+        return Math.min(desired, visibleCount);
     }
 }
