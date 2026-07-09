@@ -274,7 +274,9 @@ public final class UIUtils {
             wrappedText.append("</center>");
         }
 
-        return String.format("<html><body style='font-family: %s; font-size: %dpt; color: #%s;'>%s</body></html>",
+        return String.format(
+            "<html><body style='font-family: %s; font-size: %dpt; color: #%s; "
+            + "white-space: nowrap; overflow: hidden; display: block;'>%s</body></html>",
             fontFamily, fontSize, textColorHex, result);
     }
 
