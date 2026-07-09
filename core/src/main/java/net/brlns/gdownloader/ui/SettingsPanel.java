@@ -1389,6 +1389,13 @@ public class SettingsPanel {
             .setter(settings.getYtDlpSettings()::setMediaTranscoding)
             .build());
 
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.move_unknown_files_to_uncategorized")
+            .getter(settings.getYtDlpSettings()::isMoveUnknownFilesToUncategorized)
+            .setter(settings.getYtDlpSettings()::setMoveUnknownFilesToUncategorized)
+            .build());
+
         addExtraArgumentsSettings(panel,
             settings.getYtDlpSettings()::isEnableExtraArguments,
             settings.getYtDlpSettings()::setEnableExtraArguments,

@@ -65,7 +65,6 @@ public class YtDlpSettings extends AbstractDownloaderSettings {
     @JsonProperty("PreferSystemExecutable")
     private boolean preferSystemExecutable = false;
 
-    // TODO: ui
     @JsonProperty("MoveUnknownFilesToUncategorized")
     private boolean moveUnknownFilesToUncategorized = true;
 
