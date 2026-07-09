@@ -141,6 +141,11 @@ public class DirectHttpDownloader extends AbstractDownloader {
     }
 
     @Override
+    public String getDefaultOutputSubdirectory() {
+        return "HTTP";
+    }
+
+    @Override
     public List<DownloadTypeEnum> getArchivableTypes() {
         return Collections.emptyList();
     }
@@ -267,10 +272,7 @@ public class DirectHttpDownloader extends AbstractDownloader {
 
     @Override
     protected void processMediaFiles(QueueEntry entry) {
-        File finalPath = new File(main.getOrCreateDownloadsDirectory(), "HTTP");
-        if (!finalPath.exists()) {
-            finalPath.mkdirs();
-        }
+        File finalPath = resolveOutputDirectory(entry);
 
         File tmpPath = entry.getTmpDirectory();
         Path deepestDir = null;
@@ -617,7 +619,11 @@ public class DirectHttpDownloader extends AbstractDownloader {
         String suggestedUrlPath = URLUtils.getDirectoryPath(fileUrl.toString());
 
         Path basePath = queueEntry.getTmpDirectory().toPath();
-        Path urlPath = Paths.get(suggestedUrlPath != null ? suggestedUrlPath : "");
+        Path urlPath = Paths.get("");
+        if (settings().isOrganizeFilesIntoFolders() && suggestedUrlPath != null) {
+            urlPath = Paths.get(suggestedUrlPath);
+        }
+
         Path targetPath = basePath.resolve(urlPath);
 
         int pathLength = targetPath.resolve(detectedFileName).toString().length();

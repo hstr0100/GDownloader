@@ -30,6 +30,7 @@ import java.util.Dictionary;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 import javax.swing.*;
 import javax.swing.event.ChangeEvent;
@@ -41,6 +42,8 @@ import lombok.Data;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
+import net.brlns.gdownloader.downloader.AbstractDownloader;
+import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.ffmpeg.enums.AudioBitrateEnum;
 import net.brlns.gdownloader.ffmpeg.structs.FFmpegConfig;
 import net.brlns.gdownloader.filters.AbstractUrlFilter;
@@ -48,6 +51,7 @@ import net.brlns.gdownloader.lang.ITranslatable;
 import net.brlns.gdownloader.settings.ProxySettings;
 import net.brlns.gdownloader.settings.QualitySettings;
 import net.brlns.gdownloader.settings.Settings;
+import net.brlns.gdownloader.settings.downloader.AbstractDownloaderSettings;
 import net.brlns.gdownloader.settings.enums.*;
 import net.brlns.gdownloader.system.StartupManager;
 import net.brlns.gdownloader.ui.builder.CheckBoxBuilder;
@@ -140,6 +144,11 @@ public class SettingsPanel {
                 log.error("Selected path not writable {}", file);
             }
         }
+
+        validateCustomDirectory(settings.getYtDlpSettings());
+        validateCustomDirectory(settings.getGalleryDLSettings());
+        validateCustomDirectory(settings.getSpotDLSettings());
+        validateCustomDirectory(settings.getDirectHttpSettings());
 
         main.updateConfig(settings);
 
@@ -891,6 +900,173 @@ public class SettingsPanel {
         return panelWrapper;
     }
 
+    private void addCustomDirectorySettings(JPanel panel, AbstractDownloaderSettings downloaderSettings,
+        DownloaderIdEnum downloaderId) {
+        UIColors background = resolveColor(panel);
+
+        JLabel label = createLabel("settings.custom_download_directory", LIGHT_TEXT);
+        label.setToolTipText(l10n("settings.custom_download_directory.tooltip"));
+
+        JPanel wrapperPanel = new JPanel(new GridBagLayout());
+        wrapperPanel.setBackground(color(background));
+
+        GridBagConstraints gbcPanel = new GridBagConstraints();
+        gbcPanel.anchor = GridBagConstraints.WEST;
+        gbcPanel.fill = GridBagConstraints.HORIZONTAL;
+
+        JTextField directoryField = new JTextField(20);
+
+        String currentValue = downloaderSettings.getCustomDownloadDirectory();
+        if (!notNullOrEmpty(currentValue)) {
+            AbstractDownloader downloader = main.getDownloadManager().getDownloader(downloaderId);
+            if (downloader != null) {
+                currentValue = downloader.resolvePreviewDirectory().getAbsolutePath();
+            }
+        }
+
+        final String customDirectory = currentValue;
+
+        directoryField.setText(currentValue);
+        directoryField.setForeground(color(TEXT_AREA_FOREGROUND));
+        directoryField.setBackground(color(TEXT_AREA_BACKGROUND));
+        directoryField.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+
+        JLabel statusLabel = new JLabel(" ");
+        statusLabel.setForeground(color(LIGHT_TEXT));
+        statusLabel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+
+        Runnable updateValidationState = () -> {
+            String text = directoryField.getText();
+
+            if (text.isEmpty()) {
+                statusLabel.setText(" ");
+                return;
+            }
+
+            File dir = new File(text);
+            boolean valid = dir.isAbsolute() && dir.exists()
+                && dir.isDirectory() && dir.canWrite()
+                || customDirectory != null && text.equals(customDirectory);
+
+            statusLabel.setText(l10n(valid
+                ? "settings.custom_download_directory.status_valid"
+                : "settings.custom_download_directory.status_invalid"));
+            statusLabel.setForeground(valid
+                ? color(LIGHT_TEXT)
+                : new Color(231, 76, 60));
+        };
+
+        directoryField.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                handleUpdate();
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                handleUpdate();
+            }
+
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                handleUpdate();
+            }
+
+            private void handleUpdate() {
+                downloaderSettings.setCustomDownloadDirectory(directoryField.getText());
+
+                updateValidationState.run();
+            }
+        });
+
+        updateValidationState.run();
+
+        gbcPanel.gridx = 0;
+        gbcPanel.gridwidth = 1;
+        gbcPanel.weightx = 0.9;
+        wrapperPanel.add(directoryField, gbcPanel);
+
+        JButton selectButton = createButton(
+            "settings.select_download_directory",
+            "settings.select_download_directory.tooltip",
+            COMBO_BOX_BUTTON_FOREGROUND,
+            BACKGROUND,
+            BUTTON_HOVER);
+
+        selectButton.addActionListener((ActionEvent e) -> {
+            JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+
+            String current = downloaderSettings.getCustomDownloadDirectory();
+            if (notNullOrEmpty(current)) {
+                File currentDir = new File(current);
+                if (currentDir.isAbsolute() && currentDir.isDirectory()) {
+                    fileChooser.setCurrentDirectory(currentDir);
+                }
+            }
+
+            int result = fileChooser.showOpenDialog(null);
+            if (result == JFileChooser.APPROVE_OPTION) {
+                String selectedPath = fileChooser.getSelectedFile().getAbsolutePath();
+
+                directoryField.setText(selectedPath);
+            }
+        });
+
+        selectButton.setPreferredSize(new Dimension(30, directoryField.getPreferredSize().height));
+
+        directoryField.putClientProperty("associated-label", label);
+        selectButton.putClientProperty("associated-label", label);
+
+        gbcPanel.gridx = 1;
+        gbcPanel.weightx = 0.1;
+        gbcPanel.insets = new Insets(0, 10, 0, 0);
+        wrapperPanel.add(selectButton, gbcPanel);
+
+        JPanel columnPanel = new JPanel(new BorderLayout());
+        columnPanel.setBackground(color(background));
+        columnPanel.add(wrapperPanel, BorderLayout.NORTH);
+        columnPanel.add(statusLabel, BorderLayout.SOUTH);
+
+        wrapComponentRow(panel, label, columnPanel, background);
+    }
+
+    private void validateCustomDirectory(AbstractDownloaderSettings downloaderSettings) {
+        String customDir = downloaderSettings.getCustomDownloadDirectory();
+        if (!notNullOrEmpty(customDir)) {
+            return;
+        }
+
+        File file = new File(customDir);
+        if (!file.exists() || !file.canWrite()) {
+            downloaderSettings.setCustomDownloadDirectory("");
+        }
+    }
+
+    private void addExtraArgumentsSettings(JPanel panel,
+        Supplier<Boolean> enabledGetter, Consumer<Boolean> enabledSetter,
+        Supplier<String> argsGetter, Consumer<String> argsSetter,
+        String argumentsLabelKey, String placeholderExample) {
+        List<JComponent> extraArgumentFields = new ArrayList<>();
+
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.enable_extra_arguments")
+            .getter(enabledGetter)
+            .setter(enabledSetter)
+            .onSet((selected) -> enableComponentsAndLabels(extraArgumentFields, selected))
+            .build());
+
+        extraArgumentFields.add(addTextField(panel, TextFieldBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey(argumentsLabelKey)
+            .getter(argsGetter)
+            .setter(argsSetter)
+            .enabled(enabledGetter.get())
+            .placeholderText(l10n("gui.example") + " " + placeholderExample)
+            .build()));
+    }
+
     private JPanel createGeneralDownloadSettingsTab() {
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
@@ -1098,6 +1274,8 @@ public class SettingsPanel {
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         panel.setBackground(color(BACKGROUND));
 
+        addCustomDirectorySettings(panel, settings.getYtDlpSettings(), DownloaderIdEnum.YT_DLP);
+
         addComboBox(panel, ComboBoxBuilder.<PlayListOptionEnum>builder()
             .background(resolveColor(panel))
             .labelKey("settings.playlist_download_option")
@@ -1211,6 +1389,14 @@ public class SettingsPanel {
             .setter(settings.getYtDlpSettings()::setMediaTranscoding)
             .build());
 
+        addExtraArgumentsSettings(panel,
+            settings.getYtDlpSettings()::isEnableExtraArguments,
+            settings.getYtDlpSettings()::setEnableExtraArguments,
+            settings.getYtDlpSettings()::getExtraCommandLineArguments,
+            settings.getYtDlpSettings()::setExtraCommandLineArguments,
+            "settings.extra_yt_dlp_arguments",
+            "--ignore-config --proxy http://example.com:1234");
+
         return wrapInScrollableSettingsPanel(panel);
     }
 
@@ -1225,6 +1411,16 @@ public class SettingsPanel {
             .getter(settings.getGalleryDLSettings()::isEnabled)
             .setter(settings.getGalleryDLSettings()::setEnabled)
             .requiresRestart(true)
+            .build());
+
+        addCustomDirectorySettings(panel, settings.getGalleryDLSettings(), DownloaderIdEnum.GALLERY_DL);
+
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.organize_files_into_directories")
+            .getter(settings.getGalleryDLSettings()::isOrganizeFilesIntoFolders)
+            .setter(settings.getGalleryDLSettings()::setOrganizeFilesIntoFolders)
+            .tooltipText(l10n("settings.organize_files_into_directories.tooltip"))
             .build());
 
         addCheckBox(panel, CheckBoxBuilder.builder()
@@ -1263,6 +1459,14 @@ public class SettingsPanel {
             .requiresRestart(true)
             .build());
 
+        addExtraArgumentsSettings(panel,
+            settings.getGalleryDLSettings()::isEnableExtraArguments,
+            settings.getGalleryDLSettings()::setEnableExtraArguments,
+            settings.getGalleryDLSettings()::getExtraCommandLineArguments,
+            settings.getGalleryDLSettings()::setExtraCommandLineArguments,
+            "settings.extra_gallery_dl_arguments",
+            "--config-ignore --proxy http://example.com:1234");
+
         return wrapInScrollableSettingsPanel(panel);
     }
 
@@ -1279,6 +1483,8 @@ public class SettingsPanel {
             .requiresRestart(true)
             .build());
 
+        addCustomDirectorySettings(panel, settings.getSpotDLSettings(), DownloaderIdEnum.SPOTDL);
+
         addCheckBox(panel, CheckBoxBuilder.builder()
             .background(resolveColor(panel))
             .labelKey("settings.downloader.spotdl.respect_config_file")
@@ -1294,6 +1500,14 @@ public class SettingsPanel {
             .requiresRestart(true)
             .build());
 
+        addExtraArgumentsSettings(panel,
+            settings.getSpotDLSettings()::isEnableExtraArguments,
+            settings.getSpotDLSettings()::setEnableExtraArguments,
+            settings.getSpotDLSettings()::getExtraCommandLineArguments,
+            settings.getSpotDLSettings()::setExtraCommandLineArguments,
+            "settings.extra_spotdl_arguments",
+            "--proxy http://example.com:1234");
+
         return wrapInScrollableSettingsPanel(panel);
     }
 
@@ -1308,6 +1522,16 @@ public class SettingsPanel {
             .getter(settings.getDirectHttpSettings()::isEnabled)
             .setter(settings.getDirectHttpSettings()::setEnabled)
             .requiresRestart(true)
+            .build());
+
+        addCustomDirectorySettings(panel, settings.getDirectHttpSettings(), DownloaderIdEnum.DIRECT_HTTP);
+
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.organize_files_into_directories")
+            .getter(settings.getDirectHttpSettings()::isOrganizeFilesIntoFolders)
+            .setter(settings.getDirectHttpSettings()::setOrganizeFilesIntoFolders)
+            .tooltipText(l10n("settings.organize_files_into_directories.tooltip"))
             .build());
 
         addCheckBox(panel, CheckBoxBuilder.builder()
@@ -1518,44 +1742,6 @@ public class SettingsPanel {
             .getter(settings::isDisableAACPns)
             .setter(settings::setDisableAACPns)
             .build());
-
-        List<JComponent> extraArgumentFields = new ArrayList<>();
-        addCheckBox(panel, CheckBoxBuilder.builder()
-            .background(resolveColor(panel))
-            .labelKey("settings.enable_extra_arguments")
-            .getter(settings::isEnableExtraArguments)
-            .setter(settings::setEnableExtraArguments)
-            .onSet((selected) -> {
-                enableComponentsAndLabels(extraArgumentFields, selected);
-            })
-            .build());
-
-        extraArgumentFields.add(addTextField(panel, TextFieldBuilder.builder()
-            .background(resolveColor(panel))
-            .labelKey("settings.extra_yt_dlp_arguments")
-            .getter(settings.getYtDlpSettings()::getExtraCommandLineArguments)
-            .setter(settings.getYtDlpSettings()::setExtraCommandLineArguments)
-            .enabled(settings.isEnableExtraArguments())
-            .placeholderText(l10n("gui.example") + " --ignore-config --proxy http://example.com:1234")
-            .build()));
-
-        extraArgumentFields.add(addTextField(panel, TextFieldBuilder.builder()
-            .background(resolveColor(panel))
-            .labelKey("settings.extra_gallery_dl_arguments")
-            .getter(settings.getGalleryDLSettings()::getExtraCommandLineArguments)
-            .setter(settings.getGalleryDLSettings()::setExtraCommandLineArguments)
-            .enabled(settings.isEnableExtraArguments())
-            .placeholderText(l10n("gui.example") + " --config-ignore --proxy http://example.com:1234")
-            .build()));
-
-        extraArgumentFields.add(addTextField(panel, TextFieldBuilder.builder()
-            .background(resolveColor(panel))
-            .labelKey("settings.extra_spotdl_arguments")
-            .getter(settings.getSpotDLSettings()::getExtraCommandLineArguments)
-            .setter(settings.getSpotDLSettings()::setExtraCommandLineArguments)
-            .enabled(settings.isEnableExtraArguments())
-            .placeholderText(l10n("gui.example") + " --proxy http://example.com:1234")
-            .build()));
 
         return wrapInScrollableSettingsPanel(panel);
     }
@@ -2280,6 +2466,8 @@ public class SettingsPanel {
         JCheckBox checkBox = new JCheckBox();
         if (builder.isRequiresRestart()) {
             checkBox.setToolTipText(l10n("settings.requires_restart.tooltip"));
+        } else if (builder.getTooltipText() != null) {
+            checkBox.setToolTipText(builder.getTooltipText());
         }
 
         if (builder.getGetter() != null) {

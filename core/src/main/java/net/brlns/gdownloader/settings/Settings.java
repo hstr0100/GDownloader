@@ -46,7 +46,7 @@ import net.brlns.gdownloader.settings.enums.WebFilterEnum;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class Settings {
 
-    public static final int CONFIG_VERSION = 36;
+    public static final int CONFIG_VERSION = 37;
 
     @JsonProperty("ConfigVersion")
     private int configVersion = CONFIG_VERSION;
@@ -150,9 +150,6 @@ public class Settings {
 
     @JsonProperty("CaptureAnyLinks")
     private boolean captureAnyLinks = false;
-
-    @JsonProperty("EnableExtraArguments")
-    private boolean enableExtraArguments = false;
 
     @JsonProperty("LastSettingsExportDirectory")
     private String lastSettingsExportDirectory = "";
@@ -360,10 +357,25 @@ public class Settings {
             spotDLSettings.setRespectConfigFile(isRespectSpotDLConfigFile());
         }
 
+        if (getConfigVersion() < 37) {
+            boolean legacyGlobalToggle = isEnableExtraArguments();
+
+            ytDlpSettings.setEnableExtraArguments(
+                legacyGlobalToggle && !ytDlpSettings.getExtraCommandLineArguments().isEmpty());
+            galleryDLSettings.setEnableExtraArguments(
+                legacyGlobalToggle && !galleryDLSettings.getExtraCommandLineArguments().isEmpty());
+            spotDLSettings.setEnableExtraArguments(
+                legacyGlobalToggle && !spotDLSettings.getExtraCommandLineArguments().isEmpty());
+        }
+
         setConfigVersion(CONFIG_VERSION);
     }
 
     // Graveyard Area
+    @Deprecated
+    @JsonProperty(value = "EnableExtraArguments", access = JsonProperty.Access.WRITE_ONLY)
+    private boolean enableExtraArguments = false;
+
     @Deprecated
     @JsonProperty(value = "DownloadSubtitles", access = JsonProperty.Access.WRITE_ONLY)
     private boolean downloadSubtitles = false;

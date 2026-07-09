@@ -20,13 +20,11 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-import lombok.extern.slf4j.Slf4j;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
 @Data
-@Slf4j
 @EqualsAndHashCode(callSuper = true)
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class DirectHttpSettings extends AbstractDownloaderSettings {
@@ -36,6 +34,9 @@ public class DirectHttpSettings extends AbstractDownloaderSettings {
 
     @JsonProperty("MediaTranscoding")
     private boolean mediaTranscoding = true;
+
+    @JsonProperty("OrganizeFilesIntoFolders")
+    private boolean organizeFilesIntoFolders = true;
 
     @JsonProperty("MaxDownloadChunks")
     private int maxDownloadChunks = 5;

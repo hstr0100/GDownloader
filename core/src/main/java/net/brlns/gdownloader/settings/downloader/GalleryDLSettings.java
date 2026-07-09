@@ -20,14 +20,12 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
 @Data
-@Slf4j
 @EqualsAndHashCode(callSuper = true)
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class GalleryDLSettings extends AbstractDownloaderSettings {
@@ -39,6 +37,9 @@ public class GalleryDLSettings extends AbstractDownloaderSettings {
 
     @JsonProperty("PreferSystemExecutable")
     private boolean preferSystemExecutable = false;
+
+    @JsonProperty("OrganizeFilesIntoFolders")
+    private boolean organizeFilesIntoFolders = true;
 
     @JsonProperty("FileDeduplication")
     private boolean fileDeduplication = true;

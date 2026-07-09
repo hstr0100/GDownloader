@@ -48,6 +48,8 @@ import net.brlns.gdownloader.util.FileUtils;
 
 import static net.brlns.gdownloader.downloader.enums.DownloadFlagsEnum.*;
 import static net.brlns.gdownloader.lang.Language.l10n;
+import static net.brlns.gdownloader.util.StringUtils.notNullOrEmpty;
+import static net.brlns.gdownloader.util.StringUtils.nullOrEmpty;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -85,6 +87,9 @@ public abstract class AbstractDownloader {
     public abstract void setExecutablePath(Optional<File> file);
 
     public abstract boolean isMainDownloader();
+
+    @Nullable
+    public abstract String getDefaultOutputSubdirectory();
 
     public abstract List<DownloadTypeEnum> getArchivableTypes();
 
@@ -319,4 +324,43 @@ public abstract class AbstractDownloader {
 
         return line.substring(0, MAX_OUTPUT_LINE_LENGTH) + "... [truncated, " + line.length() + " chars]";
     }
+
+    protected File resolveOutputDirectory(QueueEntry entry) {
+        File resolved = resolvePreviewDirectory(entry.getCustomDownloadDirectory());
+
+        if (!resolved.exists()) {
+            resolved.mkdirs();
+        }
+
+        return resolved;
+    }
+
+    public File resolvePreviewDirectory() {
+        return resolvePreviewDirectory(null);
+    }
+
+    private File resolvePreviewDirectory(@Nullable String entryOverride) {
+        File downloadsDir = main.getOrCreateDownloadsDirectory();
+
+        if (notNullOrEmpty(entryOverride)) {
+            return new File(entryOverride);
+        }
+
+        String configured = settings().getCustomDownloadDirectory();
+        if (notNullOrEmpty(configured)) {
+            File configuredFile = new File(configured);
+
+            return configuredFile.isAbsolute()
+                ? configuredFile
+                : new File(downloadsDir, configured);
+        }
+
+        String defaultSubdir = getDefaultOutputSubdirectory();
+        if (nullOrEmpty(defaultSubdir)) {
+            return downloadsDir;
+        }
+
+        return new File(downloadsDir, defaultSubdir);
+    }
+
 }

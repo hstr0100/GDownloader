@@ -116,6 +116,9 @@ public class QueueEntryEntity implements Serializable {
     @Column(name = "tmp_directory_path", length = 4096)
     private String tmpDirectoryPath;
 
+    @Column(name = "custom_download_directory", length = 4096)
+    private String customDownloadDirectory;
+
     @ElementCollection(fetch = FetchType.EAGER)
     @Lob
     @CollectionTable(name = "final_media_files", joinColumns = @JoinColumn(name = "download_id"))

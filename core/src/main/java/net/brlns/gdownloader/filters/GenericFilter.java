@@ -19,6 +19,7 @@ package net.brlns.gdownloader.filters;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.io.File;
+import java.nio.file.Path;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.extern.slf4j.Slf4j;
@@ -95,7 +96,7 @@ public class GenericFilter extends AbstractUrlFilter {
 
                 switch (typeEnum) {
                     case ALL -> {
-                        if (config.isEnableExtraArguments()) {
+                        if (config.getYtDlpSettings().isEnableExtraArguments()) {
                             for (String arg : config.getYtDlpSettings()
                                 .getExtraCommandLineArguments().split(" ")) {
                                 if (!arg.trim().isEmpty()) {
@@ -306,7 +307,7 @@ public class GenericFilter extends AbstractUrlFilter {
 
                 switch (typeEnum) {
                     case ALL -> {
-                        if (config.isEnableExtraArguments()) {
+                        if (config.getGalleryDLSettings().isEnableExtraArguments()) {
                             for (String arg : config.getGalleryDLSettings()
                                 .getExtraCommandLineArguments().split(" ")) {
                                 if (!arg.trim().isEmpty()) {
@@ -350,11 +351,14 @@ public class GenericFilter extends AbstractUrlFilter {
                         }
                     }
                     case GALLERY -> {
-                        String fileName = URLUtils.getDirectoryPath(inputUrl);
+                        String urlRelativePath = URLUtils.getDirectoryPath(inputUrl);
+                        Path targetPath = savePath.toPath();
 
-                        arguments.add(
-                            "-D", savePath.getAbsolutePath() + (fileName != null ? File.separator + fileName : "")
-                        );
+                        if (config.getGalleryDLSettings().isOrganizeFilesIntoFolders() && urlRelativePath != null) {
+                            targetPath = targetPath.resolve(urlRelativePath);
+                        }
+
+                        arguments.add("-D", targetPath.toAbsolutePath().toString());
 
                         if (config.getGalleryDLSettings().isUseOriginalFilenames()) {
                             arguments.add("-o", "filename=\"{filename}.{extension}\"");
@@ -375,7 +379,7 @@ public class GenericFilter extends AbstractUrlFilter {
 
                 switch (typeEnum) {
                     case ALL -> {
-                        if (config.isEnableExtraArguments()) {
+                        if (config.getSpotDLSettings().isEnableExtraArguments()) {
                             for (String arg : config.getSpotDLSettings()
                                 .getExtraCommandLineArguments().split(" ")) {
                                 if (!arg.trim().isEmpty()) {

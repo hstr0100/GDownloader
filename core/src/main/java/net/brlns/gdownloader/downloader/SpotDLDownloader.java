@@ -89,6 +89,11 @@ public class SpotDLDownloader extends AbstractDownloader {
     }
 
     @Override
+    public String getDefaultOutputSubdirectory() {
+        return "SpotDL";
+    }
+
+    @Override
     public List<DownloadTypeEnum> getArchivableTypes() {
         return Collections.singletonList(SPOTIFY);
     }
@@ -225,10 +230,7 @@ public class SpotDLDownloader extends AbstractDownloader {
 
     @Override
     protected void processMediaFiles(QueueEntry entry) {
-        File finalPath = new File(main.getOrCreateDownloadsDirectory(), "SpotDL");
-        if (!finalPath.exists()) {
-            finalPath.mkdirs();
-        }
+        File finalPath = resolveOutputDirectory(entry);
 
         File tmpPath = entry.getTmpDirectory();
         Path deepestDir = null;

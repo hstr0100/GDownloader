@@ -16,9 +16,20 @@
  */
 package net.brlns.gdownloader.settings.downloader;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Data;
+
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
+@Data
+@JsonIgnoreProperties(ignoreUnknown = true)
 public abstract class AbstractDownloaderSettings {
 
+    @JsonProperty("CustomDownloadDirectory")
+    private String customDownloadDirectory = "";
+
+    @JsonProperty("EnableExtraArguments")
+    private boolean enableExtraArguments = false;
 }

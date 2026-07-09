@@ -42,4 +42,6 @@ public class CheckBoxBuilder {
     private Consumer<Boolean> onSet;
     @NonNull
     private UIColors background;
+    @Nullable
+    private String tooltipText;
 }

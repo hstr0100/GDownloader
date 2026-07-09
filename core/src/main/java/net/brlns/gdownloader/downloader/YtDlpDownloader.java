@@ -104,6 +104,12 @@ public class YtDlpDownloader extends AbstractDownloader {
         return true;
     }
 
+    @Nullable
+    @Override
+    public String getDefaultOutputSubdirectory() {
+        return null;
+    }
+
     @Override
     public List<DownloadTypeEnum> getArchivableTypes() {
         return List.of(VIDEO, AUDIO);
@@ -171,7 +177,7 @@ public class YtDlpDownloader extends AbstractDownloader {
                 arguments.add(queueEntry.getUrl());
 
                 // yt-dlp very much likes to take its time sometimes
-                List<String> lines = main.readOutput(arguments, Duration.ofMinutes(5));
+                List<String> lines = main.readOutput(arguments, Duration.ofMinutes(15));
                 List<String> videoUrls = new ArrayList<>();
 
                 for (String line : lines) {
@@ -278,7 +284,7 @@ public class YtDlpDownloader extends AbstractDownloader {
 
             arguments.add(queueEntry.getUrl());
 
-            List<String> list = main.readOutput(arguments, Duration.ofSeconds(60));
+            List<String> list = main.readOutput(arguments, Duration.ofMinutes(7));
 
             if (main.getConfig().isDebugMode()) {
                 long what = System.currentTimeMillis() - start;
@@ -495,13 +501,15 @@ public class YtDlpDownloader extends AbstractDownloader {
 
     @Override
     protected void processMediaFiles(QueueEntry entry) {
-        File finalPath = main.getOrCreateDownloadsDirectory();
+        File finalPath = resolveOutputDirectory(entry);
         File tmpPath = entry.getTmpDirectory();
 
         Path deepestDir = null;
         int maxDepth = -1;
 
         QualitySettings quality = entry.getFilter().getActiveQualitySettings(main.getConfig());
+
+        boolean bucketUnrecognizedFiles = settings().isMoveUnknownFilesToUncategorized();
 
         try {
             List<Path> paths = Files.walk(tmpPath.toPath())
@@ -529,7 +537,7 @@ public class YtDlpDownloader extends AbstractDownloader {
 
             for (Path path : paths) {
                 if (!Files.isDirectory(path)) {
-                    Path targetPath = determineTargetPath(tmpPath, finalPath, path, quality);
+                    Path targetPath = determineTargetPath(tmpPath, finalPath, path, quality, bucketUnrecognizedFiles);
 
                     if (DescriptionContainerEnum.isFileType(path)
                         && settings().isSaveDescriptionFileAsTxt()) {
@@ -603,17 +611,19 @@ public class YtDlpDownloader extends AbstractDownloader {
         }
     }
 
-    private Path determineTargetPath(File tmpPath, File finalPath, Path path, QualitySettings quality) {
+    private Path determineTargetPath(File tmpPath, File finalPath, Path path, QualitySettings quality, boolean bucketUnrecognizedFiles) {
         boolean isAudio = AudioContainerEnum.isFileType(path);
         boolean isVideo = VideoContainerEnum.isFileType(path) || VideoContainerEnum.isGif(path);
         boolean isSubtitle = SubtitleContainerEnum.isFileType(path);
         boolean isThumbnail = ThumbnailContainerEnum.isFileType(path);
         boolean isDescription = DescriptionContainerEnum.isFileType(path);
 
-        if (isAudio || isVideo
+        boolean isRecognized = isAudio || isVideo
             || (isSubtitle && settings().isDownloadSubtitles())
             || (isThumbnail && settings().isDownloadThumbnails())
-            || (isDescription && settings().isDownloadDescription())) {
+            || (isDescription && settings().isDownloadDescription());
+
+        if (isRecognized || !bucketUnrecognizedFiles) {
             return relativize(tmpPath, finalPath, path);
         }
 

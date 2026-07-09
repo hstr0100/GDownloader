@@ -93,6 +93,11 @@ public class GalleryDlDownloader extends AbstractDownloader {
     }
 
     @Override
+    public String getDefaultOutputSubdirectory() {
+        return "GalleryDL";
+    }
+
+    @Override
     public List<DownloadTypeEnum> getArchivableTypes() {
         return Collections.singletonList(GALLERY);
     }
@@ -233,10 +238,7 @@ public class GalleryDlDownloader extends AbstractDownloader {
 
     @Override
     protected void processMediaFiles(QueueEntry entry) {
-        File finalPath = new File(main.getOrCreateDownloadsDirectory(), "GalleryDL");
-        if (!finalPath.exists()) {
-            finalPath.mkdirs();
-        }
+        File finalPath = resolveOutputDirectory(entry);
 
         File tmpPath = entry.getTmpDirectory();
         Path deepestDir = null;

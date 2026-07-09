@@ -20,13 +20,11 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-import lombok.extern.slf4j.Slf4j;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
 @Data
-@Slf4j
 @EqualsAndHashCode(callSuper = true)
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class YtDlpSettings extends AbstractDownloaderSettings {
@@ -66,6 +64,10 @@ public class YtDlpSettings extends AbstractDownloaderSettings {
 
     @JsonProperty("PreferSystemExecutable")
     private boolean preferSystemExecutable = false;
+
+    // TODO: ui
+    @JsonProperty("MoveUnknownFilesToUncategorized")
+    private boolean moveUnknownFilesToUncategorized = true;
 
     /**
      * These arguments are intended for quick, ad-hoc flags.For more granular control and per-download-type arguments,

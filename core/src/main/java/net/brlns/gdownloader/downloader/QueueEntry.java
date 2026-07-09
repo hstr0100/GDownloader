@@ -41,6 +41,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.swing.JFileChooser;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -167,6 +168,8 @@ public class QueueEntry {
 
     private final AtomicReference<String> forcedFormatId = new AtomicReference<>(null);
 
+    private final AtomicReference<String> customDownloadDirectory = new AtomicReference<>(null);
+
     private final Queue<String> pendingFormatQueue = new ConcurrentLinkedQueue<>();
     private final Set<String> uniquePendingFormats = ConcurrentHashMap.newKeySet();
 
@@ -259,6 +262,19 @@ public class QueueEntry {
 
     public void setForcedFormatId(@Nullable String formatId) {
         forcedFormatId.set(formatId);
+    }
+
+    @Nullable
+    public String getCustomDownloadDirectory() {
+        return customDownloadDirectory.get();
+    }
+
+    public boolean hasCustomDownloadDirectory() {
+        return notNullOrEmpty(getCustomDownloadDirectory());
+    }
+
+    public void setCustomDownloadDirectory(@Nullable String downloadDirectory) {
+        customDownloadDirectory.set(downloadDirectory);
     }
 
     public boolean queueFormatForDownload(String formatId) {
@@ -1016,6 +1032,48 @@ public class QueueEntry {
             }
         }
 
+        if (currentQueueCategory == QueueCategoryEnum.QUEUED
+            || currentQueueCategory == QueueCategoryEnum.RUNNING) {
+            extrasSubmenu.put(hasCustomDownloadDirectory()
+                ? l10n("gui.change_custom_download_directory")
+                : l10n("gui.set_custom_download_directory"),
+                new MultiActionMenuEntry<>(() -> this, (entries) -> {
+                    JFileChooser fileChooser = new JFileChooser();
+                    fileChooser.setDialogTitle(l10n("gui.set_custom_download_directory"));
+                    fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+
+                    String current = getCustomDownloadDirectory();
+                    if (notNullOrEmpty(current)) {
+                        File currentDir = new File(current);
+                        if (currentDir.isDirectory()) {
+                            fileChooser.setCurrentDirectory(currentDir);
+                        }
+                    }
+
+                    int result = fileChooser.showOpenDialog(null);
+                    if (result == JFileChooser.APPROVE_OPTION) {
+                        String selectedPath = fileChooser.getSelectedFile().getAbsolutePath();
+
+                        for (QueueEntry entry : entries) {
+                            entry.setCustomDownloadDirectory(selectedPath);
+                            entry.updateExtraRightClickOptions();
+                        }
+                    }
+
+                    // TODO: toast notification.
+                }));
+
+            if (hasCustomDownloadDirectory()) {
+                extrasSubmenu.put(l10n("gui.clear_custom_download_directory"),
+                    new MultiActionMenuEntry<>(() -> this, (entries) -> {
+                        for (QueueEntry entry : entries) {
+                            entry.setCustomDownloadDirectory(null);
+                            entry.updateExtraRightClickOptions();
+                        }
+                    }));
+            }
+        }
+
         if (!extrasSubmenu.isEmpty()) {
             addRightClick(l10n("gui.more_options") + ":",
                 extrasSubmenu);
@@ -1193,6 +1251,8 @@ public class QueueEntry {
             entity.setTmpDirectoryPath(getTmpDirectory().getAbsolutePath());
         }
 
+        entity.setCustomDownloadDirectory(getCustomDownloadDirectory());
+
         entity.setMediaFilePaths(getFinalMediaFiles().stream()
             .map(File::getAbsolutePath)
             .collect(Collectors.toCollection(ArrayList::new)));
@@ -1255,6 +1315,8 @@ public class QueueEntry {
         if (entity.getTmpDirectoryPath() != null && !entity.getTmpDirectoryPath().isEmpty()) {
             queueEntry.setTmpDirectory(new File(entity.getTmpDirectoryPath()));
         }
+
+        queueEntry.setCustomDownloadDirectory(entity.getCustomDownloadDirectory());
 
         // Deprecated field, extract contents for migration.
         for (String path : entity.getFinalMediaFilePaths()) {

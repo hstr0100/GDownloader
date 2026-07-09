@@ -121,7 +121,6 @@ import static net.brlns.gdownloader.util.StringUtils.notNullOrEmpty;
 // TODO display number in download queue
 // TODO automatic ui sorting
 // TODO Manually mark downloads as complete, correctly move files to final directory
-// TODO Make download paths for the different downloaders customizable
 // TODO Fetch favicons for url filters
 // TODO Tags/Filtering
 // TODO Remove ffmpeg requirement by omitting transcoding arguments
@@ -135,7 +134,6 @@ import static net.brlns.gdownloader.util.StringUtils.notNullOrEmpty;
 // TODO transcode specific-format downloads if requested by user
 // TODO fetch first playlist item for metadata, then fetch the full playlist for individual filtering/processing/state tracking
 // TODO right click > query metadata
-// TODO in-depth download path customization
 /**
  * GDownloader - GUI wrapper for yt-dlp
  *
