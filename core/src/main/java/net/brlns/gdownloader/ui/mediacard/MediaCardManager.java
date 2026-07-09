@@ -535,6 +535,8 @@ public final class MediaCardManager {
                 currentlyUpdatingMediaCards.set(false);
 
                 mediaQueuePane.revalidate();
+                mediaQueuePane.validate();
+                queueScrollPane.validate();
                 mediaQueuePane.repaint();
 
                 manager.updateContentPane();
