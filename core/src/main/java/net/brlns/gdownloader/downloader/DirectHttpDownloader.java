@@ -161,7 +161,7 @@ public class DirectHttpDownloader extends AbstractDownloader {
             return false;
         }
 
-        if (!URLUtils.isHttpUrl(inputUrl)) {
+        if (!URLUtils.isHttpUrl(inputUrl) || URLUtils.isSpotify(inputUrl)) {
             return false;
         }
 

@@ -47,6 +47,7 @@ import net.brlns.gdownloader.util.DirectoryUtils;
 import net.brlns.gdownloader.util.FileUtils;
 import net.brlns.gdownloader.util.Pair;
 import net.brlns.gdownloader.util.StringUtils;
+import net.brlns.gdownloader.util.URLUtils;
 
 import static net.brlns.gdownloader.downloader.enums.DownloadFlagsEnum.*;
 import static net.brlns.gdownloader.downloader.enums.DownloadTypeEnum.*;
@@ -110,7 +111,7 @@ public class GalleryDlDownloader extends AbstractDownloader {
 
     @Override
     protected boolean canConsumeUrl(String inputUrl) {
-        boolean isSpotifyUrl = inputUrl.contains("spotify.com/") || inputUrl.contains("spotify.link/");
+        boolean isSpotifyUrl = URLUtils.isSpotify(inputUrl);
 
         // Check if it's not a garbage URL
         boolean isNotGarbageUrl = !(inputUrl.contains("ytimg")

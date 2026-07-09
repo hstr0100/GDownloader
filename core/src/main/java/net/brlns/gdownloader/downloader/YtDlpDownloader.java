@@ -60,6 +60,7 @@ import net.brlns.gdownloader.util.CancelHook;
 import net.brlns.gdownloader.util.DirectoryUtils;
 import net.brlns.gdownloader.util.FileUtils;
 import net.brlns.gdownloader.util.Pair;
+import net.brlns.gdownloader.util.URLUtils;
 
 import static net.brlns.gdownloader.downloader.enums.DownloadFlagsEnum.*;
 import static net.brlns.gdownloader.downloader.enums.DownloadTypeEnum.*;
@@ -224,7 +225,7 @@ public class YtDlpDownloader extends AbstractDownloader {
     @Override
     protected boolean canConsumeUrl(String inputUrl) {
         // If SpotDL is disabled, try to consume url with yt-dlp instead (Not currently supported)
-        boolean isSpotifyUrl = inputUrl.contains("spotify.com/") || inputUrl.contains("spotify.link/");
+        boolean isSpotifyUrl = URLUtils.isSpotify(inputUrl);
         boolean spotDlEnabled = main.getConfig().getSpotDLSettings().isEnabled();
 
         // Check if it's not a garbage URL

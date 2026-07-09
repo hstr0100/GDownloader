@@ -189,6 +189,14 @@ public final class URLUtils {
         return null;
     }
 
+    public static boolean isSpotify(String spotifyUrl) {
+        if (spotifyUrl == null) {
+            return false;
+        }
+
+        return spotifyUrl.contains("spotify.com/") || spotifyUrl.contains("spotify.link/");
+    }
+
     private static String buildQueryString(Map<String, String> queryParams) throws UnsupportedEncodingException {
         StringBuilder queryString = new StringBuilder();
 

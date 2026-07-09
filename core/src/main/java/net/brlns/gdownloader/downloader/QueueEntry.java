@@ -1022,7 +1022,7 @@ public class QueueEntry {
                 }));
         }
 
-        if (isPlaylist()) {
+        if (isPlaylist() && !URLUtils.isSpotify(getUrl())) {
             YtDlpDownloader downloader = (YtDlpDownloader)main.getDownloadManager()
                 .getDownloader(DownloaderIdEnum.YT_DLP);
 
