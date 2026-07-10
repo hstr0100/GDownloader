@@ -352,7 +352,16 @@ public final class MediaCardManager {
     }
 
     public void selectAllMediaCards() {
-        selectedMediaCards.replaceAll(mediaCards.keySet());
+        List<Integer> visibleCardIds = new ArrayList<>();
+        for (MediaCard mediaCard : mediaCards.values()) {
+            CustomMediaCardUI ui = mediaCard.getUi();
+
+            if (ui != null && ui.getCard().isVisible()) {
+                visibleCardIds.add(mediaCard.getId());
+            }
+        }
+
+        selectedMediaCards.replaceAll(visibleCardIds);
 
         updateMediaCardSelectionState();
     }
@@ -406,6 +415,11 @@ public final class MediaCardManager {
 
             if (card == null) {
                 log.error("Cannot find card for index {}", i);
+                continue;
+            }
+
+            CustomMediaCardUI cardUi = card.getUi();
+            if (cardUi == null || !cardUi.getCard().isVisible()) {
                 continue;
             }
 

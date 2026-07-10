@@ -413,6 +413,14 @@ public final class GUIManager {
             }
         });
 
+        searchField.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_A, KeyEvent.CTRL_DOWN_MASK), "selectAllCards");
+        searchField.getActionMap().put("selectAllCards", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                mediaCardManager.selectAllMediaCards();
+            }
+        });
+
         searchDebounceTimer = new Timer(150, e -> {
             String query = searchField.getText();
             mediaCardManager.filterMediaCards(query, count -> {

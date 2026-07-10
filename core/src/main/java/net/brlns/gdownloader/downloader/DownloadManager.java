@@ -497,10 +497,7 @@ public class DownloadManager implements IEvent, AutoCloseable {
             if (capturedLinks.add(filteredUrl)) {
                 capturedLinks.add(inputUrl);
 
-                // Silencing this for performance reasons, even though its quite useful.
-                if (log.isDebugEnabled()) {
-                    log.debug("Captured {}", inputUrl);
-                }
+                log.info("Captured {}", inputUrl);
 
                 MediaCard mediaCard = main.getGuiManager()
                     .getMediaCardManager().addMediaCard(filteredUrl);
