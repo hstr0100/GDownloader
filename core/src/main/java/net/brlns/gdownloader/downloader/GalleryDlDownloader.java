@@ -384,6 +384,8 @@ public class GalleryDlDownloader extends AbstractDownloader {
                     .replace(entry.getTmpDirectory().getAbsolutePath() + File.separator, "")), false);
         } else {
             if (lastOutput.contains("Waiting") && lastOutput.contains("rate limit")) {
+                entry.markRateLimited();
+
                 entry.updateStatus(DownloadStatusEnum.WAITING, lastOutput);
                 return;
             }

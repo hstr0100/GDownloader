@@ -130,6 +130,8 @@ public class QueueEntry {
     private final AtomicBoolean downloadStarted = new AtomicBoolean(false);
     private final AtomicBoolean downloadSkipped = new AtomicBoolean(false);
 
+    private final AtomicBoolean rateLimitDetected = new AtomicBoolean(false);
+
     private final CancelHook cancelHook = new CancelHook();
     private final AtomicBoolean running = new AtomicBoolean(false);
     private final AtomicBoolean queried = new AtomicBoolean(false);
@@ -413,6 +415,11 @@ public class QueueEntry {
         downloadStarted.set(false);
         cancelHook.set(false);
         process = null;
+        rateLimitDetected.set(false);
+    }
+
+    public void markRateLimited() {
+        rateLimitDetected.set(true);
     }
 
     public void resetRetryCounter() {

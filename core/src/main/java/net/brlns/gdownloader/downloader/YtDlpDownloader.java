@@ -717,6 +717,10 @@ public class YtDlpDownloader extends AbstractDownloader {
     private void processProgress(QueueEntry entry, String lastOutput) {
         double lastPercentage = entry.getMediaCard().getPercentage();
 
+        if (isRateLimitWarning(lastOutput)) {
+            entry.markRateLimited();
+        }
+
         if (lastOutput.contains("Sleeping") && lastOutput.contains("...")) {
             entry.updateStatus(DownloadStatusEnum.WAITING, lastOutput);
             return;
@@ -756,6 +760,16 @@ public class YtDlpDownloader extends AbstractDownloader {
                 }
             }
         }
+    }
+
+    private static boolean isRateLimitWarning(String lastOutput) {
+        String lower = lastOutput.toLowerCase(Locale.ROOT);
+
+        return lower.contains("error 429")
+            || lower.contains("too many requests")
+            || lower.contains("rate-limit")// -ed included
+            || lower.contains("rate limit")
+            || lower.contains("try again later");
     }
 
     @Override
