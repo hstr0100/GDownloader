@@ -54,7 +54,7 @@ public class DarkTheme extends AbstractTheme {
         put(SLIDER_FOREGROUND, Color.WHITE);
         put(CHECK_BOX_HOVER, new Color(128, 128, 128));
         put(SIDE_PANEL_SELECTED, new Color(93, 93, 93));
-        put(TOOLTIP_BACKGROUND, Color.DARK_GRAY);
+        put(TOOLTIP_BACKGROUND, new Color(58, 58, 58));
         put(TOOLTIP_FOREGROUND, Color.WHITE);
         put(COMBO_BOX_FOREGROUND, Color.DARK_GRAY);
         put(COMBO_BOX_BACKGROUND, Color.LIGHT_GRAY);

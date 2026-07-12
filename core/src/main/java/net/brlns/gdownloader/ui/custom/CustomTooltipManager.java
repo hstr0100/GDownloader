@@ -18,6 +18,7 @@ package net.brlns.gdownloader.ui.custom;
 
 import java.awt.*;
 import java.awt.event.MouseEvent;
+import java.awt.geom.RoundRectangle2D;
 import java.util.Collections;
 import java.util.Set;
 import java.util.WeakHashMap;
@@ -132,12 +133,6 @@ public final class CustomTooltipManager {
         overlayWindow.setFocusableWindowState(false);
         overlayWindow.setAlwaysOnTop(true);
 
-        if (GraphicsEnvironment.getLocalGraphicsEnvironment()
-            .getDefaultScreenDevice()
-            .isWindowTranslucencySupported(GraphicsDevice.WindowTranslucency.PERPIXEL_TRANSLUCENT)) {
-            overlayWindow.setBackground(new Color(0, 0, 0, 0));
-        }
-
         overlayContent = new CustomTooltipOverlay();
         overlayWindow.setContentPane(overlayContent);
 
@@ -179,6 +174,11 @@ public final class CustomTooltipManager {
         }
 
         overlayWindow.setBounds(x, y, size.width, size.height);
+
+        overlayWindow.setShape(new RoundRectangle2D.Double(
+            0, 0, size.width, size.height,
+            CustomTooltipOverlay.ARC, CustomTooltipOverlay.ARC));
+
         overlayWindow.setVisible(true);
     }
 

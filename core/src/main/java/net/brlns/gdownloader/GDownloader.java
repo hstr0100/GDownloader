@@ -1006,6 +1006,7 @@ public final class GDownloader {
         boolean noGui = false;
         int uiScale = 1;
         boolean fromOta = false;
+        boolean disableHWAccel = true;
 
         for (int i = 0; i < args.length; i++) {
             if (args[i].equalsIgnoreCase("--debug")) {
@@ -1038,6 +1039,10 @@ public final class GDownloader {
                 portable = true;
                 log.info("Running in portable mode. (Found --portable argument)");
             }
+
+            if (args[i].equalsIgnoreCase("--hw-accel")) {
+                disableHWAccel = false;
+            }
         }
 
         if (!portable) {
@@ -1062,8 +1067,8 @@ public final class GDownloader {
         UpdaterBootstrap.tryOta(args, fromOta);
 
         System.setProperty("sun.java2d.uiScale", String.valueOf(uiScale));// Does not accept double
-        // TODO: there seems to be artifacting issues on fluxbox and sometimes Windows 11
-        //System.setProperty("sun.java2d.opengl", !disableHWAccel && !isLinuxAndAmdGpu() ? "true" : "false");
+        // TODO: defaults to OFF. there seems to be artifacting issues on fluxbox and sometimes Windows 11
+        System.setProperty("sun.java2d.opengl", !disableHWAccel ? "true" : "false");
         //System.setProperty("sun.java2d.d3d", "true");
 
         log.info("Starting...");

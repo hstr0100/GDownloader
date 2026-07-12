@@ -35,7 +35,7 @@ public class CustomTooltipOverlay extends JComponent {
 
     private static final int H_PADDING = 8;
     private static final int V_PADDING = 5;
-    private static final int ARC = 10;
+    protected static final int ARC = 14;
 
     private static final Font TOOLTIP_FONT;
 
@@ -92,7 +92,7 @@ public class CustomTooltipOverlay extends JComponent {
             g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
             g2d.setColor(color(TOOLTIP_BACKGROUND));
-            g2d.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, ARC, ARC);
+            g2d.fillRoundRect(0, 0, getWidth(), getHeight(), ARC, ARC);
 
             g2d.setColor(color(TOOLTIP_FOREGROUND));
             FontMetrics fm = g2d.getFontMetrics();
