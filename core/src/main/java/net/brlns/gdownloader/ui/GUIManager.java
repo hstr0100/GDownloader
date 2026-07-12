@@ -74,14 +74,11 @@ import static net.brlns.gdownloader.ui.themes.UIColors.*;
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-// TODO add custom tooltip to all buttons
 @Slf4j
 public final class GUIManager {
 
     static {
-        ToolTipManager.sharedInstance().setInitialDelay(0);
-        ToolTipManager.sharedInstance().setDismissDelay(5000);
-        ToolTipManager.sharedInstance().setEnabled(true);
+        CustomTooltipManager.install();
     }
 
     @Getter
@@ -812,9 +809,7 @@ public final class GUIManager {
             button.setToolTipText(l10n(tooltip.apply(state)));
         });
 
-        CustomToolTip ui = new CustomToolTip();
-        ui.setComponent(button);
-        ui.setToolTipText(l10n(tooltip.apply(watch.get())));
+        button.setToolTipText(l10n(tooltip.apply(watch.get())));
 
         return button;
     }
@@ -850,9 +845,7 @@ public final class GUIManager {
         button.addActionListener(actionListener);
 
         if (tooltipText != null) {
-            CustomToolTip ui = new CustomToolTip();
-            ui.setComponent(button);
-            ui.setToolTipText(l10n(tooltipText));
+            button.setToolTipText(l10n(tooltipText));
         }
 
         return button;

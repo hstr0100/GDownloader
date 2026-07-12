@@ -278,9 +278,7 @@ public final class CustomMediaCardUI {
         });
         startButton.addActionListener(e -> onStartClick.run());
 
-        CustomToolTip startButtonToolTipUi = new CustomToolTip();
-        startButtonToolTipUi.setComponent(startButton);
-        startButtonToolTipUi.setToolTipText(l10n(defaultButtonState.getTooltipKey()));
+        startButton.setToolTipText(l10n(defaultButtonState.getTooltipKey()));
 
         startButton.setPreferredSize(new Dimension(16, 16));
         startButton.setAlignmentX(Component.CENTER_ALIGNMENT);
