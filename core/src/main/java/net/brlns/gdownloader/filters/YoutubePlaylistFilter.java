@@ -24,7 +24,6 @@ import lombok.EqualsAndHashCode;
 import net.brlns.gdownloader.downloader.AbstractDownloader;
 import net.brlns.gdownloader.downloader.DownloadManager;
 import net.brlns.gdownloader.downloader.enums.DownloadTypeEnum;
-import net.brlns.gdownloader.downloader.structs.PlaylistItemFileTime;
 import net.brlns.gdownloader.process.ProcessArguments;
 
 import static net.brlns.gdownloader.downloader.enums.DownloadTypeEnum.*;
@@ -64,15 +63,6 @@ public class YoutubePlaylistFilter extends YoutubeFilter {
                             "--yes-playlist",
                             "--ignore-errors"
                         );
-                    }
-                    case VIDEO, AUDIO -> {
-                        if (manager.getMain().getConfig().isUseUploadTimeAsFileTime()) {
-                            arguments.add(
-                                "--print",
-                                "after_move:" + PlaylistItemFileTime.MARKER + "%(upload_date)s|%(filepath)s",
-                                "--no-quiet"
-                            );
-                        }
                     }
                 }
             }

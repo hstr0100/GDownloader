@@ -26,6 +26,7 @@ import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 import lombok.Getter;
@@ -277,11 +278,13 @@ public class GalleryDlDownloader extends AbstractDownloader {
                         Files.createDirectories(targetPath.getParent());
                         targetPath = FileUtils.ensureUniqueFileName(targetPath);
 
+                        Optional<LocalDateTime> uploadTime = FileUtils.readLastModifiedTime(path);
+
                         Files.move(path, targetPath, StandardCopyOption.REPLACE_EXISTING);
                         // If upload-time is null, this is no-op
                         // if the 'use upload time as created time' setting is off, this
                         // sets the file to the current local time
-                        updateFileTimes(entry, targetPath);
+                        updateFileTimes(entry, targetPath, uploadTime.orElseGet(entry::getUploadTime));
 
                         entry.getFinalMediaFiles().add(targetPath.toFile());
                     } catch (IOException e) {

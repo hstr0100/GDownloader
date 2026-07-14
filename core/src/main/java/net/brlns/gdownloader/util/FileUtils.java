@@ -344,6 +344,22 @@ public final class FileUtils {
         }
     }
 
+    public static Optional<LocalDateTime> readLastModifiedTime(Path filePath) {
+        if (!Files.exists(filePath)) {
+            return Optional.empty();
+        }
+
+        try {
+            FileTime fileTime = Files.getLastModifiedTime(filePath);
+
+            return Optional.of(LocalDateTime.ofInstant(fileTime.toInstant(), ZoneId.systemDefault()));
+        } catch (IOException e) {
+            log.error("An error occurred reading file time: {}", e.getMessage());
+
+            return Optional.empty();
+        }
+    }
+
     public static void copyAllFileTimes(Path sourcePath, Path targetPath) {
         if (!Files.exists(sourcePath) || !Files.exists(targetPath)) {
             return;// Exit silently

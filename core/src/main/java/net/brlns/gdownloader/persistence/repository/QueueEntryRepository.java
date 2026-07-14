@@ -18,8 +18,13 @@ package net.brlns.gdownloader.persistence.repository;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import net.brlns.gdownloader.persistence.entity.QueueEntryEntity;
 
 /**
@@ -60,6 +65,23 @@ public class QueueEntryRepository extends PersistenceRepository<Long, QueueEntry
             QueueEntryEntity entity = em.find(QueueEntryEntity.class, downloadId);
 
             return entity != null ? new ArrayList<>(entity.getDownloadLog()) : new ArrayList<>();
+        }
+    }
+
+    public Map<String, LocalDateTime> loadPlaylistItemUploadTimes(Long downloadId) {
+        try (EntityManager em = getEmf().createEntityManager()) {
+            QueueEntryEntity entity = em.find(QueueEntryEntity.class, downloadId);
+            if (entity == null) {
+                return new HashMap<>();
+            }
+
+            Map<String, LocalDateTime> result = new HashMap<>();
+            for (Map.Entry<String, Long> entry : entity.getPlaylistItemUploadTimes().entrySet()) {
+                result.put(entry.getKey(),
+                    LocalDateTime.ofInstant(Instant.ofEpochMilli(entry.getValue()), ZoneId.systemDefault()));
+            }
+
+            return result;
         }
     }
 }

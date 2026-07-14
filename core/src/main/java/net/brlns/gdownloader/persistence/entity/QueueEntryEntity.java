@@ -19,6 +19,8 @@ package net.brlns.gdownloader.persistence.entity;
 import jakarta.persistence.*;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -159,4 +161,10 @@ public class QueueEntryEntity implements Serializable {
     @OrderColumn
     @Column(name = "download_log", length = 8192)
     private ArrayList<String> downloadLog = new ArrayList<>();
+
+    @ElementCollection(fetch = FetchType.LAZY)
+    @CollectionTable(name = "playlist_item_upload_times", joinColumns = @JoinColumn(name = "download_id"))
+    @MapKeyColumn(name = "file_path", length = 4096)
+    @Column(name = "upload_time_millis")
+    private Map<String, Long> playlistItemUploadTimes = new HashMap<>();
 }

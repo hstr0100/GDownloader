@@ -25,7 +25,9 @@ import java.nio.file.DirectoryNotEmptyException;
 import java.nio.file.Files;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -141,8 +143,6 @@ public class QueueEntry {
     private File tmpDirectory;
     private final Set<File> finalMediaFiles = new HashSet<>();
 
-    private final Map<String, LocalDateTime> playlistItemUploadTimes = new ConcurrentHashMap<>();
-
     @Setter
     private Process process;
 
@@ -156,10 +156,13 @@ public class QueueEntry {
     private final ConcurrentLinkedHashSet<String> _errorLog = new ConcurrentLinkedHashSet<>();
     private final ConcurrentLinkedHashSet<String> _downloadLog = new ConcurrentLinkedHashSet<>();
 
+    private final Map<String, LocalDateTime> _playlistItemUploadTimes = new ConcurrentHashMap<>();
+
     private final AtomicBoolean thumbnailUrlsLoaded = new AtomicBoolean(false);
     private final AtomicBoolean lastCommandLineLoaded = new AtomicBoolean(false);
     private final AtomicBoolean errorLogLoaded = new AtomicBoolean(false);
     private final AtomicBoolean downloadLogLoaded = new AtomicBoolean(false);
+    private final AtomicBoolean playlistItemUploadTimesLoaded = new AtomicBoolean(false);
 
     private final AtomicBoolean labelNeedsRefresh = new AtomicBoolean(false);
 
@@ -567,6 +570,19 @@ public class QueueEntry {
         }
 
         return _downloadLog;
+    }
+
+    public Map<String, LocalDateTime> getPlaylistItemUploadTimes() {
+        if (playlistItemUploadTimesLoaded.compareAndSet(false, true)) {
+            getPersistence().ifPresent(persistence -> {
+                Map<String, LocalDateTime> times = persistence.getQueueEntries()
+                    .loadPlaylistItemUploadTimes(downloadId);
+
+                _playlistItemUploadTimes.putAll(times);
+            });
+        }
+
+        return _playlistItemUploadTimes;
     }
 
     @Nullable
@@ -1271,6 +1287,14 @@ public class QueueEntry {
 
         entity.setErrorLog(getErrorLog().snapshotAsList());
         entity.setDownloadLog(getDownloadLog().snapshotAsList());
+
+        Map<String, Long> uploadTimesMillis = new HashMap<>();
+        getPlaylistItemUploadTimes().forEach((path, time) -> {
+            if (time != null) {
+                uploadTimesMillis.put(path, time.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli());
+            }
+        });
+        entity.setPlaylistItemUploadTimes(uploadTimesMillis);
 
         return entity;
     }
