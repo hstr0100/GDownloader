@@ -201,7 +201,9 @@ public final class MediaInfoPopup {
         dialog.setMinimumSize(new Dimension(500, 200));
 
         if (formatSelectorLocation != null) {
-            dialog.setLocation(formatSelectorLocation);
+            Rectangle restored = clampToVisibleScreen(
+                new Rectangle(formatSelectorLocation, dialog.getSize()));
+            dialog.setLocation(restored.getLocation());
         } else {
             dialog.setLocationRelativeTo(null);
         }
@@ -215,6 +217,30 @@ public final class MediaInfoPopup {
             : new Rectangle(Toolkit.getDefaultToolkit().getScreenSize());
 
         return Math.min(desiredWidth, screen.width - 40);
+    }
+
+    private static Rectangle clampToVisibleScreen(Rectangle desired) {
+        GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+        Point center = new Point(
+            desired.x + desired.width / 2,
+            desired.y + desired.height / 2);
+
+        for (GraphicsDevice gd : ge.getScreenDevices()) {
+            Rectangle bounds = gd.getDefaultConfiguration().getBounds();
+            if (bounds.contains(center)) {
+                return desired;
+            }
+        }
+
+        try {
+            Rectangle fallback = ge.getDefaultScreenDevice().getDefaultConfiguration().getBounds();
+            int x = fallback.x + (fallback.width - desired.width) / 2;
+            int y = fallback.y + (fallback.height - desired.height) / 2;
+
+            return new Rectangle(x, y, desired.width, desired.height);
+        } catch (HeadlessException e) {
+            return desired;
+        }
     }
 
     private void closeFormatSelector() {
@@ -549,7 +575,7 @@ public final class MediaInfoPopup {
         dialog.pack();
 
         Optional.ofNullable(detailsBounds).ifPresentOrElse(
-            dialog::setBounds,
+            bounds -> dialog.setBounds(clampToVisibleScreen(bounds)),
             () -> {
                 dialog.setSize(DETAILS_DEFAULT_WIDTH, DETAILS_DEFAULT_HEIGHT);
                 dialog.setMinimumSize(new Dimension(
