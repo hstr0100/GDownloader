@@ -22,14 +22,20 @@ import jakarta.annotation.PreDestroy;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
+import java.nio.charset.CharsetDecoder;
+import java.nio.charset.CodingErrorAction;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.Setter;
@@ -42,6 +48,7 @@ import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.downloader.structs.DownloadResult;
 import net.brlns.gdownloader.downloader.structs.FormatInfo;
 import net.brlns.gdownloader.downloader.structs.MediaInfo;
+import net.brlns.gdownloader.downloader.structs.PlaylistItemFileTime;
 import net.brlns.gdownloader.ffmpeg.enums.AudioBitrateEnum;
 import net.brlns.gdownloader.filters.AbstractUrlFilter;
 import net.brlns.gdownloader.process.ProcessArguments;
@@ -287,7 +294,7 @@ public class YtDlpDownloader extends AbstractDownloader {
 
             List<String> list = main.readOutput(arguments, Duration.ofMinutes(7));
 
-            if (main.getConfig().isDebugMode()) {
+            if (log.isDebugEnabled()) {
                 long what = System.currentTimeMillis() - start;
                 double on = 1000L * 365.25 * 24 * 60 * 60 * 1000;
                 double earth = (what / on) * 100;
@@ -550,13 +557,13 @@ public class YtDlpDownloader extends AbstractDownloader {
                         Files.createDirectories(targetPath.getParent());
                         targetPath = FileUtils.ensureUniqueFileName(targetPath);
 
+                        LocalDateTime uploadTime = entry.isPlaylist()
+                            ? lookupPlaylistItemUploadTime(entry, path)
+                            : entry.getUploadTime();
+
                         Files.move(path, targetPath, StandardCopyOption.REPLACE_EXISTING);
 
-                        if (!entry.isPlaylist() || !main.getConfig().isUseUploadTimeAsFileTime()) {
-                            // TODO handle playlists correctly, for that we need to fetch the entire playlist data not just the first item.
-                            // For now we're just passing through the dates as set by yt-dlp.
-                            updateFileTimes(entry, targetPath);
-                        }
+                        updateFileTimes(entry, targetPath, uploadTime);
 
                         entry.getFinalMediaFiles().add(targetPath.toFile());
                     } catch (IOException e) {
@@ -573,6 +580,16 @@ public class YtDlpDownloader extends AbstractDownloader {
         } catch (IOException e) {
             log.error("Failed to process media files", e);
         }
+    }
+
+    @Nullable
+    private LocalDateTime lookupPlaylistItemUploadTime(QueueEntry entry, Path sourcePath) {
+        if (entry.getPlaylistItemUploadTimes().isEmpty()) {
+            return null;
+        }
+
+        String key = sourcePath.toAbsolutePath().normalize().toString();
+        return entry.getPlaylistItemUploadTimes().get(key);
     }
 
     private void updateThumbnailAndSubtitleTimes(QueueEntry entry, QualitySettings quality) {
@@ -631,6 +648,53 @@ public class YtDlpDownloader extends AbstractDownloader {
         return relativize(tmpPath.toPath(), Paths.get(finalPath.toString(), l10n("system.unknown_directory_name")), path);
     }
 
+    private void capturePlaylistItemFileTime(QueueEntry entry, String line) {
+        try {
+            PlaylistItemFileTime fileTime = PlaylistItemFileTime.parse(line);
+            if (fileTime == null || fileTime.getUploadTime() == null) {
+                return;
+            }
+
+            Path normalized = Paths.get(fileTime.getFilePath()).toAbsolutePath().normalize();
+            entry.getPlaylistItemUploadTimes().put(normalized.toString(), fileTime.getUploadTime());
+        } catch (Exception e) {
+            log.debug("Failed to parse playlist item file time line: {}", line, e);
+        }
+    }
+
+    // TODO: pass a record instead
+    private String consumeOutputChunk(QueueEntry entry, ByteBuffer byteBuffer, CharBuffer charBuffer,
+        CharsetDecoder decoder, StringBuilder output, AtomicReference<Character> prevChar, String previousLastOutput) {
+        String lastOutput = previousLastOutput;
+
+        byteBuffer.flip();
+        charBuffer.clear();
+        decoder.decode(byteBuffer, charBuffer, false);
+        charBuffer.flip();
+
+        while (charBuffer.hasRemaining()) {
+            char ch = charBuffer.get();
+            output.append(ch);
+
+            if (ch == '\n' || (ch == '\r' && prevChar.get() != '\n')) {
+                String completedLine = output.toString().replace("\n", "");
+                output.setLength(0);
+
+                if (completedLine.startsWith(PlaylistItemFileTime.MARKER)) {
+                    capturePlaylistItemFileTime(entry, completedLine);
+                }
+
+                lastOutput = truncateLine(completedLine);
+            }
+
+            prevChar.set(ch);
+        }
+
+        byteBuffer.compact();
+
+        return lastOutput;
+    }
+
     @Nullable
     private Pair<Integer, String> processDownload(QueueEntry entry, List<String> arguments) throws Exception {
         long start = System.currentTimeMillis();
@@ -648,9 +712,15 @@ public class YtDlpDownloader extends AbstractDownloader {
 
         try (
             ReadableByteChannel stdInput = Channels.newChannel(process.getInputStream())) {
-            ByteBuffer buffer = ByteBuffer.allocate(4096);
+            ByteBuffer byteBuffer = ByteBuffer.allocate(4096);
+            CharBuffer charBuffer = CharBuffer.allocate(4096);
+
+            CharsetDecoder decoder = StandardCharsets.UTF_8.newDecoder()
+                .onMalformedInput(CodingErrorAction.REPLACE)
+                .onUnmappableCharacter(CodingErrorAction.REPLACE);
+
             StringBuilder output = new StringBuilder();
-            char prevChar = '\0';
+            AtomicReference<Character> prevChar = new AtomicReference<>('\0');
 
             while (!cancelHook.get() && process.isAlive()) {
                 if (Thread.currentThread().isInterrupted()) {
@@ -659,22 +729,9 @@ public class YtDlpDownloader extends AbstractDownloader {
                     throw new InterruptedException("Download interrupted");
                 }
 
-                buffer.clear();
-                int bytesRead = stdInput.read(buffer);
+                int bytesRead = stdInput.read(byteBuffer);
                 if (bytesRead > 0) {
-                    buffer.flip();
-
-                    while (buffer.hasRemaining()) {
-                        char ch = (char)buffer.get();
-                        output.append(ch);
-
-                        if (ch == '\n' || (ch == '\r' && prevChar != '\n')) {
-                            lastOutput = truncateLine(output.toString().replace("\n", ""));
-                            output.setLength(0);
-                        }
-
-                        prevChar = ch;
-                    }
+                    lastOutput = consumeOutputChunk(entry, byteBuffer, charBuffer, decoder, output, prevChar, lastOutput);
 
                     processProgress(entry, lastOutput);
                 }
@@ -690,14 +747,14 @@ public class YtDlpDownloader extends AbstractDownloader {
             long stopped = System.currentTimeMillis() - start;
 
             if (cancelHook.get()) {
-                if (main.getConfig().isDebugMode()) {
+                if (log.isDebugEnabled()) {
                     log.debug("Download process halted after {}ms.", stopped);
                 }
 
                 return null;
             } else {
                 int exitCode = process.waitFor();
-                if (main.getConfig().isDebugMode()) {
+                if (log.isDebugEnabled()) {
                     log.debug("Download process took {}ms, exit code: {}", stopped, exitCode);
                 }
 
@@ -715,6 +772,10 @@ public class YtDlpDownloader extends AbstractDownloader {
     }
 
     private void processProgress(QueueEntry entry, String lastOutput) {
+        if (lastOutput.startsWith(PlaylistItemFileTime.MARKER)) {
+            return;
+        }
+
         double lastPercentage = entry.getMediaCard().getPercentage();
 
         if (isRateLimitWarning(lastOutput)) {
@@ -741,7 +802,7 @@ public class YtDlpDownloader extends AbstractDownloader {
 
             entry.updateStatus(DownloadStatusEnum.DOWNLOADING, lastOutput.replace("[download] ", ""), false);
         } else {
-            if (main.getConfig().isDebugMode()) {
+            if (log.isDebugEnabled()) {
                 log.debug("[{}] - {}", entry.getDownloadId(), lastOutput);
             }
 

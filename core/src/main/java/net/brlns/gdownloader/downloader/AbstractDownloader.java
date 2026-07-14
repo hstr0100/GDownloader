@@ -310,8 +310,12 @@ public abstract class AbstractDownloader {
     }
 
     protected void updateFileTimes(QueueEntry entry, Path filePath) {
+        updateFileTimes(entry, filePath, entry.getUploadTime());
+    }
+
+    protected void updateFileTimes(QueueEntry entry, Path filePath, @Nullable LocalDateTime uploadTime) {
         if (main.getConfig().isUseUploadTimeAsFileTime()) {
-            FileUtils.setAllFileTimesTo(filePath, entry.getUploadTime());
+            FileUtils.setAllFileTimesTo(filePath, uploadTime != null ? uploadTime : LocalDateTime.now());
         } else {
             FileUtils.setAllFileTimesTo(filePath, LocalDateTime.now());
         }

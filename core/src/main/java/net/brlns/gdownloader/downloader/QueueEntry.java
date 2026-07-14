@@ -141,6 +141,8 @@ public class QueueEntry {
     private File tmpDirectory;
     private final Set<File> finalMediaFiles = new HashSet<>();
 
+    private final Map<String, LocalDateTime> playlistItemUploadTimes = new ConcurrentHashMap<>();
+
     @Setter
     private Process process;
 
