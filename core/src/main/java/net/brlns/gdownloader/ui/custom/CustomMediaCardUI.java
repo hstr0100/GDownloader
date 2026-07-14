@@ -198,14 +198,16 @@ public final class CustomMediaCardUI {
         progressBar.setForeground(Color.GRAY);
         progressBar.setBackground(Color.GRAY);
         //progressBar.setBorderPainted(false);
-        progressBar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 15));
+        progressBar.setPreferredSize(new Dimension(300, 21));
+        progressBar.setMinimumSize(new Dimension(10, 21));
+        progressBar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 21));
 
-        gbc.insets = new Insets(10, 10, 10, 10);
+        gbc.insets = new Insets(9, 10, 11, 10);
         gbc.gridx = 2;
         gbc.gridy = 1;
         gbc.weightx = 1;
-        gbc.weighty = 1;
-        gbc.fill = GridBagConstraints.BOTH;
+        gbc.weighty = 0;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
         card.add(progressBar, gbc);
 
         JPanel controlPanel = new JPanel();
@@ -426,6 +428,13 @@ public final class CustomMediaCardUI {
         Dimension cardDimension = new Dimension(
             (int)(cardMaximumSize.getWidth() * factor),
             (int)(cardMaximumSize.getHeight() * factor));
+
+        int progressHeight = (int)(21 * factor);
+        progressBar.setPreferredSize(new Dimension(300, progressHeight));
+        progressBar.setMinimumSize(new Dimension(10, progressHeight));
+        progressBar.setMaximumSize(new Dimension(Integer.MAX_VALUE, progressHeight));
+        progressBar.revalidate();
+        progressBar.repaint();
 
         card.setMaximumSize(cardDimension);
         thumbnailPanel.setPreferredSize(thumbDimension);
