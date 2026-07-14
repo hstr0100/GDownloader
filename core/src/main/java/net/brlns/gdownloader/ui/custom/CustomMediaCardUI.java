@@ -430,6 +430,10 @@ public final class CustomMediaCardUI {
 
     public void updateScale(double factor) {
         assert SwingUtilities.isEventDispatchThread();
+        if (parent.getWidth() <= 0 || parent.getHeight() <= 0) {
+            return; // this is noise, ignore.
+        }
+
         Dimension thumbDimension = new Dimension(
             (int)(THUMBNAIL_WIDTH * factor),
             (int)(THUMBNAIL_HEIGHT * factor));
@@ -440,10 +444,7 @@ public final class CustomMediaCardUI {
 
         int progressHeight = (int)(21 * factor);
         progressBar.setPreferredSize(new Dimension(300, progressHeight));
-        progressBar.setMinimumSize(new Dimension(10, progressHeight));
         progressBar.setMaximumSize(new Dimension(Integer.MAX_VALUE, progressHeight));
-        progressBar.revalidate();
-        progressBar.repaint();
 
         int buttonSize = (int)(16 * factor);
         Dimension btnDimension = new Dimension(buttonSize, buttonSize);
@@ -458,10 +459,8 @@ public final class CustomMediaCardUI {
         Dimension strutDimension = new Dimension(0, strutHeight);
         topStrut.setPreferredSize(strutDimension);
         topStrut.setMaximumSize(strutDimension);
-        topStrut.setMinimumSize(strutDimension);
         bottomStrut.setPreferredSize(strutDimension);
         bottomStrut.setMaximumSize(strutDimension);
-        bottomStrut.setMinimumSize(strutDimension);
 
         card.setMaximumSize(cardDimension);
         thumbnailPanel.setPreferredSize(thumbDimension);

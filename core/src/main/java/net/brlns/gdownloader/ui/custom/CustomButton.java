@@ -70,7 +70,7 @@ public class CustomButton extends JButton {
 
         g2d.fill(backgroundRect);
 
-        g2d.setClip(backgroundRect);
+        g2d.clip(backgroundRect);
 
         super.paintComponent(g2d);
 

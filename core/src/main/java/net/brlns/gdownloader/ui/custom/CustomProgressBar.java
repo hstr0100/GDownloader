@@ -97,7 +97,7 @@ public class CustomProgressBar extends JPanel {
         g2d.setColor(getBackground());
         g2d.fill(backgroundRect);
 
-        g2d.setClip(backgroundRect);
+        g2d.clip(backgroundRect);
 
         g2d.setColor(getForeground());
 
