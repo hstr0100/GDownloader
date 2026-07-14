@@ -67,6 +67,12 @@ public final class CustomMediaCardUI {
     private ComponentAdapter componentResizeListener;
 
     @Getter
+    private JButton closeButton;
+
+    private Component topStrut;
+    private Component bottomStrut;
+
+    @Getter
     private JButton infoButton;
 
     @Getter
@@ -243,13 +249,16 @@ public final class CustomMediaCardUI {
         moreButton.setPreferredSize(new Dimension(16, 16));
         moreButton.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        JButton closeButton = createIconButton(
+        closeButton = createIconButton(
             loadIcon("/assets/x-mark.png", ICON, 16),
             loadIcon("/assets/x-mark.png", ICON_CLOSE, 16),
             "gui.remove_from_queue.tooltip",
             e -> onClose.run());
         closeButton.setPreferredSize(new Dimension(16, 16));
         closeButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        topStrut = Box.createVerticalStrut(21);
+        bottomStrut = Box.createVerticalStrut(21);
 
         StartButtonState defaultButtonState = new StartButtonState(
             loadIcon("/assets/play.png", ICON, 16),
@@ -287,9 +296,9 @@ public final class CustomMediaCardUI {
 
         controlPanel.add(Box.createVerticalGlue());
         controlPanel.add(moreButton);
-        controlPanel.add(Box.createVerticalStrut(22));
+        controlPanel.add(topStrut);
         controlPanel.add(closeButton);
-        controlPanel.add(Box.createVerticalStrut(22));
+        controlPanel.add(bottomStrut);
         controlPanel.add(startButton);
         controlPanel.add(Box.createVerticalGlue());
 
@@ -435,6 +444,24 @@ public final class CustomMediaCardUI {
         progressBar.setMaximumSize(new Dimension(Integer.MAX_VALUE, progressHeight));
         progressBar.revalidate();
         progressBar.repaint();
+
+        int buttonSize = (int)(16 * factor);
+        Dimension btnDimension = new Dimension(buttonSize, buttonSize);
+        moreButton.setPreferredSize(btnDimension);
+        moreButton.setMaximumSize(btnDimension);
+        closeButton.setPreferredSize(btnDimension);
+        closeButton.setMaximumSize(btnDimension);
+        startButton.setPreferredSize(btnDimension);
+        startButton.setMaximumSize(btnDimension);
+
+        int strutHeight = (int)Math.ceil(21 * factor);
+        Dimension strutDimension = new Dimension(0, strutHeight);
+        topStrut.setPreferredSize(strutDimension);
+        topStrut.setMaximumSize(strutDimension);
+        topStrut.setMinimumSize(strutDimension);
+        bottomStrut.setPreferredSize(strutDimension);
+        bottomStrut.setMaximumSize(strutDimension);
+        bottomStrut.setMinimumSize(strutDimension);
 
         card.setMaximumSize(cardDimension);
         thumbnailPanel.setPreferredSize(thumbDimension);

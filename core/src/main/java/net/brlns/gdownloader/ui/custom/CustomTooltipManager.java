@@ -159,19 +159,21 @@ public final class CustomTooltipManager {
             : MouseInfo.getPointerInfo().getLocation();
 
         Dimension size = overlayContent.getPreferredSize();
-        int screenW = Toolkit.getDefaultToolkit().getScreenSize().width;
-        int screenH = Toolkit.getDefaultToolkit().getScreenSize().height;
+        Rectangle screenBounds = getCurrentScreenBounds(cursor);
 
         int x = cursor.x + CURSOR_CLEARANCE;
         int y = cursor.y + CURSOR_CLEARANCE;
 
-        if (x + size.width > screenW) {
+        if (x + size.width > screenBounds.x + screenBounds.width) {
             x = cursor.x - size.width - CURSOR_CLEARANCE;
         }
 
-        if (y + size.height > screenH) {
+        if (y + size.height > screenBounds.y + screenBounds.height) {
             y = cursor.y - size.height - CURSOR_CLEARANCE;
         }
+
+        x = Math.max(screenBounds.x, x);
+        y = Math.max(screenBounds.y, y);
 
         overlayWindow.setBounds(x, y, size.width, size.height);
 
@@ -180,6 +182,24 @@ public final class CustomTooltipManager {
             CustomTooltipOverlay.ARC, CustomTooltipOverlay.ARC));
 
         overlayWindow.setVisible(true);
+    }
+
+    private Rectangle getCurrentScreenBounds(Point screenPoint) {
+        GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+
+        for (GraphicsDevice gd : ge.getScreenDevices()) {
+            GraphicsConfiguration gc = gd.getDefaultConfiguration();
+            Rectangle bounds = gc.getBounds();
+            if (bounds.contains(screenPoint)) {
+                return bounds;
+            }
+        }
+
+        try {
+            return ge.getDefaultScreenDevice().getDefaultConfiguration().getBounds();
+        } catch (HeadlessException e) {
+            return new Rectangle(Toolkit.getDefaultToolkit().getScreenSize());
+        }
     }
 
     private void hide() {
