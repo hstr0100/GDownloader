@@ -18,6 +18,8 @@ package net.brlns.gdownloader.ui.custom;
 
 import jakarta.annotation.Nullable;
 import java.awt.*;
+import java.awt.geom.Area;
+import java.awt.geom.Rectangle2D;
 import java.awt.geom.RoundRectangle2D;
 import java.util.Collections;
 import java.util.Set;
@@ -104,6 +106,8 @@ public class CustomProgressBar extends JPanel {
         int progressBarWidth = width;
         int blockWidth = progressBarWidth / 6; // 1 / 6
 
+        Shape filledShape = new Rectangle2D.Float();
+
         if (value == -1) {
             // Use a sine curve to slow down near the edges
             double normalizedPosition = (Math.sin(phase) + 1) / 2;
@@ -112,6 +116,7 @@ public class CustomProgressBar extends JPanel {
             RoundRectangle2D progressRect = new RoundRectangle2D.Float(
                 blockX, 0, blockWidth, height, arcSize, arcSize);
             g2d.fill(progressRect);
+            filledShape = progressRect;
         } else {
             // Draw normal progress bar when value is not -1
             int progressWidth = (int)(progressBarWidth * (value / 100.0));
@@ -119,23 +124,83 @@ public class CustomProgressBar extends JPanel {
             if (progressWidth > 0) {
                 if (progressWidth < width) {
                     g2d.fillRect(0, 0, progressWidth, height);
+                    filledShape = new Rectangle2D.Float(0, 0, progressWidth, height);
                 } else {
                     g2d.fill(backgroundRect);
+                    filledShape = backgroundRect;
                 }
             }
         }
 
         if (stringPainted && string != null) {
             String stringToPaint = string.replace("-1.0%", "N/A");
-            g2d.setColor(textColor != null ? textColor : Color.BLACK);
+            Color baseTextColor = textColor != null ? textColor : Color.BLACK;
+
             g2d.setFont(FONT);
             FontMetrics fm = g2d.getFontMetrics();
             int x = (width - fm.stringWidth(stringToPaint)) / 2;
             int y = (height + fm.getAscent() - fm.getDescent()) / 2;
-            g2d.drawString(stringToPaint, x, y);
+
+            Area filledArea = new Area(filledShape);
+            Area backgroundArea = new Area(backgroundRect);
+
+            Area unfilledArea = new Area(backgroundArea);
+            unfilledArea.subtract(filledArea);
+
+            Graphics2D g2dUnfilled = (Graphics2D)g2d.create();
+            g2dUnfilled.clip(unfilledArea);
+            g2dUnfilled.setColor(getFGColor(baseTextColor, getBackground()));
+            g2dUnfilled.drawString(stringToPaint, x, y);
+            g2dUnfilled.dispose();
+
+            Graphics2D g2dFilled = (Graphics2D)g2d.create();
+            g2dFilled.clip(filledArea);
+            g2dFilled.setColor(getFGColor(baseTextColor, getForeground()));
+            g2dFilled.drawString(stringToPaint, x, y);
+            g2dFilled.dispose();
         }
 
         g2d.dispose();
+    }
+
+    private Color getFGColor(Color text, Color bg) {
+        if (text == null) {
+            text = Color.BLACK;
+        }
+
+        if (bg == null) {
+            return text;
+        }
+
+        double textLum = calculateLuminance(text);
+        double bgLum = calculateLuminance(bg);
+
+        if (getContrast(textLum, bgLum) >= 2.1) {
+            return text;
+        }
+
+        if (bgLum > 0.4) {
+            // we don't use theme-defined colors for progress bars
+            return new Color(43, 45, 66);
+        } else {
+            return Color.WHITE;
+        }
+    }
+
+    private double calculateLuminance(Color c) {
+        double r = linearize(c.getRed() / 255.0);
+        double g = linearize(c.getGreen() / 255.0);
+        double b = linearize(c.getBlue() / 255.0);
+
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    }
+
+    private double linearize(double v) {
+        return (v <= 0.03928) ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+    }
+
+    private double getContrast(double lum1, double lum2) {
+        return (Math.max(lum1, lum2) + 0.05) / (Math.min(lum1, lum2) + 0.05);
     }
 
     public void setValue(int valueIn) {
