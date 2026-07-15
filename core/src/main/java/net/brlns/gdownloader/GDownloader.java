@@ -225,6 +225,8 @@ public final class GDownloader {
             printDebugInformation();
         }
 
+        initToolkit(config);
+
         initLanguage(config);
         updateConfig();
 
@@ -346,6 +348,38 @@ public final class GDownloader {
                 .messageType(MessageTypeEnum.INFO)
                 .discardDuplicates(true)
                 .build());
+        }
+    }
+
+    public void initToolkit(Settings config) {
+        if ("false".equals(System.getProperty("sun.java2d.opengl"))) {
+            if (config.isHardwareAcceleratedUI()) {
+                System.setProperty("sun.java2d.opengl", "true");
+
+                log.warn("Hardware-accelerated UI enabled via config file. If you encounter "
+                    + "any issues, set 'HardwareAcceleratedUI' back to 'false' in config.json.");
+            }
+        }
+
+        if ("1".equals(System.getProperty("sun.java2d.uiScale"))) {
+            if (config.getUiScalePercentage() != 100) {
+                int uiScale = Math.clamp(config.getUiScalePercentage(), 100, 1000);
+                System.setProperty("sun.java2d.uiScale", uiScale + "%");
+                log.info("UI scale set to {}%", uiScale);
+            }
+        }
+
+        try {
+            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+        } catch (Exception e) {
+            // Default to Java's look and feel
+        }
+
+        try {
+            Desktop.getDesktop().enableSuddenTermination();
+            Desktop.getDesktop().setQuitStrategy(QuitStrategy.CLOSE_ALL_WINDOWS);
+        } catch (Exception e) {
+            // Not windows
         }
     }
 
@@ -1072,19 +1106,6 @@ public final class GDownloader {
         //System.setProperty("sun.java2d.d3d", "true");
 
         log.info("Starting...");
-
-        try {
-            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-        } catch (Exception e) {
-            // Default to Java's look and feel
-        }
-
-        try {
-            Desktop.getDesktop().enableSuddenTermination();
-            Desktop.getDesktop().setQuitStrategy(QuitStrategy.CLOSE_ALL_WINDOWS);
-        } catch (Exception e) {
-            // Not windows
-        }
 
         try {
             // If libxkbcommon-x11 is missing, JNativeHook's GlobalScreen class will be completely DOA.

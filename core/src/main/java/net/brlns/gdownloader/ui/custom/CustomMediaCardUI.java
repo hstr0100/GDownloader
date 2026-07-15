@@ -444,6 +444,7 @@ public final class CustomMediaCardUI {
 
         int progressHeight = (int)(21 * factor);
         progressBar.setPreferredSize(new Dimension(300, progressHeight));
+        progressBar.setMinimumSize(new Dimension(10, progressHeight));
         progressBar.setMaximumSize(new Dimension(Integer.MAX_VALUE, progressHeight));
 
         int buttonSize = (int)(16 * factor);
@@ -459,8 +460,10 @@ public final class CustomMediaCardUI {
         Dimension strutDimension = new Dimension(0, strutHeight);
         topStrut.setPreferredSize(strutDimension);
         topStrut.setMaximumSize(strutDimension);
+        topStrut.setMinimumSize(strutDimension);
         bottomStrut.setPreferredSize(strutDimension);
         bottomStrut.setMaximumSize(strutDimension);
+        bottomStrut.setMinimumSize(strutDimension);
 
         card.setMaximumSize(cardDimension);
         thumbnailPanel.setPreferredSize(thumbDimension);

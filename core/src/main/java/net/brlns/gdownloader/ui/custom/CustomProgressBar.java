@@ -181,7 +181,7 @@ public class CustomProgressBar extends JPanel {
 
         if (bgLum > 0.4) {
             // we don't use theme-defined colors for progress bars
-            return new Color(43, 45, 66);
+            return new Color(61, 61, 61);
         } else {
             return Color.WHITE;
         }

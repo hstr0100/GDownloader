@@ -132,9 +132,9 @@ public class Settings {
     @JsonProperty("DownloadsPath")
     private String downloadsPath = "";
 
-    // TODO implement
-    @JsonProperty("UIScale")
-    private double uiScale = 1.0;
+    // Java only honors whole multiples (100/200/300...), anything else gets rounded.
+    @JsonProperty("UIScalePercentage")
+    private int uiScalePercentage = 100;
 
     @JsonProperty("FontSize")
     private int fontSize = 14;
@@ -144,6 +144,10 @@ public class Settings {
 
     @JsonProperty("LogMagnetLinks")
     private boolean logMagnetLinks = false;
+
+    // Only editable via config file as this can and will implode the UI on certain systems.
+    @JsonProperty("HardwareAcceleratedUI")
+    private boolean hardwareAcceleratedUI = false;
 
     @JsonProperty("Theme")
     private ThemeEnum theme = ThemeEnum.DARK;
