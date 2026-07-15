@@ -22,6 +22,7 @@ import java.awt.geom.Area;
 import java.awt.geom.Rectangle2D;
 import java.awt.geom.RoundRectangle2D;
 import java.util.Collections;
+import java.util.Objects;
 import java.util.Set;
 import java.util.WeakHashMap;
 import javax.swing.JPanel;
@@ -50,6 +51,12 @@ public class CustomProgressBar extends JPanel {
 
     @Getter
     private int value = 0;
+
+    private Color cachedUnfilledColor;
+    private Color cachedFilledColor;
+    private Color lastTextColor;
+    private Color lastBgColor;
+    private Color lastFgColor;
 
     private static double phase = 0;
     private static final Timer bounceTimer;
@@ -133,31 +140,53 @@ public class CustomProgressBar extends JPanel {
         }
 
         if (stringPainted && string != null) {
-            String stringToPaint = string.replace("-1.0%", "N/A");
+            String stringToPaint = string.replace(": -1.0%", "");
             Color baseTextColor = textColor != null ? textColor : Color.BLACK;
+            Color currentBg = getBackground();
+
+            boolean textColorChanged = !Objects.equals(baseTextColor, lastTextColor);
+
+            if (cachedUnfilledColor == null || textColorChanged || !Objects.equals(currentBg, lastBgColor)) {
+                cachedUnfilledColor = getFGColor(baseTextColor, currentBg);
+                lastBgColor = currentBg;
+            }
 
             g2d.setFont(FONT);
             FontMetrics fm = g2d.getFontMetrics();
             int x = (width - fm.stringWidth(stringToPaint)) / 2;
             int y = (height + fm.getAscent() - fm.getDescent()) / 2;
 
-            Area filledArea = new Area(filledShape);
-            Area backgroundArea = new Area(backgroundRect);
+            if (value == -1) {
+                g2d.setColor(cachedUnfilledColor);
+                g2d.drawString(stringToPaint, x, y);
+            } else {
+                Color currentFg = getForeground();
 
-            Area unfilledArea = new Area(backgroundArea);
-            unfilledArea.subtract(filledArea);
+                if (cachedFilledColor == null || textColorChanged || !Objects.equals(currentFg, lastFgColor)) {
+                    cachedFilledColor = getFGColor(baseTextColor, currentFg);
+                    lastFgColor = currentFg;
+                }
 
-            Graphics2D g2dUnfilled = (Graphics2D)g2d.create();
-            g2dUnfilled.clip(unfilledArea);
-            g2dUnfilled.setColor(getFGColor(baseTextColor, getBackground()));
-            g2dUnfilled.drawString(stringToPaint, x, y);
-            g2dUnfilled.dispose();
+                Area filledArea = new Area(filledShape);
+                Area backgroundArea = new Area(backgroundRect);
 
-            Graphics2D g2dFilled = (Graphics2D)g2d.create();
-            g2dFilled.clip(filledArea);
-            g2dFilled.setColor(getFGColor(baseTextColor, getForeground()));
-            g2dFilled.drawString(stringToPaint, x, y);
-            g2dFilled.dispose();
+                Area unfilledArea = new Area(backgroundArea);
+                unfilledArea.subtract(filledArea);
+
+                Graphics2D g2dUnfilled = (Graphics2D)g2d.create();
+                g2dUnfilled.clip(unfilledArea);
+                g2dUnfilled.setColor(cachedUnfilledColor);
+                g2dUnfilled.drawString(stringToPaint, x, y);
+                g2dUnfilled.dispose();
+
+                Graphics2D g2dFilled = (Graphics2D)g2d.create();
+                g2dFilled.clip(filledArea);
+                g2dFilled.setColor(cachedFilledColor);
+                g2dFilled.drawString(stringToPaint, x, y);
+                g2dFilled.dispose();
+            }
+
+            lastTextColor = baseTextColor;
         }
 
         g2d.dispose();
