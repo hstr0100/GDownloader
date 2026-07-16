@@ -124,7 +124,7 @@ public class HistoryWindow {
                 return;
             }
 
-            frame = new JFrame(l10n("gui.history.window_title")) {
+            frame = new JFrame(l10n("gui.history")) {
                 @Override
                 public void dispose() {
                     frame = null;
@@ -186,7 +186,7 @@ public class HistoryWindow {
         headerPanel.setBackground(color(SIDE_PANEL_SELECTED));
         headerPanel.setBorder(BorderFactory.createEmptyBorder(8, 10, 8, 10));
 
-        JLabel titleLabel = new JLabel(l10n("gui.history.window_title"));
+        JLabel titleLabel = new JLabel(l10n("gui.history"));
         titleLabel.setForeground(color(FOREGROUND));
         titleLabel.setFont(titleLabel.getFont().deriveFont(Font.BOLD, 16f));
         headerPanel.add(titleLabel, BorderLayout.WEST);

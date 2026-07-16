@@ -126,7 +126,6 @@ import static net.brlns.gdownloader.util.StringUtils.notNullOrEmpty;
 // TODO Implement plugin API, create example plugin, create more events.
 // prio
 // TODO save last window size in config
-// TODO right-click > set download location
 // TODO when changing download path, move the cache directory to the new location. Need to take available space into consideration
 // TODO button to cancel update check
 // TODO run transcoder for audio-only downloads

@@ -116,6 +116,10 @@ public final class GUIManager {
     private JLabel matchCountLabel;
     private Timer searchDebounceTimer;
 
+    private CustomOverflowArea overflowArea;
+    private JPanel toolbarPanel;
+    private int toolbarBaseWidth = -1;
+
     private final AtomicBoolean initialQueueRenderComplete = new AtomicBoolean();
 
     public GUIManager(GDownloader mainIn) {
@@ -568,6 +572,33 @@ public final class GUIManager {
             }
         });
 
+        JButton historyButton = createIconButton(
+            loadIcon("/assets/log.png", ICON),
+            loadIcon("/assets/log.png", ICON_HOVER),
+            "gui.history",
+            e -> displayHistoryPanel()
+        );
+
+        JButton searchToolbarButton = createIconButton(
+            loadIcon("/assets/search.png", ICON),
+            loadIcon("/assets/search.png", ICON_HOVER),
+            "gui.search.tooltip",
+            e -> {
+                if (searchBarPanel.isVisible()) {
+                    hideSearchBar();
+                } else {
+                    showSearchBar();
+                }
+            }
+        );
+
+        overflowArea = new CustomOverflowArea(5, 100);
+
+        overflowArea.addEntry(searchToolbarButton, 1);
+        overflowArea.addEntry(historyButton, 2);
+
+        buttonPanel.add(overflowArea);
+
         buttonPanel.add(createToggleButton(
             (state) -> loadIcon("/assets/copy-link.png", state ? ICON_ACTIVE : ICON_INACTIVE),
             (state) -> loadIcon("/assets/copy-link.png", ICON_HOVER),
@@ -741,7 +772,30 @@ public final class GUIManager {
         gbc.insets = new Insets(0, 0, 0, 0);
         topPanel.add(buttonPanel, gbc);
 
+        toolbarPanel = topPanel;
+        updateOverflowLayout();
+
+        topPanel.addComponentListener(new ComponentAdapter() {
+            @Override
+            public void componentResized(ComponentEvent e) {
+                updateOverflowLayout();
+            }
+        });
+
         return topPanel;
+    }
+
+    private void updateOverflowLayout() {
+        if (toolbarPanel == null || overflowArea == null) {
+            return;
+        }
+
+        if (toolbarBaseWidth < 0) {
+            toolbarBaseWidth = toolbarPanel.getPreferredSize().width;
+        }
+
+        int availableWidth = toolbarPanel.getWidth() - toolbarBaseWidth;
+        overflowArea.layout(Math.max(0, availableWidth));
     }
 
     private void confirmClearQueue() {
