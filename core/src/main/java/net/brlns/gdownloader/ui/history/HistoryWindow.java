@@ -413,8 +413,10 @@ public class HistoryWindow {
                     removeFromHistory(entry);
                 }
             });
-        closeButton.setVisible(false);
-        thumbnailPanel.add(closeButton);
+
+        JPanel closeButtonPanel = createGradientWrapper(closeButton);
+        closeButtonPanel.setVisible(false);
+        thumbnailPanel.add(closeButtonPanel);
 
         BufferedImage thumbnail = ImageUtils.base64ToBufferedImage(entry.getBase64EncodedThumbnail());
         if (thumbnail != null) {
@@ -466,7 +468,7 @@ public class HistoryWindow {
                     card.repaint();
                 }
 
-                closeButton.setVisible(true);
+                closeButtonPanel.setVisible(true);
             }
 
             @Override
@@ -478,7 +480,7 @@ public class HistoryWindow {
 
                 Rectangle bounds = new Rectangle(0, 0, card.getWidth(), card.getHeight());
                 if (!bounds.contains(e.getPoint())) {
-                    closeButton.setVisible(false);
+                    closeButtonPanel.setVisible(false);
                 }
             }
         });
@@ -772,7 +774,43 @@ public class HistoryWindow {
                             .build());
                     });
                 });
-            }));
+            })
+        );
+    }
+
+    private JPanel createGradientWrapper(JComponent content) {
+        JPanel wrapper = new JPanel(new GridBagLayout()) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+
+                Graphics2D g2d = (Graphics2D)g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                int cx = getWidth() / 2;
+                int cy = getHeight() / 2;
+
+                float radius = 15.0f;
+
+                RadialGradientPaint paint = new RadialGradientPaint(
+                    new Point(cx, cy),
+                    radius,
+                    new float[] {0.0f, 1.0f},
+                    new Color[] {new Color(0, 0, 0, 120), new Color(0, 0, 0, 0)}
+                );
+
+                g2d.setPaint(paint);
+                g2d.fillOval(cx - (int)radius, cy - (int)radius, (int)(radius * 2), (int)(radius * 2));
+
+                g2d.dispose();
+            }
+        };
+
+        wrapper.setOpaque(false);
+        wrapper.setBorder(BorderFactory.createEmptyBorder(2, 2, 2, 2));
+        wrapper.add(content);
+
+        return wrapper;
     }
 
     private class ResponsiveGridLayout implements LayoutManager {
