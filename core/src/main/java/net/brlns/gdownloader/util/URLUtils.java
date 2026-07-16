@@ -341,6 +341,35 @@ public final class URLUtils {
     }
 
     @Nullable
+    public static String getDisplayUrl(String url) {
+        if (url == null || url.isBlank()) {
+            return url;
+        }
+
+        String displayUrl = url.replaceFirst("^(https?://)?(www\\.)?", "");
+
+        int queryIndex = displayUrl.indexOf('?');
+        int hashIndex = displayUrl.indexOf('#');
+
+        int endIndex = displayUrl.length();
+        if (queryIndex != -1) {
+            endIndex = queryIndex;
+        }
+
+        if (hashIndex != -1 && hashIndex < endIndex) {
+            endIndex = hashIndex;
+        }
+
+        displayUrl = displayUrl.substring(0, endIndex);
+
+        if (displayUrl.endsWith("/")) {
+            displayUrl = displayUrl.substring(0, displayUrl.length() - 1);
+        }
+
+        return displayUrl;
+    }
+
+    @Nullable
     public static String getExtension(String url) {
         int queryIndex = url.indexOf('?');
         int hashIndex = url.indexOf('#');

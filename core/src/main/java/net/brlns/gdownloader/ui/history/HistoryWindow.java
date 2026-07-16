@@ -68,6 +68,7 @@ import static net.brlns.gdownloader.ui.themes.ThemeProvider.color;
 import static net.brlns.gdownloader.ui.themes.UIColors.*;
 import static net.brlns.gdownloader.util.StringUtils.containsIgnoreCase;
 import static net.brlns.gdownloader.util.StringUtils.notNullOrEmpty;
+import static net.brlns.gdownloader.util.URLUtils.getDisplayUrl;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -391,9 +392,9 @@ public class HistoryWindow {
         card.setBackground(isSelected(entry) ? color(MEDIA_CARD_SELECTED) : color(MEDIA_CARD));
         card.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
 
-        String rawUrl = entry.getOriginalUrl() != null ? entry.getOriginalUrl() : entry.getUrl();
-        // TODO: URLUtils.getDisplayUrl() (strip protocol, www, query and fragments)
-        String displayUrl = rawUrl.replaceFirst("^(https?://)?(www\\.)?", "").split("\\?")[0];
+        String displayUrl = getDisplayUrl(entry.getOriginalUrl() != null
+            ? entry.getOriginalUrl() : entry.getUrl());
+
         card.setToolTipText(displayUrl);
 
         CustomThumbnailPanel thumbnailPanel = new CustomThumbnailPanel();
@@ -832,13 +833,9 @@ public class HistoryWindow {
 
         private Dimension computeLayout(Container parent, boolean apply) {
             Insets insets = parent.getInsets();
-            int scrollbarWidth = scrollPane != null && scrollPane.getVerticalScrollBar().isVisible()
-                ? scrollPane.getVerticalScrollBar().getWidth() : 16;
 
-            int availableWidth = Math.max(0, parent.getWidth() - insets.left - insets.right);
-            if (availableWidth == 0 && scrollPane != null) {
-                availableWidth = Math.max(0, scrollPane.getViewport().getWidth() - insets.left - insets.right - scrollbarWidth);
-            }
+            int availableWidth = parent.getWidth() - insets.left - insets.right;
+            availableWidth = Math.max(0, availableWidth);
 
             int visibleCount = 0;
             for (Component c : parent.getComponents()) {
@@ -851,13 +848,23 @@ public class HistoryWindow {
                 return new Dimension(availableWidth, 0);
             }
 
-            int columns = Math.max(1, (availableWidth + GAP) / (MIN_THUMBNAIL_WIDTH + 16 + GAP));
+            int baseCardWidth = MIN_THUMBNAIL_WIDTH + 16;
+            int maxColumns = 7;
+            int maxCardWidth = (int)(baseCardWidth * 1.5);
 
-            int cellWidth = Math.max(MIN_THUMBNAIL_WIDTH + 16, (availableWidth - (columns - 1) * GAP) / columns);
+            int columns = Math.max(1, (availableWidth + GAP) / (baseCardWidth + GAP));
+            columns = Math.min(columns, maxColumns);
+
+            int cellWidth = Math.max(baseCardWidth, (availableWidth - (columns - 1) * GAP) / columns);
+            cellWidth = Math.min(cellWidth, maxCardWidth);
+
+            int gridWidth = (columns * cellWidth) + ((columns - 1) * GAP);
+            int offsetX = insets.left + Math.max(0, (availableWidth - gridWidth) / 2);
+
             int thumbnailHeight = (int)((cellWidth - 16) / 16.0 * 9.0);
             int cellHeight = thumbnailHeight + TEXT_PANEL_HEIGHT;
 
-            int x = insets.left;
+            int x = offsetX;
             int y = insets.top;
             int col = 0;
 
@@ -870,7 +877,7 @@ public class HistoryWindow {
                     col++;
                     if (col >= columns) {
                         col = 0;
-                        x = insets.left;
+                        x = offsetX;
                         y += cellHeight + GAP;
                     } else {
                         x += cellWidth + GAP;
