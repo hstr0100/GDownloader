@@ -52,6 +52,7 @@ import net.brlns.gdownloader.system.taskbar.TaskbarManager;
 import net.brlns.gdownloader.ui.custom.*;
 import net.brlns.gdownloader.ui.dnd.WindowDragSourceListener;
 import net.brlns.gdownloader.ui.dnd.WindowDropTargetListener;
+import net.brlns.gdownloader.ui.history.HistoryWindow;
 import net.brlns.gdownloader.ui.mediacard.MediaCardManager;
 import net.brlns.gdownloader.ui.mediacard.ScrollableQueuePanel;
 import net.brlns.gdownloader.ui.menu.NestedMenuEntry;
@@ -96,6 +97,7 @@ public final class GUIManager {
 
     private final SettingsPanel settingsPanel;
     private final WelcomeScreen welcomeScreen;
+    private final HistoryWindow historyWindow;
 
     @Getter
     private JFrame appWindow;
@@ -128,6 +130,7 @@ public final class GUIManager {
         //uiScale = Math.clamp(mainIn.getConfig().getUiScale(), 0.5, 3.0);
         settingsPanel = new SettingsPanel(main, this);
         welcomeScreen = new WelcomeScreen(main, this);
+        historyWindow = new HistoryWindow(main, this);
 
         mediaCardManager = new MediaCardManager(main, this);
     }
@@ -155,6 +158,10 @@ public final class GUIManager {
 
     public void displaySettingsPanel() {
         settingsPanel.createAndShowGUI();
+    }
+
+    public void displayHistoryPanel() {
+        historyWindow.createAndShowGUI();
     }
 
     public void displayWelcomeScreen() {
@@ -664,7 +671,7 @@ public final class GUIManager {
                 loadIcon("/assets/erase.png", ICON),
                 loadIcon("/assets/erase.png", ICON_HOVER),
                 "gui.clear_download_queue.tooltip",
-                e -> main.getDownloadManager().clearQueue(CloseReasonEnum.MANUAL)
+                e -> confirmClearQueue()
             );
 
             RightClickMenuEntries rightClickMenu = new RightClickMenuEntries();
@@ -680,6 +687,8 @@ public final class GUIManager {
             rightClickMenu.put(l10n("gui.clear_download_queue.clear_running"),
                 new RunnableMenuEntry(() -> main.getDownloadManager()
                 .clearQueue(QueueCategoryEnum.RUNNING, CloseReasonEnum.MANUAL)));
+            rightClickMenu.put(l10n("gui.history.clear_all"),
+                new RunnableMenuEntry(() -> historyWindow.confirmClearAllFromMainWindow()));
 
             clearQueueButton.addMouseListener(new MouseAdapter() {
                 @Override
@@ -733,6 +742,26 @@ public final class GUIManager {
         topPanel.add(buttonPanel, gbc);
 
         return topPanel;
+    }
+
+    private void confirmClearQueue() {
+        if (main.getConfig().isConfirmBeforeClearingQueue()) {
+            showConfirmDialog(
+                l10n("dialog.confirm"),
+                l10n("gui.queue.clear_all.confirm"),
+                15000,
+                false,
+                new DialogButton("", (boolean setDefault) -> {
+                }),
+                new DialogButton(l10n("gui.queue.clear_all"), (boolean setDefault) -> {
+                    GDownloader.GLOBAL_THREAD_POOL.execute(() -> {
+                        main.getDownloadManager().clearQueue(CloseReasonEnum.MANUAL);
+                    });
+                })
+            );
+        } else {
+            main.getDownloadManager().clearQueue(CloseReasonEnum.MANUAL);
+        }
     }
 
     private void addStatusLabel(JPanel statusPanel, UIColors textColor, StatusLabelUpdater updater) {
@@ -1123,7 +1152,7 @@ public final class GUIManager {
         rightClickMenu.showMenu(parentComponent, actions, dependents, x, y);
     }
 
-    public void showConfirmDialog(String title, String message, int timeoutMs,
+    public void showConfirmDialog(String title, String message, int timeoutMs, boolean showRememberCheckBox,
         DialogButton onClose, DialogButton... buttons) {
 
         runOnEDT(() -> {
@@ -1177,6 +1206,7 @@ public final class GUIManager {
             rememberCheckBox.setBackground(color(BACKGROUND));
             rememberCheckBox.setForeground(color(FOREGROUND));
             rememberCheckBox.setOpaque(false);
+            rememberCheckBox.setVisible(showRememberCheckBox);
             checkboxPanel.add(rememberCheckBox);
 
             JPanel buttonPanel = new JPanel();
@@ -1278,9 +1308,9 @@ public final class GUIManager {
             rightClickMenu.putIfAbsent(l10n("gui.paste_url_from_clipboard"),
                 new RunnableMenuEntry(() -> {
                     main.getClipboardManager().pasteURLsFromClipboard();
-                }));
+                }, () -> "/assets/add.png"));
 
-            NestedMenuEntry sortSubmenu = new NestedMenuEntry();
+            NestedMenuEntry sortSubmenu = new NestedMenuEntry(() -> "/assets/sort.png");
             for (QueueSortOrderEnum sortOrder : QueueSortOrderEnum.values()) {
                 sortSubmenu.put(sortOrder.getDisplayName(),
                     new RunnableMenuEntry(
@@ -1297,7 +1327,12 @@ public final class GUIManager {
             rightClickMenu.putIfAbsent(l10n("gui.sort_by"), sortSubmenu);
 
             rightClickMenu.putIfAbsent(l10n("gui.search.tooltip"),
-                new RunnableMenuEntry(() -> showSearchBar()));
+                new RunnableMenuEntry(() -> showSearchBar(),
+                    () -> "/assets/search.png"));
+
+            rightClickMenu.putIfAbsent(l10n("gui.history"),
+                new RunnableMenuEntry(() -> displayHistoryPanel(),
+                    () -> "/assets/log.png"));
 
             return rightClickMenu;
         }

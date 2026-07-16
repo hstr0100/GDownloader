@@ -652,6 +652,22 @@ public class SettingsPanel {
 
         addCheckBox(panel, CheckBoxBuilder.builder()
             .background(resolveColor(panel))
+            .labelKey("settings.enable_download_history")
+            .tooltipText(l10n("settings.enable_download_history.tooltip"))
+            .getter(settings::isEnableDownloadHistory)
+            .setter(settings::setEnableDownloadHistory)
+            .build());
+
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.skip_duplicates_in_history")
+            .tooltipText(l10n("settings.skip_duplicates_in_history.tooltip"))
+            .getter(settings::isSkipDuplicatesInHistory)
+            .setter(settings::setSkipDuplicatesInHistory)
+            .build());
+
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
             .labelKey("settings.start_on_system_startup")
             .getter(settings::isAutoStart)
             .setter(settings::setAutoStart)
@@ -756,6 +772,13 @@ public class SettingsPanel {
             .getter(settings::isShowWelcomeScreen)
             .setter(settings::setShowWelcomeScreen)
             .requiresRestart(true)
+            .build());
+
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.confirm_before_clearing_download_queue")
+            .getter(settings::isConfirmBeforeClearingQueue)
+            .setter(settings::setConfirmBeforeClearingQueue)
             .build());
 
         panel.add(getFillerPanel());

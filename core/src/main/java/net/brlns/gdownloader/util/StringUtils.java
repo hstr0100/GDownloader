@@ -21,6 +21,7 @@ import java.io.File;
 import java.security.MessageDigest;
 import java.text.DecimalFormat;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.stream.Collectors;
@@ -300,5 +301,83 @@ public final class StringUtils {
         String hex = bytesToHex(digest);
 
         return lowercase ? hex.toLowerCase() : hex;
+    }
+
+    public static List<String> wrapText(String str, int wrapLength) {
+        if (str == null || str.isBlank()) {
+            return List.of("");
+        }
+
+        List<String> result = new ArrayList<>();
+        String[] hardLines = str.split("\r?\n", -1);
+
+        for (String line : hardLines) {
+            if (line.isEmpty()) {
+                result.add("");
+                continue;
+            }
+
+            int[] codePoints = line.codePoints().toArray();
+            int offset = 0;
+
+            while (offset < codePoints.length) {
+                int remaining = codePoints.length - offset;
+                if (remaining <= wrapLength) {
+                    result.add(new String(codePoints, offset, remaining));
+                    break;
+                }
+
+                int breakIndex = wrapLength;
+                while (breakIndex > 0 && !Character.isWhitespace(codePoints[offset + breakIndex])) {
+                    breakIndex--;
+                }
+
+                if (breakIndex == 0) {
+                    breakIndex = wrapLength;
+                }
+
+                result.add(new String(codePoints, offset, breakIndex));
+
+                offset += breakIndex;
+                while (offset < codePoints.length && Character.isWhitespace(codePoints[offset])) {
+                    offset++;
+                }
+            }
+        }
+
+        return result;
+    }
+
+    @Nullable
+    public static String safeTruncate(@Nullable String line, int maxLength) {
+        if (line == null) {
+            return null;
+        }
+
+        if (maxLength < 0) {
+            throw new IllegalArgumentException("Maximum length cannot be negative");
+        }
+
+        if (line.length() <= maxLength) {
+            return line;
+        }
+
+        String ellipsis = "...";
+
+        if (maxLength <= ellipsis.length()) {
+            if (maxLength > 0 && Character.isHighSurrogate(line.charAt(maxLength - 1))) {
+                return line.substring(0, maxLength - 1);
+            }
+
+            return line.substring(0, maxLength);
+        }
+
+        int maxTextLength = maxLength - ellipsis.length();
+
+        if (maxTextLength > 0 && Character.isHighSurrogate(line.charAt(maxTextLength - 1))) {
+            maxTextLength--;
+        }
+
+        return line.substring(0, maxTextLength) + ellipsis;
     }
 }

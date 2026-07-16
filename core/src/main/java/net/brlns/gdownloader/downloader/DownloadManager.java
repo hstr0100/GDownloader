@@ -48,6 +48,7 @@ import net.brlns.gdownloader.filters.YoutubeFilter;
 import net.brlns.gdownloader.filters.YoutubePlaylistFilter;
 import net.brlns.gdownloader.persistence.PersistenceManager;
 import net.brlns.gdownloader.persistence.entity.CounterTypeEnum;
+import net.brlns.gdownloader.persistence.entity.DownloadHistoryEntity;
 import net.brlns.gdownloader.persistence.entity.QueueEntryEntity;
 import net.brlns.gdownloader.process.ProcessMonitor;
 import net.brlns.gdownloader.settings.enums.PlayListOptionEnum;
@@ -71,6 +72,7 @@ import static net.brlns.gdownloader.downloader.enums.DownloadFlagsEnum.*;
 import static net.brlns.gdownloader.downloader.enums.QueueCategoryEnum.*;
 import static net.brlns.gdownloader.lang.Language.*;
 import static net.brlns.gdownloader.settings.enums.PlayListOptionEnum.*;
+import static net.brlns.gdownloader.util.StringUtils.notNullOrEmpty;
 import static net.brlns.gdownloader.util.URLUtils.*;
 
 /**
@@ -458,6 +460,7 @@ public class DownloadManager implements IEvent, AutoCloseable {
                                     l10n("dialog.confirm"),
                                     l10n("dialog.download_playlist") + sep + sep + playlist,
                                     30000,
+                                    true,
                                     defaultOption,
                                     playlistDialogOption,
                                     singleDialogOption);
@@ -496,6 +499,17 @@ public class DownloadManager implements IEvent, AutoCloseable {
 
             if (capturedLinks.add(filteredUrl)) {
                 capturedLinks.add(inputUrl);
+
+                if (!force && main.getConfig().isEnableDownloadHistory()
+                    && main.getConfig().isSkipDuplicatesInHistory()
+                    && persistence.isHistoryInitialized()
+                    && persistence.getDownloadHistory().isUrlKnown(filteredUrl, inputUrl)) {
+
+                    log.info("Skipping {} - already present in the download history", inputUrl);
+
+                    future.complete(false);
+                    return future;
+                }
 
                 log.info("Captured {}", inputUrl);
 
@@ -663,6 +677,66 @@ public class DownloadManager implements IEvent, AutoCloseable {
         if (persistence.isInitialized()) {
             persistence.getQueueEntries().remove(queueEntry.getDownloadId());
         }
+    }
+
+    private void recordHistoryEntry(QueueEntry entry) {
+        if (!main.getConfig().isEnableDownloadHistory()
+            || !persistence.isHistoryInitialized()
+            || !entry.getRecordedInHistory().compareAndSet(false, true)) {
+            return;
+        }
+
+        try {
+            DownloadHistoryEntity historyEntity = new DownloadHistoryEntity();
+            historyEntity.setUrl(entry.getUrl());
+            historyEntity.setOriginalUrl(entry.getOriginalUrl());
+            historyEntity.setTitle(entry.getTitle());
+            historyEntity.setHostDisplayName(entry.getHostDisplayName());
+            historyEntity.setDownloaderId(entry.getCurrentDownloader());
+
+            MediaInfo mediaInfo = entry.getMediaInfo();
+            if (mediaInfo != null) {
+                historyEntity.setBase64EncodedThumbnail(mediaInfo.getBase64EncodedThumbnail());
+            }
+
+            List<String> filePaths = entry.getFinalMediaFiles().stream()
+                .map(File::getAbsolutePath)
+                .collect(Collectors.toList());
+            historyEntity.setFilePaths(filePaths);
+
+            historyEntity.setDownloadedAt(System.currentTimeMillis());
+
+            persistence.getDownloadHistory().upsert(historyEntity);
+        } catch (Exception e) {
+            log.error("Failed to record download history entry for {}", entry.getUrl(), e);
+        }
+    }
+
+    public void redownloadFromHistory(DownloadHistoryEntity historyEntry) {
+        String urlToCapture = notNullOrEmpty(historyEntry.getOriginalUrl())
+            ? historyEntry.getOriginalUrl() : historyEntry.getUrl();
+
+        QueueEntry existingEntry = sequencer.getEntry(candidate
+            -> candidate.getUrl().equals(historyEntry.getUrl())
+            || candidate.getUrl().equals(historyEntry.getOriginalUrl())
+            || candidate.getOriginalUrl().equals(historyEntry.getUrl())
+            || candidate.getOriginalUrl().equals(historyEntry.getOriginalUrl()));
+
+        if (existingEntry != null) {
+            existingEntry.dispose(CloseReasonEnum.MANUAL);
+        }
+
+        linkCaptureLock.lock();
+        try {
+            capturedLinks.remove(historyEntry.getUrl());
+            capturedLinks.remove(historyEntry.getOriginalUrl());
+            capturedPlaylists.remove(historyEntry.getUrl());
+            capturedPlaylists.remove(historyEntry.getOriginalUrl());
+        } finally {
+            linkCaptureLock.unlock();
+        }
+
+        captureUrl(urlToCapture, true);
     }
 
     private Optional<AbstractUrlFilter> getFilterForUrl(String url, boolean allowAnyLink) {
@@ -1332,6 +1406,8 @@ public class DownloadManager implements IEvent, AutoCloseable {
                             }
 
                             offerTo(COMPLETED, entry);
+
+                            recordHistoryEntry(entry);
 
                             if (main.getConfig().isRemoveSuccessfulDownloads()) {
                                 entry.dispose(CloseReasonEnum.SUCCEEDED);

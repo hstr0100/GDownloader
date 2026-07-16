@@ -76,6 +76,7 @@ open module net.brlns.gdownloader {
     exports net.brlns.gdownloader.ui.builder;
     exports net.brlns.gdownloader.ui.custom;
     exports net.brlns.gdownloader.ui.dnd;
+    exports net.brlns.gdownloader.ui.history;
     exports net.brlns.gdownloader.ui.mediacard;
     exports net.brlns.gdownloader.ui.menu;
     exports net.brlns.gdownloader.ui.message;

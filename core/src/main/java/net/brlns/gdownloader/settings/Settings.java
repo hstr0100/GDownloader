@@ -83,6 +83,15 @@ public class Settings {
     @JsonProperty("RestoreSessionAfterRestart")
     private boolean restoreSessionAfterRestart = true;
 
+    @JsonProperty("EnableDownloadHistory")
+    private boolean enableDownloadHistory = true;
+
+    @JsonProperty("SkipDuplicatesInHistory")
+    private boolean skipDuplicatesInHistory = false;
+
+    @JsonProperty("ConfirmBeforeClearingQueue")
+    private boolean confirmBeforeClearingQueue = false;
+
     @JsonProperty("KeepRawMediaFilesAfterTranscode")
     private boolean keepRawMediaFilesAfterTranscode = false;
 

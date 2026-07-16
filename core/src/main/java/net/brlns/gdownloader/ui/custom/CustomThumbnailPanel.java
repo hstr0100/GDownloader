@@ -20,7 +20,6 @@ import java.awt.*;
 import java.awt.geom.RoundRectangle2D;
 import java.awt.image.BufferedImage;
 import javax.swing.ImageIcon;
-import javax.swing.JLabel;
 import javax.swing.JPanel;
 import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.downloader.enums.DownloadPriorityEnum;
@@ -93,23 +92,6 @@ public class CustomThumbnailPanel extends JPanel {
 
         placeholderIcon = iconIn;
 
-        JLabel imageLabel = null;
-        for (Component comp : getComponents()) {
-            if (comp instanceof JLabel jLabel) {
-                imageLabel = jLabel;
-                break;
-            }
-        }
-
-        if (imageLabel == null) {
-            imageLabel = new JLabel(iconIn);
-            imageLabel.setOpaque(false);
-            add(imageLabel, BorderLayout.CENTER);
-        } else {
-            imageLabel.setIcon(iconIn);
-        }
-
-        revalidate();
         repaint();
     }
 
@@ -174,10 +156,6 @@ public class CustomThumbnailPanel extends JPanel {
             int panelWidth = getWidth();
             int panelHeight = getHeight();
 
-            if (image == null && priorityIcon != null) {
-                drawPriorityIcon(g2d, panelWidth, panelHeight);
-            }
-
             if (image != null) {
                 int imageWidth = image.getWidth();
                 int imageHeight = image.getHeight();
@@ -196,10 +174,6 @@ public class CustomThumbnailPanel extends JPanel {
                 int y = (panelHeight - scaledHeight) / 2;
 
                 g2d.drawImage(image, x, y, scaledWidth, scaledHeight, this);
-
-                if (priorityIcon != null) {
-                    drawPriorityIcon(g2d, panelWidth, panelHeight);
-                }
 
                 if (durationText != null) {
                     g2d.setFont(FONT);
@@ -230,10 +204,18 @@ public class CustomThumbnailPanel extends JPanel {
                     g2d.drawString(durationText, textX, textY);
                 }
             } else if (placeholderIcon != null) {
-                Component[] components = getComponents();
-                if (components.length > 0 && components[0] instanceof JLabel) {
-                    components[0].paint(g2d);
-                }
+                Image pImg = placeholderIcon.getImage();
+                int pWidth = placeholderIcon.getIconWidth();
+                int pHeight = placeholderIcon.getIconHeight();
+
+                int x = (panelWidth - pWidth) / 2;
+                int y = (panelHeight - pHeight) / 2;
+
+                g2d.drawImage(pImg, x, y, pWidth, pHeight, this);
+            }
+
+            if (priorityIcon != null) {
+                drawPriorityIcon(g2d, panelWidth, panelHeight);
             }
 
             if (live) {

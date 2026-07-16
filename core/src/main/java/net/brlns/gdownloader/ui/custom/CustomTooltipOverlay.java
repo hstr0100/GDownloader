@@ -22,11 +22,13 @@ import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
+import java.util.List;
 import javax.swing.JComponent;
 import javax.swing.UIManager;
 
 import static net.brlns.gdownloader.ui.themes.ThemeProvider.*;
 import static net.brlns.gdownloader.ui.themes.UIColors.*;
+import static net.brlns.gdownloader.util.StringUtils.wrapText;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -37,6 +39,8 @@ public class CustomTooltipOverlay extends JComponent {
     private static final int V_PADDING = 5;
     protected static final int ARC = 14;
 
+    private static final int MAX_LINE_LENGTH = 72;
+
     private static final Font TOOLTIP_FONT;
 
     static {
@@ -44,7 +48,7 @@ public class CustomTooltipOverlay extends JComponent {
         TOOLTIP_FONT = (f != null) ? f : new Font(Font.SANS_SERIF, Font.PLAIN, 12);
     }
 
-    private String text = "";
+    private List<String> lines = List.of();
 
     @SuppressWarnings("this-escape")
     public CustomTooltipOverlay() {
@@ -57,7 +61,8 @@ public class CustomTooltipOverlay extends JComponent {
     }
 
     public void setText(String textIn) {
-        text = textIn != null ? textIn : "";
+        String rawText = textIn != null ? textIn : "";
+        lines = wrapText(rawText, MAX_LINE_LENGTH);
 
         Dimension pref = computePreferredSize();
         setSize(pref);
@@ -74,8 +79,14 @@ public class CustomTooltipOverlay extends JComponent {
 
     private Dimension computePreferredSize() {
         FontMetrics fm = getFontMetrics(getFont());
-        int width = fm.stringWidth(text) + H_PADDING * 2;
-        int height = fm.getHeight() + V_PADDING * 2;
+        int maxWidth = 0;
+
+        for (String line : lines) {
+            maxWidth = Math.max(maxWidth, fm.stringWidth(line));
+        }
+
+        int width = maxWidth + H_PADDING * 2;
+        int height = (fm.getHeight() * Math.max(1, lines.size())) + V_PADDING * 2;
 
         return new Dimension(width, height);
     }
@@ -97,7 +108,11 @@ public class CustomTooltipOverlay extends JComponent {
             g2d.setColor(color(TOOLTIP_FOREGROUND));
             FontMetrics fm = g2d.getFontMetrics();
             int textY = V_PADDING + fm.getAscent();
-            g2d.drawString(text, H_PADDING, textY);
+
+            for (String line : lines) {
+                g2d.drawString(line, H_PADDING, textY);
+                textY += fm.getHeight();
+            }
         } finally {
             g2d.dispose();
         }

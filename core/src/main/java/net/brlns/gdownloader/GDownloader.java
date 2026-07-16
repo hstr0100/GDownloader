@@ -114,7 +114,6 @@ import static net.brlns.gdownloader.util.StringUtils.notNullOrEmpty;
 // TODO Downloader priority settings
 // TODO Notifications are appearing below the main window when in fullscreen mode.
 // TODO About page
-// TODO Confirm dialog before clearing DL queue
 // TODO Move config files, downloaders and their respective data to subfolders
 // TODO implement remuxing to mkv
 // TODO System/provided binary selection should be configurable for FFMPEG and Deno

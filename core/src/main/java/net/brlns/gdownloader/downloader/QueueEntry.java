@@ -150,6 +150,8 @@ public class QueueEntry {
     private final AtomicReference<Optional<MediaInfo>> optionalMediaInfo
         = new AtomicReference<>(Optional.empty());
 
+    private final AtomicBoolean recordedInHistory = new AtomicBoolean(false);
+
     private final List<String> _thumbnailUrls = new CopyOnWriteArrayList<>();
     private final List<String> _lastCommandLine = new CopyOnWriteArrayList<>();
 
@@ -688,7 +690,7 @@ public class QueueEntry {
         });
     }
 
-    private String getTitle() {
+    public String getTitle() {
         // Emojis won't render, but will successfully distort the layout.
         return StringUtils.removeEmojis(getRawTitle());
     }
@@ -723,7 +725,7 @@ public class QueueEntry {
         return Optional.empty();
     }
 
-    private String getHostDisplayName() {
+    public String getHostDisplayName() {
         MediaInfo mediaInfo = getMediaInfo();
         if (mediaInfo != null && notNullOrEmpty(mediaInfo.getHostDisplayName())) {
             return mediaInfo.getHostDisplayName();

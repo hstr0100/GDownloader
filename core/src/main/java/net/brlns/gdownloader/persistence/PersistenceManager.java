@@ -34,6 +34,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.persistence.entity.CounterTypeEnum;
 import net.brlns.gdownloader.persistence.repository.CounterRepository;
+import net.brlns.gdownloader.persistence.repository.DownloadHistoryRepository;
 import net.brlns.gdownloader.persistence.repository.MediaInfoRepository;
 import net.brlns.gdownloader.persistence.repository.QueueEntryRepository;
 import org.eclipse.persistence.config.PersistenceUnitProperties;
@@ -69,8 +70,13 @@ public class PersistenceManager implements AutoCloseable {
 
     private EntityManagerFactory emf;
 
+    private EntityManagerFactory historyEmf;
+
     @Getter
     private boolean initialized = false;
+
+    @Getter
+    private boolean historyInitialized = false;
 
     @Getter
     private CounterRepository counters;
@@ -80,6 +86,9 @@ public class PersistenceManager implements AutoCloseable {
 
     @Getter
     private MediaInfoRepository mediaInfos;
+
+    @Getter
+    private DownloadHistoryRepository downloadHistory;
 
     @Getter
     private final boolean firstBoot;
@@ -128,6 +137,8 @@ public class PersistenceManager implements AutoCloseable {
             queueEntries = new QueueEntryRepository(emf);
             mediaInfos = new MediaInfoRepository(emf);
 
+            initHistoryDatabase();
+
             GLOBAL_THREAD_POOL.execute(() -> {
                 // Prime the db by preloading some random item before the updaters even fire up
                 counters.getCurrentValue(CounterTypeEnum.DOWNLOAD_ID);
@@ -143,11 +154,43 @@ public class PersistenceManager implements AutoCloseable {
         return false;
     }
 
+    private void initHistoryDatabase() {
+        try {
+            File historyDatabaseFile = new File(databaseDirectory, getHistoryDbFileName());
+
+            Map<String, String> historyProperties = new HashMap<>();
+            historyProperties.put(PersistenceUnitProperties.DDL_GENERATION,
+                PersistenceUnitProperties.CREATE_OR_EXTEND);
+            historyProperties.put(PersistenceUnitProperties.JDBC_URL, "jdbc:hsqldb:"
+                + "file:" + historyDatabaseFile + ";"
+                + "sql.syntax_pgs=true;"
+                + "hsqldb.lob_compressed=true;"
+                + "hsqldb.script_format=3");
+
+            historyEmf = Persistence.createEntityManagerFactory("historyPU", historyProperties);
+
+            if (historyEmf == null) {
+                throw new RuntimeException("Cannot create history database.");
+            }
+
+            downloadHistory = new DownloadHistoryRepository(historyEmf);
+            historyInitialized = true;
+
+            log.info("{} history db is now open", historyDatabaseFile);
+        } catch (Exception e) {
+            log.error("Cannot initialize download history database, history disabled.", e);
+        }
+    }
+
     @PreDestroy
     @Override
     public void close() {
         if (emf != null && emf.isOpen()) {
             emf.close();
+        }
+
+        if (historyEmf != null && historyEmf.isOpen()) {
+            historyEmf.close();
         }
     }
 
@@ -161,5 +204,9 @@ public class PersistenceManager implements AutoCloseable {
 
     private String getDbFileName() {
         return "persistence";
+    }
+
+    private String getHistoryDbFileName() {
+        return "history";
     }
 }
