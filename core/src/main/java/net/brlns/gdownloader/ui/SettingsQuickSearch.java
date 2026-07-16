@@ -33,6 +33,8 @@ import net.brlns.gdownloader.ui.custom.CustomMenuButton;
 import net.brlns.gdownloader.ui.menu.RightClickMenu;
 
 import static net.brlns.gdownloader.lang.Language.l10n;
+import static net.brlns.gdownloader.ui.UIUtils.installPlaceholder;
+import static net.brlns.gdownloader.ui.UIUtils.isPlaceholder;
 import static net.brlns.gdownloader.ui.UIUtils.loadIcon;
 import static net.brlns.gdownloader.ui.themes.ThemeProvider.color;
 import static net.brlns.gdownloader.ui.themes.UIColors.*;
@@ -75,6 +77,10 @@ public class SettingsQuickSearch extends JPanel {
         searchField.setCaretColor(color(FOREGROUND));
         searchField.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
         searchField.setMargin(new Insets(2, 5, 2, 5));
+
+        installPlaceholder(searchField,
+            l10n("gui.settings.search.tooltip"),
+            color(FOREGROUND), color(LIGHT_TEXT));
 
         debounceTimer = new Timer(200, e -> performSearch());
         debounceTimer.setRepeats(false);
@@ -186,6 +192,10 @@ public class SettingsQuickSearch extends JPanel {
 
     private void performSearch() {
         SwingUtilities.invokeLater(() -> {
+            if (isPlaceholder(searchField, l10n("gui.settings.search.tooltip"))) {
+                return;
+            }
+
             String query = searchField.getText().toLowerCase(Locale.ROOT).trim();
 
             closePopup();

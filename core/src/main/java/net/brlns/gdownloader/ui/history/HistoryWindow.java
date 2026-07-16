@@ -62,6 +62,8 @@ import net.brlns.gdownloader.util.StringUtils;
 import static net.brlns.gdownloader.downloader.enums.DownloaderIdEnum.*;
 import static net.brlns.gdownloader.lang.Language.l10n;
 import static net.brlns.gdownloader.ui.GUIManager.createIconButton;
+import static net.brlns.gdownloader.ui.UIUtils.installPlaceholder;
+import static net.brlns.gdownloader.ui.UIUtils.isPlaceholder;
 import static net.brlns.gdownloader.ui.UIUtils.loadIcon;
 import static net.brlns.gdownloader.ui.UIUtils.runOnEDT;
 import static net.brlns.gdownloader.ui.themes.ThemeProvider.color;
@@ -216,6 +218,10 @@ public class HistoryWindow {
         searchField.setToolTipText(l10n("gui.history.search.tooltip"));
         searchField.setPreferredSize(new Dimension(350, 30));
 
+        installPlaceholder(searchField,
+            l10n("gui.history.search.tooltip"),
+            color(FOREGROUND), color(LIGHT_TEXT));
+
         searchPanel.add(searchIcon, BorderLayout.WEST);
         searchPanel.add(searchField, BorderLayout.CENTER);
 
@@ -332,7 +338,9 @@ public class HistoryWindow {
     }
 
     private List<DownloadHistoryEntity> getFilteredEntries() {
-        String filter = searchField != null ? searchField.getText().trim().toLowerCase(Locale.ROOT) : "";
+        String filter = (searchField == null
+            || isPlaceholder(searchField, l10n("gui.history.search.tooltip")))
+            ? "" : searchField.getText().trim().toLowerCase(Locale.ROOT);
 
         return loadedEntries.stream()
             .filter(entry -> filter.isEmpty()

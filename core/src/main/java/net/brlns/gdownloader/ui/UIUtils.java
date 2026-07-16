@@ -19,6 +19,8 @@ package net.brlns.gdownloader.ui;
 import java.awt.*;
 import java.awt.event.AdjustmentEvent;
 import java.awt.event.AdjustmentListener;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
 import java.awt.image.BufferedImage;
 import java.awt.image.WritableRaster;
 import java.io.IOException;
@@ -292,6 +294,39 @@ public final class UIUtils {
             window.revalidate();
             window.repaint();
         });
+    }
+
+    public static void installPlaceholder(JTextField textField, String placeholder, Color textColor, Color placeholderColor) {
+        if (placeholder == null) {
+            return;
+        }
+
+        if (textField.getText().isEmpty()) {
+            textField.setText(placeholder);
+            textField.setForeground(placeholderColor);
+        }
+
+        textField.addFocusListener(new FocusAdapter() {
+            @Override
+            public void focusGained(FocusEvent e) {
+                if (textField.getText().equals(placeholder)) {
+                    textField.setText("");
+                    textField.setForeground(textColor);
+                }
+            }
+
+            @Override
+            public void focusLost(FocusEvent e) {
+                if (textField.getText().isEmpty()) {
+                    textField.setText(placeholder);
+                    textField.setForeground(placeholderColor);
+                }
+            }
+        });
+    }
+
+    public static boolean isPlaceholder(JTextField textField, String placeholder) {
+        return placeholder != null && placeholder.equals(textField.getText());
     }
 
     /**

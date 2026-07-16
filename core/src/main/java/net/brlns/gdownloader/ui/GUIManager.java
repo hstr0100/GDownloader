@@ -407,11 +407,16 @@ public final class GUIManager {
         searchBarPanel.setVisible(false);
 
         searchField = new JTextField();
+        searchField.setOpaque(false);
         searchField.setBackground(color(SIDE_PANEL));
         searchField.setForeground(color(FOREGROUND));
         searchField.setCaretColor(color(FOREGROUND));
         searchField.setBorder(BorderFactory.createEmptyBorder(3, 6, 3, 6));
         searchField.setToolTipText(l10n("gui.search.tooltip"));
+
+        installPlaceholder(searchField,
+            l10n("gui.search.tooltip"),
+            color(FOREGROUND), color(LIGHT_TEXT));
 
         searchField.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), "hideSearch");
         searchField.getActionMap().put("hideSearch", new AbstractAction() {
@@ -430,6 +435,11 @@ public final class GUIManager {
         });
 
         searchDebounceTimer = new Timer(150, e -> {
+            if (isPlaceholder(searchField, l10n("gui.search.tooltip"))) {
+                updateMatchCountLabel("", 0);
+                return;
+            }
+
             String query = searchField.getText();
             mediaCardManager.filterMediaCards(query, count -> {
                 updateMatchCountLabel(query, count);
@@ -454,6 +464,16 @@ public final class GUIManager {
             }
         });
 
+        JLabel searchIcon = new JLabel(loadIcon("/assets/search.png", LIGHT_TEXT, 16));
+        searchIcon.setOpaque(false);
+        searchIcon.setBorder(BorderFactory.createEmptyBorder(0, 6, 0, 4));
+
+        JPanel searchBoxPanel = new JPanel(new BorderLayout());
+        searchBoxPanel.setBackground(color(SIDE_PANEL));
+        searchBoxPanel.setBorder(BorderFactory.createLineBorder(color(SIDE_PANEL_HEADER_FOOTER)));
+        searchBoxPanel.add(searchIcon, BorderLayout.WEST);
+        searchBoxPanel.add(searchField, BorderLayout.CENTER);
+
         matchCountLabel = new JLabel("");
         matchCountLabel.setForeground(color(LIGHT_TEXT));
         matchCountLabel.setBorder(BorderFactory.createEmptyBorder(0, 5, 0, 5));
@@ -472,14 +492,14 @@ public final class GUIManager {
         rightPanel.add(matchCountLabel);
         rightPanel.add(closeButton);
 
-        searchBarPanel.add(searchField, BorderLayout.CENTER);
+        searchBarPanel.add(searchBoxPanel, BorderLayout.CENTER);
         searchBarPanel.add(rightPanel, BorderLayout.EAST);
 
         return searchBarPanel;
     }
 
     private void updateMatchCountLabel(String query, int matchCount) {
-        if (query.isEmpty()) {
+        if (query.isEmpty() || isPlaceholder(searchField, l10n("gui.search.tooltip"))) {
             matchCountLabel.setText("");
             searchField.setBackground(color(SIDE_PANEL));
         } else {
