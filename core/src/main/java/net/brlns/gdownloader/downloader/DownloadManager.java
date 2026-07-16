@@ -274,6 +274,8 @@ public class DownloadManager implements IEvent, AutoCloseable {
     private List<AbstractDownloader> getCompatibleDownloaders(String inputUrl) {
         return downloaders.stream()
             .filter(downloader -> downloader.canConsumeUrl(inputUrl))
+            .sorted((d1, d2)
+                -> Integer.compare(d2.getPreferenceScore(inputUrl), d1.getPreferenceScore(inputUrl)))
             .collect(Collectors.toUnmodifiableList());
     }
 

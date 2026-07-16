@@ -48,6 +48,7 @@ import net.brlns.gdownloader.util.Pair;
 import static net.brlns.gdownloader.downloader.enums.DownloadFlagsEnum.*;
 import static net.brlns.gdownloader.downloader.enums.DownloadTypeEnum.*;
 import static net.brlns.gdownloader.util.FileUtils.relativize;
+import static net.brlns.gdownloader.util.URLUtils.isSpotify;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -84,6 +85,15 @@ public class SpotDLDownloader extends AbstractDownloader {
     }
 
     @Override
+    public int getPreferenceScore(String inputUrl) {
+        if (isSpotify(inputUrl)) {
+            return 100;
+        }
+
+        return super.getPreferenceScore(inputUrl);
+    }
+
+    @Override
     public boolean isMainDownloader() {
         return false;
     }
@@ -113,7 +123,7 @@ public class SpotDLDownloader extends AbstractDownloader {
 
     @Override
     protected boolean canConsumeUrl(String inputUrl) {
-        return isEnabled() && (inputUrl.contains("spotify.com") || inputUrl.contains("spotify.link"));
+        return isEnabled() && isSpotify(inputUrl);
     }
 
     @Override

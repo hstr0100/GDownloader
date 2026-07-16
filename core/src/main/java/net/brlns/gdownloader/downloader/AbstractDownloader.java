@@ -101,6 +101,10 @@ public abstract class AbstractDownloader {
         return DownloadTypeEnum.getForDownloaderId(getDownloaderId());
     }
 
+    public int getPreferenceScore(String inputUrl) {
+        return 0;
+    }
+
     @PreDestroy
     public abstract void close();
 
