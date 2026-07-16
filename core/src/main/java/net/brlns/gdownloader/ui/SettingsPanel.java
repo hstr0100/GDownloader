@@ -96,6 +96,7 @@ public class SettingsPanel {
     private CardLayout cardLayout;
 
     private Runnable _resetAction;
+    private SettingsQuickSearch searchBox;
 
     public SettingsPanel(GDownloader mainIn, GUIManager managerIn) {
         main = mainIn;
@@ -161,10 +162,16 @@ public class SettingsPanel {
 
         int i = 0;
         for (SettingsMenuEntry entry : contentPanels) {
-            contentPanel.add(entry.getPanel().get(), String.valueOf(i++));
+            JPanel panelInstance = entry.getPanel().get();
+            panelInstance.putClientProperty("nav-action", entry.getNavAction());
+            contentPanel.add(panelInstance, String.valueOf(i++));
         }
 
         _resetAction.run();
+
+        if (searchBox != null) {
+            searchBox.buildIndex();
+        }
     }
 
     public void createAndShowGUI() {
@@ -188,7 +195,7 @@ public class SettingsPanel {
             };
 
             frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-            frame.setSize(1010, 718);
+            frame.setSize(1010, 726);
             frame.setLayout(new BorderLayout());
             //frame.setResizable(false);
             frame.setLocationRelativeTo(null);
@@ -218,7 +225,7 @@ public class SettingsPanel {
                 headerLabel.setHorizontalAlignment(SwingConstants.CENTER);
                 headerPanel.setLayout(new BorderLayout());
                 headerPanel.add(headerLabel, BorderLayout.CENTER);
-                headerPanel.setPreferredSize(new Dimension(32, 32));
+                headerPanel.setPreferredSize(new Dimension(32, 40));
 
                 sidebarPanel.add(headerPanel, gbc);
 
@@ -230,16 +237,26 @@ public class SettingsPanel {
                 contentPanel = new JPanel(cardLayout);
                 contentPanel.setBackground(color(BACKGROUND));
 
-                JPanel headerPanel = new JPanel(new GridBagLayout());
+                JPanel headerPanel = new JPanel(new BorderLayout());
                 headerPanel.setBackground(color(SIDE_PANEL_SELECTED));
+                headerPanel.setBorder(BorderFactory.createEmptyBorder(0, 15, 0, 15));
 
                 JLabel headerLabel = new JLabel(contentPanels.get(0).getDisplayName());
                 headerLabel.setForeground(color(FOREGROUND));
-                headerLabel.setHorizontalAlignment(SwingConstants.CENTER);
+                headerLabel.setHorizontalAlignment(SwingConstants.LEFT);
                 headerLabel.setVerticalAlignment(SwingConstants.CENTER);
 
-                headerPanel.setPreferredSize(new Dimension(32, 32));
-                headerPanel.add(headerLabel, new GridBagConstraints());
+                headerPanel.setPreferredSize(new Dimension(32, 40));
+                headerPanel.add(headerLabel, BorderLayout.CENTER);
+
+                searchBox = new SettingsQuickSearch(mainContentPanel);
+                searchBox.setPreferredSize(new Dimension(350, 30));
+
+                JPanel searchWrapper = new JPanel(new GridBagLayout());
+                searchWrapper.setOpaque(false);
+                searchWrapper.add(searchBox);
+
+                headerPanel.add(searchWrapper, BorderLayout.EAST);
 
                 mainContentPanel.add(headerPanel, BorderLayout.NORTH);
 
@@ -281,11 +298,15 @@ public class SettingsPanel {
                         _resetAction = action;
                     }
 
+                    entry.setNavAction(action);
+
                     sidebarPanel.add(button, gbc);
 
                     gbc.gridy++;
 
-                    contentPanel.add(entry.getPanel().get(), String.valueOf(index));
+                    JPanel panelInstance = entry.getPanel().get();
+                    panelInstance.putClientProperty("nav-action", action);
+                    contentPanel.add(panelInstance, String.valueOf(index));
 
                     i++;
                 }
@@ -480,9 +501,9 @@ public class SettingsPanel {
 
             frame.add(sidebarPanel, BorderLayout.WEST);
 
-            frame.add(mainContentPanel, BorderLayout.CENTER);
-
             cardLayout.show(contentPanel, String.valueOf(0));
+
+            searchBox.buildIndex();
 
             frame.setVisible(true);
         });
@@ -849,18 +870,23 @@ public class SettingsPanel {
 
             CustomTabButton tabButton = createDownloadTabButton(
                 entry.getDisplayName(), entry.getIcon(), index == 0);
-            tabButton.addActionListener((ActionEvent e) -> {
+
+            Runnable tabAction = () -> {
                 downloadTabLayout.show(downloadTabContent, String.valueOf(index));
 
                 for (CustomTabButton other : tabButtons) {
                     updateDownloadTabButtonState(other, other == tabButton);
                 }
-            });
+            };
+
+            tabButton.addActionListener((ActionEvent e) -> tabAction.run());
 
             tabButtons.add(tabButton);
             tabBar.add(tabButton);
 
-            downloadTabContent.add(entry.getPanel().get(), String.valueOf(index));
+            JPanel tabInstance = entry.getPanel().get();
+            tabInstance.putClientProperty("nav-action", tabAction);
+            downloadTabContent.add(tabInstance, String.valueOf(index));
 
             i++;
         }
@@ -2599,6 +2625,7 @@ public class SettingsPanel {
         private final String displayName;
         private final String icon;
         private final Supplier<JPanel> panel;
+        private Runnable navAction;
 
         public SettingsMenuEntry(String translationKey, String iconIn, Supplier<JPanel> panelIn) {
             displayName = l10n(translationKey);

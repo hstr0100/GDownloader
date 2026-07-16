@@ -198,7 +198,14 @@ public class HistoryWindow {
         countLabel.setForeground(color(LIGHT_TEXT));
         countLabel.setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 10));
 
+        JPanel searchPanel = new JPanel();
+        searchPanel.setLayout(new BorderLayout());
+        searchPanel.setOpaque(true);
+        searchPanel.setBackground(color(SIDE_PANEL));
+        searchPanel.setBorder(BorderFactory.createLineBorder(color(SIDE_PANEL_HEADER_FOOTER)));
+
         JLabel searchIcon = new JLabel(loadIcon("/assets/search.png", LIGHT_TEXT, 16));
+        searchIcon.setOpaque(false);
         searchIcon.setBorder(BorderFactory.createEmptyBorder(0, 5, 0, 5));
 
         searchField = new JTextField(22);
@@ -207,7 +214,11 @@ public class HistoryWindow {
         searchField.setCaretColor(color(FOREGROUND));
         searchField.setBorder(BorderFactory.createEmptyBorder(3, 6, 3, 6));
         searchField.setToolTipText(l10n("gui.history.search.tooltip"));
-        searchField.setMaximumSize(new Dimension(220, 28));
+        searchField.setPreferredSize(new Dimension(350, 30));
+
+        searchPanel.add(searchIcon, BorderLayout.WEST);
+        searchPanel.add(searchField, BorderLayout.CENTER);
+
         searchField.getDocument().addDocumentListener(new DocumentListener() {
             @Override
             public void insertUpdate(DocumentEvent e) {
@@ -238,8 +249,7 @@ public class HistoryWindow {
             e -> confirmClearAll());
 
         rightPanel.add(countLabel);
-        rightPanel.add(searchIcon);
-        rightPanel.add(searchField);
+        rightPanel.add(searchPanel);
         rightPanel.add(refreshButton);
         rightPanel.add(clearAllButton);
 
