@@ -66,7 +66,7 @@ public class SettingsQuickSearch extends JPanel {
         setBackground(color(SIDE_PANEL));
         setBorder(BorderFactory.createLineBorder(color(SIDE_PANEL_HEADER_FOOTER)));
 
-        JLabel searchIcon = new JLabel(loadIcon("/assets/search.png", LIGHT_TEXT, 16));
+        JLabel searchIcon = new JLabel(loadIcon("/assets/search.png", ICON, 16));
         searchIcon.setOpaque(false);
         searchIcon.setBorder(BorderFactory.createEmptyBorder(0, 5, 0, 5));
 
@@ -80,13 +80,13 @@ public class SettingsQuickSearch extends JPanel {
 
         installPlaceholder(searchField,
             l10n("gui.settings.search.tooltip"),
-            color(FOREGROUND), color(LIGHT_TEXT));
+            color(FOREGROUND), color(ICON));
 
         JPanel clearWrapper = new JPanel(new BorderLayout());
         clearWrapper.setOpaque(false);
         clearWrapper.setPreferredSize(new Dimension(26, 30));
 
-        JLabel clearIcon = new JLabel(loadIcon("/assets/delete.png", LIGHT_TEXT, 22));
+        JLabel clearIcon = new JLabel(loadIcon("/assets/delete.png", ICON, 22));
         clearIcon.setOpaque(false);
         clearIcon.setBorder(BorderFactory.createEmptyBorder(0, 5, 0, 5));
         clearIcon.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));

@@ -418,7 +418,7 @@ public final class GUIManager {
 
         installPlaceholder(searchField,
             l10n("gui.search.tooltip"),
-            color(FOREGROUND), color(LIGHT_TEXT));
+            color(FOREGROUND), color(ICON));
 
         searchField.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), "hideSearch");
         searchField.getActionMap().put("hideSearch", new AbstractAction() {
@@ -454,7 +454,7 @@ public final class GUIManager {
         clearWrapper.setOpaque(false);
         clearWrapper.setPreferredSize(new Dimension(26, 30));
 
-        JLabel clearIcon = new JLabel(loadIcon("/assets/delete.png", LIGHT_TEXT, 22));
+        JLabel clearIcon = new JLabel(loadIcon("/assets/delete.png", ICON, 22));
         clearIcon.setOpaque(false);
         clearIcon.setBorder(BorderFactory.createEmptyBorder(0, 5, 0, 5));
         clearIcon.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
@@ -497,7 +497,7 @@ public final class GUIManager {
             }
         });
 
-        JLabel searchIcon = new JLabel(loadIcon("/assets/search.png", LIGHT_TEXT, 16));
+        JLabel searchIcon = new JLabel(loadIcon("/assets/search.png", ICON, 16));
         searchIcon.setOpaque(false);
         searchIcon.setBorder(BorderFactory.createEmptyBorder(0, 6, 0, 4));
 
