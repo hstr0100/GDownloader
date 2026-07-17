@@ -414,13 +414,21 @@ public final class URLUtils {
     }
 
     public static String resolveFetchSite(URL target, @Nullable String referer) {
+        return resolveFetchSite(target.getHost(), referer);
+    }
+
+    public static String resolveFetchSite(URI target, @Nullable String referer) {
+        return resolveFetchSite(target.getHost(), referer);
+    }
+
+    private static String resolveFetchSite(@Nullable String targetHostIn, @Nullable String referer) {
         if (referer == null) {
             return "none";
         }
 
         String refererHost = URLUtils.getHost(referer);
-        String targetHost = target.getHost() != null
-            ? target.getHost().toLowerCase(Locale.ROOT) : null;
+        String targetHost = targetHostIn != null
+            ? targetHostIn.toLowerCase(Locale.ROOT) : null;
 
         if (refererHost == null || targetHost == null) {
             return "cross-site";
