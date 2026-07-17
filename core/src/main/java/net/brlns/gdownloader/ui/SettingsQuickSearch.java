@@ -82,22 +82,52 @@ public class SettingsQuickSearch extends JPanel {
             l10n("gui.settings.search.tooltip"),
             color(FOREGROUND), color(LIGHT_TEXT));
 
+        JPanel clearWrapper = new JPanel(new BorderLayout());
+        clearWrapper.setOpaque(false);
+        clearWrapper.setPreferredSize(new Dimension(26, 30));
+
+        JLabel clearIcon = new JLabel(loadIcon("/assets/delete.png", LIGHT_TEXT, 22));
+        clearIcon.setOpaque(false);
+        clearIcon.setBorder(BorderFactory.createEmptyBorder(0, 5, 0, 5));
+        clearIcon.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        clearIcon.setVisible(false);
+
+        clearIcon.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                searchField.setText("");
+                searchField.requestFocusInWindow();
+            }
+        });
+
+        clearWrapper.add(clearIcon, BorderLayout.CENTER);
+
         debounceTimer = new Timer(200, e -> performSearch());
         debounceTimer.setRepeats(false);
 
         searchField.getDocument().addDocumentListener(new DocumentListener() {
+            private void updateClearIcon() {
+                String text = searchField.getText();
+                boolean hasText = !text.isEmpty()
+                    && !isPlaceholder(searchField, l10n("gui.settings.search.tooltip"));
+                clearIcon.setVisible(hasText);
+            }
+
             @Override
             public void insertUpdate(DocumentEvent e) {
+                updateClearIcon();
                 debounceTimer.restart();
             }
 
             @Override
             public void removeUpdate(DocumentEvent e) {
+                updateClearIcon();
                 debounceTimer.restart();
             }
 
             @Override
             public void changedUpdate(DocumentEvent e) {
+                updateClearIcon();
                 debounceTimer.restart();
             }
         });
@@ -144,6 +174,7 @@ public class SettingsQuickSearch extends JPanel {
 
         add(searchIcon, BorderLayout.WEST);
         add(searchField, BorderLayout.CENTER);
+        add(clearWrapper, BorderLayout.EAST);
     }
 
     public void buildIndex() {

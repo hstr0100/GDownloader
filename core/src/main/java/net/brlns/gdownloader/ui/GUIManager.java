@@ -449,19 +449,50 @@ public final class GUIManager {
         });
         searchDebounceTimer.setRepeats(false);
 
+        // TODO: move searchbox creation to UIUtils
+        JPanel clearWrapper = new JPanel(new BorderLayout());
+        clearWrapper.setOpaque(false);
+        clearWrapper.setPreferredSize(new Dimension(26, 30));
+
+        JLabel clearIcon = new JLabel(loadIcon("/assets/delete.png", LIGHT_TEXT, 22));
+        clearIcon.setOpaque(false);
+        clearIcon.setBorder(BorderFactory.createEmptyBorder(0, 5, 0, 5));
+        clearIcon.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        clearIcon.setVisible(false);
+
+        clearIcon.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                searchField.setText("");
+                searchField.requestFocusInWindow();
+            }
+        });
+
+        clearWrapper.add(clearIcon, BorderLayout.CENTER);
+
         searchField.getDocument().addDocumentListener(new DocumentListener() {
+            private void updateClearIcon() {
+                String text = searchField.getText();
+                boolean hasText = !text.isEmpty()
+                    && !isPlaceholder(searchField, l10n("gui.search.tooltip"));
+                clearIcon.setVisible(hasText);
+            }
+
             @Override
             public void insertUpdate(DocumentEvent e) {
+                updateClearIcon();
                 searchDebounceTimer.restart();
             }
 
             @Override
             public void removeUpdate(DocumentEvent e) {
+                updateClearIcon();
                 searchDebounceTimer.restart();
             }
 
             @Override
             public void changedUpdate(DocumentEvent e) {
+                updateClearIcon();
                 searchDebounceTimer.restart();
             }
         });
@@ -475,6 +506,7 @@ public final class GUIManager {
         searchBoxPanel.setBorder(BorderFactory.createLineBorder(color(SIDE_PANEL_HEADER_FOOTER)));
         searchBoxPanel.add(searchIcon, BorderLayout.WEST);
         searchBoxPanel.add(searchField, BorderLayout.CENTER);
+        searchBoxPanel.add(clearWrapper, BorderLayout.EAST);
 
         matchCountLabel = new JLabel("");
         matchCountLabel.setForeground(color(LIGHT_TEXT));

@@ -29,8 +29,8 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import javax.swing.*;
@@ -262,22 +262,53 @@ public class HistoryWindow {
             l10n("gui.history.search.tooltip"),
             color(FOREGROUND), color(LIGHT_TEXT));
 
+        JPanel clearWrapper = new JPanel(new BorderLayout());
+        clearWrapper.setOpaque(false);
+        clearWrapper.setPreferredSize(new Dimension(26, 30));
+
+        JLabel clearIcon = new JLabel(loadIcon("/assets/delete.png", LIGHT_TEXT, 22));
+        clearIcon.setOpaque(false);
+        clearIcon.setBorder(BorderFactory.createEmptyBorder(0, 5, 0, 5));
+        clearIcon.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        clearIcon.setVisible(false);
+
+        clearIcon.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                searchField.setText("");
+                searchField.requestFocusInWindow();
+            }
+        });
+
+        clearWrapper.add(clearIcon, BorderLayout.CENTER);
+
         searchPanel.add(searchIcon, BorderLayout.WEST);
         searchPanel.add(searchField, BorderLayout.CENTER);
+        searchPanel.add(clearWrapper, BorderLayout.EAST);
 
         searchField.getDocument().addDocumentListener(new DocumentListener() {
+            private void updateClearIcon() {
+                String text = searchField.getText();
+                boolean hasText = !text.isEmpty()
+                    && !isPlaceholder(searchField, l10n("gui.history.search.tooltip"));
+                clearIcon.setVisible(hasText);
+            }
+
             @Override
             public void insertUpdate(DocumentEvent e) {
+                updateClearIcon();
                 scheduleSearchUpdate();
             }
 
             @Override
             public void removeUpdate(DocumentEvent e) {
+                updateClearIcon();
                 scheduleSearchUpdate();
             }
 
             @Override
             public void changedUpdate(DocumentEvent e) {
+                updateClearIcon();
                 scheduleSearchUpdate();
             }
         });
