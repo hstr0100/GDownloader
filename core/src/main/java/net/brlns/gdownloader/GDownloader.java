@@ -133,6 +133,8 @@ import static net.brlns.gdownloader.util.StringUtils.notNullOrEmpty;
 // TODO fetch first playlist item for metadata, then fetch the full playlist for individual filtering/processing/state tracking
 // TODO right click > query metadata
 // TODO pause downloads when space runs out in DL path
+// TODO Direct-HTTP: resume chunked
+// TODO Direct-HTTP: post-processors (unzip, convert, etc)
 /**
  * GDownloader - GUI wrapper for yt-dlp
  *

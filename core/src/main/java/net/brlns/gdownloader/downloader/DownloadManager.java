@@ -297,7 +297,7 @@ public class DownloadManager implements IEvent, AutoCloseable {
             return StartButtonMode.START;
         }
 
-        return switch (entry.getCurrentQueueCategory()) {
+        return switch (category) {
             case RUNNING ->
                 StartButtonMode.STOP;
             case COMPLETED, FAILED ->
