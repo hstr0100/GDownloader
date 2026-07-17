@@ -128,7 +128,7 @@ public final class CustomTooltipManager {
             overlayWindow.dispose();
         }
 
-        overlayWindow = new JWindow(owner);
+        overlayWindow = new JWindow();
         overlayWindow.setType(Window.Type.POPUP);
         overlayWindow.setFocusableWindowState(false);
         overlayWindow.setAlwaysOnTop(true);
