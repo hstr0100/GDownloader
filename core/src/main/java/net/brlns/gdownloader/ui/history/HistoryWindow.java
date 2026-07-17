@@ -27,14 +27,14 @@ import java.io.File;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.LinkedHashSet;
+import java.util.*;
 import java.util.List;
-import java.util.Locale;
-import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import javax.swing.*;
+import javax.swing.Timer;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import lombok.extern.slf4j.Slf4j;
@@ -42,6 +42,8 @@ import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.downloader.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.persistence.entity.DownloadHistoryEntity;
+import net.brlns.gdownloader.persistence.entity.DownloadHistorySummary;
+import net.brlns.gdownloader.persistence.repository.DownloadHistoryRepository;
 import net.brlns.gdownloader.ui.GUIManager;
 import net.brlns.gdownloader.ui.SmoothScroller;
 import net.brlns.gdownloader.ui.custom.CustomDynamicLabel;
@@ -58,6 +60,7 @@ import net.brlns.gdownloader.ui.message.MessageTypeEnum;
 import net.brlns.gdownloader.ui.message.ToastMessenger;
 import net.brlns.gdownloader.util.ImageUtils;
 import net.brlns.gdownloader.util.StringUtils;
+import net.brlns.gdownloader.util.collection.LRUCache;
 
 import static net.brlns.gdownloader.downloader.enums.DownloaderIdEnum.*;
 import static net.brlns.gdownloader.lang.Language.l10n;
@@ -68,15 +71,12 @@ import static net.brlns.gdownloader.ui.UIUtils.loadIcon;
 import static net.brlns.gdownloader.ui.UIUtils.runOnEDT;
 import static net.brlns.gdownloader.ui.themes.ThemeProvider.color;
 import static net.brlns.gdownloader.ui.themes.UIColors.*;
-import static net.brlns.gdownloader.util.StringUtils.containsIgnoreCase;
 import static net.brlns.gdownloader.util.StringUtils.notNullOrEmpty;
 import static net.brlns.gdownloader.util.URLUtils.getDisplayUrl;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-// TODO: lazy load thumbnails and cards to avoid MASSIVE ui issues on huge histories
-// TODO: add icon to the main toolbar (overflow area)
 @Slf4j
 public class HistoryWindow {
 
@@ -87,8 +87,20 @@ public class HistoryWindow {
     private static final int SEARCH_DEBOUNCE_MS = 200;
 
     private static final String CARD_URL_PROPERTY = "historyCardUrl";
+    private static final String VIRTUAL_INDEX_PROPERTY = "historyVirtualIndex";
+    private static final String THUMBNAIL_PANEL_PROPERTY = "historyThumbnailPanel";
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("d MMM yyyy HH:mm");
+
+    private static final int PAGE_SIZE = 300;
+    private static final int MAX_CACHED_PAGES = 60;
+    private static final int MAX_CACHED_ENTITIES = 400;
+    private static final int BUFFER_ROWS = 2;
+
+    private static final int MAX_CONTEXT_MENU_DEPENDENTS = 200;
+
+    private static final int MAX_CONCURRENT_PAGE_FETCHES = 4;
+    private static final int MAX_CONCURRENT_ENTITY_BATCHES = 4;
 
     private final GDownloader main;
     private final GUIManager manager;
@@ -100,19 +112,52 @@ public class HistoryWindow {
     private JLabel countLabel;
     private JScrollPane scrollPane;
 
-    private final Timer searchDebounceTimer = new Timer(SEARCH_DEBOUNCE_MS, e -> renderCards());
+    private final ResponsiveGridLayout gridLayout = new ResponsiveGridLayout();
 
-    private final List<DownloadHistoryEntity> loadedEntries = new ArrayList<>();
-    private List<DownloadHistoryEntity> currentlyDisplayedEntries = new ArrayList<>();
+    private final Timer searchDebounceTimer = new Timer(SEARCH_DEBOUNCE_MS, e -> reload());
+
+    private final AtomicInteger totalCount = new AtomicInteger();
+    private String currentFilter = "";
+
+    private int loadGeneration = 0;
+    private final AtomicBoolean isLoading = new AtomicBoolean();
+
+    private int lastStartIndex = -1;
+    private int lastEndIndex = -1;
+
+    private final LRUCache<Integer, List<DownloadHistorySummary>> summaryPageCache
+        = new LRUCache<>(MAX_CACHED_PAGES);
+
+    private final Set<Integer> inFlightPages = new HashSet<>();
+    private final Deque<Integer> pendingPageFetches = new ArrayDeque<>();
+    private int activePageFetches = 0;
+
+    private final Set<String> inFlightEntityUrls = new HashSet<>();
+    private final Deque<List<String>> pendingEntityBatches = new ArrayDeque<>();
+    private int activeEntityBatches = 0;
+
+    private final LRUCache<String, DownloadHistoryEntity> entityCache
+        = new LRUCache<>(MAX_CACHED_ENTITIES);
+
+    private final Map<Integer, JComponent> renderedCards = new LinkedHashMap<>();
 
     private final Set<String> selectedUrls = new LinkedHashSet<>();
     private String lastSelectedUrl;
+    private int lastSelectedIndex = -1;
 
     public HistoryWindow(GDownloader mainIn, GUIManager managerIn) {
         main = mainIn;
         manager = managerIn;
 
         searchDebounceTimer.setRepeats(false);
+    }
+
+    private boolean isRepoInitialized() {
+        return main.getPersistenceManager().isHistoryInitialized();
+    }
+
+    private DownloadHistoryRepository getRepo() {
+        return main.getPersistenceManager().getDownloadHistory();
     }
 
     public void createAndShowGUI() {
@@ -122,7 +167,6 @@ public class HistoryWindow {
                 frame.setExtendedState(JFrame.NORMAL);
                 frame.requestFocus();
 
-                reload();
                 return;
             }
 
@@ -149,6 +193,11 @@ public class HistoryWindow {
 
             frame.setVisible(true);
 
+            if (cardsPanel != null) {
+                cardsPanel.setFocusable(true);
+                cardsPanel.requestFocusInWindow();
+            }
+
             reload();
         });
     }
@@ -161,16 +210,7 @@ public class HistoryWindow {
         actionMap.put("selectAll", new AbstractAction() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                selectedUrls.clear();
-
-                for (DownloadHistoryEntity entry : currentlyDisplayedEntries) {
-                    selectedUrls.add(entry.getUrl());
-                }
-
-                lastSelectedUrl = currentlyDisplayedEntries.isEmpty()
-                    ? null : currentlyDisplayedEntries.get(currentlyDisplayedEntries.size() - 1).getUrl();
-
-                updateSelectionUI();
+                selectAllAsync();
             }
         });
 
@@ -265,11 +305,15 @@ public class HistoryWindow {
     }
 
     private void scheduleSearchUpdate() {
-        searchDebounceTimer.restart();
+        String newFilter = readSearchFilter();
+
+        if (!newFilter.equals(currentFilter)) {
+            searchDebounceTimer.restart();
+        }
     }
 
     private JScrollPane buildContentPanel() {
-        cardsPanel = new ScrollableQueuePanel(new ResponsiveGridLayout());
+        cardsPanel = new ScrollableQueuePanel(gridLayout);
         cardsPanel.setBackground(color(BACKGROUND));
         cardsPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         cardsPanel.addMouseListener(new MouseAdapter() {
@@ -293,6 +337,8 @@ public class HistoryWindow {
         scrollPane.getVerticalScrollBar().setUI(new CustomScrollBarUI());
         SmoothScroller.install(scrollPane);
 
+        scrollPane.getViewport().addChangeListener(e -> updateVisibleWindow(false));
+
         return scrollPane;
     }
 
@@ -307,89 +353,417 @@ public class HistoryWindow {
         manager.showRightClickMenu(parent, menu, x, y);
     }
 
+    private String readSearchFilter() {
+        if (searchField == null || isPlaceholder(searchField, l10n("gui.history.search.tooltip"))) {
+            return "";
+        }
+
+        return searchField.getText().trim().toLowerCase(Locale.ROOT);
+    }
+
     private void reload() {
+        reload(false);
+    }
+
+    private void reload(boolean preserveScroll) {
+        loadGeneration++;
+        int generation = loadGeneration;
+
+        String filter = readSearchFilter();
+
+        Point savedPosition = (preserveScroll && scrollPane != null)
+            ? scrollPane.getViewport().getViewPosition()
+            : new Point(0, 0);
+
         runOnEDT(() -> {
-            cardsPanel.removeAll();
-            cardsPanel.setLayout(new GridBagLayout());
+            isLoading.set(true);
+            currentFilter = filter;
 
-            cardsPanel.add(new CustomLoadingSpinner(48));
+            summaryPageCache.clear();
+            inFlightPages.clear();
+            pendingPageFetches.clear();
+            entityCache.clear();
+            inFlightEntityUrls.clear();
+            pendingEntityBatches.clear();
 
-            cardsPanel.revalidate();
-            cardsPanel.repaint();
+            if (!preserveScroll) {
+                renderedCards.clear();
+                cardsPanel.removeAll();
+                cardsPanel.setLayout(new GridBagLayout());
+
+                cardsPanel.add(new CustomLoadingSpinner(48));
+
+                cardsPanel.revalidate();
+                cardsPanel.repaint();
+
+                if (scrollPane != null) {
+                    scrollPane.getViewport().setViewPosition(savedPosition);
+                }
+            }
+
+            lastStartIndex = -1;
+            lastEndIndex = -1;
         });
 
         GDownloader.GLOBAL_THREAD_POOL.execute(() -> {
-            List<DownloadHistoryEntity> entries = main.getPersistenceManager().isHistoryInitialized()
-                ? main.getPersistenceManager().getDownloadHistory().getAllOrderedByDate()
-                : List.of();
+            long count = isRepoInitialized()
+                ? getRepo().getCount(filter)
+                : 0L;
 
             runOnEDT(() -> {
-                loadedEntries.clear();
-                loadedEntries.addAll(entries);
+                if (generation != loadGeneration) {
+                    return;
+                }
 
-                Set<String> knownUrls = entries.stream()
-                    .map(DownloadHistoryEntity::getUrl)
-                    .collect(Collectors.toSet());
-                selectedUrls.retainAll(knownUrls);
+                isLoading.set(false);
+                totalCount.set((int)Math.min(count, Integer.MAX_VALUE - 16));
 
-                renderCards();
+                if (countLabel != null) {
+                    countLabel.setText(String.valueOf(count));
+                }
+
+                updateVisibleWindow(true);
+
+                if (preserveScroll && scrollPane != null) {
+                    SwingUtilities.invokeLater(() -> {
+                        int maxY = Math.max(0, scrollPane.getViewport().getView().getHeight() - scrollPane.getViewport().getHeight());
+                        savedPosition.y = Math.min(savedPosition.y, maxY);
+                        scrollPane.getViewport().setViewPosition(savedPosition);
+                    });
+                }
             });
         });
     }
 
-    private List<DownloadHistoryEntity> getFilteredEntries() {
-        String filter = (searchField == null
-            || isPlaceholder(searchField, l10n("gui.history.search.tooltip")))
-            ? "" : searchField.getText().trim().toLowerCase(Locale.ROOT);
+    private GridMetrics computeGridMetrics() {
+        Insets insets = cardsPanel.getInsets();
+        int availableWidth = Math.max(0, cardsPanel.getWidth() - insets.left - insets.right);
 
-        return loadedEntries.stream()
-            .filter(entry -> filter.isEmpty()
-            || containsIgnoreCase(entry.getTitle(), filter)
-            || containsIgnoreCase(entry.getUrl(), filter)
-            || containsIgnoreCase(entry.getHostDisplayName(), filter))
-            .sorted(Comparator.comparingLong(DownloadHistoryEntity::getDownloadedAt).reversed())
-            .collect(Collectors.toList());
+        int baseCardWidth = MIN_THUMBNAIL_WIDTH + 16;
+        int maxColumns = 7;
+        int maxCardWidth = (int)(baseCardWidth * 1.5);
+
+        int columns = Math.max(1, (availableWidth + GAP) / (baseCardWidth + GAP));
+        columns = Math.min(columns, maxColumns);
+
+        int cellWidth = Math.max(baseCardWidth, (availableWidth - (columns - 1) * GAP) / columns);
+        cellWidth = Math.min(cellWidth, maxCardWidth);
+
+        int gridWidth = (columns * cellWidth) + ((columns - 1) * GAP);
+        int offsetX = insets.left + Math.max(0, (availableWidth - gridWidth) / 2);
+
+        int thumbnailHeight = (int)((cellWidth - 16) / 16.0 * 9.0);
+        int cellHeight = thumbnailHeight + TEXT_PANEL_HEIGHT;
+
+        return new GridMetrics(columns, cellWidth, cellHeight, offsetX, insets.top, availableWidth);
     }
 
-    private void renderCards() {
-        List<DownloadHistoryEntity> filtered = getFilteredEntries();
-        currentlyDisplayedEntries = filtered;
-
-        if (countLabel != null) {
-            countLabel.setText(String.valueOf(filtered.size()));
+    private void updateVisibleWindow(boolean force) {
+        if (cardsPanel == null || scrollPane == null || isLoading.get()) {
+            return;
         }
 
-        Set<String> visibleUrls = filtered.stream()
-            .map(DownloadHistoryEntity::getUrl)
-            .collect(Collectors.toSet());
+        int total = totalCount.get();
 
-        selectedUrls.retainAll(visibleUrls);
-        if (lastSelectedUrl != null && !visibleUrls.contains(lastSelectedUrl)) {
-            lastSelectedUrl = null;
-        }
+        if (total <= 0) {
+            if (!(cardsPanel.getLayout() instanceof BorderLayout)) {
+                renderedCards.clear();
 
-        cardsPanel.removeAll();
-
-        if (filtered.isEmpty()) {
-            cardsPanel.setLayout(new BorderLayout());
-            cardsPanel.add(emptyLabel, BorderLayout.CENTER);
-        } else {
-            if (!(cardsPanel.getLayout() instanceof ResponsiveGridLayout)) {
-                cardsPanel.setLayout(new ResponsiveGridLayout());
+                cardsPanel.removeAll();
+                cardsPanel.setLayout(new BorderLayout());
+                cardsPanel.add(emptyLabel, BorderLayout.CENTER);
+                cardsPanel.revalidate();
+                cardsPanel.repaint();
             }
 
-            for (DownloadHistoryEntity entry : filtered) {
-                cardsPanel.add(buildCard(entry, filtered));
+            lastStartIndex = -1;
+            lastEndIndex = -1;
+
+            return;
+        }
+
+        if (!(cardsPanel.getLayout() instanceof ResponsiveGridLayout)) {
+            cardsPanel.removeAll();
+            renderedCards.clear();
+            cardsPanel.setLayout(gridLayout);
+
+            force = true;
+        }
+
+        GridMetrics metrics = computeGridMetrics();
+        int totalRows = (int)Math.ceil(total / (double)metrics.columns());
+        int rowHeight = Math.max(1, metrics.cellHeight() + GAP);
+
+        Rectangle viewRect = scrollPane.getViewport().getViewRect();
+
+        int firstRow = Math.max(0, (viewRect.y - metrics.insetsTop()) / rowHeight - BUFFER_ROWS);
+        int lastRow = Math.min(totalRows - 1,
+            (viewRect.y + viewRect.height - metrics.insetsTop()) / rowHeight + BUFFER_ROWS);
+        firstRow = Math.min(firstRow, lastRow);
+
+        int startIndex = firstRow * metrics.columns();
+        int endIndex = Math.min(total - 1, (lastRow + 1) * metrics.columns() - 1);
+
+        if (!force && startIndex == lastStartIndex && endIndex == lastEndIndex) {
+            return;
+        }
+
+        lastStartIndex = startIndex;
+        lastEndIndex = endIndex;
+
+        Map<Integer, JComponent> newRendered = new LinkedHashMap<>();
+        List<String> needThumbnails = new ArrayList<>();
+
+        for (int index = startIndex; index <= endIndex; index++) {
+            Optional<DownloadHistorySummary> summary = getCachedSummary(index);
+            JComponent existing = renderedCards.remove(index);
+            boolean needsThumb = summary.isPresent() && entityCache.get(summary.get().getUrl()) == null;
+
+            if (existing != null && matchesExpected(existing, summary)) {
+                newRendered.put(index, existing);
+            } else {
+                if (existing != null) {
+                    cardsPanel.remove(existing);
+                }
+
+                JComponent comp = summary.isPresent()
+                    ? buildCard(summary.get(), index) : buildPlaceholderCard(index);
+
+                cardsPanel.add(comp);
+                newRendered.put(index, comp);
+            }
+
+            if (needsThumb) {
+                needThumbnails.add(summary.get().getUrl());
             }
         }
+
+        for (JComponent leftover : renderedCards.values()) {
+            cardsPanel.remove(leftover);
+        }
+
+        renderedCards.clear();
+        renderedCards.putAll(newRendered);
 
         updateSelectionUI();
 
         cardsPanel.revalidate();
         cardsPanel.repaint();
+
+        if (!needThumbnails.isEmpty()) {
+            fetchEntitiesForWindow(needThumbnails);
+        }
     }
 
-    private JPanel buildCard(DownloadHistoryEntity entry, List<DownloadHistoryEntity> currentList) {
+    private boolean matchesExpected(JComponent existing, Optional<DownloadHistorySummary> summary) {
+        Object urlProp = existing.getClientProperty(CARD_URL_PROPERTY);
+
+        if (summary.isEmpty()) {
+            return urlProp == null;
+        }
+
+        return summary.get().getUrl().equals(urlProp);
+    }
+
+    private Optional<DownloadHistorySummary> getCachedSummary(int index) {
+        if (index < 0 || index >= totalCount.get()) {
+            return Optional.empty();
+        }
+
+        int page = index / PAGE_SIZE;
+        List<DownloadHistorySummary> pageRows = summaryPageCache.get(page);
+
+        if (pageRows == null) {
+            ensurePageLoaded(page);
+
+            return Optional.empty();
+        }
+
+        int withinPage = index - page * PAGE_SIZE;
+        if (withinPage < 0 || withinPage >= pageRows.size()) {
+            return Optional.empty();
+        }
+
+        return Optional.of(pageRows.get(withinPage));
+    }
+
+    private void ensurePageLoaded(int page) {
+        if (!inFlightPages.add(page)) {
+            return;
+        }
+
+        pendingPageFetches.addLast(page);
+
+        pumpPageFetchQueue();
+    }
+
+    private void pumpPageFetchQueue() {
+        while (activePageFetches < MAX_CONCURRENT_PAGE_FETCHES && !pendingPageFetches.isEmpty()) {
+            int page = pendingPageFetches.pollFirst();
+            activePageFetches++;
+
+            dispatchPageFetch(page);
+        }
+    }
+
+    private void dispatchPageFetch(int page) {
+        int offset = page * PAGE_SIZE;
+        String filterSnapshot = currentFilter;
+        int generation = loadGeneration;
+
+        GDownloader.GLOBAL_THREAD_POOL.execute(() -> {
+            List<DownloadHistorySummary> rows = isRepoInitialized()
+                ? getRepo().getSummaryPage(offset, PAGE_SIZE, filterSnapshot)
+                : List.of();
+
+            runOnEDT(() -> {
+                inFlightPages.remove(page);
+                activePageFetches--;
+
+                if (generation == loadGeneration) {
+                    summaryPageCache.put(page, rows);
+                    updateVisibleWindow(true);
+                }
+
+                pumpPageFetchQueue();
+            });
+        });
+    }
+
+    private void fetchEntitiesForWindow(List<String> urls) {
+        List<String> missing = urls.stream()
+            .distinct()
+            .filter(u -> entityCache.get(u) == null)
+            .filter(inFlightEntityUrls::add)
+            .collect(Collectors.toList());
+
+        if (missing.isEmpty()) {
+            return;
+        }
+
+        pendingEntityBatches.addLast(missing);
+
+        pumpEntityFetchQueue();
+    }
+
+    private void pumpEntityFetchQueue() {
+        while (activeEntityBatches < MAX_CONCURRENT_ENTITY_BATCHES && !pendingEntityBatches.isEmpty()) {
+            List<String> batch = pendingEntityBatches.pollFirst();
+            activeEntityBatches++;
+
+            dispatchEntityFetch(batch);
+        }
+    }
+
+    private void dispatchEntityFetch(List<String> missing) {
+        int generation = loadGeneration;
+
+        GDownloader.GLOBAL_THREAD_POOL.execute(() -> {
+            Map<String, DownloadHistoryEntity> resolved = isRepoInitialized()
+                ? getRepo().getEntitiesByUrls(missing)
+                : Map.of();
+
+            runOnEDT(() -> {
+                missing.forEach(inFlightEntityUrls::remove);
+                activeEntityBatches--;
+
+                if (generation == loadGeneration) {
+                    resolved.forEach(entityCache::put);
+                    applyResolvedThumbnails(resolved);
+                }
+
+                pumpEntityFetchQueue();
+            });
+        });
+    }
+
+    private void applyResolvedThumbnails(Map<String, DownloadHistoryEntity> resolved) {
+        for (JComponent comp : renderedCards.values()) {
+            Object urlProp = comp.getClientProperty(CARD_URL_PROPERTY);
+            if (!(urlProp instanceof String url) || !resolved.containsKey(url)) {
+                continue;
+            }
+
+            Object thumbProp = comp.getClientProperty(THUMBNAIL_PANEL_PROPERTY);
+            if (thumbProp instanceof CustomThumbnailPanel thumbnailPanel) {
+                BufferedImage thumbnail = ImageUtils.base64ToBufferedImage(
+                    resolved.get(url).getBase64EncodedThumbnail());
+
+                if (thumbnail != null) {
+                    thumbnailPanel.setImage(thumbnail);
+                }
+            }
+        }
+    }
+
+    private void resolveEntities(Collection<String> urls, Consumer<Map<String, DownloadHistoryEntity>> callback) {
+        Map<String, DownloadHistoryEntity> resolved = new HashMap<>();
+        List<String> missing = new ArrayList<>();
+
+        for (String url : urls) {
+            DownloadHistoryEntity cached = entityCache.get(url);
+
+            if (cached != null) {
+                resolved.put(url, cached);
+            } else {
+                missing.add(url);
+            }
+        }
+
+        if (missing.isEmpty()) {
+            callback.accept(resolved);
+
+            return;
+        }
+
+        GDownloader.GLOBAL_THREAD_POOL.execute(() -> {
+            Map<String, DownloadHistoryEntity> fetched = isRepoInitialized()
+                ? getRepo().getEntitiesByUrls(missing)
+                : Map.of();
+
+            runOnEDT(() -> {
+                fetched.forEach(entityCache::put);
+                resolved.putAll(fetched);
+                callback.accept(resolved);
+            });
+        });
+    }
+
+    private DownloadHistoryEntity toLightEntity(DownloadHistorySummary s) {
+        DownloadHistoryEntity e = new DownloadHistoryEntity();
+        e.setUrl(s.getUrl());
+        e.setOriginalUrl(s.getOriginalUrl());
+        e.setTitle(s.getTitle());
+        e.setHostDisplayName(s.getHostDisplayName());
+        e.setDownloaderId(s.getDownloaderId());
+        e.setDownloadedAt(s.getDownloadedAt());
+
+        return e;
+    }
+
+    private JComponent buildPlaceholderCard(int virtualIndex) {
+        JPanel card = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2d = (Graphics2D)g.create();
+                try {
+                    g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                    g2d.setColor(getBackground());
+                    g2d.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 10, 10));
+                } finally {
+                    g2d.dispose();
+                }
+            }
+        };
+
+        card.putClientProperty(VIRTUAL_INDEX_PROPERTY, virtualIndex);
+        card.setOpaque(false);
+        card.setBackground(color(MEDIA_CARD));
+
+        return card;
+    }
+
+    private JPanel buildCard(DownloadHistorySummary entry, int virtualIndex) {
         JPanel card = new JPanel() {
             @Override
             protected void paintComponent(Graphics g) {
@@ -405,6 +779,7 @@ public class HistoryWindow {
         };
 
         card.putClientProperty(CARD_URL_PROPERTY, entry.getUrl());
+        card.putClientProperty(VIRTUAL_INDEX_PROPERTY, virtualIndex);
         card.setOpaque(false);
         card.setLayout(new BorderLayout(0, 6));
         card.setBackground(isSelected(entry) ? color(MEDIA_CARD_SELECTED) : color(MEDIA_CARD));
@@ -419,6 +794,7 @@ public class HistoryWindow {
         thumbnailPanel.setLayout(new FlowLayout(FlowLayout.RIGHT, 0, 0));
         thumbnailPanel.setBackground(color(MEDIA_CARD_THUMBNAIL));
         thumbnailPanel.setToolTipText(displayUrl);
+        card.putClientProperty(THUMBNAIL_PANEL_PROPERTY, thumbnailPanel);
 
         JButton closeButton = createIconButton(
             loadIcon("/assets/x-mark.png", ICON, 16),
@@ -436,11 +812,14 @@ public class HistoryWindow {
         closeButtonPanel.setVisible(false);
         thumbnailPanel.add(closeButtonPanel);
 
-        BufferedImage thumbnail = ImageUtils.base64ToBufferedImage(entry.getBase64EncodedThumbnail());
+        DownloadHistoryEntity cachedEntity = entityCache.get(entry.getUrl());
+        BufferedImage thumbnail = cachedEntity != null
+            ? ImageUtils.base64ToBufferedImage(cachedEntity.getBase64EncodedThumbnail()) : null;
+
         if (thumbnail != null) {
             thumbnailPanel.setImage(thumbnail);
         } else {
-            thumbnailPanel.setPlaceholderIcon(inferDownloadType(entry));
+            thumbnailPanel.setPlaceholderIcon(inferDownloadType(entry.getDownloaderId()));
         }
 
         card.add(thumbnailPanel, BorderLayout.CENTER);
@@ -471,11 +850,17 @@ public class HistoryWindow {
             @Override
             public void mouseClicked(MouseEvent e) {
                 if (SwingUtilities.isRightMouseButton(e)) {
-                    handleRightClick(entry, card, currentList, e);
+                    handleRightClick(entry, card, virtualIndex, e);
                 } else if (e.getClickCount() == 2 && SwingUtilities.isLeftMouseButton(e)) {
-                    openFirstAvailableFile(entry);
+                    resolveEntities(Set.of(entry.getUrl()), resolved -> {
+                        DownloadHistoryEntity full = resolved.get(entry.getUrl());
+
+                        if (full != null) {
+                            openFirstAvailableFile(full);
+                        }
+                    });
                 } else if (SwingUtilities.isLeftMouseButton(e)) {
-                    handleLeftClick(entry, currentList, e);
+                    handleLeftClick(entry, virtualIndex, e);
                 }
             }
 
@@ -506,11 +891,11 @@ public class HistoryWindow {
         return card;
     }
 
-    private boolean isSelected(DownloadHistoryEntity entry) {
+    private boolean isSelected(DownloadHistorySummary entry) {
         return selectedUrls.contains(entry.getUrl());
     }
 
-    private void handleLeftClick(DownloadHistoryEntity entry, List<DownloadHistoryEntity> currentList, MouseEvent e) {
+    private void handleLeftClick(DownloadHistorySummary entry, int virtualIndex, MouseEvent e) {
         String url = entry.getUrl();
 
         if (e.isControlDown()) {
@@ -519,37 +904,75 @@ public class HistoryWindow {
             }
 
             lastSelectedUrl = url;
-        } else if (e.isShiftDown() && lastSelectedUrl != null) {
-            int start = indexOfUrl(currentList, lastSelectedUrl);
-            int end = indexOfUrl(currentList, url);
+            lastSelectedIndex = virtualIndex;
 
-            if (start != -1 && end != -1) {
-                selectedUrls.clear();
-
-                int min = Math.min(start, end);
-                int max = Math.max(start, end);
-                for (int i = min; i <= max; i++) {
-                    selectedUrls.add(currentList.get(i).getUrl());
-                }
-            }
+            updateSelectionUI();
+        } else if (e.isShiftDown() && lastSelectedIndex >= 0) {
+            selectRangeAsync(lastSelectedIndex, virtualIndex);
         } else {
             selectedUrls.clear();
             selectedUrls.add(url);
 
             lastSelectedUrl = url;
-        }
+            lastSelectedIndex = virtualIndex;
 
-        updateSelectionUI();
+            updateSelectionUI();
+        }
     }
 
-    private int indexOfUrl(List<DownloadHistoryEntity> list, String url) {
-        for (int i = 0; i < list.size(); i++) {
-            if (list.get(i).getUrl().equals(url)) {
-                return i;
-            }
+    private void selectRangeAsync(int indexA, int indexB) {
+        int min = Math.min(indexA, indexB);
+        int max = Math.max(indexA, indexB);
+        int count = max - min + 1;
+        String filterSnapshot = currentFilter;
+        int generation = loadGeneration;
+
+        GDownloader.GLOBAL_THREAD_POOL.execute(() -> {
+            List<String> urls = isRepoInitialized()
+                ? getRepo().getUrlsPage(min, count, filterSnapshot)
+                : List.of();
+
+            runOnEDT(() -> {
+                if (generation != loadGeneration) {
+                    return;
+                }
+
+                selectedUrls.clear();
+                selectedUrls.addAll(urls);
+
+                updateSelectionUI();
+            });
+        });
+    }
+
+    private void selectAllAsync() {
+        if (totalCount.get() == 0) {
+            return;
         }
 
-        return -1;
+        String filterSnapshot = currentFilter;
+        int generation = loadGeneration;
+        int lastIndex = totalCount.get() - 1;
+
+        GDownloader.GLOBAL_THREAD_POOL.execute(() -> {
+            List<String> urls = isRepoInitialized()
+                ? getRepo().getAllUrls(filterSnapshot)
+                : List.of();
+
+            runOnEDT(() -> {
+                if (generation != loadGeneration) {
+                    return;
+                }
+
+                selectedUrls.clear();
+                selectedUrls.addAll(urls);
+
+                lastSelectedUrl = urls.isEmpty() ? null : urls.get(urls.size() - 1);
+                lastSelectedIndex = urls.isEmpty() ? -1 : lastIndex;
+
+                updateSelectionUI();
+            });
+        });
     }
 
     private void clearSelection() {
@@ -565,6 +988,7 @@ public class HistoryWindow {
         for (Component c : cardsPanel.getComponents()) {
             if (c instanceof JPanel panel) {
                 Object url = panel.getClientProperty(CARD_URL_PROPERTY);
+
                 if (url instanceof String urlString) {
                     panel.setBackground(selectedUrls.contains(urlString)
                         ? color(MEDIA_CARD_SELECTED) : color(MEDIA_CARD));
@@ -574,31 +998,62 @@ public class HistoryWindow {
         }
     }
 
-    private void handleRightClick(DownloadHistoryEntity entry, JPanel card,
-        List<DownloadHistoryEntity> currentList, MouseEvent e) {
+    private void handleRightClick(DownloadHistorySummary entry, JPanel card, int virtualIndex, MouseEvent e) {
         if (!isSelected(entry)) {
             selectedUrls.clear();
             selectedUrls.add(entry.getUrl());
 
+            lastSelectedUrl = entry.getUrl();
+            lastSelectedIndex = virtualIndex;
+
             updateSelectionUI();
         }
 
-        if (selectedUrls.size() > 1) {
-            List<RightClickMenuEntries> dependents = new ArrayList<>();
+        int x = e.getX();
+        int y = e.getY();
+        boolean multiSelect = selectedUrls.size() > 1;
 
-            for (DownloadHistoryEntity other : currentList) {
-                if (!other.getUrl().equals(entry.getUrl()) && selectedUrls.contains(other.getUrl())) {
-                    dependents.add(buildCardContextMenu(other));
+        Set<String> resolveTargets = new LinkedHashSet<>();
+        resolveTargets.add(entry.getUrl());
+
+        if (multiSelect) {
+            int added = 0;
+            for (String url : selectedUrls) {
+                if (added >= MAX_CONTEXT_MENU_DEPENDENTS) {
+                    break;
+                }
+
+                if (resolveTargets.add(url)) {
+                    added++;
                 }
             }
-
-            manager.showRightClickMenu(card, buildCardContextMenu(entry), dependents, e.getX(), e.getY());
-        } else {
-            manager.showRightClickMenu(card, buildCardContextMenu(entry), e.getX(), e.getY());
         }
+
+        resolveEntities(resolveTargets, resolved -> {
+            DownloadHistoryEntity clicked = resolved.getOrDefault(entry.getUrl(), toLightEntity(entry));
+
+            if (multiSelect) {
+                List<RightClickMenuEntries> dependents = new ArrayList<>();
+
+                for (String otherUrl : resolveTargets) {
+                    if (otherUrl.equals(entry.getUrl())) {
+                        continue;
+                    }
+
+                    DownloadHistoryEntity otherEntity = resolved.get(otherUrl);
+                    if (otherEntity != null) {
+                        dependents.add(buildCardContextMenu(otherEntity));
+                    }
+                }
+
+                manager.showRightClickMenu(card, buildCardContextMenu(clicked), dependents, x, y);
+            } else {
+                manager.showRightClickMenu(card, buildCardContextMenu(clicked), x, y);
+            }
+        });
     }
 
-    private String buildSubtitle(DownloadHistoryEntity entry) {
+    private String buildSubtitle(DownloadHistorySummary entry) {
         String date = DATE_FORMATTER.format(
             Instant.ofEpochMilli(entry.getDownloadedAt()).atZone(ZoneId.systemDefault()));
 
@@ -609,8 +1064,7 @@ public class HistoryWindow {
         return notNullOrEmpty(host) ? date + " \u00b7 " + host : date;
     }
 
-    private DownloadTypeEnum inferDownloadType(DownloadHistoryEntity entry) {
-        DownloaderIdEnum downloaderId = entry.getDownloaderId();
+    private DownloadTypeEnum inferDownloadType(DownloaderIdEnum downloaderId) {
         if (downloaderId == null) {
             return DownloadTypeEnum.VIDEO;
         }
@@ -677,7 +1131,7 @@ public class HistoryWindow {
             }, () -> "/assets/restart.png"));
 
         menu.put(l10n("gui.history.remove"),
-            new RunnableMenuEntry(() -> removeFromHistory(entry),
+            new RunnableMenuEntry(() -> removeUrlsFromHistory(Set.of(entry.getUrl())),
                 () -> "/assets/bin.png"));
 
         return menu;
@@ -702,8 +1156,8 @@ public class HistoryWindow {
             .build());
     }
 
-    private void removeFromHistory(DownloadHistoryEntity entry) {
-        removeEntriesFromHistory(List.of(entry));
+    private void removeFromHistory(DownloadHistorySummary entry) {
+        removeUrlsFromHistory(Set.of(entry.getUrl()));
     }
 
     private void removeSelectedFromHistory() {
@@ -711,37 +1165,36 @@ public class HistoryWindow {
             return;
         }
 
-        List<DownloadHistoryEntity> toRemove = loadedEntries.stream()
-            .filter(entry -> selectedUrls.contains(entry.getUrl()))
-            .collect(Collectors.toList());
-
-        removeEntriesFromHistory(toRemove);
+        removeUrlsFromHistory(new LinkedHashSet<>(selectedUrls));
     }
 
-    private void removeEntriesFromHistory(List<DownloadHistoryEntity> entries) {
-        if (entries.isEmpty()) {
+    private void removeUrlsFromHistory(Set<String> urls) {
+        if (urls.isEmpty()) {
             return;
         }
 
         GDownloader.GLOBAL_THREAD_POOL.execute(() -> {
-            if (main.getPersistenceManager().isHistoryInitialized()) {
-                for (DownloadHistoryEntity entry : entries) {
-                    main.getPersistenceManager().getDownloadHistory().remove(entry.getUrl());
-                }
+            if (isRepoInitialized()) {
+                getRepo().removeUrls(urls);
             }
 
             runOnEDT(() -> {
-                loadedEntries.removeAll(entries);
+                selectedUrls.removeAll(urls);
 
-                for (DownloadHistoryEntity entry : entries) {
-                    selectedUrls.remove(entry.getUrl());
+                for (String url : urls) {
+                    entityCache.remove(url);
                 }
 
-                renderCards();
+                if (lastSelectedUrl != null && urls.contains(lastSelectedUrl)) {
+                    lastSelectedUrl = null;
+                    lastSelectedIndex = -1;
+                }
+
+                reload(true);
 
                 ToastMessenger.show(frame, Message.builder()
                     .title("gui.history.notification_title")
-                    .message("gui.history.removed.toast")
+                    .message("gui.history.removed.toast", urls.size())
                     .durationMillis(2000)
                     .messageType(MessageTypeEnum.INFO)
                     .build());
@@ -750,7 +1203,7 @@ public class HistoryWindow {
     }
 
     private void confirmClearAll() {
-        if (loadedEntries.isEmpty()) {
+        if (totalCount.get() == 0) {
             return;
         }
 
@@ -771,17 +1224,18 @@ public class HistoryWindow {
             }),
             new GUIManager.DialogButton(l10n("gui.history.clear_all"), (boolean setDefault) -> {
                 GDownloader.GLOBAL_THREAD_POOL.execute(() -> {
-                    if (main.getPersistenceManager().isHistoryInitialized()) {
-                        main.getPersistenceManager().getDownloadHistory().clearAll();
+                    if (isRepoInitialized()) {
+                        getRepo().clearAll();
                     }
 
                     runOnEDT(() -> {
-                        loadedEntries.clear();
                         selectedUrls.clear();
                         lastSelectedUrl = null;
+                        lastSelectedIndex = -1;
+                        entityCache.clear();
 
                         if (frame != null) {
-                            renderCards();
+                            reload();
                         }
 
                         ToastMessenger.show(toastParent, Message.builder()
@@ -831,19 +1285,31 @@ public class HistoryWindow {
         return wrapper;
     }
 
-    private class ResponsiveGridLayout implements LayoutManager {
+    private record GridMetrics(
+        int columns,
+        int cellWidth,
+        int cellHeight,
+        int offsetX,
+        int insetsTop,
+        int availableWidth) {
+
+    }
+
+    private final class ResponsiveGridLayout implements LayoutManager {
 
         private final Timer debounceTimer;
         private boolean forceLayout = true;
         private int lastWidth = -1;
 
-        public ResponsiveGridLayout() {
+        private ResponsiveGridLayout() {
             debounceTimer = new Timer(150, e -> {
                 forceLayout = true;
 
                 if (cardsPanel != null) {
                     cardsPanel.revalidate();
                     cardsPanel.repaint();
+
+                    updateVisibleWindow(true);
                 }
             });
 
@@ -862,7 +1328,20 @@ public class HistoryWindow {
 
         @Override
         public Dimension preferredLayoutSize(Container parent) {
-            return computeLayout(parent, false);
+            GridMetrics metrics = computeGridMetrics();
+
+            int total = totalCount.get();
+
+            if (total <= 0) {
+                return new Dimension(metrics.availableWidth(), 0);
+            }
+
+            int totalRows = (int)Math.ceil(total / (double)metrics.columns());
+            int height = metrics.insetsTop() + totalRows * metrics.cellHeight()
+                + Math.max(0, totalRows - 1) * GAP;
+
+            Insets insets = parent.getInsets();
+            return new Dimension(metrics.availableWidth(), height + insets.bottom);
         }
 
         @Override
@@ -877,7 +1356,7 @@ public class HistoryWindow {
             if (lastWidth == -1 || forceLayout || lastWidth == currentWidth) {
                 lastWidth = currentWidth;
 
-                computeLayout(parent, true);
+                applyBounds(parent);
                 forceLayout = false;
 
                 return;
@@ -887,66 +1366,27 @@ public class HistoryWindow {
             debounceTimer.restart();
         }
 
-        private Dimension computeLayout(Container parent, boolean apply) {
-            Insets insets = parent.getInsets();
+        private void applyBounds(Container parent) {
+            GridMetrics metrics = computeGridMetrics();
 
-            int availableWidth = parent.getWidth() - insets.left - insets.right;
-            availableWidth = Math.max(0, availableWidth);
-
-            int visibleCount = 0;
-            for (Component c : parent.getComponents()) {
-                if (c.isVisible()) {
-                    visibleCount++;
+            for (Component comp : parent.getComponents()) {
+                if (!(comp instanceof JComponent jcomp)) {
+                    continue;
                 }
-            }
 
-            if (visibleCount == 0) {
-                return new Dimension(availableWidth, 0);
-            }
-
-            int baseCardWidth = MIN_THUMBNAIL_WIDTH + 16;
-            int maxColumns = 7;
-            int maxCardWidth = (int)(baseCardWidth * 1.5);
-
-            int columns = Math.max(1, (availableWidth + GAP) / (baseCardWidth + GAP));
-            columns = Math.min(columns, maxColumns);
-
-            int cellWidth = Math.max(baseCardWidth, (availableWidth - (columns - 1) * GAP) / columns);
-            cellWidth = Math.min(cellWidth, maxCardWidth);
-
-            int gridWidth = (columns * cellWidth) + ((columns - 1) * GAP);
-            int offsetX = insets.left + Math.max(0, (availableWidth - gridWidth) / 2);
-
-            int thumbnailHeight = (int)((cellWidth - 16) / 16.0 * 9.0);
-            int cellHeight = thumbnailHeight + TEXT_PANEL_HEIGHT;
-
-            int x = offsetX;
-            int y = insets.top;
-            int col = 0;
-
-            for (Component c : parent.getComponents()) {
-                if (c.isVisible()) {
-                    if (apply) {
-                        c.setBounds(x, y, cellWidth, cellHeight);
-                    }
-
-                    col++;
-                    if (col >= columns) {
-                        col = 0;
-                        x = offsetX;
-                        y += cellHeight + GAP;
-                    } else {
-                        x += cellWidth + GAP;
-                    }
+                Object indexProp = jcomp.getClientProperty(VIRTUAL_INDEX_PROPERTY);
+                if (!(indexProp instanceof Integer index)) {
+                    continue;
                 }
-            }
 
-            if (col > 0) {
-                y += cellHeight + GAP;
-            }
+                int row = index / metrics.columns();
+                int col = index % metrics.columns();
 
-            return new Dimension(availableWidth, Math.max(0, y - GAP + insets.bottom));
+                int x = metrics.offsetX() + col * (metrics.cellWidth() + GAP);
+                int y = metrics.insetsTop() + row * (metrics.cellHeight() + GAP);
+
+                comp.setBounds(x, y, metrics.cellWidth(), metrics.cellHeight());
+            }
         }
     }
-
 }

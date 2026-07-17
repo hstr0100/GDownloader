@@ -170,7 +170,7 @@ extraJavaModuleInfo {
 }
 
 tasks.withType(JavaCompile).configureEach {
-    options.compilerArgs.addAll(['-Xlint:all,-serial,-processing,-requires-automatic,-missing-explicit-ctor'])
+    options.compilerArgs.addAll(['-Xlint:all,-serial,-processing,-requires-automatic,-missing-explicit-ctor,-this-escape'])
 }
 
 tasks.named('jar', Jar) {

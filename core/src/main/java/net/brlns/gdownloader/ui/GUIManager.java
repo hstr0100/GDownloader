@@ -31,6 +31,8 @@ import java.util.function.Supplier;
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.Timer;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.plaf.FontUIResource;
 import javax.swing.plaf.basic.BasicButtonUI;
 import lombok.Data;
@@ -411,7 +413,7 @@ public final class GUIManager {
         searchField.setBackground(color(SIDE_PANEL));
         searchField.setForeground(color(FOREGROUND));
         searchField.setCaretColor(color(FOREGROUND));
-        searchField.setBorder(BorderFactory.createEmptyBorder(3, 6, 3, 6));
+        searchField.setBorder(BorderFactory.createEmptyBorder(3, 4, 3, 6));
         searchField.setToolTipText(l10n("gui.search.tooltip"));
 
         installPlaceholder(searchField,
@@ -447,19 +449,19 @@ public final class GUIManager {
         });
         searchDebounceTimer.setRepeats(false);
 
-        searchField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+        searchField.getDocument().addDocumentListener(new DocumentListener() {
             @Override
-            public void insertUpdate(javax.swing.event.DocumentEvent e) {
+            public void insertUpdate(DocumentEvent e) {
                 searchDebounceTimer.restart();
             }
 
             @Override
-            public void removeUpdate(javax.swing.event.DocumentEvent e) {
+            public void removeUpdate(DocumentEvent e) {
                 searchDebounceTimer.restart();
             }
 
             @Override
-            public void changedUpdate(javax.swing.event.DocumentEvent e) {
+            public void changedUpdate(DocumentEvent e) {
                 searchDebounceTimer.restart();
             }
         });

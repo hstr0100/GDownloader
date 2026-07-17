@@ -16,10 +16,6 @@
  */
 package net.brlns.gdownloader.persistence.entity;
 
-import jakarta.persistence.*;
-import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -31,41 +27,12 @@ import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Entity
-@Table(name = "download_history",
-    indexes = {
-        @Index(name = "idx_download_history_date_url", columnList = "downloaded_at DESC, url ASC")
-    }
-)
-public class DownloadHistoryEntity implements Serializable {
+public class DownloadHistorySummary {
 
-    @Id
-    @Column(name = "url", length = 2048)
     private String url;
-
-    @Column(name = "original_url", length = 2048)
     private String originalUrl;
-
-    @Column(name = "title", length = 2048)
     private String title;
-
-    @Column(name = "host_display_name", length = 2048)
     private String hostDisplayName;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "downloader_id")
     private DownloaderIdEnum downloaderId;
-
-    @Column(name = "thumbnail", columnDefinition = "LONGVARCHAR")
-    private String base64EncodedThumbnail;
-
-    @ElementCollection(fetch = FetchType.EAGER)
-    @CollectionTable(name = "download_history_file_paths", joinColumns = @JoinColumn(name = "history_url"))
-    @Lob
-    @OrderColumn
-    @Column(name = "file_path", length = 4096)
-    private List<String> filePaths = new ArrayList<>();
-
-    @Column(name = "downloaded_at")
     private long downloadedAt;
 }
