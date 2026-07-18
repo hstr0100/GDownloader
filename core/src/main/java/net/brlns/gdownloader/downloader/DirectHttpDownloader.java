@@ -136,8 +136,12 @@ public class DirectHttpDownloader extends AbstractDownloader {
 
     @Override
     public int getPreferenceScore(String inputUrl) {
-        if (inputUrl.contains("suno.com/")
-            || inputUrl.contains("suno.ai/")) {
+        if (StringUtils.contains(inputUrl,
+            "suno.com", "suno.ai",
+            "hiddenpalace.org",
+            "1fichier.com",
+            "archive.org"
+        )) {
             return 100;
         }
 
