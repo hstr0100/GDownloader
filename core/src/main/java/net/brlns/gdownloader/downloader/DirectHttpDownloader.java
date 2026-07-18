@@ -243,7 +243,7 @@ public class DirectHttpDownloader extends AbstractDownloader {
                         String fmPercent = StringUtils.formatPercent(percent);
                         String fmTotal = StringUtils.getHumanReadableFileSize(total);
                         String fmSpeed = StringUtils.getHumanReadableFileSize(speed);
-                        String fmRemaingTime = StringUtils.formatETATime(remainingTime);
+                        String fmRemaingTime = StringUtils.formatDownloadETATime(remainingTime);
 
                         entry.updateStatus(DownloadStatusEnum.DOWNLOADING,
                             l10n("gui.direct_http.download_status.downloading_progress",
