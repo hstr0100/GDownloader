@@ -40,6 +40,7 @@ public class HostResolverRegistry {
         List<IHostResolver> defaults = new ArrayList<>();
 
         defaults.add(new SunoResolver());
+        defaults.add(new OneFichierResolver());
 
         return new HostResolverRegistry(defaults);
     }

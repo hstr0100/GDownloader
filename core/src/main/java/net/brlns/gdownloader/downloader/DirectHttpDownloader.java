@@ -203,6 +203,7 @@ public class DirectHttpDownloader extends AbstractDownloader {
         String lastOutput = "";
 
         AtomicLong lastProgressUpdateNanos = new AtomicLong(0);
+        AtomicReference<Double> lastReportedPercent = new AtomicReference<>(0.0);
 
         for (DownloadTypeEnum type : DownloadTypeEnum.values()) {
             boolean supported = getDownloadTypes().contains(type);
@@ -217,7 +218,7 @@ public class DirectHttpDownloader extends AbstractDownloader {
                 success = downloadFile(entry, (percent, total, speed, remainingTime, chunkCount) -> {
                     double roundedPercent = Math.round(percent * 10) / 10.0;// Strip out unecessary precision
 
-                    double lastPercentage = entry.getMediaCard().getPercentage();
+                    double lastPercentage = lastReportedPercent.get();
                     boolean reachedCompletion = roundedPercent >= 100.0;
 
                     long now = System.nanoTime();
@@ -228,6 +229,7 @@ public class DirectHttpDownloader extends AbstractDownloader {
                     }
 
                     lastProgressUpdateNanos.set(now);
+                    lastReportedPercent.set(roundedPercent);
                     entry.getMediaCard().setPercentage(roundedPercent);
 
                     String fmPercent = StringUtils.formatPercent(percent);
@@ -533,6 +535,7 @@ public class DirectHttpDownloader extends AbstractDownloader {
         List<Future<?>> futures = new ArrayList<>();
 
         DownloadCarousel carousel = new DownloadCarousel();
+        MultiFileProgressAggregator aggregator = new MultiFileProgressAggregator();
 
         for (String link : mediaLinks) {
             if (!isAlive(queueEntry)) {
@@ -596,12 +599,13 @@ public class DirectHttpDownloader extends AbstractDownloader {
                             .build(),
                         mediaConnectionPair.getKey(),
                         (percent, total, speed, remainingTime, chunkCount) -> {
+                            aggregator.update(currentIndex, percent, total, speed);
+
+                            MultiFileProgressAggregator.Snapshot snapshot = aggregator.snapshot();
+                            progressCallback.accept(snapshot.percent(), snapshot.totalBytes(),
+                                snapshot.speed(), snapshot.remainingTimeMillis(), snapshot.activeFiles());
+
                             if (carousel.shouldUpdate(currentIndex)) {
-                                // TODO: this needs TLC, we need to aggregate the percentage of all media links (and resolved files) to present to mediacard
-                                double overallPercent = ((currentIndex - 1) * 100.0 + percent) / totalFiles;
-
-                                progressCallback.accept(overallPercent, total, speed, remainingTime, chunkCount);
-
                                 queueEntry.updateStatus(DownloadStatusEnum.DOWNLOADING,
                                     l10n("gui.direct_http.download_status.discovered_media_progress",
                                         currentIndex, totalFiles,
@@ -613,9 +617,15 @@ public class DirectHttpDownloader extends AbstractDownloader {
 
                     if (ok) {
                         successCount.incrementAndGet();
+
+                        aggregator.complete(currentIndex);
+                    } else {
+                        aggregator.remove(currentIndex);
                     }
                 } catch (Exception e) {
                     log.error("Failed to download scanned media {}: {}", link, e.getMessage());
+
+                    aggregator.remove(currentIndex);
                 } finally {
                     carousel.unregister(currentIndex);
                     concurrencyLimiter.release();
@@ -677,6 +687,7 @@ public class DirectHttpDownloader extends AbstractDownloader {
         List<Future<?>> futures = new ArrayList<>();
 
         DownloadCarousel carousel = new DownloadCarousel();
+        MultiFileProgressAggregator aggregator = new MultiFileProgressAggregator();
 
         for (ResolvedFile resolved : resolvedFiles) {
             if (!isAlive(queueEntry)) {
@@ -739,17 +750,26 @@ public class DirectHttpDownloader extends AbstractDownloader {
                     boolean ok = downloadResolvedFile(queueEntry, mediaUrl, resolved,
                         connectionPair.getKey(),
                         (percent, total, speed, remainingTime, chunkCount) -> {
-                            if (carousel.shouldUpdate(registeredIndex)) {
-                                double overallPercent = ((registeredIndex - 1) * 100.0 + percent) / totalFiles;
-                                progressCallback.accept(overallPercent, total, speed, remainingTime, chunkCount);
-                            }
+                            aggregator.update(registeredIndex, percent, total, speed);
+
+                            MultiFileProgressAggregator.Snapshot snapshot = aggregator.snapshot();
+                            progressCallback.accept(snapshot.percent(), snapshot.totalBytes(),
+                                snapshot.speed(), snapshot.remainingTimeMillis(), snapshot.activeFiles());
                         });
 
                     if (ok) {
                         successCount.incrementAndGet();
+
+                        aggregator.complete(registeredIndex);
+                    } else {
+                        aggregator.remove(registeredIndex);
                     }
                 } catch (Exception e) {
                     log.error("Failed to download resolved file {}: {}", resolved.getUrl(), e.getMessage());
+
+                    if (currentIndex != -1) {
+                        aggregator.remove(currentIndex);
+                    }
                 } finally {
                     if (currentIndex != -1) {
                         carousel.unregister(currentIndex);
@@ -1430,6 +1450,77 @@ public class DirectHttpDownloader extends AbstractDownloader {
             } else {
                 currentDisplay.set(list.get((idx + 1) % list.size()));
             }
+        }
+    }
+
+    private static final class MultiFileProgressAggregator {
+
+        private final ConcurrentHashMap<Integer, FileProgress> files = new ConcurrentHashMap<>();
+
+        public void update(int index, double percent, long totalBytes, long speed) {
+            if (totalBytes <= 0) {// Size not known yet
+                return;
+            }
+
+            FileProgress progress = files.computeIfAbsent(index, i -> new FileProgress());
+            progress.totalBytes.set(totalBytes);
+            progress.percent.set(Math.min(100.0, Math.max(0.0, percent)));
+            progress.speed.set(speed);
+        }
+
+        public void complete(int index) {
+            FileProgress progress = files.get(index);
+
+            if (progress != null) {
+                progress.percent.set(100.0);
+                progress.speed.set(0L);
+            }
+        }
+
+        public void remove(int index) {
+            files.remove(index);
+        }
+
+        public Snapshot snapshot() {
+            long totalBytes = 0;
+            long downloadedBytes = 0;
+            long totalSpeed = 0;
+            int activeFiles = 0;
+
+            for (FileProgress progress : files.values()) {
+                long fileTotalBytes = progress.totalBytes.get();
+                double filePercent = progress.percent.get();
+
+                totalBytes += fileTotalBytes;
+                downloadedBytes += Math.round(fileTotalBytes * (filePercent / 100.0));
+
+                if (filePercent < 100.0) {
+                    totalSpeed += progress.speed.get();
+                    activeFiles++;
+                }
+            }
+
+            double overallPercent = totalBytes > 0
+                ? (downloadedBytes * 100.0) / totalBytes
+                : 0.0;
+
+            long remainingBytes = Math.max(0, totalBytes - downloadedBytes);
+            long remainingTimeMillis = totalSpeed > 0
+                ? (long)((remainingBytes / (double)totalSpeed) * 1000)
+                : 0;
+
+            return new Snapshot(overallPercent, totalBytes, totalSpeed, remainingTimeMillis, Math.max(1, activeFiles));
+        }
+
+        private static final class FileProgress {
+
+            private final AtomicLong totalBytes = new AtomicLong();
+            private final AtomicReference<Double> percent = new AtomicReference<>(0.0);
+            private final AtomicLong speed = new AtomicLong();
+        }
+
+        private record Snapshot(double percent, long totalBytes, long speed, long remainingTimeMillis, int activeFiles) {
+
         }
     }
 
