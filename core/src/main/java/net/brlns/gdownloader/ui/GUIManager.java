@@ -586,8 +586,15 @@ public final class GUIManager {
         statusPanel.setOpaque(false);
 
         addStatusLabel(statusPanel, LIGHT_TEXT, (downloadManager) -> {
+            int running = downloadManager.getRunningDownloads();
+            int scheduled = downloadManager.getScheduledDownloads();
+
+            String runningLine = (running > 0 || scheduled == 0)
+                ? running + " " + l10n("gui.statusbar.running")
+                : scheduled + " " + l10n("gui.statusbar.waiting");
+
             return "<html>"
-                + downloadManager.getRunningDownloads() + " " + l10n("gui.statusbar.running")
+                + runningLine
                 + "<br>"
                 + downloadManager.getCompletedDownloads() + " " + l10n("gui.statusbar.completed")
                 + "</html>";

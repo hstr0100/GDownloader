@@ -22,7 +22,6 @@ import net.brlns.gdownloader.settings.enums.ISettingsEnum;
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-// TODO: new SCHEDULED status for hosts with absurd wait times
 @Getter
 public enum DownloadStatusEnum implements ISettingsEnum {
     QUERYING("enums.download_status.querying"),
@@ -37,6 +36,7 @@ public enum DownloadStatusEnum implements ISettingsEnum {
     DEDUPLICATING("enums.download_status.deduplicating"),
     DOWNLOADING("enums.download_status.downloading"),
     WAITING("enums.download_status.waiting"),
+    SCHEDULED("enums.download_status.scheduled"),
     COMPLETE("enums.download_status.complete"),
     TRANSCODING("enums.download_status.transcoding"),
     FAILED("enums.download_status.failed"),

@@ -24,9 +24,10 @@ import lombok.Getter;
 @Getter
 public enum QueueCategoryEnum {
     RUNNING(1),
-    QUEUED(2),
-    COMPLETED(3),
-    FAILED(4);
+    SCHEDULED(2),
+    QUEUED(3),
+    COMPLETED(4),
+    FAILED(5);
 
     private final int comparatorOrder;
 

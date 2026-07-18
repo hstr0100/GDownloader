@@ -393,9 +393,20 @@ public class SettingsPanel {
 
                         resetButton.setPreferredSize(new Dimension(200, 30));
                         resetButton.addActionListener((ActionEvent e) -> {
-                            settings = new Settings();
-                            settings.setShowWelcomeScreen(false);
-                            settings.setPersistenceDatabaseInitialized(true);
+                            Settings newSettings = new Settings();
+                            newSettings.setShowWelcomeScreen(false);
+                            newSettings.setPersistenceDatabaseInitialized(true);
+
+                            // Carry over welcome screen choices.
+                            newSettings.setAutomaticUpdates(settings.isAutomaticUpdates());
+                            newSettings.getGalleryDLSettings()
+                                .setEnabled(settings.getGalleryDLSettings().isEnabled());
+                            newSettings.getSpotDLSettings()
+                                .setEnabled(settings.getSpotDLSettings().isEnabled());
+                            newSettings.getDirectHttpSettings()
+                                .setEnabled(settings.getDirectHttpSettings().isEnabled());
+
+                            settings = newSettings;
 
                             reloadSettings();
 
