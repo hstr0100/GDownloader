@@ -17,6 +17,7 @@
 package net.brlns.gdownloader.util;
 
 import jakarta.annotation.Nullable;
+import java.awt.FontMetrics;
 import java.io.File;
 import java.security.MessageDigest;
 import java.text.DecimalFormat;
@@ -127,7 +128,7 @@ public final class StringUtils {
             : String.format("%d:%02d", m, s);
     }
 
-    public static String formatETATime(long timeInMillis) {
+    public static String formatDownloadETATime(long timeInMillis) {
         // If the time exceeds 24 hours, return "n/a". Tough luck buddy
         if (timeInMillis >= Duration.ofDays(1).toMillis()) {
             return "n/a";
@@ -159,6 +160,37 @@ public final class StringUtils {
         timeString.append(String.format("%02d", seconds));
 
         return timeString.toString();
+    }
+
+    public static String formatETATime(long timeInMillis) {
+        if (timeInMillis <= 0) {
+            return "0s";
+        }
+
+        Duration duration = Duration.ofMillis(timeInMillis);
+
+        long days = duration.toDays();
+        long hours = duration.toHours() % 24;
+        long minutes = duration.toMinutes() % 60;
+        long seconds = duration.getSeconds() % 60;
+
+        StringBuilder timeString = new StringBuilder();
+
+        if (days > 0) {
+            timeString.append(days).append("d ");
+        }
+
+        if (hours > 0) {
+            timeString.append(hours).append("h ");
+        }
+
+        if (minutes > 0) {
+            timeString.append(minutes).append("m ");
+        }
+
+        timeString.append(seconds).append("s");
+
+        return timeString.toString().trim();
     }
 
     public static String getStringAfterLastSeparator(String filePath) {
@@ -389,5 +421,32 @@ public final class StringUtils {
         }
 
         return line.substring(0, maxTextLength) + ellipsis;
+    }
+
+    public static String fastTruncate(String line, FontMetrics fontMetrics, int availableWidth) {
+        String ellipsis = "...";
+        int ellipsisWidth = fontMetrics.stringWidth(ellipsis);
+        int budget = availableWidth - ellipsisWidth;
+
+        if (budget <= 0) {
+            return ellipsis;
+        }
+
+        int[] codePoints = line.codePoints().toArray();
+        int lo = 0;
+        int hi = codePoints.length;
+
+        while (lo < hi) {
+            int mid = (lo + hi + 1) >>> 1;
+            String testString = new String(codePoints, 0, mid);
+
+            if (fontMetrics.stringWidth(testString) <= budget) {
+                lo = mid;
+            } else {
+                hi = mid - 1;
+            }
+        }
+
+        return new String(codePoints, 0, lo) + ellipsis;
     }
 }

@@ -228,6 +228,10 @@ public final class UIUtils {
         String textColorHex = String.format("%02x%02x%02x", c.getRed(), c.getGreen(), c.getBlue());
 
         Font baseFont = UIManager.getFont("Label.font");
+        if (baseFont == null) {
+            baseFont = new JLabel().getFont();
+        }
+
         int fontSize = baseFont.getSize();
         String fontFamily = baseFont.getFamily();
 
@@ -263,11 +267,6 @@ public final class UIUtils {
             }
         }
 
-        String result = wrappedText.toString().trim();
-        if (result.endsWith("<br>")) {
-            result = result.substring(0, result.length() - 4);
-        }
-
         if (bold) {
             wrappedText.append("</b>");
         }
@@ -275,6 +274,10 @@ public final class UIUtils {
         if (centerText) {
             wrappedText.append("</center>");
         }
+
+        String result = wrappedText.toString().trim();
+
+        result = result.replaceFirst("(<br>)(</b>)?(</center>)?$", "$2$3");
 
         return String.format(
             "<html><body style='font-family: %s; font-size: %dpt; color: #%s; "
