@@ -49,6 +49,8 @@ public class Language {
             throw new IllegalArgumentException("Unknown language key: " + key);
         }
 
+        pattern = pattern.replace("[PLAY]", "►");
+
         return MessageFormat.format(pattern, args);
     }
 
