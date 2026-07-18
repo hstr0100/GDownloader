@@ -19,6 +19,7 @@ package net.brlns.gdownloader.downloader.hosts;
 import jakarta.annotation.Nullable;
 import java.util.Collections;
 import java.util.Map;
+import java.util.function.Supplier;
 import lombok.Builder;
 import lombok.Data;
 import lombok.Singular;
@@ -69,6 +70,12 @@ public class ResolvedFile {
      * Skips all checks and jumps straight to downloading.
      */
     private final boolean singleUse;
+
+    /**
+     * Invoked when a singleUse download fails partway and needs to be retried.
+     */
+    @Nullable
+    private final Supplier<ResolvedFile> reissueSupplier;
 
     public Map<String, String> getExtraHeaders() {
         return extraHeaders == null ? Collections.emptyMap() : extraHeaders;

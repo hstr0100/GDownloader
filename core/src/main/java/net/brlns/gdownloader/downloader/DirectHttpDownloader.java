@@ -912,6 +912,7 @@ public class DirectHttpDownloader extends AbstractDownloader {
                         .queueEntry(queueEntry)
                         .fileUrl(fileUrl)
                         .referer(referer)
+                        .extraHeaders(resolvedFile.getExtraHeaders())
                         .filePath(targetFile)
                         .startByte(downloadedBytesSoFar)
                         .endByte(totalBytes - 1)
@@ -920,7 +921,9 @@ public class DirectHttpDownloader extends AbstractDownloader {
                         .activeChunkCount(activeChunkCount)
                         .progressCallback(progressCallback)
                         .throttle(throttle)
+                        .singleUse(resolvedFile.isSingleUse())
                         .existingConnection(resolvedFile.isSingleUse() ? connection : null)
+                        .reissueSupplier(resolvedFile.isSingleUse() ? resolvedFile.getReissueSupplier() : null)
                         .build();
 
                     return downloadChunk(chunkData);
@@ -965,6 +968,7 @@ public class DirectHttpDownloader extends AbstractDownloader {
                             .queueEntry(queueEntry)
                             .fileUrl(fileUrl)
                             .referer(referer)
+                            .extraHeaders(resolvedFile.getExtraHeaders())
                             .filePath(targetFile)
                             .startByte(startByte)
                             .endByte(endByte)
@@ -1038,6 +1042,10 @@ public class DirectHttpDownloader extends AbstractDownloader {
 
         int chunkRetries = Math.clamp(main.getConfig().getMaxFragmentRetries(), 1, 50);
 
+        if (chunkData.isSingleUse() && chunkData.getReissueSupplier() == null) {
+            chunkRetries = 1;
+        }
+
         while (attempt < chunkRetries && !success && alive.get()) {
             // A 429 anywhere pauses every subsequent attempt until the cooldown clears
             long hostCooldown = getHostCooldownRemainingMillis(chunkData.getFileUrl());
@@ -1051,6 +1059,7 @@ public class DirectHttpDownloader extends AbstractDownloader {
             HttpURLConnection connection = null;
             AtomicReference<HttpURLConnection> connectionRef = new AtomicReference<>();
             Thread cancelWatcher = null;
+
             Semaphore hostLimiter = getHostLimiter(chunkData.getFileUrl());
             boolean acquiredSlot = false;
             long backoffMillis = -1;
@@ -1079,12 +1088,41 @@ public class DirectHttpDownloader extends AbstractDownloader {
                         l10n("gui.direct_http.download_status.error.download_cancelled_waiting_slot"));
                 }
 
-                connection = (HttpURLConnection)chunkData.getFileUrl().openConnection(getProxySettings());
+                boolean reusingConnection = attempt == 0 && chunkData.getExistingConnection() != null;
+
+                if (reusingConnection) {
+                    connection = chunkData.getExistingConnection();
+                } else {
+                    if (chunkData.isSingleUse() && attempt > 0) {
+                        Supplier<ResolvedFile> reissue = chunkData.getReissueSupplier();
+                        ResolvedFile fresh = reissue != null ? reissue.get() : null;
+
+                        if (fresh == null) {
+                            throw new IOException(
+                                l10n("gui.direct_http.download_status.error.single_use_link_exhausted"));
+                        }
+
+                        log.info("Reissued a fresh single-use link for chunk {}", chunkData.getChunkId());
+
+                        chunkData.setFileUrl(new URI(fresh.getUrl()).toURL());
+                        chunkData.setReferer(fresh.getReferer());
+                        chunkData.setExtraHeaders(fresh.getExtraHeaders());
+                        chunkData.setReissueSupplier(fresh.getReissueSupplier());
+
+                        // Reissued links start a brand-new one-shot transfer
+                        currentByteOffset = 0;
+                        chunkData.getDownloadedBytes().set(chunkData.getStartByte());
+                    }
+
+                    connection = (HttpURLConnection)chunkData.getFileUrl().openConnection(getProxySettings());
+                    connection.setConnectTimeout(CONNECT_TIMEOUT_MILLIS);
+                    connection.setReadTimeout(READ_TIMEOUT_MILLIS);
+                    connection.setRequestMethod("GET");
+                    applyBrowserHeaders(connection, ACCEPT_ANY, chunkData.getReferer());
+                    chunkData.getExtraHeaders().forEach(connection::setRequestProperty);
+                }
+
                 connectionRef.set(connection);
-                connection.setConnectTimeout(CONNECT_TIMEOUT_MILLIS);
-                connection.setReadTimeout(READ_TIMEOUT_MILLIS);
-                connection.setRequestMethod("GET");
-                applyBrowserHeaders(connection, ACCEPT_ANY, chunkData.getReferer());
 
                 cancelWatcher = Thread.ofVirtual().start(() -> {
                     while (!Thread.currentThread().isInterrupted()) {
@@ -1107,7 +1145,7 @@ public class DirectHttpDownloader extends AbstractDownloader {
 
                 long startOffset = chunkData.getStartByte() + currentByteOffset;
 
-                if (chunkData.isChunked()) {
+                if (chunkData.isChunked() && !reusingConnection && !chunkData.isSingleUse()) {
                     connection.setRequestProperty("Range", "bytes=" + startOffset + "-" + chunkData.getEndByte());
                 }
 
@@ -1557,6 +1595,8 @@ public class DirectHttpDownloader extends AbstractDownloader {
         private QueueEntry queueEntry;
         private URL fileUrl;
         private String referer;
+        @Builder.Default
+        private Map<String, String> extraHeaders = Collections.emptyMap();
         private File filePath;
         private long startByte;
         private long endByte;
@@ -1565,7 +1605,9 @@ public class DirectHttpDownloader extends AbstractDownloader {
         private AtomicInteger activeChunkCount;
         private ProgressUpdater progressCallback;
         private BandwidthThrottle throttle;
+        private boolean singleUse;
         private HttpURLConnection existingConnection;
+        private Supplier<ResolvedFile> reissueSupplier;
     }
 
     private static final class BandwidthThrottle {
