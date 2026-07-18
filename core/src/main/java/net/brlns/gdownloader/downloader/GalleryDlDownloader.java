@@ -92,7 +92,7 @@ public class GalleryDlDownloader extends AbstractDownloader {
     @Override
     public int getPreferenceScore(String inputUrl) {
         if (inputUrl.contains("pinterest.com/")
-            || inputUrl.contains("instagram.com/")) {
+            || inputUrl.contains("instagram.com/") && !inputUrl.contains("instagram.com/reel")) {
             return 100;
         }
 
