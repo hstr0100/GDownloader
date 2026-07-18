@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
@@ -36,6 +37,7 @@ import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.downloader.enums.DownloadStatusEnum;
 import net.brlns.gdownloader.downloader.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
+import net.brlns.gdownloader.downloader.hosts.RetryLaterException;
 import net.brlns.gdownloader.downloader.structs.DownloadResult;
 import net.brlns.gdownloader.ffmpeg.enums.AudioBitrateEnum;
 import net.brlns.gdownloader.ffmpeg.enums.AudioCodecEnum;
@@ -45,6 +47,7 @@ import net.brlns.gdownloader.settings.downloader.AbstractDownloaderSettings;
 import net.brlns.gdownloader.settings.enums.VideoContainerEnum;
 import net.brlns.gdownloader.util.CancelHook;
 import net.brlns.gdownloader.util.FileUtils;
+import net.brlns.gdownloader.util.StringUtils;
 
 import static net.brlns.gdownloader.downloader.enums.DownloadFlagsEnum.*;
 import static net.brlns.gdownloader.lang.Language.l10n;
@@ -58,6 +61,8 @@ import static net.brlns.gdownloader.util.StringUtils.nullOrEmpty;
 public abstract class AbstractDownloader {
 
     private static final int MAX_OUTPUT_LINE_LENGTH = 4096;
+
+    protected static final Duration RETRY_LATER_INLINE_THRESHOLD = Duration.ofMinutes(4);
 
     @Getter
     protected final GDownloader main;
@@ -107,6 +112,44 @@ public abstract class AbstractDownloader {
 
     @PreDestroy
     public abstract void close();
+
+    protected Optional<DownloadResult> awaitRetryLaterOrSchedule(QueueEntry entry, RetryLaterException e) {
+        Duration retryAfter = e.getRetryAfter();
+
+        if (retryAfter.compareTo(RETRY_LATER_INLINE_THRESHOLD) > 0) {
+            log.info("Retry-later wait of {} for {} exceeds the inline threshold, scheduling instead",
+                retryAfter, entry.getUrl());
+
+            return Optional.of(DownloadResult.retryLater(e.getMessage(), retryAfter.toMillis()));
+        }
+
+        long deadline = System.currentTimeMillis() + retryAfter.toMillis();
+        long lastStatusUpdate = 0;
+
+        while (System.currentTimeMillis() < deadline
+            && manager.isRunning() && !entry.getCancelHook().get()) {
+
+            long now = System.currentTimeMillis();
+            if (now - lastStatusUpdate > 500) {
+                long remainingMillis = Math.max(0, deadline - now);
+
+                entry.updateStatus(DownloadStatusEnum.WAITING,
+                    l10n("gui.host_resolver.status.retry_later",
+                        StringUtils.formatETATime(remainingMillis), e.getMessage()));
+
+                lastStatusUpdate = now;
+            }
+
+            try {
+                Thread.sleep(50);
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+                break;
+            }
+        }
+
+        return Optional.empty();
+    }
 
     @Nullable
     public File getArchiveFile(DownloadTypeEnum downloadType) {

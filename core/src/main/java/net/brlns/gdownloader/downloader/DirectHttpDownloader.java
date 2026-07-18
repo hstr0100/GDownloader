@@ -58,6 +58,12 @@ import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.downloader.enums.DownloadStatusEnum;
 import net.brlns.gdownloader.downloader.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
+import net.brlns.gdownloader.downloader.hosts.HostResolverContext;
+import net.brlns.gdownloader.downloader.hosts.HostResolverException;
+import net.brlns.gdownloader.downloader.hosts.HostResolverRegistry;
+import net.brlns.gdownloader.downloader.hosts.IHostResolver;
+import net.brlns.gdownloader.downloader.hosts.ResolvedFile;
+import net.brlns.gdownloader.downloader.hosts.RetryLaterException;
 import net.brlns.gdownloader.downloader.structs.DownloadResult;
 import net.brlns.gdownloader.downloader.webscanner.WebScanner;
 import net.brlns.gdownloader.downloader.webscanner.WebScannerExtensions;
@@ -74,8 +80,6 @@ import static net.brlns.gdownloader.downloader.enums.DownloadTypeEnum.DIRECT;
 import static net.brlns.gdownloader.lang.Language.l10n;
 import static net.brlns.gdownloader.util.FileUtils.relativize;
 
-// TODO: Resume chunked
-// TODO: ftp
 /**
  * Example of a supported URL: https://hiddenpalace.org/Resident_Evil_(Prototype)
  *
@@ -83,15 +87,6 @@ import static net.brlns.gdownloader.util.FileUtils.relativize;
  */
 @Slf4j
 public class DirectHttpDownloader extends AbstractDownloader {
-
-    private static final String ACCEPT_DOCUMENT = "text/html,"
-        + "application/xhtml+xml,"
-        + "application/xml;q=0.9,"
-        + "image/avif,"
-        + "image/webp,"
-        + "image/apng,"
-        + "*/*;q=0.8,"
-        + "application/signed-exchange;v=b3;q=0.7";
 
     private static final String ACCEPT_ANY = "*/*";
 
@@ -112,12 +107,16 @@ public class DirectHttpDownloader extends AbstractDownloader {
 
     private final ExecutorService chunkThreadPool = Executors.newVirtualThreadPerTaskExecutor();
 
+    private final HostResolverRegistry hostResolverRegistry;
+
     @Getter
     @Setter
     private Optional<File> executablePath = Optional.empty();
 
     public DirectHttpDownloader(DownloadManager managerIn) {
         super(managerIn);
+
+        hostResolverRegistry = HostResolverRegistry.createDefault();
     }
 
     @Override
@@ -133,6 +132,20 @@ public class DirectHttpDownloader extends AbstractDownloader {
     @Override
     public DownloaderIdEnum getDownloaderId() {
         return DownloaderIdEnum.DIRECT_HTTP;
+    }
+
+    @Override
+    public int getPreferenceScore(String inputUrl) {
+        if (StringUtils.contains(inputUrl,
+            "suno.com", "suno.ai",
+            "hiddenpalace.org",
+            "1fichier.com",
+            "archive.org"
+        )) {
+            return 100;
+        }
+
+        return super.getPreferenceScore(inputUrl);
     }
 
     @Override
@@ -192,6 +205,8 @@ public class DirectHttpDownloader extends AbstractDownloader {
         String lastOutput = "";
 
         AtomicLong lastProgressUpdateNanos = new AtomicLong(0);
+        AtomicReference<Double> lastReportedPercent = new AtomicReference<>(0.0);
+        AtomicBoolean suppressStatusText = new AtomicBoolean(false);
 
         for (DownloadTypeEnum type : DownloadTypeEnum.values()) {
             boolean supported = getDownloadTypes().contains(type);
@@ -202,45 +217,66 @@ public class DirectHttpDownloader extends AbstractDownloader {
 
             entry.setCurrentDownloadType(type);
 
-            try {
-                success = downloadFile(entry, (percent, total, speed, remainingTime, chunkCount) -> {
-                    double roundedPercent = Math.round(percent * 10) / 10.0;// Strip out unecessary precision
+            while (true) {
+                try {
+                    success = downloadFile(entry, suppressStatusText, (percent, total, speed, remainingTime, chunkCount) -> {
+                        double roundedPercent = Math.round(percent * 10) / 10.0;// Strip out unecessary precision
 
-                    double lastPercentage = entry.getMediaCard().getPercentage();
-                    boolean reachedCompletion = roundedPercent >= 100.0;
+                        double lastPercentage = lastReportedPercent.get();
+                        boolean reachedCompletion = roundedPercent >= 100.0;
 
-                    long now = System.nanoTime();
-                    boolean intervalElapsed = (now - lastProgressUpdateNanos.get()) >= 400_000_000;
+                        long now = System.nanoTime();
+                        boolean intervalElapsed = (now - lastProgressUpdateNanos.get()) >= 400_000_000;
 
-                    if (roundedPercent < lastPercentage || (!intervalElapsed && !reachedCompletion)) {
-                        return;
+                        if (roundedPercent < lastPercentage || (!intervalElapsed && !reachedCompletion)) {
+                            return;
+                        }
+
+                        lastProgressUpdateNanos.set(now);
+                        lastReportedPercent.set(roundedPercent);
+                        entry.getMediaCard().setPercentage(roundedPercent);
+
+                        if (suppressStatusText.get()) {
+                            return;
+                        }
+
+                        String fmPercent = StringUtils.formatPercent(percent);
+                        String fmTotal = StringUtils.getHumanReadableFileSize(total);
+                        String fmSpeed = StringUtils.getHumanReadableFileSize(speed);
+                        String fmRemaingTime = StringUtils.formatDownloadETATime(remainingTime);
+
+                        entry.updateStatus(DownloadStatusEnum.DOWNLOADING,
+                            l10n("gui.direct_http.download_status.downloading_progress",
+                                fmPercent, fmTotal, fmSpeed, fmRemaingTime, chunkCount), false);
+                    });
+
+                    lastOutput = PREFIX + l10n("gui.direct_http.download_status.download_complete");
+                    entry.updateStatus(DownloadStatusEnum.DOWNLOADING, lastOutput);
+                } catch (RetryLaterException e) {
+                    Optional<DownloadResult> scheduled = awaitRetryLaterOrSchedule(entry, e);
+
+                    if (scheduled.isPresent()) {
+                        return scheduled.get();
                     }
 
-                    lastProgressUpdateNanos.set(now);
-                    entry.getMediaCard().setPercentage(roundedPercent);
+                    if (!isAlive(entry)) {
+                        return new DownloadResult(FLAG_STOPPED);
+                    }
 
-                    String fmPercent = StringUtils.formatPercent(percent);
-                    String fmTotal = StringUtils.getHumanReadableFileSize(total);
-                    String fmSpeed = StringUtils.getHumanReadableFileSize(speed);
-                    String fmRemaingTime = StringUtils.formatETATime(remainingTime);
+                    continue;
+                } catch (UnsupportedURLException e) {
+                    lastOutput = PREFIX + e.getMessage();
 
-                    entry.updateStatus(DownloadStatusEnum.DOWNLOADING,
-                        l10n("gui.direct_http.download_status.downloading_progress",
-                            fmPercent, fmTotal, fmSpeed, fmRemaingTime, chunkCount), false);
-                });
+                    unsupportedUrl = true;
+                    success = false;
+                } catch (Exception e) {
+                    lastOutput = PREFIX + e.getMessage();
+                    success = false;
+                } finally {
+                    entry.getDownloadStarted().set(false);
+                }
 
-                lastOutput = PREFIX + l10n("gui.direct_http.download_status.download_complete");
-                entry.updateStatus(DownloadStatusEnum.DOWNLOADING, lastOutput);
-            } catch (UnsupportedURLException e) {
-                lastOutput = PREFIX + e.getMessage();
-
-                unsupportedUrl = true;
-                success = false;
-            } catch (Exception e) {
-                lastOutput = PREFIX + e.getMessage();
-                success = false;
-            } finally {
-                entry.getDownloadStarted().set(false);
+                break;
             }
 
             log.debug(lastOutput);
@@ -353,14 +389,21 @@ public class DirectHttpDownloader extends AbstractDownloader {
 
     @Nullable
     private Pair<HttpURLConnection, Integer> openConnection(URL fileUrl, String requestType, @Nullable String referer) {
-        HttpURLConnection connection = null;
+        return openConnection(fileUrl, requestType, referer, new HashMap<>());
+    }
 
+    @Nullable
+    private Pair<HttpURLConnection, Integer> openConnection(URL fileUrl, String requestType,
+        @Nullable String referer, Map<String, String> extraHeaders) {
+
+        HttpURLConnection connection = null;
         try {
             connection = (HttpURLConnection)fileUrl.openConnection(getProxySettings());
             connection.setConnectTimeout(CONNECT_TIMEOUT_MILLIS);
             connection.setReadTimeout(READ_TIMEOUT_MILLIS);
             connection.setRequestMethod(requestType);
-            applyBrowserHeaders(connection, ACCEPT_DOCUMENT, referer);
+            applyBrowserHeaders(connection, ACCEPT_ANY, referer);
+            extraHeaders.forEach(connection::setRequestProperty);
 
             int responseCode = connection.getResponseCode();
             if (responseCode != HTTP_OK && responseCode != HTTP_PARTIAL) {
@@ -382,8 +425,19 @@ public class DirectHttpDownloader extends AbstractDownloader {
         }
     }
 
-    private boolean downloadFile(QueueEntry queueEntry, ProgressUpdater progressCallback) throws Exception {
+    private boolean downloadFile(QueueEntry queueEntry, AtomicBoolean suppressStatusText,
+        ProgressUpdater progressCallback) throws Exception {
         URL fileUrl = new URI(queueEntry.getUrl()).toURL();
+
+        if (settings().getHostResolvers().isEnabled()) {
+            Optional<IHostResolver> resolver = hostResolverRegistry.findResolver(
+                queueEntry.getUrl(), buildResolverContext(queueEntry, null));
+
+            if (resolver.isPresent()) {
+                return resolveAndDownloadHostFiles(queueEntry, resolver.get(), progressCallback);
+            }
+        }
+
         Pair<HttpURLConnection, Integer> connectionPair = null;
 
         int attempts = 0;
@@ -426,10 +480,13 @@ public class DirectHttpDownloader extends AbstractDownloader {
                 throw new UnsupportedURLException(l10n("gui.direct_http.download_status.error.unsupported_url", fileUrl));
             }
 
+            suppressStatusText.set(true);
             return scanAndDownloadMedia(queueEntry, fileUrl, progressCallback);
         }
 
-        return downloadResolvedFile(queueEntry, fileUrl, connection, progressCallback);
+        return downloadResolvedFile(queueEntry, fileUrl,
+            ResolvedFile.builder().url(fileUrl.toString()).build(),
+            connection, progressCallback);
     }
 
     private boolean isHtmlContent(@Nullable String mimeType) {
@@ -490,6 +547,9 @@ public class DirectHttpDownloader extends AbstractDownloader {
 
         List<Future<?>> futures = new ArrayList<>();
 
+        DownloadCarousel carousel = new DownloadCarousel();
+        MultiFileProgressAggregator aggregator = new MultiFileProgressAggregator(totalFiles);
+
         for (String link : mediaLinks) {
             if (!isAlive(queueEntry)) {
                 break;
@@ -503,8 +563,10 @@ public class DirectHttpDownloader extends AbstractDownloader {
                     try {
                         acquired = concurrencyLimiter.tryAcquire(500, TimeUnit.MILLISECONDS);
                         if (!acquired && (System.currentTimeMillis() - waitStart) > 1000) {
-                            queueEntry.updateStatus(DownloadStatusEnum.WAITING,
-                                l10n("gui.direct_http.download_status.waiting_queue_slot"));
+                            if (!carousel.isDownloading()) {
+                                queueEntry.updateStatus(DownloadStatusEnum.WAITING,
+                                    l10n("gui.direct_http.download_status.waiting_queue_slot"));
+                            }
                         }
                     } catch (InterruptedException e) {
                         Thread.currentThread().interrupt();
@@ -516,10 +578,14 @@ public class DirectHttpDownloader extends AbstractDownloader {
                     return;
                 }
 
+                int currentIndex = fileIndex.incrementAndGet();
+
                 try {
                     if (!isAlive(queueEntry)) {
                         return;
                     }
+
+                    carousel.register(currentIndex);
 
                     URL mediaUrl;
                     try {
@@ -539,28 +605,42 @@ public class DirectHttpDownloader extends AbstractDownloader {
                         return;
                     }
 
-                    int currentIndex = fileIndex.incrementAndGet();
-
-                    boolean ok = downloadResolvedFile(queueEntry, mediaUrl, mediaConnectionPair.getKey(),
+                    boolean ok = downloadResolvedFile(queueEntry, mediaUrl,
+                        ResolvedFile.builder()
+                            .url(link)
+                            .referer(pageUrl.toString())
+                            .build(),
+                        mediaConnectionPair.getKey(),
                         (percent, total, speed, remainingTime, chunkCount) -> {
-                            double overallPercent = ((currentIndex - 1) * 100.0 + percent) / totalFiles;
+                            aggregator.update(currentIndex, percent, total, speed);
 
-                            progressCallback.accept(overallPercent, total, speed, remainingTime, chunkCount);
+                            MultiFileProgressAggregator.Snapshot snapshot = aggregator.snapshot();
+                            progressCallback.accept(snapshot.percent(), snapshot.totalBytes(),
+                                snapshot.speed(), snapshot.remainingTimeMillis(), snapshot.activeFiles());
 
-                            queueEntry.updateStatus(DownloadStatusEnum.DOWNLOADING,
-                                l10n("gui.direct_http.download_status.discovered_media_progress",
-                                    currentIndex, totalFiles,
-                                    StringUtils.formatPercent(percent),
-                                    StringUtils.getHumanReadableFileSize(total),
-                                    StringUtils.getHumanReadableFileSize(speed)), false);
-                        }, pageUrl.toString());
+                            if (carousel.shouldUpdate(currentIndex)) {
+                                queueEntry.updateStatus(DownloadStatusEnum.DOWNLOADING,
+                                    l10n("gui.direct_http.download_status.discovered_media_progress",
+                                        currentIndex, totalFiles,
+                                        StringUtils.formatPercent(percent),
+                                        StringUtils.getHumanReadableFileSize(total),
+                                        StringUtils.getHumanReadableFileSize(speed)), false);
+                            }
+                        });
 
                     if (ok) {
                         successCount.incrementAndGet();
+
+                        aggregator.complete(currentIndex);
+                    } else {
+                        aggregator.fail(currentIndex);
                     }
                 } catch (Exception e) {
                     log.error("Failed to download scanned media {}: {}", link, e.getMessage());
+
+                    aggregator.fail(currentIndex);
                 } finally {
+                    carousel.unregister(currentIndex);
                     concurrencyLimiter.release();
                 }
             }));
@@ -577,14 +657,161 @@ public class DirectHttpDownloader extends AbstractDownloader {
         return successCount.get() > 0;
     }
 
-    private boolean downloadResolvedFile(QueueEntry queueEntry, URL fileUrl,
-        HttpURLConnection connection, ProgressUpdater progressCallback) throws Exception {
+    private HostResolverContext buildResolverContext(QueueEntry queueEntry, @Nullable String password) {
+        return HostResolverContext.builder()
+            .httpClient(main.getHttpManager().getClient())
+            .settings(settings().getHostResolvers())
+            .requestTimeout(Duration.ofMillis(CONNECT_TIMEOUT_MILLIS + READ_TIMEOUT_MILLIS))
+            .password(password)
+            .cancelHook(() -> !isAlive(queueEntry))
+            .statusListener((key, args)
+                -> queueEntry.updateStatus(DownloadStatusEnum.SCANNING, l10n(key, args), false))
+            .build();
+    }
 
-        return downloadResolvedFile(queueEntry, fileUrl, connection, progressCallback, null);
+    private boolean resolveAndDownloadHostFiles(QueueEntry queueEntry, IHostResolver resolver,
+        ProgressUpdater progressCallback) throws Exception {
+
+        queueEntry.updateStatus(DownloadStatusEnum.SCANNING,
+            l10n("gui.host_resolver.status.resolving", resolver.getDisplayName()));
+
+        List<ResolvedFile> resolvedFiles;
+        try {
+            resolvedFiles = resolver.resolve(queueEntry.getUrl(), buildResolverContext(queueEntry, null));
+        } catch (RetryLaterException e) {
+            throw e;
+        } catch (HostResolverException e) {
+            throw new UnsupportedURLException(e.getMessage());
+        }
+
+        if (!isAlive(queueEntry)) {
+            return false;
+        }
+
+        log.info("Resolved {} file(s) via {} for {}", resolvedFiles.size(), resolver.getId(), queueEntry.getUrl());
+
+        int totalFiles = resolvedFiles.size();
+        AtomicInteger fileIndex = new AtomicInteger(0);
+        AtomicInteger successCount = new AtomicInteger(0);
+
+        Semaphore concurrencyLimiter = new Semaphore(
+            Math.max(1, Math.min(settings().getMaxConcurrentCrawledDownloads(), totalFiles)));
+
+        List<Future<?>> futures = new ArrayList<>();
+
+        DownloadCarousel carousel = new DownloadCarousel();
+        MultiFileProgressAggregator aggregator = new MultiFileProgressAggregator(totalFiles);
+
+        for (ResolvedFile resolved : resolvedFiles) {
+            if (!isAlive(queueEntry)) {
+                break;
+            }
+
+            futures.add(chunkThreadPool.submit(() -> {
+                boolean acquired = false;
+                int currentIndex = -1;
+                long waitStart = System.currentTimeMillis();
+
+                try {
+                    while (!acquired && isAlive(queueEntry)) {
+                        try {
+                            acquired = concurrencyLimiter.tryAcquire(500, TimeUnit.MILLISECONDS);
+                            if (!acquired && (System.currentTimeMillis() - waitStart) > 1000) {
+                                if (!carousel.isDownloading()) {
+                                    queueEntry.updateStatus(DownloadStatusEnum.WAITING,
+                                        l10n("gui.direct_http.download_status.waiting_queue_slot"));
+                                }
+                            }
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                            return;
+                        }
+                    }
+
+                    if (!acquired || !isAlive(queueEntry)) {
+                        return;
+                    }
+
+                    currentIndex = fileIndex.incrementAndGet();
+                    carousel.register(currentIndex);
+
+                    URL mediaUrl;
+                    try {
+                        mediaUrl = new URI(resolved.getUrl()).toURL();
+                    } catch (Exception e) {
+                        log.warn("Skipping malformed resolved link {}: {}", resolved.getUrl(), e.getMessage());
+                        return;
+                    }
+
+                    Pair<HttpURLConnection, Integer> connectionPair = null;
+                    if (!resolved.isSingleUse()) {
+                        connectionPair = openConnection(
+                            mediaUrl, "HEAD", resolved.getReferer(), resolved.getExtraHeaders());
+                    }
+
+                    if (connectionPair == null) {
+                        connectionPair = openConnection(mediaUrl, "GET", resolved.getReferer(), resolved.getExtraHeaders());
+                    }
+
+                    if (connectionPair == null) {
+                        log.warn("Skipping unreachable resolved link: {}", resolved.getUrl());
+                        return;
+                    }
+
+                    final int registeredIndex = currentIndex;
+
+                    boolean ok = downloadResolvedFile(queueEntry, mediaUrl, resolved,
+                        connectionPair.getKey(),
+                        (percent, total, speed, remainingTime, chunkCount) -> {
+                            aggregator.update(registeredIndex, percent, total, speed);
+
+                            MultiFileProgressAggregator.Snapshot snapshot = aggregator.snapshot();
+                            progressCallback.accept(snapshot.percent(), snapshot.totalBytes(),
+                                snapshot.speed(), snapshot.remainingTimeMillis(), snapshot.activeFiles());
+                        });
+
+                    if (ok) {
+                        successCount.incrementAndGet();
+
+                        aggregator.complete(registeredIndex);
+                    } else {
+                        aggregator.fail(registeredIndex);
+                    }
+                } catch (Exception e) {
+                    log.error("Failed to download resolved file {}: {}", resolved.getUrl(), e.getMessage());
+
+                    if (currentIndex != -1) {
+                        aggregator.fail(currentIndex);
+                    }
+                } finally {
+                    if (currentIndex != -1) {
+                        carousel.unregister(currentIndex);
+                    }
+
+                    if (acquired) {
+                        concurrencyLimiter.release();
+                    }
+                }
+            }));
+        }
+
+        for (Future<?> future : futures) {
+            try {
+                future.get();
+            } catch (Exception e) {
+                log.error("Error while waiting for a resolved file download: {}", e.getMessage());
+            }
+        }
+
+        return successCount.get() > 0;
     }
 
     private boolean downloadResolvedFile(QueueEntry queueEntry, URL fileUrl,
-        HttpURLConnection connection, ProgressUpdater progressCallback, @Nullable String referer) throws Exception {
+        ResolvedFile resolvedFile, HttpURLConnection connection, ProgressUpdater progressCallback) throws Exception {
+
+        String referer = resolvedFile.getReferer();
+        String suggestedFileName = resolvedFile.getFileName();
+        boolean forceSingleChunk = resolvedFile.isForceSingleChunk() || resolvedFile.isSingleUse();
 
         String mimeType = connection.getContentType();
         log.debug("MIME Type: {}", mimeType);
@@ -604,7 +831,10 @@ public class DirectHttpDownloader extends AbstractDownloader {
                 l10n("gui.direct_http.download_status.error.content_length_unknown", fileUrl));
         }
 
-        String detectedFileName = getFileNameFromHeaders(connection);
+        String detectedFileName = suggestedFileName != null && !suggestedFileName.isBlank()
+            ? suggestedFileName
+            : getFileNameFromHeaders(connection);
+
         log.debug("Detected filename: {}", detectedFileName);
         if (detectedFileName == null || detectedFileName.isEmpty()) {
             closeQuietly(connection);
@@ -614,7 +844,10 @@ public class DirectHttpDownloader extends AbstractDownloader {
         }
 
         boolean supportsRanges = "bytes".equalsIgnoreCase(connection.getHeaderField("Accept-Ranges"));
-        closeQuietly(connection);
+
+        if (!resolvedFile.isSingleUse()) {
+            closeQuietly(connection);
+        }
 
         String suggestedUrlPath = URLUtils.getDirectoryPath(fileUrl.toString());
 
@@ -639,15 +872,24 @@ public class DirectHttpDownloader extends AbstractDownloader {
 
         long downloadedBytesSoFar = targetFile.exists() ? targetFile.length() : 0;
 
+        if (resolvedFile.isSingleUse() && downloadedBytesSoFar > 0) {
+            downloadedBytesSoFar = 0;
+            targetFile.delete();
+        }
+
         long remainingBytes = totalBytes - downloadedBytesSoFar;
         if (remainingBytes <= 0) {
+            if (resolvedFile.isSingleUse()) {
+                connection.disconnect();
+            }
+
             log.info("Download already complete.");
             return true;
         }
 
         BandwidthThrottle throttle = new BandwidthThrottle(
             () -> settings().getMaxDownloadSpeedBytesPerSecond());
-        boolean attemptChunking = supportsRanges;
+        boolean attemptChunking = supportsRanges && !forceSingleChunk;
 
         while (true) {
             AtomicLong downloadedBytes = new AtomicLong(downloadedBytesSoFar);
@@ -678,6 +920,7 @@ public class DirectHttpDownloader extends AbstractDownloader {
                         .activeChunkCount(activeChunkCount)
                         .progressCallback(progressCallback)
                         .throttle(throttle)
+                        .existingConnection(resolvedFile.isSingleUse() ? connection : null)
                         .build();
 
                     return downloadChunk(chunkData);
@@ -818,8 +1061,10 @@ public class DirectHttpDownloader extends AbstractDownloader {
                     try {
                         acquiredSlot = hostLimiter.tryAcquire(200, TimeUnit.MILLISECONDS);
                         if (!acquiredSlot && (System.currentTimeMillis() - slotWaitStart) > 1000) {
-                            chunkData.getQueueEntry().updateStatus(DownloadStatusEnum.WAITING,
-                                l10n("gui.direct_http.download_status.waiting_server_connection"));
+                            if (chunkData.getActiveChunkCount().get() <= 0) {
+                                chunkData.getQueueEntry().updateStatus(DownloadStatusEnum.WAITING,
+                                    l10n("gui.direct_http.download_status.waiting_server_connection"));
+                            }
                         }
                     } catch (InterruptedException ie) {
                         Thread.currentThread().interrupt();
@@ -1168,6 +1413,139 @@ public class DirectHttpDownloader extends AbstractDownloader {
 
     }
 
+    private static class DownloadCarousel {
+
+        private final Set<Integer> active = ConcurrentHashMap.newKeySet();
+        private final AtomicInteger currentDisplay = new AtomicInteger(-1);
+        private final AtomicLong lastRotate = new AtomicLong(System.currentTimeMillis());
+
+        public void register(int index) {
+            active.add(index);
+
+            currentDisplay.compareAndSet(-1, index);
+        }
+
+        public void unregister(int index) {
+            active.remove(index);
+
+            if (currentDisplay.get() == index) {
+                rotate();
+            }
+        }
+
+        public boolean shouldUpdate(int index) {
+            if (active.size() > 1 && System.currentTimeMillis() - lastRotate.get() >= 2000) {
+                rotate();
+            }
+
+            return currentDisplay.get() == index;
+        }
+
+        public boolean isDownloading() {
+            return !active.isEmpty();
+        }
+
+        private synchronized void rotate() {
+            lastRotate.set(System.currentTimeMillis());
+
+            if (active.isEmpty()) {
+                currentDisplay.set(-1);
+
+                return;
+            }
+
+            List<Integer> list = new ArrayList<>(active);
+            Collections.sort(list);
+
+            int idx = list.indexOf(currentDisplay.get());
+            if (idx == -1) {
+                currentDisplay.set(list.get(0));
+            } else {
+                currentDisplay.set(list.get((idx + 1) % list.size()));
+            }
+        }
+    }
+
+    private static final class MultiFileProgressAggregator {
+
+        private final int totalFiles;
+        private final ConcurrentHashMap<Integer, FileProgress> files = new ConcurrentHashMap<>();
+
+        private MultiFileProgressAggregator(int totalFilesIn) {
+            totalFiles = Math.max(1, totalFilesIn);
+        }
+
+        public void update(int index, double percent, long totalBytes, long speed) {
+            FileProgress progress = files.computeIfAbsent(index, i -> new FileProgress());
+
+            if (totalBytes > 0) {
+                progress.totalBytes.set(totalBytes);
+            }
+
+            progress.percent.set(Math.min(100.0, Math.max(0.0, percent)));
+            progress.speed.set(speed);
+        }
+
+        public void complete(int index) {
+            FileProgress progress = files.computeIfAbsent(index, i -> new FileProgress());
+
+            progress.percent.set(100.0);
+            progress.speed.set(0L);
+        }
+
+        public void fail(int index) {
+            FileProgress progress = files.computeIfAbsent(index, i -> new FileProgress());
+
+            progress.speed.set(0L);
+            progress.failed.set(true);
+        }
+
+        public Snapshot snapshot() {
+            double percentSum = 0.0;
+            long totalBytesKnown = 0;
+            long downloadedKnown = 0;
+            long totalSpeed = 0;
+            int activeFiles = 0;
+
+            for (FileProgress progress : files.values()) {
+                double filePercent = progress.percent.get();
+                percentSum += filePercent;
+
+                long fileTotalBytes = progress.totalBytes.get();
+                if (fileTotalBytes > 0) {
+                    totalBytesKnown += fileTotalBytes;
+                    downloadedKnown += Math.round(fileTotalBytes * (filePercent / 100.0));
+                }
+
+                if (filePercent < 100.0 && !progress.failed.get()) {
+                    totalSpeed += progress.speed.get();
+                    activeFiles++;
+                }
+            }
+
+            double overallPercent = percentSum / totalFiles;
+
+            long remainingBytes = Math.max(0, totalBytesKnown - downloadedKnown);
+            long remainingTimeMillis = totalSpeed > 0
+                ? (long)((remainingBytes / (double)totalSpeed) * 1000)
+                : 0;
+
+            return new Snapshot(overallPercent, totalBytesKnown, totalSpeed, remainingTimeMillis, Math.max(1, activeFiles));
+        }
+
+        private static final class FileProgress {
+
+            private final AtomicLong totalBytes = new AtomicLong();
+            private final AtomicReference<Double> percent = new AtomicReference<>(0.0);
+            private final AtomicLong speed = new AtomicLong();
+            private final AtomicBoolean failed = new AtomicBoolean();
+        }
+
+        private record Snapshot(double percent, long totalBytes, long speed, long remainingTimeMillis, int activeFiles) {
+
+        }
+    }
+
     @Data
     @Builder
     private static class ChunkData {
@@ -1187,6 +1565,7 @@ public class DirectHttpDownloader extends AbstractDownloader {
         private AtomicInteger activeChunkCount;
         private ProgressUpdater progressCallback;
         private BandwidthThrottle throttle;
+        private HttpURLConnection existingConnection;
     }
 
     private static final class BandwidthThrottle {

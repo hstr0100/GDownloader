@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 hstr0100
+ * Copyright (C) 2026 hstr0100
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package net.brlns.gdownloader.downloader.enums;
+package net.brlns.gdownloader.downloader.hosts;
 
 import lombok.Getter;
 
@@ -22,16 +22,21 @@ import lombok.Getter;
  * @author Gabriel / hstr0100 / vertx010
  */
 @Getter
-public enum QueueCategoryEnum {
-    RUNNING(1),
-    SCHEDULED(2),
-    QUEUED(3),
-    COMPLETED(4),
-    FAILED(5);
+public class HostResolverException extends Exception {
 
-    private final int comparatorOrder;
+    private final boolean recoverable;
 
-    private QueueCategoryEnum(int comparatorOrderIn) {
-        comparatorOrder = comparatorOrderIn;
+    public HostResolverException(String message) {
+        this(message, false, null);
+    }
+
+    public HostResolverException(String message, boolean recoverableIn) {
+        this(message, recoverableIn, null);
+    }
+
+    public HostResolverException(String message, boolean recoverableIn, Throwable cause) {
+        super(message, cause);
+
+        recoverable = recoverableIn;
     }
 }

@@ -30,7 +30,7 @@ import lombok.EqualsAndHashCode;
 public class DirectHttpSettings extends AbstractDownloaderSettings {
 
     @JsonProperty("Enabled")
-    private boolean enabled = false;
+    private boolean enabled = true;
 
     @JsonProperty("MediaTranscoding")
     private boolean mediaTranscoding = true;
@@ -56,6 +56,9 @@ public class DirectHttpSettings extends AbstractDownloaderSettings {
     @JsonProperty("WebScannerBlacklistedExtensions")
     private String webScannerBlacklistedExtensions = "";
 
+    @JsonProperty("HostResolvers")
+    private HostResolverSettings hostResolvers = new HostResolverSettings();
+
     @JsonProperty("MaxDownloadSpeedBytesPerSecond")
     private long maxDownloadSpeedBytesPerSecond = 0L;// 0 = unlimited
 
@@ -63,7 +66,7 @@ public class DirectHttpSettings extends AbstractDownloaderSettings {
     private int maxConnectionsPerHost = 10;
 
     @JsonProperty("MaxConcurrentCrawledDownloads")
-    private int maxConcurrentCrawledDownloads = 4;
+    private int maxConcurrentCrawledDownloads = 1;
 
     @JsonProperty("MaxPageSizeBytes")
     private long maxPageSizeBytes = 100L * 1024 * 1024; // 100MB

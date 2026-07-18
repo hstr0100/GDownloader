@@ -31,6 +31,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import static net.brlns.gdownloader.ui.UIUtils.wrapTextInHtml;
 import static net.brlns.gdownloader.ui.themes.UIColors.FOREGROUND;
+import static net.brlns.gdownloader.util.StringUtils.fastTruncate;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -51,6 +52,8 @@ public class CustomDynamicLabel extends JLabel {
 
     private String[] fullText;
 
+    private int lastComputedWidth = -1;
+
     @SuppressWarnings("this-escape")
     public CustomDynamicLabel(String initialText) {
         this();
@@ -62,13 +65,17 @@ public class CustomDynamicLabel extends JLabel {
     public CustomDynamicLabel() {
         super();
 
-        debounceTimer = new Timer(THROTTLE_MS, e -> doUpdateTruncatedText());
+        debounceTimer = new Timer(THROTTLE_MS, e -> {
+            lastUpdateTime.set(System.currentTimeMillis());
+
+            doUpdateTruncatedText();
+        });
         debounceTimer.setRepeats(false);
 
         addComponentListener(new ComponentAdapter() {
             @Override
             public void componentResized(ComponentEvent e) {
-                updateTruncatedText();
+                doUpdateTruncatedText();
             }
         });
     }
@@ -83,8 +90,8 @@ public class CustomDynamicLabel extends JLabel {
         }
 
         fullText = newFullText;
+        lastComputedWidth = -1;
 
-        setText(wrapTextInHtml(FOREGROUND, true, centerText, fullText));
         updateTruncatedText();
     }
 
@@ -104,12 +111,13 @@ public class CustomDynamicLabel extends JLabel {
 
         long now = System.currentTimeMillis();
 
-        if (now - lastUpdateTime.get() >= THROTTLE_MS) {
+        if (now - lastUpdateTime.get() >= THROTTLE_MS || getText() == null || getText().isEmpty()) {
             lastUpdateTime.set(now);
-            doUpdateTruncatedText();
-        }
 
-        debounceTimer.restart();
+            doUpdateTruncatedText();
+        } else if (!debounceTimer.isRunning()) {
+            debounceTimer.start();
+        }
     }
 
     private void doUpdateTruncatedText() {
@@ -121,31 +129,43 @@ public class CustomDynamicLabel extends JLabel {
         }
 
         int availableWidth = getWidth() - getInsets().left - getInsets().right - 10;
+
         if (availableWidth <= 10) {// Likely size 0 at the time it was called, ignore
+            Container parent = getParent();
+            if (parent != null && parent.getWidth() > 10) {
+                availableWidth = parent.getWidth() - getInsets().left - getInsets().right - 10;
+            } else {
+                availableWidth = 10;
+            }
+        }
+
+        if (lastComputedWidth >= 0 && Math.abs(availableWidth - lastComputedWidth) < 5) {
             return;
         }
 
+        lastComputedWidth = availableWidth;
+
+        String[] truncatedText = getTruncated(fullText, availableWidth);
+        setText(wrapTextInHtml(FOREGROUND, true, centerText, truncatedText));
+    }
+
+    private String[] getTruncated(String[] fullText, int availableWidth) {
         FontMetrics fontMetrics = getFontMetrics(getFont());
+        if (fontMetrics == null) {
+            return fullText;
+        }
+
         String[] truncatedText = new String[fullText.length];
 
         for (int i = 0; i < fullText.length; i++) {
             String line = fullText[i];
-            if (line.isEmpty() || fontMetrics.stringWidth(line) <= availableWidth) {
+            if (line == null || line.isEmpty() || fontMetrics.stringWidth(line) <= availableWidth) {
                 truncatedText[i] = line;
                 continue;
             }
 
             if (!lineWrapping) {
-                String ellipsis = "...";
-                int ellipsisWidth = fontMetrics.stringWidth(ellipsis);
-                StringBuilder truncatedLine = new StringBuilder(line);
-
-                while (fontMetrics.stringWidth(truncatedLine.toString()) + ellipsisWidth > availableWidth
-                    && truncatedLine.length() > 0) {
-                    truncatedLine.deleteCharAt(truncatedLine.length() - 1);
-                }
-
-                truncatedText[i] = truncatedLine + ellipsis;
+                truncatedText[i] = fastTruncate(line, fontMetrics, availableWidth);
             } else {
                 StringBuilder wrappedLine = new StringBuilder();
                 StringBuilder currentLine = new StringBuilder();
@@ -164,6 +184,6 @@ public class CustomDynamicLabel extends JLabel {
             }
         }
 
-        setText(wrapTextInHtml(FOREGROUND, true, centerText, truncatedText));
+        return truncatedText;
     }
 }

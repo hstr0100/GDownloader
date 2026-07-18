@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 hstr0100
+ * Copyright (C) 2026 hstr0100
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,24 +14,21 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package net.brlns.gdownloader.downloader.enums;
+package net.brlns.gdownloader.settings.downloader;
 
-import lombok.Getter;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Data;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-@Getter
-public enum QueueCategoryEnum {
-    RUNNING(1),
-    SCHEDULED(2),
-    QUEUED(3),
-    COMPLETED(4),
-    FAILED(5);
+// TODO: For future use.
+@Data
+@JsonIgnoreProperties(ignoreUnknown = true)
+public class HostResolverSettings {
 
-    private final int comparatorOrder;
+    @JsonProperty("Enabled")
+    private boolean enabled = true;
 
-    private QueueCategoryEnum(int comparatorOrderIn) {
-        comparatorOrder = comparatorOrderIn;
-    }
 }
