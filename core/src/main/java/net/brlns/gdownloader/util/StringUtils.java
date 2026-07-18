@@ -38,6 +38,16 @@ public final class StringUtils {
         return PERCENT_FORMATTER.format(percent);
     }
 
+    public static boolean contains(String haystack, String... needles) {
+        for (String needle : needles) {
+            if (haystack.contains(needle)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public static String getHumanReadableFileSize(long bytes) {
         assert bytes >= 0 && bytes < Long.MAX_VALUE : "Invalid argument. Expected valid positive long";
 
