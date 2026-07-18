@@ -30,7 +30,7 @@ import lombok.EqualsAndHashCode;
 public class DirectHttpSettings extends AbstractDownloaderSettings {
 
     @JsonProperty("Enabled")
-    private boolean enabled = false;
+    private boolean enabled = true;
 
     @JsonProperty("MediaTranscoding")
     private boolean mediaTranscoding = true;

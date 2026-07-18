@@ -2,6 +2,7 @@ package net.brlns.gdownloader.downloader.hosts.impl;
 
 import jakarta.annotation.Nullable;
 import java.net.URI;
+import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
@@ -12,6 +13,9 @@ import net.brlns.gdownloader.downloader.hosts.HostResolverContext;
 import net.brlns.gdownloader.downloader.hosts.HostResolverException;
 import net.brlns.gdownloader.downloader.hosts.ResolvedFile;
 import net.brlns.gdownloader.downloader.hosts.RetryLaterException;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -22,9 +26,11 @@ public class SunoResolver extends AbstractHostResolver {
 
     private static final Pattern SONG_ID_PATTERN = Pattern.compile(
         "suno\\.(?:com|ai)/song/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})");
-
     private static final Pattern SHORT_URL_PATTERN = Pattern.compile(
         "suno\\.(?:com|ai)/s/[a-zA-Z0-9]+");
+
+    private static final Pattern ILLEGAL_FILENAME_CHARS = Pattern.compile("[\\\\/:*?\"<>|\\x00-\\x1F]");
+    private static final Pattern TITLE_SUFFIX = Pattern.compile("\\s*[|\\-]\\s*Suno\\s*$", Pattern.CASE_INSENSITIVE);
 
     private static final String CDN_URL_TEMPLATE = "https://cdn1.suno.ai/%s.mp3";
     private static final String REFERER = "https://suno.com/";
@@ -52,7 +58,6 @@ public class SunoResolver extends AbstractHostResolver {
     @Override
     public List<ResolvedFile> resolve(String url, HostResolverContext context) throws HostResolverException {
         ensureNotCancelled(context);
-
         context.notifyStatus("gui.host_resolver.status.resolving", getDisplayName());
 
         Duration timeout = context.getRequestTimeout() != null
@@ -88,11 +93,77 @@ public class SunoResolver extends AbstractHostResolver {
                 "Suno CDN returned HTTP " + status, status == 429 || status >= 500);
         }
 
+        String songTitle = fetchSongTitle(context, url, timeout);
+        String fileName = songTitle != null
+            ? sanitizeFileName(songTitle) + ".mp3"
+            : songId + ".mp3";
+
         return List.of(ResolvedFile.builder()
             .url(cdnUrl)
-            .fileName(songId + ".mp3")
+            .fileName(fileName)
             .referer(REFERER)
             .build());
+    }
+
+    @Nullable
+    private String fetchSongTitle(HostResolverContext context, String pageUrl, Duration timeout) {
+        try {
+            HttpResponse<String> response = get(context, URI.create(pageUrl), timeout,
+                Map.of("Referer", REFERER));
+
+            if (response.statusCode() / 100 != 2) {
+                log.warn("Failed to fetch Suno song page {}: HTTP {}", pageUrl, response.statusCode());
+
+                return null;
+            }
+
+            Document doc = Jsoup.parse(response.body(), pageUrl);
+
+            String title = null;
+
+            Element ogTitle = doc.selectFirst("meta[property=og:title]");
+            if (ogTitle != null) {
+                String content = ogTitle.attr("content");
+
+                if (!content.isBlank()) {
+                    title = content.trim();
+                }
+            }
+
+            if (title == null) {
+                String pageTitle = doc.title();
+
+                if (!pageTitle.isBlank()) {
+                    title = pageTitle.trim();
+                }
+            }
+
+            if (title == null) {
+                return null;
+            }
+
+            title = TITLE_SUFFIX.matcher(title).replaceFirst("").trim();
+
+            return title.isBlank() ? null : title;
+        } catch (HostResolverException e) {
+            log.warn("Failed to fetch Suno song title from {}: {}", pageUrl, e.getMessage());
+
+            return null;
+        } catch (Exception e) {
+            log.warn("Failed to parse Suno song title from {}: {}", pageUrl, e.toString());
+
+            return null;
+        }
+    }
+
+    private static String sanitizeFileName(String name) {
+        String sanitized = ILLEGAL_FILENAME_CHARS.matcher(name).replaceAll("_").trim();
+        sanitized = sanitized.replaceAll("[.\\s]+$", "");
+        if (sanitized.length() > 150) {
+            sanitized = sanitized.substring(0, 150).trim();
+        }
+
+        return sanitized.isBlank() ? "suno_song" : sanitized;
     }
 
     @Nullable
