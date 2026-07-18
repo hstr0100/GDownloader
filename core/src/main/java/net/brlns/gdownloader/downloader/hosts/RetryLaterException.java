@@ -21,7 +21,6 @@ import java.time.Duration;
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
-// TODO: implement
 public class RetryLaterException extends HostResolverException {
 
     private final Duration retryAfter;

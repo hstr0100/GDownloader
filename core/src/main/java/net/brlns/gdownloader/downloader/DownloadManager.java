@@ -65,6 +65,7 @@ import net.brlns.gdownloader.ui.message.PopupMessenger;
 import net.brlns.gdownloader.ui.message.ToastMessenger;
 import net.brlns.gdownloader.util.CancelHook;
 import net.brlns.gdownloader.util.MathUtils;
+import net.brlns.gdownloader.util.StringUtils;
 import net.brlns.gdownloader.util.collection.ExpiringSet;
 import net.brlns.gdownloader.util.collection.LRUCache;
 
@@ -81,6 +82,9 @@ import static net.brlns.gdownloader.util.URLUtils.*;
 @Slf4j
 @CloseBefore(before = {PersistenceManager.class, ProcessMonitor.class})
 public class DownloadManager implements IEvent, AutoCloseable {
+
+    // Circuit-breaker for rogue hosts
+    private static final int MAX_SCHEDULED_RETRY_ATTEMPTS = 500;
 
     private final AtomicLong downloadIdGenerator = new AtomicLong();
 
@@ -298,7 +302,7 @@ public class DownloadManager implements IEvent, AutoCloseable {
         }
 
         return switch (category) {
-            case RUNNING ->
+            case RUNNING, SCHEDULED ->
                 StartButtonMode.STOP;
             case COMPLETED, FAILED ->
                 StartButtonMode.RESTART;
@@ -794,6 +798,13 @@ public class DownloadManager implements IEvent, AutoCloseable {
         downloadsManuallyStarted.set(false);
         suggestedDownloaderId.set(null);
 
+        for (QueueEntry entry : sequencer.getEntries(SCHEDULED)) {
+            entry.clearSchedule();
+            entry.updateStatus(DownloadStatusEnum.STOPPED, l10n("gui.download_status.not_started"));
+
+            offerTo(QUEUED, entry);
+        }
+
         fireListeners();
     }
 
@@ -807,6 +818,10 @@ public class DownloadManager implements IEvent, AutoCloseable {
 
     public int getRunningDownloads() {
         return sequencer.getCount(RUNNING);
+    }
+
+    public int getScheduledDownloads() {
+        return sequencer.getCount(SCHEDULED);
     }
 
     public int getFailedDownloads() {
@@ -885,6 +900,8 @@ public class DownloadManager implements IEvent, AutoCloseable {
     }
 
     public void processQueue() {
+        processScheduledRetries();
+
         int maxDownloads = main.getConfig().getMaxSimultaneousDownloads();
 
         while (downloadsRunning.get()
@@ -911,7 +928,7 @@ public class DownloadManager implements IEvent, AutoCloseable {
             }
         }
 
-        if (downloadsRunning.get() && sequencer.isEmpty(RUNNING)) {
+        if (downloadsRunning.get() && sequencer.isEmpty(RUNNING) && sequencer.isEmpty(SCHEDULED)) {
             if (main.getConfig().isDisplayDownloadsCompleteNotification()
                 && shouldNotifyCompletion.get() && !sequencer.isEmpty()) {
                 PopupMessenger.show(Message.builder()
@@ -928,6 +945,63 @@ public class DownloadManager implements IEvent, AutoCloseable {
 
             stopDownloads();
         }
+    }
+
+    private void processScheduledRetries() {
+        if (sequencer.isEmpty(SCHEDULED)) {
+            return;
+        }
+
+        long now = System.currentTimeMillis();
+
+        for (QueueEntry entry : sequencer.getEntries(SCHEDULED)) {
+            long resumeAt = entry.getScheduledResumeAtMillis().get();
+
+            if (resumeAt <= 0 || now >= resumeAt) {
+                entry.clearSchedule();
+                entry.updateStatus(DownloadStatusEnum.QUEUED,
+                    l10n("gui.download_status.not_started"));
+
+                offerTo(QUEUED, entry);
+                continue;
+            }
+
+            long remainingMillis = resumeAt - now;
+            long remainingSeconds = remainingMillis / 1000L;
+
+            if (entry.getLastDisplayedScheduledSeconds().getAndSet(remainingSeconds) != remainingSeconds) {
+                entry.updateStatus(DownloadStatusEnum.SCHEDULED,
+                    l10n("gui.host_resolver.status.scheduled",
+                        StringUtils.formatETATime(remainingMillis), entry.getScheduledReason().get()));
+            }
+        }
+    }
+
+    private void handleRetryLaterResult(QueueEntry entry, DownloadResult result) {
+        String reason = result.getLastOutput();
+        int attempts = entry.getScheduledRetryCounter().incrementAndGet();
+
+        if (attempts > MAX_SCHEDULED_RETRY_ATTEMPTS) {
+            entry.logError(reason);
+            log.error("Download of {} gave up after {} rescheduled attempts: {}",
+                entry.getUrl(), attempts, reason);
+
+            entry.updateStatus(DownloadStatusEnum.FAILED,
+                l10n("gui.host_resolver.error.gave_up_rescheduling", attempts));
+
+            offerTo(FAILED, entry);
+            return;
+        }
+
+        long retryAfterMillis = Math.max(0, result.getRetryAfterMillis());
+        long resumeAt = System.currentTimeMillis() + retryAfterMillis;
+
+        entry.scheduleRetryLater(resumeAt, reason);
+        entry.updateStatus(DownloadStatusEnum.SCHEDULED,
+            l10n("gui.host_resolver.status.scheduled",
+                StringUtils.formatETATime(retryAfterMillis), reason));
+
+        offerTo(SCHEDULED, entry);
     }
 
     public void clearQueue(CloseReasonEnum reason) {
@@ -1042,6 +1116,10 @@ public class DownloadManager implements IEvent, AutoCloseable {
 
                 if (queueEntry.getCurrentQueueCategory() == RUNNING) {
                     offerTo(QUEUED, queueEntry);
+                } else if (queueEntry.getCurrentQueueCategory() == SCHEDULED) {
+                    queueEntry.clearSchedule();
+
+                    offerTo(QUEUED, queueEntry);
                 }
             } else if (queueEntry.getDownloadStatus() == DownloadStatusEnum.SKIPPED) {
                 queueEntry.updateStatus(DownloadStatusEnum.QUEUED,
@@ -1138,6 +1216,8 @@ public class DownloadManager implements IEvent, AutoCloseable {
         queueEntry.updateStatus(DownloadStatusEnum.QUEUED, l10n("gui.download_status.not_started"));
         queueEntry.resetDownloaderBlacklist();
         queueEntry.resetRetryCounter();// Normaly we want the retry count to stick around, but not in this case.
+        queueEntry.resetScheduledRetryCounter();
+        queueEntry.clearSchedule();
 
         removeArchiveEntries(queueEntry);
     }
@@ -1181,7 +1261,18 @@ public class DownloadManager implements IEvent, AutoCloseable {
     }
 
     public void stopSingleDownload(QueueEntry entry) {
-        if (entry.getCurrentQueueCategory() != RUNNING) {
+        QueueCategoryEnum category = entry.getCurrentQueueCategory();
+
+        if (category == SCHEDULED) {
+            // Clear the schedule and dropkick it straight back into the queue.
+            entry.clearSchedule();
+            entry.updateStatus(DownloadStatusEnum.STOPPED, l10n("gui.download_status.not_started"));
+
+            offerTo(QUEUED, entry);
+            return;
+        }
+
+        if (category != RUNNING) {
             return;
         }
 
@@ -1316,6 +1407,11 @@ public class DownloadManager implements IEvent, AutoCloseable {
 
                         BitSet flags = result.getFlags();
                         lastOutput = result.getLastOutput();
+
+                        if (FLAG_RETRY_LATER.isSet(flags)) {
+                            handleRetryLaterResult(entry, result);
+                            return;
+                        }
 
                         if (main.getConfig().isRandomIntervalBetweenDownloads()
                             && entry.getRateLimitDetected().compareAndSet(true, false)) {
@@ -1507,7 +1603,7 @@ public class DownloadManager implements IEvent, AutoCloseable {
 
         int runningCount = getRunningDownloads();
         int failedCount = getFailedDownloads();
-        int queuedCount = getQueuedDownloads();
+        int queuedCount = getQueuedDownloads() + getScheduledDownloads();
         int completedCount = getCompletedDownloads();
 
         int badgeCount = queuedCount + runningCount;

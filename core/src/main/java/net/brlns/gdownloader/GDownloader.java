@@ -135,6 +135,7 @@ import static net.brlns.gdownloader.util.StringUtils.notNullOrEmpty;
 // TODO pause downloads when space runs out in DL path
 // TODO Direct-HTTP: resume chunked
 // TODO Direct-HTTP: post-processors (unzip, convert, etc)
+// TODO Direct-HTTP: metadata extractors for host resolvers
 /**
  * GDownloader - GUI wrapper for yt-dlp
  *

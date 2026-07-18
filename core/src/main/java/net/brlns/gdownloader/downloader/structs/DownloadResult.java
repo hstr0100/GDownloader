@@ -30,16 +30,25 @@ public class DownloadResult {
 
     private final BitSet flags;
     private final String lastOutput;
+    private final long retryAfterMillis;
 
     public DownloadResult(DownloadFlagsEnum flagsEnumIn) {
         this(flagsEnumIn, "");
     }
 
     public DownloadResult(DownloadFlagsEnum flagsEnumIn, String lastOutputIn) {
-        this(flagsEnumIn.asBitSet(), lastOutputIn);
+        this(flagsEnumIn.asBitSet(), lastOutputIn, 0L);
     }
 
     public DownloadResult(BitSet flagsIn) {
         this(flagsIn, "");
+    }
+
+    public DownloadResult(BitSet flagsIn, String lastOutputIn) {
+        this(flagsIn, lastOutputIn, 0L);
+    }
+
+    public static DownloadResult retryLater(String lastOutputIn, long retryAfterMillisIn) {
+        return new DownloadResult(DownloadFlagsEnum.FLAG_RETRY_LATER.asBitSet(), lastOutputIn, retryAfterMillisIn);
     }
 }

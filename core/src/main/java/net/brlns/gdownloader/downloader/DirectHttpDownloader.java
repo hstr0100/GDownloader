@@ -202,8 +202,6 @@ public class DirectHttpDownloader extends AbstractDownloader {
 
         boolean success = false;
         boolean unsupportedUrl = false;
-        boolean retryLaterRequested = false;
-        long retryAfterMillis = 0L;
         String lastOutput = "";
 
         AtomicLong lastProgressUpdateNanos = new AtomicLong(0);
@@ -219,56 +217,66 @@ public class DirectHttpDownloader extends AbstractDownloader {
 
             entry.setCurrentDownloadType(type);
 
-            try {
-                success = downloadFile(entry, suppressStatusText, (percent, total, speed, remainingTime, chunkCount) -> {
-                    double roundedPercent = Math.round(percent * 10) / 10.0;// Strip out unecessary precision
+            while (true) {
+                try {
+                    success = downloadFile(entry, suppressStatusText, (percent, total, speed, remainingTime, chunkCount) -> {
+                        double roundedPercent = Math.round(percent * 10) / 10.0;// Strip out unecessary precision
 
-                    double lastPercentage = lastReportedPercent.get();
-                    boolean reachedCompletion = roundedPercent >= 100.0;
+                        double lastPercentage = lastReportedPercent.get();
+                        boolean reachedCompletion = roundedPercent >= 100.0;
 
-                    long now = System.nanoTime();
-                    boolean intervalElapsed = (now - lastProgressUpdateNanos.get()) >= 400_000_000;
+                        long now = System.nanoTime();
+                        boolean intervalElapsed = (now - lastProgressUpdateNanos.get()) >= 400_000_000;
 
-                    if (roundedPercent < lastPercentage || (!intervalElapsed && !reachedCompletion)) {
-                        return;
+                        if (roundedPercent < lastPercentage || (!intervalElapsed && !reachedCompletion)) {
+                            return;
+                        }
+
+                        lastProgressUpdateNanos.set(now);
+                        lastReportedPercent.set(roundedPercent);
+                        entry.getMediaCard().setPercentage(roundedPercent);
+
+                        if (suppressStatusText.get()) {
+                            return;
+                        }
+
+                        String fmPercent = StringUtils.formatPercent(percent);
+                        String fmTotal = StringUtils.getHumanReadableFileSize(total);
+                        String fmSpeed = StringUtils.getHumanReadableFileSize(speed);
+                        String fmRemaingTime = StringUtils.formatETATime(remainingTime);
+
+                        entry.updateStatus(DownloadStatusEnum.DOWNLOADING,
+                            l10n("gui.direct_http.download_status.downloading_progress",
+                                fmPercent, fmTotal, fmSpeed, fmRemaingTime, chunkCount), false);
+                    });
+
+                    lastOutput = PREFIX + l10n("gui.direct_http.download_status.download_complete");
+                    entry.updateStatus(DownloadStatusEnum.DOWNLOADING, lastOutput);
+                } catch (RetryLaterException e) {
+                    Optional<DownloadResult> scheduled = awaitRetryLaterOrSchedule(entry, e);
+
+                    if (scheduled.isPresent()) {
+                        return scheduled.get();
                     }
 
-                    lastProgressUpdateNanos.set(now);
-                    lastReportedPercent.set(roundedPercent);
-                    entry.getMediaCard().setPercentage(roundedPercent);
-
-                    if (suppressStatusText.get()) {
-                        return;
+                    if (!isAlive(entry)) {
+                        return new DownloadResult(FLAG_STOPPED);
                     }
 
-                    String fmPercent = StringUtils.formatPercent(percent);
-                    String fmTotal = StringUtils.getHumanReadableFileSize(total);
-                    String fmSpeed = StringUtils.getHumanReadableFileSize(speed);
-                    String fmRemaingTime = StringUtils.formatETATime(remainingTime);
+                    continue;
+                } catch (UnsupportedURLException e) {
+                    lastOutput = PREFIX + e.getMessage();
 
-                    entry.updateStatus(DownloadStatusEnum.DOWNLOADING,
-                        l10n("gui.direct_http.download_status.downloading_progress",
-                            fmPercent, fmTotal, fmSpeed, fmRemaingTime, chunkCount), false);
-                });
+                    unsupportedUrl = true;
+                    success = false;
+                } catch (Exception e) {
+                    lastOutput = PREFIX + e.getMessage();
+                    success = false;
+                } finally {
+                    entry.getDownloadStarted().set(false);
+                }
 
-                lastOutput = PREFIX + l10n("gui.direct_http.download_status.download_complete");
-                entry.updateStatus(DownloadStatusEnum.DOWNLOADING, lastOutput);
-            } catch (RetryLaterException e) {
-                lastOutput = PREFIX + e.getMessage();
-
-                retryLaterRequested = true;
-                retryAfterMillis = e.getRetryAfter().toMillis();
-                success = false;
-            } catch (UnsupportedURLException e) {
-                lastOutput = PREFIX + e.getMessage();
-
-                unsupportedUrl = true;
-                success = false;
-            } catch (Exception e) {
-                lastOutput = PREFIX + e.getMessage();
-                success = false;
-            } finally {
-                entry.getDownloadStarted().set(false);
+                break;
             }
 
             log.debug(lastOutput);
@@ -278,12 +286,6 @@ public class DirectHttpDownloader extends AbstractDownloader {
             }
 
             if (!success) {
-                if (retryLaterRequested) {
-                    // TODO: retry/wait scheduler
-                    // retryAfterMillis
-                    return new DownloadResult(FLAG_MAIN_CATEGORY_FAILED, lastOutput);
-                }
-
                 if (unsupportedUrl) {
                     return new DownloadResult(FLAG_UNSUPPORTED, lastOutput);
                 }

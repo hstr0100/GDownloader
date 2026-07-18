@@ -12,7 +12,6 @@ import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.downloader.hosts.HostResolverContext;
 import net.brlns.gdownloader.downloader.hosts.HostResolverException;
 import net.brlns.gdownloader.downloader.hosts.ResolvedFile;
-import net.brlns.gdownloader.downloader.hosts.RetryLaterException;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -78,12 +77,7 @@ public class SunoResolver extends AbstractHostResolver {
         int status = headStatus(context, URI.create(cdnUrl), timeout,
             Map.of("Referer", REFERER));
 
-        if (status == 404) {
-            throw new RetryLaterException(Duration.ofSeconds(30),
-                "File not yet available");
-        }
-
-        if (status == 403) {
+        if (status == 404 || status == 403) {
             throw new HostResolverException(
                 "File not found", false);
         }

@@ -21,16 +21,13 @@ import java.net.URLEncoder;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
-import net.brlns.gdownloader.downloader.hosts.*;
 import java.time.Duration;
 import java.util.List;
 import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
-import net.brlns.gdownloader.downloader.hosts.HostResolverContext;
-import net.brlns.gdownloader.downloader.hosts.HostResolverException;
-import net.brlns.gdownloader.downloader.hosts.ResolvedFile;
+import net.brlns.gdownloader.downloader.hosts.*;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -204,6 +201,13 @@ public class OneFichierResolver extends AbstractHostResolver {
                     "Temporarily limited due to high demand");
             }
 
+            if (text.contains("one file at a time")) {
+                log.info("1Fichier limit detected: cannot download more than one file at a time");
+
+                throw new RetryLaterException(Duration.ofMinutes(5),
+                    "Cannot download more than one file at a time");
+            }
+
             if (text.contains("protect access")
                 || text.contains("bad password")) {
                 throw new HostResolverException(
@@ -213,7 +217,7 @@ public class OneFichierResolver extends AbstractHostResolver {
 
         log.warn("1Fichier returned unknown warning state: {}", ctWarns.text());
 
-        throw new RetryLaterException(Duration.ofMinutes(2),
+        throw new RetryLaterException(Duration.ofMinutes(5),
             "Unrecognized site response");
     }
 

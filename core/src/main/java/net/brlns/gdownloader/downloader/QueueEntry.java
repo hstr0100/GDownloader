@@ -40,6 +40,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -138,6 +139,11 @@ public class QueueEntry {
     private final AtomicBoolean running = new AtomicBoolean(false);
     private final AtomicBoolean queried = new AtomicBoolean(false);
     private final AtomicInteger retryCounter = new AtomicInteger();
+
+    private final AtomicLong scheduledResumeAtMillis = new AtomicLong(0);
+    private final AtomicReference<String> scheduledReason = new AtomicReference<>("");
+    private final AtomicInteger scheduledRetryCounter = new AtomicInteger();
+    private final AtomicLong lastDisplayedScheduledSeconds = new AtomicLong(-1);
 
     @Setter
     private File tmpDirectory;
@@ -431,6 +437,26 @@ public class QueueEntry {
 
     public void resetRetryCounter() {
         retryCounter.set(0);
+    }
+
+    public void scheduleRetryLater(long resumeAtMillis, String reason) {
+        scheduledResumeAtMillis.set(resumeAtMillis);
+        scheduledReason.set(reason);
+        lastDisplayedScheduledSeconds.set(-1);
+    }
+
+    public void clearSchedule() {
+        scheduledResumeAtMillis.set(0);
+        scheduledReason.set("");
+        lastDisplayedScheduledSeconds.set(-1);
+    }
+
+    public boolean isScheduled() {
+        return scheduledResumeAtMillis.get() > 0;
+    }
+
+    public void resetScheduledRetryCounter() {
+        scheduledRetryCounter.set(0);
     }
 
     public void markQueried() {
@@ -807,6 +833,10 @@ public class QueueEntry {
                     mediaCard.setPercentage(100);
                     mediaCard.setProgressBarTextAndColors(status.getDisplayName(), new Color(30, 136, 229));
                 }
+                case SCHEDULED -> {
+                    mediaCard.setPercentage(100);
+                    mediaCard.setProgressBarTextAndColors(status.getDisplayName(), new Color(92, 107, 192));
+                }
                 case PREPARING, QUEUED, STOPPED -> {
                     mediaCard.setPercentage(100);
                     mediaCard.setProgressBarTextAndColors(status.getDisplayName(), Color.GRAY);
@@ -1032,7 +1062,8 @@ public class QueueEntry {
                 -> dispose(CloseReasonEnum.MANUAL)));
 
         if (currentQueueCategory == QueueCategoryEnum.QUEUED
-            || currentQueueCategory == QueueCategoryEnum.RUNNING) {
+            || currentQueueCategory == QueueCategoryEnum.RUNNING
+            || currentQueueCategory == QueueCategoryEnum.SCHEDULED) {
             boolean skipped = isSkipped();
             extrasSubmenu.put(skipped
                 ? l10n("gui.skip.unskip_download")
@@ -1060,7 +1091,8 @@ public class QueueEntry {
         }
 
         if (currentQueueCategory == QueueCategoryEnum.QUEUED
-            || currentQueueCategory == QueueCategoryEnum.RUNNING) {
+            || currentQueueCategory == QueueCategoryEnum.RUNNING
+            || currentQueueCategory == QueueCategoryEnum.SCHEDULED) {
             extrasSubmenu.put(hasCustomDownloadDirectory()
                 ? l10n("gui.change_custom_download_directory")
                 : l10n("gui.set_custom_download_directory"),
