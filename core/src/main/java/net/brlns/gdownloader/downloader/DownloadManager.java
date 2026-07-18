@@ -499,19 +499,19 @@ public class DownloadManager implements IEvent, AutoCloseable {
                 return future;
             }
 
+            if (!force && main.getConfig().isEnableDownloadHistory()
+                && main.getConfig().isSkipDuplicatesInHistory()
+                && persistence.isHistoryInitialized()
+                && persistence.getDownloadHistory().isUrlKnown(filteredUrl, inputUrl)) {
+
+                log.info("Skipping {} - already present in the download history", inputUrl);
+
+                future.complete(false);
+                return future;
+            }
+
             if (capturedLinks.add(filteredUrl)) {
                 capturedLinks.add(inputUrl);
-
-                if (!force && main.getConfig().isEnableDownloadHistory()
-                    && main.getConfig().isSkipDuplicatesInHistory()
-                    && persistence.isHistoryInitialized()
-                    && persistence.getDownloadHistory().isUrlKnown(filteredUrl, inputUrl)) {
-
-                    log.info("Skipping {} - already present in the download history", inputUrl);
-
-                    future.complete(false);
-                    return future;
-                }
 
                 log.info("Captured {}", inputUrl);
 
