@@ -104,7 +104,7 @@ public class ProxySettings {
     public boolean isValid() {
         return proxyType != null && proxyType != ProxyTypeEnum.NO_PROXY
             && notNullOrEmpty(host) && (host.contains(".") || host.contains(":"))//TODO validate host
-            && port > 0 && port < Short.MAX_VALUE;
+            && port > 0 && port < 65535;// unsigned short
     }
 
 }
