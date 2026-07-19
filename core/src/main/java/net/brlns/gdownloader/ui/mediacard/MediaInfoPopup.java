@@ -1109,7 +1109,7 @@ public final class MediaInfoPopup {
         tableScroll.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
         SmoothScroller.install(tableScroll);
 
-        tableScroll.getViewport().setScrollMode(JViewport.BACKINGSTORE_SCROLL_MODE);
+        tableScroll.getViewport().setScrollMode(JViewport.BLIT_SCROLL_MODE);
 
         tableScroll.addMouseWheelListener(e -> {
             if (e.isShiftDown()) {

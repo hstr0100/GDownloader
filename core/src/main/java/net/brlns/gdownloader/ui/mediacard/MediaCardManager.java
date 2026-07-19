@@ -579,13 +579,6 @@ public final class MediaCardManager {
                 if (main.getConfig().isAutoScrollToBottom() && scrollToBottom) {
                     scrollPaneToBottom(queueScrollPane);
                 }
-
-                int currentMode = queueScrollPane.getViewport().getScrollMode();
-                if (mediaQueuePane.getComponentCount() > 100 && currentMode != JViewport.BACKINGSTORE_SCROLL_MODE) {
-                    queueScrollPane.getViewport().setScrollMode(JViewport.BACKINGSTORE_SCROLL_MODE);
-                } else if (currentMode != JViewport.SIMPLE_SCROLL_MODE) {
-                    queueScrollPane.getViewport().setScrollMode(JViewport.SIMPLE_SCROLL_MODE);
-                }
             }
         });
     }

@@ -211,8 +211,11 @@ public class CustomThumbnailPanel extends JPanel {
     }
 
     private void rebuildComposite(int panelWidth, int panelHeight) {
-        BufferedImage newComposite = new BufferedImage(
-            panelWidth, panelHeight, BufferedImage.TYPE_INT_ARGB);
+        GraphicsConfiguration gc = getGraphicsConfiguration();
+        BufferedImage newComposite = gc != null
+            ? gc.createCompatibleImage(panelWidth, panelHeight, Transparency.TRANSLUCENT)
+            : new BufferedImage(panelWidth, panelHeight, BufferedImage.TYPE_INT_ARGB);
+
         Graphics2D g2d = newComposite.createGraphics();
 
         try {

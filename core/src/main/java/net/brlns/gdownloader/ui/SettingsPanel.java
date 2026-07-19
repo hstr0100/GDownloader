@@ -821,7 +821,7 @@ public class SettingsPanel {
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
         scrollPane.setBackground(color(BACKGROUND));
         scrollPane.setPreferredSize(new Dimension(Integer.MAX_VALUE, 200));
-        scrollPane.getViewport().setScrollMode(JViewport.BACKINGSTORE_SCROLL_MODE);
+        scrollPane.getViewport().setScrollMode(JViewport.BLIT_SCROLL_MODE);
         SmoothScroller.install(scrollPane);
 
         JPanel panelWrapper = new JPanel(new BorderLayout());
@@ -949,7 +949,7 @@ public class SettingsPanel {
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
         scrollPane.setBackground(color(BACKGROUND));
         scrollPane.setPreferredSize(new Dimension(Integer.MAX_VALUE, 200));
-        scrollPane.getViewport().setScrollMode(JViewport.BACKINGSTORE_SCROLL_MODE);
+        scrollPane.getViewport().setScrollMode(JViewport.BLIT_SCROLL_MODE);
         SmoothScroller.install(scrollPane);
 
         JPanel panelWrapper = new JPanel(new BorderLayout());
@@ -1830,7 +1830,7 @@ public class SettingsPanel {
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
         scrollPane.setBackground(color(BACKGROUND));
         scrollPane.setPreferredSize(new Dimension(Integer.MAX_VALUE, 400));
-        scrollPane.getViewport().setScrollMode(JViewport.BACKINGSTORE_SCROLL_MODE);
+        scrollPane.getViewport().setScrollMode(JViewport.BLIT_SCROLL_MODE);
         SmoothScroller.install(scrollPane);
 
         JPanel panelWrapper = new JPanel(new BorderLayout());
@@ -2259,7 +2259,7 @@ public class SettingsPanel {
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
         scrollPane.setBackground(color(BACKGROUND));
         scrollPane.setPreferredSize(new Dimension(Integer.MAX_VALUE, 200));
-        scrollPane.getViewport().setScrollMode(JViewport.BACKINGSTORE_SCROLL_MODE);
+        scrollPane.getViewport().setScrollMode(JViewport.BLIT_SCROLL_MODE);
         SmoothScroller.install(scrollPane);
 
         JPanel panelWrapper = new JPanel(new BorderLayout());

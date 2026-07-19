@@ -18,9 +18,6 @@ package net.brlns.gdownloader.ui.mediacard;
 
 import jakarta.annotation.Nullable;
 import java.awt.Color;
-import java.awt.GraphicsDevice;
-import java.awt.GraphicsEnvironment;
-import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -30,6 +27,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.downloader.enums.CloseReasonEnum;
 import net.brlns.gdownloader.downloader.enums.DownloadPriorityEnum;
 import net.brlns.gdownloader.downloader.enums.DownloadTypeEnum;
+import net.brlns.gdownloader.ui.ScreenMetrics;
 import net.brlns.gdownloader.ui.custom.CustomMediaCardUI;
 import net.brlns.gdownloader.ui.menu.IMenuEntry;
 
@@ -95,10 +93,7 @@ public class MediaCard {
     }
 
     public void adjustScale(int panelWidth) {
-        GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
-        GraphicsDevice gs = ge.getDefaultScreenDevice();
-        Rectangle screenBounds = gs.getDefaultConfiguration().getBounds();
-        double screenWidth = screenBounds.getWidth();
+        double screenWidth = ScreenMetrics.getPrimaryScreenBounds().getWidth();
 
         double targetWidth = screenWidth * 0.9;
         double scaleFactor = (panelWidth >= targetWidth) ? 1.2 : 1;

@@ -124,6 +124,8 @@ public final class GUIManager {
 
     private final AtomicBoolean initialQueueRenderComplete = new AtomicBoolean();
 
+    private final ScreenMetrics.Debouncer resizeDebouncer;
+
     public GUIManager(GDownloader mainIn) {
         main = mainIn;
 
@@ -139,6 +141,9 @@ public final class GUIManager {
         historyWindow = new HistoryWindow(main, this);
 
         mediaCardManager = new MediaCardManager(main, this);
+
+        resizeDebouncer = new ScreenMetrics.Debouncer(50,
+            () -> mediaCardManager.updateVisibleCards());
     }
 
     public String getCurrentAppIconPath() {
@@ -259,7 +264,7 @@ public final class GUIManager {
             appWindow.addComponentListener(new ComponentAdapter() {
                 @Override
                 public void componentResized(ComponentEvent e) {
-                    mediaCardManager.updateVisibleCards();
+                    resizeDebouncer.trigger();
                 }
             });
 
@@ -359,8 +364,7 @@ public final class GUIManager {
             queueScrollPane = new JScrollPane(queuePanel);
             queueScrollPane.getVerticalScrollBar().setUI(new CustomScrollBarUI());
             queueScrollPane.getHorizontalScrollBar().setUI(new CustomScrollBarUI());
-            // BLIT_SCROLL_MODE is smooth but astonishingly slow, BACKINGSTORE_SCROLL_MODE is rough but fast.
-            queueScrollPane.getViewport().setScrollMode(JViewport.SIMPLE_SCROLL_MODE);
+            queueScrollPane.getViewport().setScrollMode(JViewport.BLIT_SCROLL_MODE);
             queueScrollPane.setBorder(BorderFactory.createEmptyBorder());
             queueScrollPane.setBackground(color(BACKGROUND));
             queueScrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
