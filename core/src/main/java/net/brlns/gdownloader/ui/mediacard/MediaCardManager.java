@@ -54,6 +54,7 @@ import net.brlns.gdownloader.event.EventDispatcher;
 import net.brlns.gdownloader.event.impl.SettingsChangeEvent;
 import net.brlns.gdownloader.ui.GUIManager;
 import net.brlns.gdownloader.ui.custom.CustomMediaCardUI;
+import net.brlns.gdownloader.ui.custom.CustomMediaCardUI.MediaCardPanel;
 import net.brlns.gdownloader.ui.dnd.WindowTransferHandler;
 import net.brlns.gdownloader.ui.menu.RightClickMenuEntries;
 import net.brlns.gdownloader.util.collection.ConcurrentLinkedHashSet;
@@ -81,7 +82,7 @@ public final class MediaCardManager {
     private final Queue<MediaCardUIUpdateEntry> mediaCardUIUpdateQueue = new ConcurrentLinkedQueue<>();
     private final Map<Integer, MediaCard> mediaCards = new ConcurrentHashMap<>();
 
-    private final AtomicReference<JPanel> hoveredCardPanel = new AtomicReference<>();
+    private final AtomicReference<MediaCardPanel> hoveredCardPanel = new AtomicReference<>();
     private final AtomicReference<Point> lastMouseScreenPoint = new AtomicReference<>();
     private AWTEventListener globalMouseListener;
 
@@ -175,33 +176,52 @@ public final class MediaCardManager {
             return;
         }
 
-        JPanel newHovered = null;
         Point screenPoint = lastMouseScreenPoint.get();
+        Rectangle viewportScreenBounds = null;
 
-        if (screenPoint != null && queueScrollPane.isShowing()) {
+        if (queueScrollPane.isShowing()) {
             try {
-                Rectangle viewportScreenBounds = new Rectangle(
+                viewportScreenBounds = new Rectangle(
                     queueScrollPane.getViewport().getLocationOnScreen(),
                     queueScrollPane.getViewport().getSize());
-
-                if (viewportScreenBounds.contains(screenPoint)) {
-                    Point localPoint = new Point(screenPoint);
-                    SwingUtilities.convertPointFromScreen(localPoint, mediaQueuePane);
-
-                    Component deepest = SwingUtilities.getDeepestComponentAt(
-                        mediaQueuePane, localPoint.x, localPoint.y);
-                    newHovered = findEnclosingCard(deepest);
-                }
             } catch (IllegalComponentStateException e) {
                 return;
+            }
+        }
+
+        MediaCardPanel currentHover = hoveredCardPanel.get();
+        if (screenPoint != null && currentHover != null
+            && currentHover.isShowing() && viewportScreenBounds != null) {
+            try {
+                Rectangle currentBounds = new Rectangle(
+                    currentHover.getLocationOnScreen(), currentHover.getSize());
+
+                if (currentBounds.contains(screenPoint) && viewportScreenBounds.contains(screenPoint)) {
+                    return;
+                }
+            } catch (IllegalComponentStateException e) {
+                // Fall through
+            }
+        }
+
+        MediaCardPanel newHovered = null;
+
+        if (screenPoint != null && viewportScreenBounds != null) {
+            if (viewportScreenBounds.contains(screenPoint)) {
+                Point localPoint = new Point(screenPoint);
+                SwingUtilities.convertPointFromScreen(localPoint, mediaQueuePane);
+
+                Component deepest = SwingUtilities.getDeepestComponentAt(
+                    mediaQueuePane, localPoint.x, localPoint.y);
+                newHovered = findEnclosingCard(deepest);
             }
         }
 
         applyHover(newHovered);
     }
 
-    private void applyHover(@Nullable JPanel newHovered) {
-        JPanel oldHovered = hoveredCardPanel.get();
+    private void applyHover(@Nullable MediaCardPanel newHovered) {
+        MediaCardPanel oldHovered = hoveredCardPanel.get();
         if (oldHovered == newHovered) {
             return;
         }
@@ -209,7 +229,7 @@ public final class MediaCardManager {
         hoveredCardPanel.set(newHovered);
 
         if (oldHovered != null) {
-            MediaCard oldCard = (MediaCard)oldHovered.getClientProperty("MEDIA_CARD");
+            MediaCard oldCard = oldHovered.getMediaCard();
             if (oldCard != null && !isMediaCardSelected(oldCard) && !isMultiSelectMode.get()) {
                 oldHovered.setBackground(color(MEDIA_CARD));
                 oldHovered.repaint();
@@ -217,7 +237,7 @@ public final class MediaCardManager {
         }
 
         if (newHovered != null) {
-            MediaCard newCard = (MediaCard)newHovered.getClientProperty("MEDIA_CARD");
+            MediaCard newCard = newHovered.getMediaCard();
             if (newCard != null && !isMediaCardSelected(newCard) && !isMultiSelectMode.get()) {
                 newHovered.setBackground(color(MEDIA_CARD_HOVER));
                 newHovered.repaint();
@@ -230,11 +250,10 @@ public final class MediaCardManager {
     }
 
     @Nullable
-    private JPanel findEnclosingCard(@Nullable Component component) {
+    private MediaCardPanel findEnclosingCard(@Nullable Component component) {
         Component current = component;
         while (current != null && current != mediaQueuePane) {
-            if (current instanceof JPanel panel
-                && panel.getClientProperty("MEDIA_CARD") != null) {
+            if (current instanceof MediaCardPanel panel) {
                 return panel;
             }
 
@@ -388,8 +407,8 @@ public final class MediaCardManager {
 
             CustomMediaCardUI ui = mediaCard.getUi();
             if (ui != null) {
-                JPanel card = ui.getCard();
-                card.setBackground(isSelected ? color(MEDIA_CARD_SELECTED) : color(MEDIA_CARD));
+                ui.getCard().setBackground(isSelected
+                    ? color(MEDIA_CARD_SELECTED) : color(MEDIA_CARD));
             }
         }
     }
@@ -483,7 +502,7 @@ public final class MediaCardManager {
 
                         mediaCard.setUi(ui);
 
-                        JPanel card = ui.getCard();
+                        MediaCardPanel card = ui.getCard();
                         card.setTransferHandler(new WindowTransferHandler(manager));
 
                         MouseAdapter listener = new MediaCardMouseAdapter(mediaCard);
@@ -507,7 +526,7 @@ public final class MediaCardManager {
                             }
                         });
 
-                        card.putClientProperty("MEDIA_CARD", mediaCard);
+                        card.setMediaCard(mediaCard);
 
                         String currentQuery = currentSearchQuery.get();
                         if (!currentQuery.isEmpty()) {
@@ -532,8 +551,6 @@ public final class MediaCardManager {
                                 } else {
                                     mediaQueuePane.remove(ui.getCard());
                                 }
-
-                                ui.removeListeners();
                             } catch (StackOverflowError e) {
                                 // Decades-old AWT issue. We should not have to raise the stack limit for this.
                                 // AWTEventMulticaster.remove(AWTEventMulticaster.java:153)
@@ -573,6 +590,31 @@ public final class MediaCardManager {
         });
     }
 
+    public void updateVisibleCards() {
+        runOnEDT(() -> {
+            if (mediaQueuePane == null) {
+                return;
+            }
+
+            int windowWidth = manager.getAppWindow().getWidth();
+
+            for (Component component : mediaQueuePane.getComponents()) {
+                if (component.isVisible() && component instanceof MediaCardPanel panel) {
+                    MediaCard card = panel.getMediaCard();
+                    if (card != null) {
+                        card.adjustScale(windowWidth);
+
+                        CustomMediaCardUI ui = card.getUi();
+                        if (ui != null) {
+                            ui.getCard().revalidate();
+                            ui.getCard().repaint();
+                        }
+                    }
+                }
+            }
+        });
+    }
+
     private void checkViewportVisibility() {
         if (queueScrollPane == null || mediaQueuePane == null) {
             return;
@@ -582,31 +624,44 @@ public final class MediaCardManager {
             Rectangle viewRect = queueScrollPane.getViewport().getViewRect();
             int buffer = (int)(viewRect.height * 2.5);
 
-            Rectangle expandedRect = new Rectangle(
-                viewRect.x, viewRect.y - buffer,
-                viewRect.width, viewRect.height + buffer * 2
-            );
+            int exX = viewRect.x;
+            int exY = viewRect.y - buffer;
+            int exMaxX = exX + viewRect.width;
+            int exMaxY = exY + viewRect.height + buffer * 2;
 
-            List<Runnable> toRefresh = new ArrayList<>();
+            List<Runnable> toRefresh = null;
+            int componentCount = mediaQueuePane.getComponentCount();
 
-            for (Component component : mediaQueuePane.getComponents()) {
-                if (!(component instanceof JPanel panel) || !component.isVisible()) {
+            for (int i = 0; i < componentCount; i++) {
+                Component component = mediaQueuePane.getComponent(i);
+
+                if (!(component instanceof MediaCardPanel panel) || !component.isVisible()) {
                     continue;
                 }
 
-                MediaCard card = (MediaCard)panel.getClientProperty("MEDIA_CARD");
+                MediaCard card = panel.getMediaCard();
                 if (card == null || card.getOnBecomeVisible() == null) {
                     continue;
                 }
 
-                if (expandedRect.intersects(component.getBounds())) {
+                int cX = component.getX();
+                int cY = component.getY();
+                int cMaxX = cX + component.getWidth();
+                int cMaxY = cY + component.getHeight();
+
+                if (cX < exMaxX && cMaxX > exX && cY < exMaxY && cMaxY > exY) {
+                    if (toRefresh == null) {
+                        toRefresh = new ArrayList<>();
+                    }
+
                     toRefresh.add(card.getOnBecomeVisible());
                 }
             }
 
-            if (!toRefresh.isEmpty()) {
+            if (toRefresh != null) {
+                final List<Runnable> finalToRefresh = toRefresh;
                 GDownloader.GLOBAL_THREAD_POOL.execute(() -> {
-                    for (Runnable runnable : toRefresh) {
+                    for (Runnable runnable : finalToRefresh) {
                         runnable.run();
                     }
                 });
@@ -618,19 +673,20 @@ public final class MediaCardManager {
         CustomMediaCardUI ui = mediaCard.getUi();
 
         if (ui != null) {
-            JPanel sourcePanel = ui.getCard();
+            MediaCardPanel sourcePanel = ui.getCard();
             Rectangle windowBounds = manager.getAppWindow().getBounds();
             Point dropLocation = dropTarget.getLocationOnScreen();
 
-            if (windowBounds.contains(dropLocation) && dropTarget instanceof JPanel jPanel) {
-                MediaCard targetCard = (MediaCard)jPanel.getClientProperty("MEDIA_CARD");
+            if (windowBounds.contains(dropLocation)
+                && dropTarget instanceof MediaCardPanel targetPanel) {
+                MediaCard targetCard = targetPanel.getMediaCard();
                 if (targetCard != null && targetCard.getDropTargetValidator().get()) {
                     if (mediaCard.getOnSwap() != null) {
                         mediaCard.getOnSwap().accept(targetCard);
                     }
 
                     runOnEDT(() -> {
-                        int targetIndex = getComponentIndex(jPanel);
+                        int targetIndex = getComponentIndex(targetPanel);
 
                         mediaQueuePane.remove(sourcePanel);
                         mediaQueuePane.add(sourcePanel, targetIndex);
@@ -646,7 +702,7 @@ public final class MediaCardManager {
         return false;
     }
 
-    private int getComponentIndex(JPanel component) {
+    private int getComponentIndex(Component component) {
         Component[] components = mediaQueuePane.getComponents();
         for (int i = 0; i < components.length; i++) {
             if (components[i] == component) {
@@ -666,7 +722,11 @@ public final class MediaCardManager {
 
         Component component = mediaQueuePane.getComponents()[index];
 
-        return (MediaCard)((JPanel)component).getClientProperty("MEDIA_CARD");
+        if (component instanceof MediaCardPanel panel) {
+            return panel.getMediaCard();
+        }
+
+        return null;
     }
 
     public void reorderMediaCards(@NonNull List<Integer> newOrderIds) {
@@ -684,8 +744,8 @@ public final class MediaCardManager {
 
                 int index = 0;
                 for (Component component : mediaQueuePane.getComponents()) {
-                    if (component instanceof JPanel panel) {
-                        MediaCard card = (MediaCard)panel.getClientProperty("MEDIA_CARD");
+                    if (component instanceof MediaCardPanel panel) {
+                        MediaCard card = panel.getMediaCard();
                         if (card != null) {
                             components.add(component);
                             idToComponentMap.put(card.getId(), component);
@@ -819,7 +879,7 @@ public final class MediaCardManager {
                 String currentQuery = currentSearchQuery.get();
 
                 boolean visible = currentQuery.isEmpty() || matchesSearch(card, currentQuery);
-                JPanel cardPanel = ui.getCard();
+                MediaCardPanel cardPanel = ui.getCard();
 
                 if (cardPanel.isVisible() != visible) {
                     cardPanel.setVisible(visible);
@@ -865,7 +925,7 @@ public final class MediaCardManager {
 
         private final MediaCard mediaCard;
         private final CustomMediaCardUI ui;
-        private final JPanel card;
+        private final MediaCardPanel card;
 
         private long lastClick = System.currentTimeMillis();
 

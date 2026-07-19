@@ -41,11 +41,21 @@ public class CustomThumbnailPanel extends JPanel {
     private static final Font LIVE_FONT = new Font(Font.SANS_SERIF, Font.PLAIN, 11);
 
     private BufferedImage image;
+    private BufferedImage scaledImage;
+
+    private int lastWidth = -1;
+    private int lastHeight = -1;
+
     private ImageIcon placeholderIcon;
     private ImageIcon priorityIcon;
 
     private String durationText;
     private boolean live;
+
+    private BufferedImage compositeCache;
+    private int compositeWidth = -1;
+    private int compositeHeight = -1;
+    private boolean compositeDirty = true;
 
     @SuppressWarnings("this-escape")
     public CustomThumbnailPanel() {
@@ -75,9 +85,13 @@ public class CustomThumbnailPanel extends JPanel {
     }
 
     public void setPriorityIcon(DownloadPriorityEnum downloadPriority) {
-        priorityIcon = fetchPriorityIcon(downloadPriority);
+        ImageIcon newIcon = fetchPriorityIcon(downloadPriority);
+        if (priorityIcon == newIcon) {
+            return;
+        }
 
-        repaint();
+        priorityIcon = newIcon;
+        invalidateComposite();
     }
 
     public void setPlaceholderIcon(DownloadTypeEnum downloadType) {
@@ -92,13 +106,14 @@ public class CustomThumbnailPanel extends JPanel {
 
         placeholderIcon = iconIn;
 
-        repaint();
+        invalidateComposite();
     }
 
     public void setImage(BufferedImage imageIn) {
         image = imageIn;
+        scaledImage = null;
 
-        repaint();
+        invalidateComposite();
     }
 
     public void setLive(boolean liveIn) {
@@ -108,7 +123,7 @@ public class CustomThumbnailPanel extends JPanel {
 
         live = liveIn;
 
-        repaint();
+        invalidateComposite();
     }
 
     public boolean isLive() {
@@ -119,89 +134,143 @@ public class CustomThumbnailPanel extends JPanel {
         removeAll();
 
         image = imageIn;
+        scaledImage = null;
 
+        String newDurationText;
         if (durationIn == 0) {
-            durationText = null;
+            newDurationText = null;
         } else {
-            durationText = String.format("%d:%02d:%02d",
+            newDurationText = String.format("%d:%02d:%02d",
                 durationIn / 3600,
                 (durationIn % 3600) / 60,
                 durationIn % 60);
         }
 
+        durationText = newDurationText;
+
+        invalidateComposite();
         revalidate();
+    }
+
+    private void invalidateComposite() {
+        compositeDirty = true;
         repaint();
+    }
+
+    private void updateScaledImage(int panelWidth, int panelHeight) {
+        if (image == null || panelWidth <= 0 || panelHeight <= 0) {
+            scaledImage = null;
+            return;
+        }
+
+        int imageWidth = image.getWidth();
+        int imageHeight = image.getHeight();
+
+        double scaleX = (double)(panelWidth + 4) / imageWidth;
+        double scaleY = (double)(panelHeight + 4) / imageHeight;
+
+        double scale = Math.min(scaleX, scaleY);
+
+        int sWidth = (int)(imageWidth * scale);
+        int sHeight = (int)(imageHeight * scale);
+
+        if (sWidth <= 0 || sHeight <= 0) {
+            scaledImage = null;
+            return;
+        }
+
+        scaledImage = new BufferedImage(sWidth, sHeight, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2 = scaledImage.createGraphics();
+        g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+        g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g2.drawImage(image, 0, 0, sWidth, sHeight, null);
+        g2.dispose();
+
+        lastWidth = panelWidth;
+        lastHeight = panelHeight;
     }
 
     @Override
     protected void paintComponent(Graphics g) {
-        Graphics2D g2d = (Graphics2D)g.create();
+        int panelWidth = getWidth();
+        int panelHeight = getHeight();
+
+        if (panelWidth <= 0 || panelHeight <= 0) {
+            return;
+        }
+
+        if (compositeDirty || compositeCache == null
+            || compositeWidth != panelWidth || compositeHeight != panelHeight) {
+            rebuildComposite(panelWidth, panelHeight);
+        }
+
+        if (compositeCache != null) {
+            g.drawImage(compositeCache, 0, 0, this);
+        }
+    }
+
+    private void rebuildComposite(int panelWidth, int panelHeight) {
+        BufferedImage newComposite = new BufferedImage(
+            panelWidth, panelHeight, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2d = newComposite.createGraphics();
 
         try {
             g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
             g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
             g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
 
-            int width = getWidth();
-            int height = getHeight();
-
             int arcSize = 10;
             RoundRectangle2D roundedRect = new RoundRectangle2D.Float(
-                0, 0, width, height, arcSize, arcSize);
+                0, 0, panelWidth, panelHeight, arcSize, arcSize);
 
             g2d.setColor(getBackground());
             g2d.fill(roundedRect);
             g2d.clip(roundedRect);
 
-            int panelWidth = getWidth();
-            int panelHeight = getHeight();
-
             if (image != null) {
-                int imageWidth = image.getWidth();
-                int imageHeight = image.getHeight();
+                if (scaledImage == null || panelWidth != lastWidth || panelHeight != lastHeight) {
+                    updateScaledImage(panelWidth, panelHeight);
+                }
 
-                // 2px overflow on each side to account for slight antialiasing artifacts
-                double scaleX = (double)(panelWidth + 4) / imageWidth;
-                double scaleY = (double)(panelHeight + 4) / imageHeight;
+                if (scaledImage != null) {
+                    int scaledWidth = scaledImage.getWidth();
+                    int scaledHeight = scaledImage.getHeight();
 
-                double scale = Math.min(scaleX, scaleY);
+                    // Center the image, shift left by 2px
+                    int x = (panelWidth - scaledWidth) / 2 - 2;
+                    int y = (panelHeight - scaledHeight) / 2;
 
-                int scaledWidth = (int)(imageWidth * scale);
-                int scaledHeight = (int)(imageHeight * scale);
+                    g2d.drawImage(scaledImage, x, y, this);
 
-                // Center the image, shift left by 2px
-                int x = (panelWidth - scaledWidth) / 2 - 2;
-                int y = (panelHeight - scaledHeight) / 2;
+                    if (durationText != null) {
+                        g2d.setFont(FONT);
+                        g2d.setColor(Color.WHITE);
 
-                g2d.drawImage(image, x, y, scaledWidth, scaledHeight, this);
+                        FontMetrics fm = g2d.getFontMetrics();
+                        int textWidth = fm.stringWidth(durationText);
+                        int textHeight = fm.getHeight();
+                        int vPadding = 3;
+                        int hPadding = 5;
 
-                if (durationText != null) {
-                    g2d.setFont(FONT);
-                    g2d.setColor(Color.WHITE);
+                        int margin = 3;
 
-                    FontMetrics fm = g2d.getFontMetrics();
-                    int textWidth = fm.stringWidth(durationText);
-                    int textHeight = fm.getHeight();
-                    int vPadding = 3;
-                    int hPadding = 5;
+                        int rectX = panelWidth - textWidth - (hPadding * 2) - margin;
+                        int rectY = y + scaledHeight - textHeight - (vPadding * 2) - margin;
 
-                    x = panelWidth - scaledWidth;
+                        arcSize = 8;
+                        RoundRectangle2D durationRect = new RoundRectangle2D.Float(
+                            rectX, rectY, textWidth + hPadding * 2, textHeight + vPadding * 2,
+                            arcSize, arcSize);
 
-                    int rectX = x + scaledWidth - textWidth - hPadding * 2;
-                    int rectY = y + scaledHeight - textHeight - vPadding * 2;
+                        g2d.setColor(new Color(0, 0, 0, 190));
+                        g2d.fill(durationRect);
 
-                    arcSize = 8;
-                    RoundRectangle2D durationRect = new RoundRectangle2D.Float(
-                        rectX, rectY, textWidth + hPadding * 2, textHeight + vPadding * 2,
-                        arcSize, arcSize);
-
-                    g2d.setColor(new Color(0, 0, 0, 190));
-                    g2d.fill(durationRect);
-
-                    g2d.setColor(Color.WHITE);
-                    int textX = rectX + hPadding;
-                    int textY = rectY + vPadding + fm.getAscent();
-                    g2d.drawString(durationText, textX, textY);
+                        g2d.setColor(Color.WHITE);
+                        int textX = rectX + hPadding;
+                        int textY = rectY + vPadding + fm.getAscent();
+                        g2d.drawString(durationText, textX, textY);
+                    }
                 }
             } else if (placeholderIcon != null) {
                 Image pImg = placeholderIcon.getImage();
@@ -224,6 +293,11 @@ public class CustomThumbnailPanel extends JPanel {
         } finally {
             g2d.dispose();
         }
+
+        compositeCache = newComposite;
+        compositeWidth = panelWidth;
+        compositeHeight = panelHeight;
+        compositeDirty = false;
     }
 
     private void drawLiveBadge(Graphics2D g2d) {

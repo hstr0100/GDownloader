@@ -21,7 +21,10 @@ import java.awt.Dimension;
 import java.awt.FontMetrics;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 import javax.swing.JLabel;
 import javax.swing.SwingUtilities;
@@ -81,9 +84,22 @@ public class CustomDynamicLabel extends JLabel {
     }
 
     public final void setFullText(String... text) {
-        String[] newFullText = Arrays.stream(text)
-            .flatMap(s -> Arrays.stream(s.split("\n")))
-            .toArray(String[]::new);
+        if (text == null) {
+            text = new String[0];
+        }
+
+        List<String> parsedLines = new ArrayList<>();
+        for (String s : text) {
+            if (s != null) {
+                if (s.indexOf('\n') == -1) {
+                    parsedLines.add(s);
+                } else {
+                    Collections.addAll(parsedLines, s.split("\n"));
+                }
+            }
+        }
+
+        String[] newFullText = parsedLines.toArray(new String[0]);
 
         if (Arrays.equals(fullText, newFullText)) {
             return;
@@ -146,7 +162,11 @@ public class CustomDynamicLabel extends JLabel {
         lastComputedWidth = availableWidth;
 
         String[] truncatedText = getTruncated(fullText, availableWidth);
-        setText(wrapTextInHtml(FOREGROUND, true, centerText, truncatedText));
+        String newHtml = wrapTextInHtml(FOREGROUND, true, centerText, truncatedText);
+
+        if (!newHtml.equals(getText())) {
+            setText(newHtml);
+        }
     }
 
     private String[] getTruncated(String[] fullText, int availableWidth) {
@@ -167,16 +187,23 @@ public class CustomDynamicLabel extends JLabel {
             if (!lineWrapping) {
                 truncatedText[i] = fastTruncate(line, fontMetrics, availableWidth);
             } else {
-                StringBuilder wrappedLine = new StringBuilder();
+                StringBuilder wrappedLine = new StringBuilder(line.length() + 16);
                 StringBuilder currentLine = new StringBuilder();
 
-                for (char c : line.toCharArray()) {
-                    currentLine.append(c);
-                    if (fontMetrics.stringWidth(currentLine.toString()) > availableWidth) {
-                        wrappedLine.append(currentLine.substring(0, currentLine.length() - 1))
-                            .append(System.lineSeparator());
-                        currentLine = new StringBuilder().append(c);
+                int currentWidth = 0;
+
+                for (int j = 0; j < line.length(); j++) {
+                    char c = line.charAt(j);
+                    int charWidth = fontMetrics.charWidth(c);
+
+                    if (currentWidth + charWidth > availableWidth && currentLine.length() > 0) {
+                        wrappedLine.append(currentLine).append(System.lineSeparator());
+                        currentLine.setLength(0);
+                        currentWidth = 0;
                     }
+
+                    currentLine.append(c);
+                    currentWidth += charWidth;
                 }
 
                 wrappedLine.append(currentLine);

@@ -21,11 +21,11 @@ import java.awt.datatransfer.Transferable;
 import java.awt.datatransfer.UnsupportedFlavorException;
 import java.io.IOException;
 import javax.swing.JComponent;
-import javax.swing.JPanel;
 import javax.swing.TransferHandler;
 import javax.swing.TransferHandler.TransferSupport;
 import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.ui.GUIManager;
+import net.brlns.gdownloader.ui.custom.CustomMediaCardUI.MediaCardPanel;
 import net.brlns.gdownloader.ui.mediacard.MediaCard;
 
 /**
@@ -48,8 +48,9 @@ public class MediaCardDnDHandler implements IDnDHandler {
 
     @Override
     public Transferable createTransferable(JComponent c) {
-        if (c instanceof JPanel panel) {
-            if (panel.getClientProperty("MEDIA_CARD") instanceof MediaCard card) {
+        if (c instanceof MediaCardPanel panel) {
+            MediaCard card = panel.getMediaCard();
+            if (card != null) {
                 return new MediaCardTransferable(card);
             }
         }

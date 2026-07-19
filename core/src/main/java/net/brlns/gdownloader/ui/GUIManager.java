@@ -256,12 +256,21 @@ public final class GUIManager {
             //appWindow.setUndecorated(true);
             appWindow.setIconImage(getAppIcon());
 
+            appWindow.addComponentListener(new ComponentAdapter() {
+                @Override
+                public void componentResized(ComponentEvent e) {
+                    mediaCardManager.updateVisibleCards();
+                }
+            });
+
             appWindow.addWindowStateListener((WindowEvent e) -> {
                 if ((e.getNewState() & JFrame.MAXIMIZED_BOTH) == JFrame.MAXIMIZED_BOTH) {
                     appWindow.setAlwaysOnTop(false);
                 } else {
                     appWindow.setAlwaysOnTop(main.getConfig().isKeepWindowAlwaysOnTop());
                 }
+
+                mediaCardManager.updateVisibleCards();
             });
 
             appWindow.addWindowListener(new WindowAdapter() {

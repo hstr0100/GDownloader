@@ -18,8 +18,6 @@ package net.brlns.gdownloader.ui.custom;
 
 import jakarta.annotation.Nullable;
 import java.awt.*;
-import java.awt.geom.Area;
-import java.awt.geom.Rectangle2D;
 import java.awt.geom.RoundRectangle2D;
 import java.util.Collections;
 import java.util.Objects;
@@ -52,11 +50,18 @@ public class CustomProgressBar extends JPanel {
     @Getter
     private int value = 0;
 
+    @Getter
+    private Color backdropColor;
+
     private Color cachedUnfilledColor;
     private Color cachedFilledColor;
     private Color lastTextColor;
     private Color lastBgColor;
     private Color lastFgColor;
+
+    private int cachedProgressWidth = -1;
+    private int cachedBlockX = -1;
+    private int cachedWidth = -1;
 
     private static double phase = 0;
     private static final Timer bounceTimer;
@@ -72,7 +77,7 @@ public class CustomProgressBar extends JPanel {
 
             synchronized (activeReferences) {
                 for (CustomProgressBar bar : activeReferences) {
-                    bar.repaint();
+                    bar.updateIndeterminateState(phase);
                 }
             }
         });
@@ -91,6 +96,36 @@ public class CustomProgressBar extends JPanel {
         setOpaque(false);
     }
 
+    public void setBackdropColor(@Nullable Color colorIn) {
+        if (Objects.equals(backdropColor, colorIn)) {
+            return;
+        }
+
+        backdropColor = colorIn;
+        setOpaque(colorIn != null);
+
+        repaint();
+    }
+
+    protected void updateIndeterminateState(double currentPhase) {
+        if (value != -1) {
+            return;
+        }
+
+        int width = getWidth();
+        if (width <= 0) {
+            return;
+        }
+
+        int blockWidth = width / 6;
+        double normalizedPosition = (Math.sin(currentPhase) + 1) / 2;
+        int expectedBlockX = (int)(normalizedPosition * (width - blockWidth));
+
+        if (expectedBlockX != cachedBlockX || width != cachedWidth) {
+            repaint();
+        }
+    }
+
     @Override
     protected void paintComponent(Graphics g) {
         Graphics2D g2d = (Graphics2D)g.create();
@@ -98,6 +133,13 @@ public class CustomProgressBar extends JPanel {
 
         int width = getWidth();
         int height = getHeight();
+
+        cachedWidth = width;
+
+        if (backdropColor != null) {
+            g2d.setColor(backdropColor);
+            g2d.fillRect(0, 0, width, height);
+        }
 
         int arcSize = 8;
         RoundRectangle2D backgroundRect = new RoundRectangle2D.Float(
@@ -111,30 +153,30 @@ public class CustomProgressBar extends JPanel {
         g2d.setColor(getForeground());
 
         int progressBarWidth = width;
-        int blockWidth = progressBarWidth / 6; // 1 / 6
-
-        Shape filledShape = new Rectangle2D.Float();
+        int progressWidth = 0;
 
         if (value == -1) {
+            int blockWidth = progressBarWidth / 6;
             // Use a sine curve to slow down near the edges
             double normalizedPosition = (Math.sin(phase) + 1) / 2;
             int blockX = (int)(normalizedPosition * (progressBarWidth - blockWidth));
 
+            cachedBlockX = blockX;
+
             RoundRectangle2D progressRect = new RoundRectangle2D.Float(
                 blockX, 0, blockWidth, height, arcSize, arcSize);
             g2d.fill(progressRect);
-            filledShape = progressRect;
         } else {
             // Draw normal progress bar when value is not -1
-            int progressWidth = (int)(progressBarWidth * (value / 100.0));
+            progressWidth = (int)(progressBarWidth * (value / 100.0));
+
+            cachedProgressWidth = progressWidth;
 
             if (progressWidth > 0) {
                 if (progressWidth < width) {
                     g2d.fillRect(0, 0, progressWidth, height);
-                    filledShape = new Rectangle2D.Float(0, 0, progressWidth, height);
                 } else {
                     g2d.fill(backgroundRect);
-                    filledShape = backgroundRect;
                 }
             }
         }
@@ -167,23 +209,21 @@ public class CustomProgressBar extends JPanel {
                     lastFgColor = currentFg;
                 }
 
-                Area filledArea = new Area(filledShape);
-                Area backgroundArea = new Area(backgroundRect);
+                if (progressWidth < width) {
+                    Graphics2D g2dUnfilled = (Graphics2D)g2d.create();
+                    g2dUnfilled.clipRect(progressWidth, 0, width - progressWidth, height);
+                    g2dUnfilled.setColor(cachedUnfilledColor);
+                    g2dUnfilled.drawString(stringToPaint, x, y);
+                    g2dUnfilled.dispose();
+                }
 
-                Area unfilledArea = new Area(backgroundArea);
-                unfilledArea.subtract(filledArea);
-
-                Graphics2D g2dUnfilled = (Graphics2D)g2d.create();
-                g2dUnfilled.clip(unfilledArea);
-                g2dUnfilled.setColor(cachedUnfilledColor);
-                g2dUnfilled.drawString(stringToPaint, x, y);
-                g2dUnfilled.dispose();
-
-                Graphics2D g2dFilled = (Graphics2D)g2d.create();
-                g2dFilled.clip(filledArea);
-                g2dFilled.setColor(cachedFilledColor);
-                g2dFilled.drawString(stringToPaint, x, y);
-                g2dFilled.dispose();
+                if (progressWidth > 0) {
+                    Graphics2D g2dFilled = (Graphics2D)g2d.create();
+                    g2dFilled.clipRect(0, 0, progressWidth, height);
+                    g2dFilled.setColor(cachedFilledColor);
+                    g2dFilled.drawString(stringToPaint, x, y);
+                    g2dFilled.dispose();
+                }
             }
 
             lastTextColor = baseTextColor;
@@ -233,6 +273,10 @@ public class CustomProgressBar extends JPanel {
     }
 
     public void setValue(int valueIn) {
+        if (value == valueIn) {
+            return;
+        }
+
         synchronized (activeReferences) {
             if (value == -1 && valueIn != -1) {
                 activeReferences.remove(this);
@@ -249,16 +293,37 @@ public class CustomProgressBar extends JPanel {
 
         value = valueIn;
 
-        repaint();
+        if (value != -1) {
+            int width = getWidth();
+            if (width > 0) {
+                int expectedProgressWidth = (int)(width * (value / 100.0));
+
+                if (expectedProgressWidth != cachedProgressWidth || width != cachedWidth) {
+                    repaint();
+                }
+            } else {
+                repaint();
+            }
+        } else {
+            repaint();
+        }
     }
 
     public void setString(String stringIn) {
+        if (Objects.equals(string, stringIn)) {
+            return;
+        }
+
         string = stringIn;
 
         repaint();
     }
 
     public void setTextColor(Color textColorIn) {
+        if (Objects.equals(textColor, textColorIn)) {
+            return;
+        }
+
         textColor = textColorIn;
 
         repaint();

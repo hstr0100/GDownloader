@@ -232,57 +232,45 @@ public final class UIUtils {
             baseFont = new JLabel().getFont();
         }
 
-        int fontSize = baseFont.getSize();
-        String fontFamily = baseFont.getFamily();
-
-        StringBuilder wrappedText = new StringBuilder();
+        StringBuilder html = new StringBuilder(256);
+        html.append("<html><body style='font-family: ").append(baseFont.getFamily())
+            .append("; font-size: ").append(baseFont.getSize())
+            .append("pt; color: #").append(textColorHex)
+            .append("; white-space: nowrap; overflow: hidden; display: block;'>");
 
         if (centerText) {
-            wrappedText.append("<center>");
+            html.append("<center>");
         }
-
         if (bold) {
-            wrappedText.append("<b>");
+            html.append("<b>");
         }
 
-        for (String text : lines) {
-            text = text.replace(System.lineSeparator(), "<br>")
-                .replace("\n", "<br>")
-                .replace("[PLAY]", "►");
-
-            for (String line : text.split("<br>")) {
-                if (line.isEmpty()) {
-                    wrappedText.append("<br>");
-                    continue;
-                }
-
-                String[] words = line.split(" ");
-                for (String word : words) {
-                    wrappedText.append(word).append(" ");
-                }
-
-                if (!wrappedText.toString().trim().endsWith("<br>")) {
-                    wrappedText.append("<br>");
-                }
+        boolean firstLine = true;
+        for (String line : lines) {
+            if (line == null) {
+                continue;
             }
+
+            if (!firstLine) {
+                html.append("<br>");
+            }
+
+            html.append(line.replace(System.lineSeparator(), "<br>")
+                .replace("\n", "<br>")
+                .replace("[PLAY]", "►"));
+            firstLine = false;
         }
 
         if (bold) {
-            wrappedText.append("</b>");
+            html.append("</b>");
         }
-
         if (centerText) {
-            wrappedText.append("</center>");
+            html.append("</center>");
         }
 
-        String result = wrappedText.toString().trim();
+        html.append("</body></html>");
 
-        result = result.replaceFirst("(<br>)(</b>)?(</center>)?$", "$2$3");
-
-        return String.format(
-            "<html><body style='font-family: %s; font-size: %dpt; color: #%s; "
-            + "white-space: nowrap; overflow: hidden; display: block;'>%s</body></html>",
-            fontFamily, fontSize, textColorHex, result);
+        return html.toString();
     }
 
     /**

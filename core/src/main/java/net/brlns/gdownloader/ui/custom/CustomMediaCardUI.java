@@ -16,10 +16,11 @@
  */
 package net.brlns.gdownloader.ui.custom;
 
-import jakarta.annotation.PreDestroy;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.swing.*;
 import javax.swing.plaf.basic.BasicButtonUI;
@@ -29,6 +30,7 @@ import lombok.NonNull;
 import net.brlns.gdownloader.downloader.enums.DownloadPriorityEnum;
 import net.brlns.gdownloader.downloader.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.ui.GUIManager;
+import net.brlns.gdownloader.ui.mediacard.MediaCard;
 import net.brlns.gdownloader.ui.mediacard.MediaCard.StartButtonMode;
 import net.brlns.gdownloader.ui.menu.RightClickMenu;
 
@@ -54,7 +56,7 @@ public final class CustomMediaCardUI {
     private final Runnable onFormatsClick;
 
     @Getter
-    private JPanel card;
+    private MediaCardPanel card;
     @Getter
     private JLabel dragLabel;
     private Dimension cardMaximumSize;
@@ -62,9 +64,6 @@ public final class CustomMediaCardUI {
     private CustomDynamicLabel mediaNameLabel;
     private CustomThumbnailPanel thumbnailPanel;
     private CustomProgressBar progressBar;
-
-    private WindowStateListener windowStateListener;
-    private ComponentAdapter componentResizeListener;
 
     @Getter
     private JButton closeButton;
@@ -101,19 +100,8 @@ public final class CustomMediaCardUI {
         initComponents();
     }
 
-    @PreDestroy
-    public void removeListeners() {
-        if (windowStateListener != null) {
-            parent.removeWindowStateListener(windowStateListener);
-        }
-
-        if (componentResizeListener != null) {
-            parent.removeComponentListener(componentResizeListener);
-        }
-    }
-
     private void initComponents() {
-        card = new JPanel() {
+        card = new MediaCardPanel() {
             @Override
             protected void paintComponent(Graphics g) {
                 Graphics2D g2d = (Graphics2D)g.create();
@@ -154,7 +142,7 @@ public final class CustomMediaCardUI {
         dragPanel.setPreferredSize(new Dimension(24, 24));
         dragPanel.setMinimumSize(new Dimension(24, 24));
         dragPanel.setMaximumSize(new Dimension(24, 24));
-        dragPanel.setBackground(new Color(0, 0, 0, 0));
+        card.addColorSyncComponent(dragPanel);
 
         ImageIcon dragIcon = loadIcon("/assets/drag.png", ICON, 24);
         dragLabel = new JLabel(dragIcon);
@@ -188,6 +176,8 @@ public final class CustomMediaCardUI {
 
         mediaNameLabel = new CustomDynamicLabel();
         mediaNameLabel.setForeground(color(FOREGROUND));
+        card.addColorSyncComponent(mediaNameLabel);
+
         gbc.insets = new Insets(10, 10, 5, 10);
         gbc.gridx = 2;
         gbc.gridy = 0;
@@ -204,6 +194,7 @@ public final class CustomMediaCardUI {
         progressBar.setForeground(Color.GRAY);
         progressBar.setBackground(Color.GRAY);
         //progressBar.setBorderPainted(false);
+        progressBar.setBackdropColor(color(MEDIA_CARD));
         progressBar.setPreferredSize(new Dimension(300, 21));
         progressBar.setMinimumSize(new Dimension(10, 21));
         progressBar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 21));
@@ -217,8 +208,8 @@ public final class CustomMediaCardUI {
         card.add(progressBar, gbc);
 
         JPanel controlPanel = new JPanel();
-        controlPanel.setOpaque(false);
         controlPanel.setLayout(new BoxLayout(controlPanel, BoxLayout.Y_AXIS));
+        card.addColorSyncComponent(controlPanel);
 
         infoButton = createIconButton(
             loadIcon("/assets/toast-info.png", ICON, 16),
@@ -310,19 +301,6 @@ public final class CustomMediaCardUI {
         gbc.fill = GridBagConstraints.VERTICAL;
         gbc.anchor = GridBagConstraints.CENTER;
         card.add(controlPanel, gbc);
-
-        windowStateListener = (WindowEvent e) -> {
-            updateScale(calculateScale(parent.getWidth()));
-        };
-        parent.addWindowStateListener(windowStateListener);
-
-        componentResizeListener = new ComponentAdapter() {
-            @Override
-            public void componentResized(ComponentEvent e) {
-                updateScale(calculateScale(parent.getWidth()));
-            }
-        };
-        parent.addComponentListener(componentResizeListener);
     }
 
     private void buildMenuRow(JButton button, String labelKey) {
@@ -501,23 +479,41 @@ public final class CustomMediaCardUI {
         startButton.setToolTipText(l10n(startButtonState.get().getTooltipKey()));
     }
 
-    private double calculateScale(int panelWidth) {
-        GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
-        GraphicsDevice gs = ge.getDefaultScreenDevice();
-        Rectangle screenBounds = gs.getDefaultConfiguration().getBounds();
-        double screenWidth = screenBounds.getWidth();
-
-        double targetWidth = screenWidth * 0.9;
-        double scaleFactor = (panelWidth >= targetWidth) ? 1.2 : 1;
-
-        return scaleFactor;
-    }
-
     @Data
     public static class StartButtonState {
 
         private final ImageIcon icon;
         private final ImageIcon hoverIcon;
         private final String tooltipKey;
+    }
+
+    public static class MediaCardPanel extends JPanel {
+
+        @Getter
+        private MediaCard mediaCard;
+
+        private final List<JComponent> colorSyncComponents = new ArrayList<>();
+
+        public void setMediaCard(MediaCard mediaCardIn) {
+            mediaCard = mediaCardIn;
+        }
+
+        public void addColorSyncComponent(JComponent component) {
+            colorSyncComponents.add(component);
+
+            component.setBackground(getBackground());
+            component.setOpaque(true);
+        }
+
+        @Override
+        public void setBackground(Color bg) {
+            super.setBackground(bg);
+
+            if (colorSyncComponents != null) {
+                for (JComponent comp : colorSyncComponents) {
+                    comp.setBackground(bg);
+                }
+            }
+        }
     }
 }
