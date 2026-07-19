@@ -328,6 +328,7 @@ tasks.named('jlink').configure {
             fileOps.fs.copy {
                 from(fileOps.archives.zipTree(nativeJar)) {
                     include("${baseLibPath}/**")
+                    exclude("**/libxkbcommon-x11.so.0")
                     eachFile { fcd ->
                         def segments = fcd.relativePath.segments
                         def prefixDepth = baseLibPath.split('/').length
@@ -404,39 +405,6 @@ tasks.register('createAppImage', Exec) {
                         .replace("{timestamp}", today)
                 }
             }
-        }
-
-        // Include libxkbcommon-x11 in AppImage if available
-        // TODO libxcb-xkb.so.1 -> libxcb-xkb1 + deps
-        def libDirs = [
-            "/usr/lib/x86_64-linux-gnu",
-            "/usr/lib/i386-linux-gnu",
-            "/usr/lib/aarch64-linux-gnu",
-            "/usr/lib/arm-linux-gnueabihf",
-            "/usr/lib"
-        ]
-
-        def foundXkbCommon = false
-
-        libDirs.each { libDirPath ->
-            if (!foundXkbCommon) {
-                def libDir = file(libDirPath)
-                def libFile = file("${libDir}/libxkbcommon-x11.so.0")
-
-                if (libFile.exists()) {
-                    fileOps.fs.copy {
-                        from libFile
-                        into "$appLibPath/runtime/bin/native-libs/linux/${nativeLibsArch}"
-                    }
-
-                    foundXkbCommon = true
-                    logger.lifecycle("Found libxkbcommon-x11.so.0 in ${libDir}")
-                }
-            }
-        }
-
-        if (!foundXkbCommon) {
-            logger.warn("Could not find libxkbcommon-x11.so.0 in any of: ${libDirs}")
         }
 
         def launcherScript = file("$appLibPath/${rootProject.name}")

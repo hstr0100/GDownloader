@@ -208,6 +208,13 @@ public class OneFichierResolver extends AbstractHostResolver {
                     "Cannot download more than one file at a time");
             }
 
+            if (text.contains("more than 10 files")) {
+                log.info("1Fichier limit detected: cannot download more than 10 files per day");
+
+                throw new RetryLaterException(Duration.ofHours(1),
+                    "Cannot download more than 10 files per day");
+            }
+
             if (text.contains("protect access")
                 || text.contains("bad password")) {
                 throw new HostResolverException(
