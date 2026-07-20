@@ -32,6 +32,8 @@ open module net.brlns.gdownloader {
     requires transitive jakarta.annotation;
     requires transitive jakarta.persistence;
     requires transitive org.freedesktop.dbus;
+    requires transitive com.sun.jna;
+    requires transitive com.sun.jna.platform;
     requires audiocue;
     requires com.fasterxml.jackson.annotation;
     requires com.fasterxml.jackson.core;
@@ -42,8 +44,6 @@ open module net.brlns.gdownloader {
     requires org.freedesktop.dbus.transport.jre;
     requires ch.qos.logback.classic;
     requires ch.qos.logback.core;
-    requires com.sun.jna;
-    requires com.sun.jna.platform;
 
     exports net.brlns.gdownloader;
     exports net.brlns.gdownloader.clipboard;

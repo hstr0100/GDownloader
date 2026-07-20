@@ -28,6 +28,7 @@ import net.brlns.gdownloader.util.LockUtils;
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
+// TODO: explain, instead of bailing out when yt-dlp fails to download.
 @Slf4j
 public class YtDlpUpdater extends AbstractGitUpdater {
 

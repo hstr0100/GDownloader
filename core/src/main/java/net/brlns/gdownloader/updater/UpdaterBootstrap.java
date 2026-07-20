@@ -255,7 +255,8 @@ public class UpdaterBootstrap {
     private static void launchUpdatedInstance(List<String> launchArguments, String originalLauncher, String[] args) {
         ProcessArguments arguments = new ProcessArguments(
             launchArguments,
-            "--from-ota");
+            "--from-ota",
+            "--launcher-version", Version.VERSION);
 
         if (originalLauncher != null) {
             arguments.add("--launcher", originalLauncher);

@@ -159,6 +159,7 @@ extraJavaModuleInfo {
 
     module('net.java.dev.jna:jna', 'com.sun.jna') {
         requires('java.logging')
+        requires('java.desktop')
         exportAllPackages()
     }
 

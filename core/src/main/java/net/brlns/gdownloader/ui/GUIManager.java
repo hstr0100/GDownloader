@@ -51,6 +51,7 @@ import net.brlns.gdownloader.event.impl.PerformUpdateCheckEvent;
 import net.brlns.gdownloader.event.impl.SettingsChangeEvent;
 import net.brlns.gdownloader.settings.Settings;
 import net.brlns.gdownloader.system.taskbar.TaskbarManager;
+import net.brlns.gdownloader.system.taskbar.Win32TaskbarIdentity;
 import net.brlns.gdownloader.ui.custom.*;
 import net.brlns.gdownloader.ui.dnd.WindowDragSourceListener;
 import net.brlns.gdownloader.ui.dnd.WindowDropTargetListener;
@@ -251,7 +252,6 @@ public final class GUIManager {
         assert SwingUtilities.isEventDispatchThread();
 
         if (appWindow == null) {
-            // note to self, tooltips only show up when focused
             String version = Version.VERSION;
 
             appWindow = new JFrame(GDownloader.REGISTRY_APP_NAME + (version != null ? " v" + version : ""));
@@ -387,6 +387,14 @@ public final class GUIManager {
             appWindow.add(mainPanel);
 
             taskbarManager = closeable(new TaskbarManager(appWindow));
+
+            if (GDownloader.isWindows()) {
+                String relaunchCommand = main.getRelaunchCommand();
+
+                if (relaunchCommand != null) {
+                    Win32TaskbarIdentity.apply(appWindow, relaunchCommand, GDownloader.REGISTRY_APP_NAME);
+                }
+            }
         }
     }
 

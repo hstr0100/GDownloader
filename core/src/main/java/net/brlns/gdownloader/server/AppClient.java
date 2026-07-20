@@ -34,6 +34,7 @@ import net.brlns.gdownloader.server.result.StatusResult;
 /**
  * @author Gabriel / hstr0100 / vertx010
  */
+// TODO: wake installed/portable versions independently, they use inherently different DB directories.
 @Slf4j
 public class AppClient {
 

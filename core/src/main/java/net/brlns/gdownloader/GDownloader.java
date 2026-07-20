@@ -166,7 +166,16 @@ public final class GDownloader {
     @Getter
     private static GDownloader instance;
 
+    @Getter
+    private static boolean fromOta;
+
+    @Getter
+    @Nullable
     private static String launcher;
+
+    @Getter
+    @Nullable
+    private static String launcherVersion;
 
     @Getter
     private static boolean portable;
@@ -687,6 +696,29 @@ public final class GDownloader {
         return launchString;
     }
 
+    @Nullable
+    public String getRelaunchCommand() {
+        List<String> launchCommand = getLaunchCommand();
+        if (launchCommand == null || launchCommand.isEmpty()) {
+            return null;
+        }
+
+        StringBuilder builder = new StringBuilder();
+        for (String token : launchCommand) {
+            if (builder.length() > 0) {
+                builder.append(' ');
+            }
+
+            builder.append('"').append(token).append('"');
+        }
+
+        if (isPortable()) {
+            builder.append(" --portable");
+        }
+
+        return builder.toString();
+    }
+
     public void restart() {
         restartRequested.set(true);
 
@@ -1040,7 +1072,6 @@ public final class GDownloader {
     public static void main(String[] args) {
         boolean noGui = false;
         int uiScale = 1;
-        boolean fromOta = false;
         boolean disableHWAccel = true;
 
         for (int i = 0; i < args.length; i++) {
@@ -1068,6 +1099,10 @@ public final class GDownloader {
 
             if (args[i].equalsIgnoreCase("--launcher")) {
                 launcher = args[++i];
+            }
+
+            if (args[i].equalsIgnoreCase("--launcher-version")) {
+                launcherVersion = args[++i];
             }
 
             if (args[i].equalsIgnoreCase("--portable")) {
