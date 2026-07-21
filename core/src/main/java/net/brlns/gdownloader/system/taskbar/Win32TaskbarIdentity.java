@@ -31,6 +31,7 @@ import com.sun.jna.ptr.PointerByReference;
 import com.sun.jna.win32.StdCallLibrary;
 import com.sun.jna.win32.W32APIOptions;
 import java.awt.Window;
+import java.io.File;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
@@ -53,7 +54,7 @@ public final class Win32TaskbarIdentity {
 
     }
 
-    public static void apply(Window window, String relaunchCommand, String displayName) {
+    public static void apply(Window window, String relaunchCommand, String executablePath) {
         if (!GDownloader.isWindows() || relaunchCommand == null) {
             return;
         }
@@ -71,7 +72,7 @@ public final class Win32TaskbarIdentity {
 
             boolean weInitializedCom = initializeCom();
             try {
-                applyToWindow(hwnd, relaunchCommand, displayName);
+                applyToWindow(hwnd, relaunchCommand, executablePath);
             } finally {
                 if (weInitializedCom) {
                     Ole32.INSTANCE.CoUninitialize();
@@ -100,7 +101,7 @@ public final class Win32TaskbarIdentity {
         return code != COMUtils.S_FALSE;
     }
 
-    private static void applyToWindow(HWND hwnd, String relaunchCommand, String displayName) {
+    private static void applyToWindow(HWND hwnd, String relaunchCommand, String executablePath) {
         PointerByReference ppv = new PointerByReference();
         REFIID refiid = new REFIID(IPropertyStore.IID_IPROPERTYSTORE);
 
@@ -120,7 +121,7 @@ public final class Win32TaskbarIdentity {
                 : UpdaterBootstrap.getJarLocation() != null;
 
             if (GDownloader.isPortable()) {
-                appUserModelId = "net.brlns.GDownloader.Portable";
+                appUserModelId = "net.brlns.GDownloader.PortableBuild";
             } else if (isJarLaunch) {
                 appUserModelId = "net.brlns.GDownloader.Jar";
             } else {
@@ -133,9 +134,16 @@ public final class Win32TaskbarIdentity {
                 }
             }
 
-            // Relaunch/display properties must be set before AppUserModel.ID, per MSDN.
+            // Relaunch properties must be set before AppUserModel.ID, per MSDN.
             setStringValue(propertyStore, AppUserModelKeys.PKEY_AppUserModel_RelaunchCommand, relaunchCommand);
-            setStringValue(propertyStore, AppUserModelKeys.PKEY_AppUserModel_RelaunchDisplayNameResource, displayName);
+
+            String iconResource = buildIconResource(executablePath);
+            if (iconResource != null) {
+                setStringValue(propertyStore, AppUserModelKeys.PKEY_AppUserModel_RelaunchIconResource, iconResource);
+            } else {
+                log.debug("No suitable executable found to source RelaunchIconResource from.");
+            }
+
             setStringValue(propertyStore, AppUserModelKeys.PKEY_AppUserModel_ID, appUserModelId);
 
             HRESULT commitResult = propertyStore.commit();
@@ -147,6 +155,23 @@ public final class Win32TaskbarIdentity {
         } finally {
             propertyStore.release();
         }
+    }
+
+    private static String buildIconResource(String executablePath) {
+        if (executablePath == null || !executablePath.toLowerCase().endsWith(".exe")) {
+            log.warn("RelaunchIconResource skipped: executablePath is null or not .exe: {}", executablePath);
+
+            return null;
+        }
+
+        File exeFile = new File(executablePath).getAbsoluteFile();
+        if (!exeFile.isFile()) {
+            log.warn("RelaunchIconResource skipped: file does not exist at {}", exeFile);
+
+            return null;
+        }
+
+        return exeFile.getAbsolutePath() + ",0";
     }
 
     private static void setStringValue(IPropertyStore propertyStore, PROPERTYKEY.ByReference key, String value) {
@@ -177,6 +202,9 @@ public final class Win32TaskbarIdentity {
 
         public static final PROPERTYKEY.ByReference PKEY_AppUserModel_RelaunchDisplayNameResource
             = new PROPERTYKEY.ByReference(FMTID_APPUSERMODEL, 4);
+
+        public static final PROPERTYKEY.ByReference PKEY_AppUserModel_RelaunchIconResource
+            = new PROPERTYKEY.ByReference(FMTID_APPUSERMODEL, 3);
 
     }
 

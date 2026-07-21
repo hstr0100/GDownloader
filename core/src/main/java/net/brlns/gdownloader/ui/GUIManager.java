@@ -392,7 +392,8 @@ public final class GUIManager {
                 String relaunchCommand = main.getRelaunchCommand();
 
                 if (relaunchCommand != null) {
-                    Win32TaskbarIdentity.apply(appWindow, relaunchCommand, GDownloader.REGISTRY_APP_NAME);
+                    Win32TaskbarIdentity.apply(appWindow, relaunchCommand,
+                        main.getRelaunchExecutablePath());
                 }
             }
         }

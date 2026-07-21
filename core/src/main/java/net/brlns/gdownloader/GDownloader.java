@@ -719,6 +719,16 @@ public final class GDownloader {
         return builder.toString();
     }
 
+    @Nullable
+    public String getRelaunchExecutablePath() {
+        List<String> launchCommand = getLaunchCommand();
+        if (launchCommand == null || launchCommand.isEmpty()) {
+            return null;
+        }
+
+        return launchCommand.get(0);
+    }
+
     public void restart() {
         restartRequested.set(true);
 
