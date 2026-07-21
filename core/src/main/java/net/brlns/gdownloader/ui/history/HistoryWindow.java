@@ -46,6 +46,7 @@ import net.brlns.gdownloader.persistence.entity.DownloadHistorySummary;
 import net.brlns.gdownloader.persistence.repository.DownloadHistoryRepository;
 import net.brlns.gdownloader.ui.GUIManager;
 import net.brlns.gdownloader.ui.SmoothScroller;
+import net.brlns.gdownloader.ui.WindowStateManager;
 import net.brlns.gdownloader.ui.custom.CustomDynamicLabel;
 import net.brlns.gdownloader.ui.custom.CustomLoadingSpinner;
 import net.brlns.gdownloader.ui.custom.CustomScrollBarUI;
@@ -180,11 +181,14 @@ public class HistoryWindow {
             };
 
             frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-            frame.setSize(1010, 718);
             frame.setLayout(new BorderLayout());
-            frame.setLocationRelativeTo(null);
             frame.setMinimumSize(new Dimension(700, 400));
             frame.setIconImage(manager.getAppIcon());
+
+            WindowStateManager.manage(main, frame, "history_window", () -> {
+                frame.setSize(1010, 718);
+                frame.setLocationRelativeTo(null);
+            });
 
             frame.add(buildHeaderPanel(), BorderLayout.NORTH);
             frame.add(buildContentPanel(), BorderLayout.CENTER);

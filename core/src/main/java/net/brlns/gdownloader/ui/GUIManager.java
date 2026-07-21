@@ -315,7 +315,9 @@ public final class GUIManager {
 
             appWindow.addMouseListener(defaultMouseAdapter);
 
-            adjustWindowSize();
+            appWindow.setMinimumSize(new Dimension(675, 225));
+
+            WindowStateManager.manage(main, appWindow, "main_window", this::adjustWindowSize);
 
             JPanel mainPanel = new JPanel(new BorderLayout());
             mainPanel.setBorder(BorderFactory.createLineBorder(color(BACKGROUND), 5));
@@ -411,12 +413,6 @@ public final class GUIManager {
 
         int windowX = screenSize.width - appWindow.getWidth() - 10;
         int windowY = screenSize.height - appWindow.getHeight() - taskbarHeight - 10;
-
-        int minHeight = screenSize.height - appWindow.getHeight() - taskbarHeight - 10;
-        if (windowY < minHeight) {
-            appWindow.setSize(appWindow.getWidth(), screenSize.height - minHeight);
-            windowY = minHeight;
-        }
 
         appWindow.setLocation(windowX, windowY);
     }

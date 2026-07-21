@@ -36,7 +36,7 @@ public class DirectHttpSettings extends AbstractDownloaderSettings {
     private boolean mediaTranscoding = true;
 
     @JsonProperty("OrganizeFilesIntoFolders")
-    private boolean organizeFilesIntoFolders = true;
+    private boolean organizeFilesIntoFolders = false;
 
     @JsonProperty("MaxDownloadChunks")
     private int maxDownloadChunks = 5;

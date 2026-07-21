@@ -195,12 +195,15 @@ public class SettingsPanel {
             };
 
             frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-            frame.setSize(1010, 726);
             frame.setLayout(new BorderLayout());
             //frame.setResizable(false);
-            frame.setLocationRelativeTo(null);
-            frame.setMinimumSize(new Dimension(frame.getWidth(), frame.getHeight()));
+            frame.setMinimumSize(new Dimension(1010, 726));
             frame.setIconImage(main.getGuiManager().getAppIcon());
+
+            WindowStateManager.manage(main, frame, "settings_window", () -> {
+                frame.setSize(1010, 726);
+                frame.setLocationRelativeTo(null);
+            });
 
             sidebarPanel = new JPanel();
             sidebarPanel.setBackground(color(SIDE_PANEL));
@@ -652,6 +655,18 @@ public class SettingsPanel {
             .labelKey("settings.always_on_top")
             .getter(settings::isKeepWindowAlwaysOnTop)
             .setter(settings::setKeepWindowAlwaysOnTop)
+            .build());
+
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.remember_window_placement")
+            .getter(settings::isRememberWindowPlacement)
+            .setter(settings::setRememberWindowPlacement)
+            .onSet((selected) -> {
+                if (!selected) {
+                    settings.getWindowPlacements().clear();
+                }
+            })
             .build());
 
         addCheckBox(panel, CheckBoxBuilder.builder()

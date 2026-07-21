@@ -201,6 +201,12 @@ public class Settings {
     @JsonProperty("KeepWindowAlwaysOnTop")
     private boolean keepWindowAlwaysOnTop = false;
 
+    @JsonProperty("RememberWindowPlacement")
+    private boolean rememberWindowPlacement = false;
+
+    @JsonProperty("WindowPlacements")
+    private Map<String, WindowPlacement> windowPlacements = new TreeMap<>();
+
     @JsonProperty("MaximumSimultaneousDownloads")
     private int maxSimultaneousDownloads = 3;
 
