@@ -19,10 +19,12 @@ package net.brlns.gdownloader.util;
 import jakarta.annotation.Nullable;
 import java.awt.FontMetrics;
 import java.io.File;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.text.DecimalFormat;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Locale;
 import java.util.stream.Collectors;
@@ -343,6 +345,14 @@ public final class StringUtils {
         String hex = bytesToHex(digest);
 
         return lowercase ? hex.toLowerCase() : hex;
+    }
+
+    @SneakyThrows
+    public static String calculateSHA256(String input) {
+        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+
+        return HexFormat.of().formatHex(
+            digest.digest(input.getBytes(StandardCharsets.UTF_8)));
     }
 
     public static List<String> wrapText(String str, int wrapLength) {

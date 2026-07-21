@@ -41,6 +41,7 @@ public class HostResolverRegistry {
 
         defaults.add(new SunoResolver());
         defaults.add(new OneFichierResolver());
+        defaults.add(new GoFileResolver());
 
         return new HostResolverRegistry(defaults);
     }

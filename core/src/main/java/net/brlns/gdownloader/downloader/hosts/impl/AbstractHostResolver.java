@@ -99,7 +99,7 @@ public abstract class AbstractHostResolver implements IHostResolver {
         return send(context, builder.build());
     }
 
-    private HttpResponse<String> send(HostResolverContext context, HttpRequest request) throws HostResolverException {
+    protected HttpResponse<String> send(HostResolverContext context, HttpRequest request) throws HostResolverException {
         try {
             return context.getHttpClient().send(request,
                 HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));

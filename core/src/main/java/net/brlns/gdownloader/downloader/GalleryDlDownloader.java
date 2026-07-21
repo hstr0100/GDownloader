@@ -89,6 +89,7 @@ public class GalleryDlDownloader extends AbstractDownloader {
         return DownloaderIdEnum.GALLERY_DL;
     }
 
+    // TODO: UI overrides
     @Override
     public int getPreferenceScore(String inputUrl) {
         if (inputUrl.contains("pinterest.com/")

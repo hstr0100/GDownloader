@@ -140,6 +140,7 @@ public class DirectHttpDownloader extends AbstractDownloader {
             "suno.com", "suno.ai",
             "hiddenpalace.org",
             "1fichier.com",
+            "gofile.io",
             "archive.org"
         )) {
             return 100;
@@ -866,9 +867,9 @@ public class DirectHttpDownloader extends AbstractDownloader {
             log.info("Trimmed to {}", targetPath);
         }
 
-        Files.createDirectories(targetPath);
-
         File targetFile = new File(targetPath.toFile(), detectedFileName);
+
+        Files.createDirectories(targetFile.getParentFile().toPath());
 
         long downloadedBytesSoFar = targetFile.exists() ? targetFile.length() : 0;
 

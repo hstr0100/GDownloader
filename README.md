@@ -4,8 +4,8 @@ A user-friendly graphical user interface (GUI) for [yt-dlp](https://github.com/y
 
 ## Overview
 
-GDownloader enables you to batch download YouTube videos and playlists with a simple CTRL+C.\
-It supports various platforms such as Crunchyroll, Twitch, X/Twitter, Spotify, Suno and all other platforms supported by yt-dlp and gallery-dl.
+GDownloader enables you to batch download videos, songs, galleries and playlists with a simple CTRL+C.\
+It supports various platforms such as YouTube, Crunchyroll, Twitch, X/Twitter, Spotify, Suno and all other platforms supported by yt-dlp and gallery-dl.
 
 ## Features
 

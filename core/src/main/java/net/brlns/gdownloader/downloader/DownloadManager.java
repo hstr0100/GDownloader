@@ -1064,6 +1064,8 @@ public class DownloadManager implements IEvent, AutoCloseable {
 
         if (category == RUNNING) {
             entry.removeRightClick(_forceStartKey);
+            entry.addRightClick(_downloadPriorityKey,
+                entry.getDownloadPriorityMenu(this));
             return;
         }
 
