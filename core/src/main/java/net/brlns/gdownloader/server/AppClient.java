@@ -42,7 +42,7 @@ public class AppClient {
         try (
             Socket socket = new Socket()) {
 
-            socket.connect(new InetSocketAddress(InetAddress.getLoopbackAddress(), AppServer.PORT), AppServer.TIMEOUT_MS);
+            socket.connect(new InetSocketAddress(InetAddress.getLoopbackAddress(), AppServer.getCurrentPort()), AppServer.TIMEOUT_MS);
             socket.setSoTimeout(AppServer.TIMEOUT_MS);
 
             try (

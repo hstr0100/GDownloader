@@ -52,7 +52,6 @@ import net.brlns.gdownloader.event.impl.ConnectivityStatusEvent;
 import net.brlns.gdownloader.event.impl.PerformUpdateCheckEvent;
 import net.brlns.gdownloader.event.impl.SettingsChangeEvent;
 import net.brlns.gdownloader.settings.Settings;
-import net.brlns.gdownloader.system.ShutdownRegistry;
 import net.brlns.gdownloader.system.ShutdownRegistry.CloseBefore;
 import net.brlns.gdownloader.system.taskbar.TaskbarManager;
 import net.brlns.gdownloader.system.taskbar.Win32TaskbarIdentity;

@@ -52,7 +52,8 @@ public final class AppServer implements AutoCloseable {
     protected static final int TIMEOUT_MS = 3000;
 
     public static final int PROTOCOL_VERSION = 1;
-    public static final int PORT = 49159;
+    public static final int PORTABLE_PORT = 49158;
+    public static final int INSTALLED_PORT = 49159;
 
     private final GDownloader main;
 
@@ -68,6 +69,10 @@ public final class AppServer implements AutoCloseable {
 
         registerCommand("wake-up", this::handleWakeUp);
         registerCommand("shutdown", this::handleShutdown);
+    }
+
+    public static int getCurrentPort() {
+        return GDownloader.isPortable() ? PORTABLE_PORT : INSTALLED_PORT;
     }
 
     public void registerCommand(String command, Function<String, AbstractResult> handler) {
@@ -86,14 +91,16 @@ public final class AppServer implements AutoCloseable {
     }
 
     private boolean tryBind() {
+        int port = getCurrentPort();
+
         try {
-            serverSocket = new ServerSocket(PORT, 10, InetAddress.getLoopbackAddress());
-            log.info("Listening on localhost port {}", PORT);
+            serverSocket = new ServerSocket(port, 10, InetAddress.getLoopbackAddress());
+            log.info("Listening on localhost port {}", port);
 
             running.set(true);
             return true;
         } catch (Exception e) {
-            log.error("Port {} is already in use. Another instance may be running.", PORT);
+            log.error("Port {} is already in use. Another instance may be running.", port);
 
             if (log.isDebugEnabled()) {
                 log.error("Exception:", e);

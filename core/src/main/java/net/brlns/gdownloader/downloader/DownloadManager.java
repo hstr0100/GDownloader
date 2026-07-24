@@ -52,6 +52,7 @@ import net.brlns.gdownloader.persistence.entity.DownloadHistoryEntity;
 import net.brlns.gdownloader.persistence.entity.QueueEntryEntity;
 import net.brlns.gdownloader.process.ProcessMonitor;
 import net.brlns.gdownloader.settings.enums.PlayListOptionEnum;
+import net.brlns.gdownloader.system.ShutdownRegistry;
 import net.brlns.gdownloader.system.ShutdownRegistry.CloseBefore;
 import net.brlns.gdownloader.system.taskbar.ITaskbarManager.TaskbarState;
 import net.brlns.gdownloader.system.taskbar.TaskbarManager;
@@ -809,6 +810,10 @@ public class DownloadManager implements IEvent, AutoCloseable {
     }
 
     private void fireListeners() {
+        if (!initialized.get() || ShutdownRegistry.isClosed()) {
+            return;
+        }
+
         EventDispatcher.dispatch(this);
     }
 

@@ -21,9 +21,10 @@ import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.Insets;
 import java.awt.LayoutManager;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.IntSupplier;
+import javax.swing.JComponent;
+import javax.swing.Timer;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -35,13 +36,40 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class MediaCardGridLayout implements LayoutManager {
 
+    public static final String VIRTUAL_INDEX_PROPERTY = "mediaCardVirtualIndex";
+
     private static final int MIN_CARD_WIDTH = 500;
     private static final int MAX_COLUMNS = 10;
 
     private static final int HGAP = 8;
-    private static final int VGAP = 0;
+
+    private static final int RESIZE_DEBOUNCE_MS = 150;
 
     private final AtomicInteger columnPreference = new AtomicInteger();
+
+    private final IntSupplier itemCountSupplier;
+    private final IntSupplier rowHeightSupplier;
+    private final Runnable onWidthSettled;
+
+    private final Timer debounceTimer;
+    private int lastWidth = -1;
+    private boolean forceLayout = true;
+
+    public MediaCardGridLayout(IntSupplier itemCountSupplierIn,
+        IntSupplier rowHeightSupplierIn, Runnable onWidthSettledIn) {
+
+        itemCountSupplier = itemCountSupplierIn;
+        rowHeightSupplier = rowHeightSupplierIn;
+        onWidthSettled = onWidthSettledIn;
+
+        debounceTimer = new Timer(RESIZE_DEBOUNCE_MS, e -> {
+            forceLayout = true;
+
+            onWidthSettled.run();
+        });
+
+        debounceTimer.setRepeats(false);
+    }
 
     public void setColumnPreference(int columns) {
         if (columns < 0 || columns > MAX_COLUMNS) {
@@ -53,6 +81,25 @@ public class MediaCardGridLayout implements LayoutManager {
 
     public int getColumnPreference() {
         return columnPreference.get();
+    }
+
+    public int determineColumns(int availableWidth, int itemCount) {
+        if (itemCount <= 1) {
+            return 1;
+        }
+
+        int maxThatFit = Math.max(1, (availableWidth + HGAP) / (MIN_CARD_WIDTH + HGAP));
+        maxThatFit = Math.min(maxThatFit, MAX_COLUMNS);
+
+        int preference = columnPreference.get();
+        int desired = (preference == 0) ? maxThatFit : Math.min(preference, maxThatFit);
+
+        return Math.min(desired, itemCount);
+    }
+
+    public int cellWidth(int availableWidth, int columns) {
+        return columns <= 1 ? availableWidth
+            : Math.max(1, (availableWidth - HGAP * (columns - 1)) / columns);
     }
 
     @Override
@@ -68,7 +115,19 @@ public class MediaCardGridLayout implements LayoutManager {
     @Override
     public Dimension preferredLayoutSize(Container parent) {
         synchronized (parent.getTreeLock()) {
-            return compute(parent, false);
+            Insets insets = parent.getInsets();
+            int availableWidth = Math.max(0, parent.getWidth() - insets.left - insets.right);
+
+            int itemCount = itemCountSupplier.getAsInt();
+            if (itemCount <= 0) {
+                return new Dimension(availableWidth, 0);
+            }
+
+            int columns = determineColumns(availableWidth, itemCount);
+            int rows = (itemCount + columns - 1) / columns;
+            int rowHeight = Math.max(1, rowHeightSupplier.getAsInt());
+
+            return new Dimension(availableWidth, insets.top + insets.bottom + rows * rowHeight);
         }
     }
 
@@ -80,80 +139,52 @@ public class MediaCardGridLayout implements LayoutManager {
     @Override
     public void layoutContainer(Container parent) {
         synchronized (parent.getTreeLock()) {
-            compute(parent, true);
+            int currentWidth = parent.getWidth();
+
+            if (!(lastWidth == -1 || forceLayout || lastWidth == currentWidth)) {
+                lastWidth = currentWidth;
+                debounceTimer.restart();
+
+                return;
+            }
+
+            lastWidth = currentWidth;
+            forceLayout = false;
+
+            applyBounds(parent);
         }
     }
 
-    private Dimension compute(Container parent, boolean apply) {
+    private void applyBounds(Container parent) {
         Insets insets = parent.getInsets();
         int availableWidth = Math.max(0, parent.getWidth() - insets.left - insets.right);
 
-        List<Component> visible = new ArrayList<>();
-        for (Component component : parent.getComponents()) {
-            if (component.isVisible()) {
-                visible.add(component);
-            }
+        int itemCount = itemCountSupplier.getAsInt();
+        if (itemCount <= 0) {
+            return;
         }
 
-        if (visible.isEmpty()) {
-            return new Dimension(availableWidth, 0);
-        }
+        int columns = determineColumns(availableWidth, itemCount);
+        int cellWidth = cellWidth(availableWidth, columns);
+        int rowHeight = Math.max(1, rowHeightSupplier.getAsInt());
 
-        int columns = determineColumnCount(availableWidth, visible.size());
-
-        int y = insets.top;
-
-        if (columns <= 1) {
-            for (Component component : visible) {
-                int height = component.getPreferredSize().height;
-
-                if (apply) {
-                    component.setBounds(insets.left, y, availableWidth, height);
-                }
-
-                y += height + VGAP;
+        for (Component comp : parent.getComponents()) {
+            if (!(comp instanceof JComponent jcomp)) {
+                continue;
             }
 
-            return new Dimension(availableWidth, Math.max(0, y - VGAP - insets.top));
-        }
-
-        int cellWidth = Math.max(1, (availableWidth - HGAP * (columns - 1)) / columns);
-
-        int index = 0;
-        while (index < visible.size()) {
-            int rowEnd = Math.min(index + columns, visible.size());
-
-            int rowHeight = 0;
-            for (int i = index; i < rowEnd; i++) {
-                rowHeight = Math.max(rowHeight, visible.get(i).getPreferredSize().height);
+            Object indexProp = jcomp.getClientProperty(VIRTUAL_INDEX_PROPERTY);
+            if (!(indexProp instanceof Integer index)) {
+                continue;
             }
 
-            if (apply) {
-                int x = insets.left;
-                for (int i = index; i < rowEnd; i++) {
-                    visible.get(i).setBounds(x, y, cellWidth, rowHeight);
-                    x += cellWidth + HGAP;
-                }
-            }
+            int row = index / columns;
+            int col = index % columns;
 
-            y += rowHeight + VGAP;
-            index = rowEnd;
+            int x = insets.left + col * (cellWidth + HGAP);
+            int y = insets.top + row * rowHeight;
+
+            comp.setBounds(x, y, cellWidth, rowHeight);
         }
-
-        return new Dimension(availableWidth, Math.max(0, y - VGAP - insets.top));
-    }
-
-    private int determineColumnCount(int availableWidth, int visibleCount) {
-        if (visibleCount <= 1) {
-            return 1;
-        }
-
-        int maxThatFit = Math.max(1, (availableWidth + HGAP) / (MIN_CARD_WIDTH + HGAP));
-        maxThatFit = Math.min(maxThatFit, MAX_COLUMNS);
-
-        int preference = columnPreference.get();
-        int desired = (preference == 0) ? maxThatFit : Math.min(preference, maxThatFit);
-
-        return Math.min(desired, visibleCount);
     }
 }

@@ -20,6 +20,7 @@ import jakarta.annotation.Nullable;
 import java.awt.Color;
 import java.awt.image.BufferedImage;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import lombok.Data;
@@ -44,8 +45,7 @@ public class MediaCard {
 
     private final int id;
 
-    @Nullable
-    private CustomMediaCardUI ui;
+    private final AtomicReference<CustomMediaCardUI> uiRef = new AtomicReference<>();
 
     private double percentage = 0;
     private double scale = 0;
@@ -91,18 +91,29 @@ public class MediaCard {
         }
     }
 
+    @Nullable
+    public CustomMediaCardUI getUi() {
+        return uiRef.get();
+    }
+
     public void setUi(CustomMediaCardUI uiIn) {
-        ui = uiIn;
+        uiRef.set(uiIn);
         updateUI(ALL);
     }
 
-    public void adjustScale(int panelWidth) {
+    public void clearUi() {
+        uiRef.set(null);
+    }
+
+    public static double computeScale(int panelWidth) {
         double screenWidth = ScreenMetrics.getPrimaryScreenBounds().getWidth();
-
         double targetWidth = screenWidth * 0.9;
-        double scaleFactor = (panelWidth >= targetWidth) ? 1.2 : 1;
 
-        scale = scaleFactor;
+        return (panelWidth >= targetWidth) ? 1.2 : 1;
+    }
+
+    public void adjustScale(int panelWidth) {
+        scale = computeScale(panelWidth);
         updateUI(SCALE);
     }
 
@@ -171,11 +182,17 @@ public class MediaCard {
     }
 
     public void updateUI(UpdateType updateType) {
+        CustomMediaCardUI ui = uiRef.get();
         if (ui == null) {
             return; // No UI available, skip updates
         }
 
         runOnEDT(() -> {
+            CustomMediaCardUI currentUi = uiRef.get();
+            if (currentUi != ui) {
+                return;
+            }
+
             switch (updateType) {
                 case ALL -> {
                     for (UpdateType type : UpdateType.values()) {
