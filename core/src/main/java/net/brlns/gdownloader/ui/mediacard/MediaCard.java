@@ -27,6 +27,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.downloader.enums.CloseReasonEnum;
 import net.brlns.gdownloader.downloader.enums.DownloadPriorityEnum;
 import net.brlns.gdownloader.downloader.enums.DownloadTypeEnum;
+import net.brlns.gdownloader.downloader.enums.QueueCategoryEnum;
 import net.brlns.gdownloader.ui.ScreenMetrics;
 import net.brlns.gdownloader.ui.custom.CustomMediaCardUI;
 import net.brlns.gdownloader.ui.menu.IMenuEntry;
@@ -60,6 +61,9 @@ public class MediaCard {
     private DownloadPriorityEnum downloadPriorityIconType;
     private boolean live;
     private String urlHint = "";
+
+    @Nullable
+    private QueueCategoryEnum category;
 
     private Runnable onBecomeVisible;
     private Runnable onLeftClick;

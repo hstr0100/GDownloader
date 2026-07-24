@@ -47,6 +47,10 @@ public final class ShutdownRegistry {
     private ShutdownRegistry() {
     }
 
+    public static boolean isClosed() {
+        return closed.get();
+    }
+
     public static <T extends AutoCloseable> T closeable(@NonNull T instance) {
         register(instance);
         return instance;

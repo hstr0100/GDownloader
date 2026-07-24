@@ -41,7 +41,7 @@ public class LooperTask implements Runnable {
             action.run();
         } catch (Throwable t) {
             if (failedOnce.compareAndSet(false, true)) {
-                log.error("Looper task has failed at least once: {}", t.getMessage());
+                log.error("Looper task has failed at least once: {}", t.toString());
 
                 if (log.isDebugEnabled()) {
                     log.error("Exception: ", t);

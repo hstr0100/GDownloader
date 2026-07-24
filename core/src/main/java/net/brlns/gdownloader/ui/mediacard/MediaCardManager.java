@@ -50,8 +50,11 @@ import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.downloader.enums.CloseReasonEnum;
+import net.brlns.gdownloader.downloader.enums.QueueFilterEnum;
 import net.brlns.gdownloader.event.EventDispatcher;
+import net.brlns.gdownloader.event.impl.QueueFilterChangedEvent;
 import net.brlns.gdownloader.event.impl.SettingsChangeEvent;
+import net.brlns.gdownloader.system.ShutdownRegistry;
 import net.brlns.gdownloader.ui.GUIManager;
 import net.brlns.gdownloader.ui.custom.CustomMediaCardUI;
 import net.brlns.gdownloader.ui.custom.CustomMediaCardUI.MediaCardPanel;
@@ -93,17 +96,22 @@ public final class MediaCardManager {
     private final MediaCardGridLayout mediaCardGridLayout = new MediaCardGridLayout();
 
     private final AtomicReference<String> currentSearchQuery = new AtomicReference<>("");
+    private final AtomicReference<QueueFilterEnum> currentStatusFilter = new AtomicReference<>(QueueFilterEnum.ALL);
+    private volatile Consumer<Integer> matchCountListener;
 
     private JScrollPane queueScrollPane;
+
+    private final Timer mediaCardQueueTimer;
+    private final Timer visibilityCheckTimer;
 
     public MediaCardManager(GDownloader mainIn, GUIManager managerIn) {
         main = mainIn;
         manager = managerIn;
 
-        Timer mediaCardQueueTimer = new Timer(50, e -> processMediaCardQueue());
+        mediaCardQueueTimer = new Timer(50, e -> processMediaCardQueue());
         mediaCardQueueTimer.start();
 
-        Timer visibilityCheckTimer = new Timer(150, e -> checkViewportVisibility());
+        visibilityCheckTimer = new Timer(150, e -> checkViewportVisibility());
         visibilityCheckTimer.start();
 
         EventDispatcher.registerEDT(SettingsChangeEvent.class, (event) -> {
@@ -112,6 +120,25 @@ public final class MediaCardManager {
                 setColumnLayoutPreference(newPreference);
             }
         });
+    }
+
+    @PreDestroy
+    public void close() {
+        if (mediaCardQueueTimer != null) {
+            mediaCardQueueTimer.stop();
+        }
+
+        if (visibilityCheckTimer != null) {
+            visibilityCheckTimer.stop();
+        }
+
+        synchronized (mediaCardUIUpdateQueue) {
+            mediaCardUIUpdateQueue.clear();
+        }
+    }
+
+    public int getRenderedCardCount() {
+        return mediaQueuePane != null ? mediaQueuePane.getComponentCount() : 0;
     }
 
     public void initializeQueueScrollPane(JScrollPane scrollPane) {
@@ -167,7 +194,9 @@ public final class MediaCardManager {
     }
 
     private void onViewportScrolled() {
-        SwingUtilities.invokeLater(this::recomputeHover);
+        assert SwingUtilities.isEventDispatchThread();
+
+        recomputeHover();
     }
 
     private void recomputeHover() {
@@ -343,6 +372,10 @@ public final class MediaCardManager {
     }
 
     public void removeMediaCard(int id, CloseReasonEnum reason) {
+        if (ShutdownRegistry.isClosed()) {
+            return;
+        }
+
         MediaCard mediaCard = mediaCards.remove(id);
 
         if (mediaCard != null) {
@@ -473,7 +506,7 @@ public final class MediaCardManager {
             try {
                 int count = 0;
                 while (!mediaCardUIUpdateQueue.isEmpty()) {
-                    if (++count == 40) {// Process in batches of 40 items every 100ms
+                    if (++count == 500) {// Process in batches of 500 items every 100ms
                         break;
                     }
 
@@ -492,11 +525,11 @@ public final class MediaCardManager {
 
                             removeMediaCard(mediaCard.getId(), CloseReasonEnum.MANUAL);
                         },
-                            () -> Optional.of(mediaCard.getOnInfoClick())
+                            () -> Optional.ofNullable(mediaCard.getOnInfoClick())
                                 .ifPresent(runnable -> runnable.run()),
-                            () -> Optional.of(mediaCard.getOnStartClick())
+                            () -> Optional.ofNullable(mediaCard.getOnStartClick())
                                 .ifPresent(runnable -> runnable.run()),
-                            () -> Optional.of(mediaCard.getOnFormatsClick())
+                            () -> Optional.ofNullable(mediaCard.getOnFormatsClick())
                                 .ifPresent(runnable -> runnable.run())
                         );
 
@@ -529,8 +562,12 @@ public final class MediaCardManager {
                         card.setMediaCard(mediaCard);
 
                         String currentQuery = currentSearchQuery.get();
-                        if (!currentQuery.isEmpty()) {
-                            boolean visible = matchesSearch(mediaCard, currentQuery);
+
+                        QueueFilterEnum statusFilter = currentStatusFilter.get();
+                        if (!currentQuery.isEmpty() || statusFilter != QueueFilterEnum.ALL) {
+                            boolean visible = (currentQuery.isEmpty() || matchesSearch(mediaCard, currentQuery))
+                                && statusFilter.matches(mediaCard.getCategory());
+
                             card.setVisible(visible);
                         }
 
@@ -854,13 +891,60 @@ public final class MediaCardManager {
         return mediaCards.size();
     }
 
+    public int getVisibleMediaCardCount() {
+        int count = 0;
+
+        for (MediaCard card : mediaCards.values()) {
+            CustomMediaCardUI ui = card.getUi();
+            if (ui != null && ui.getCard().isVisible()) {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    public boolean hasActiveSearchQuery() {
+        return !currentSearchQuery.get().isEmpty();
+    }
+
     public void filterMediaCards(@NonNull String query, @Nullable Consumer<Integer> onCountUpdate) {
         currentSearchQuery.set(query.trim().toLowerCase());
+        matchCountListener = onCountUpdate;
 
+        applyCardFilters();
+    }
+
+    public void setStatusFilter(@NonNull QueueFilterEnum filter) {
+        if (currentStatusFilter.getAndSet(filter) != filter) {
+            applyCardFilters();
+
+            EventDispatcher.dispatch(QueueFilterChangedEvent.builder()
+                .filter(filter)
+                .build());
+        }
+    }
+
+    public QueueFilterEnum getStatusFilter() {
+        return currentStatusFilter.get();
+    }
+
+    public void onMediaCardCategoryChanged() {
+        applyCardFilters();
+    }
+
+    private void applyCardFilters() {
         runOnEDT(() -> {
+            if (ShutdownRegistry.isClosed()) {
+                return;
+            }
+
             if (mediaQueuePane == null) {
                 return;
             }
+
+            String currentQuery = currentSearchQuery.get();
+            QueueFilterEnum statusFilter = currentStatusFilter.get();
 
             int count = 0;
             for (MediaCard card : mediaCards.values()) {
@@ -869,9 +953,9 @@ public final class MediaCardManager {
                     continue;
                 }
 
-                String currentQuery = currentSearchQuery.get();
+                boolean visible = (currentQuery.isEmpty() || matchesSearch(card, currentQuery))
+                    && statusFilter.matches(card.getCategory());
 
-                boolean visible = currentQuery.isEmpty() || matchesSearch(card, currentQuery);
                 MediaCardPanel cardPanel = ui.getCard();
 
                 if (cardPanel.isVisible() != visible) {
@@ -886,9 +970,12 @@ public final class MediaCardManager {
             mediaQueuePane.revalidate();
             mediaQueuePane.repaint();
 
-            if (onCountUpdate != null) {
-                onCountUpdate.accept(count);
+            Consumer<Integer> listener = matchCountListener;
+            if (listener != null) {
+                listener.accept(count);
             }
+
+            manager.updateContentPane();
         });
     }
 

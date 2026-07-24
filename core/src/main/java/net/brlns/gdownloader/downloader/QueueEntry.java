@@ -121,7 +121,6 @@ public class QueueEntry {
 
     private DownloadTypeEnum currentDownloadType;
 
-    @Setter
     private QueueCategoryEnum currentQueueCategory;
 
     private DownloadPriorityEnum downloadPriority
@@ -467,6 +466,14 @@ public class QueueEntry {
         currentDownloadType = typeIn;
 
         mediaCard.setPlaceholderIcon(typeIn);
+    }
+
+    public void setCurrentQueueCategory(QueueCategoryEnum categoryIn) {
+        currentQueueCategory = categoryIn;
+
+        mediaCard.setCategory(categoryIn);
+
+        main.getGuiManager().getMediaCardManager().onMediaCardCategoryChanged();
     }
 
     public void setDownloadPriority(DownloadPriorityEnum priorityIn) {

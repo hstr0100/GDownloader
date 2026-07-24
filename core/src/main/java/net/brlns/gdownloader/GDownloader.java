@@ -266,7 +266,7 @@ public final class GDownloader {
         ffmpegTranscoder = closeable(new FFmpegTranscoder(processMonitor));
         clipboardManager = new ClipboardManager(this);
         downloadManager = closeable(new DownloadManager(this));
-        guiManager = new GUIManager(this);
+        guiManager = closeable(new GUIManager(this));
         systemTrayManager = new SystemTrayManager(this);
 
         connectivityListener = closeable(new NetworkConnectivityListener(() -> config.getProxySettings()));

@@ -251,7 +251,10 @@ public class DirectHttpDownloader extends AbstractDownloader {
                                 fmPercent, fmTotal, fmSpeed, fmRemaingTime, chunkCount), false);
                     });
 
-                    lastOutput = PREFIX + l10n("gui.direct_http.download_status.download_complete");
+                    lastOutput = PREFIX + l10n(success
+                        ? "gui.direct_http.download_status.download_complete"
+                        : "gui.direct_http.download_status.error.download_incomplete");
+
                     entry.updateStatus(DownloadStatusEnum.DOWNLOADING, lastOutput);
                 } catch (RetryLaterException e) {
                     Optional<DownloadResult> scheduled = awaitRetryLaterOrSchedule(entry, e);
