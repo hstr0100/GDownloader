@@ -34,7 +34,6 @@ import java.util.Map;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
-import net.brlns.gdownloader.persistence.entity.CounterTypeEnum;
 import net.brlns.gdownloader.persistence.repository.CounterRepository;
 import net.brlns.gdownloader.persistence.repository.DownloadHistoryRepository;
 import net.brlns.gdownloader.persistence.repository.MediaInfoRepository;
@@ -144,11 +143,11 @@ public class PersistenceManager implements AutoCloseable {
 
             boolean needsMigration = !firstBoot && !main.getConfig().isPersistenceDatabaseMigratedToCached();
 
-            GLOBAL_THREAD_POOL.execute(() -> {
-                try {
-                    if (needsMigration) {
-                        log.info("Legacy configuration detected. Migrating database tables to CACHED format...");
+            if (needsMigration) {
+                log.info("Legacy configuration detected. Migrating database tables to CACHED format...");
 
+                GLOBAL_THREAD_POOL.execute(() -> {
+                    try {
                         convertToCachedTables(emf);
                         if (historyInitialized) {
                             convertToCachedTables(historyEmf);
@@ -157,16 +156,11 @@ public class PersistenceManager implements AutoCloseable {
                         main.getConfig().setPersistenceDatabaseMigratedToCached(true);
                         main.updateConfig();
                         log.info("Database migration completed.");
+                    } catch (Exception e) {
+                        log.error("Failed to execute background database optimizations", e);
                     }
-
-                    // Prime the db by preloading some random item before the updaters even fire up
-                    counters.getCurrentValue(CounterTypeEnum.DOWNLOAD_ID);
-
-                    log.info("Background database optimizations completed.");
-                } catch (Exception e) {
-                    log.error("Failed to execute background database optimizations", e);
-                }
-            });
+                });
+            }
 
             log.info("{} db is now open", databaseFile);
             initialized = true;

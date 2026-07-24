@@ -54,6 +54,7 @@ public class ToastMessenger extends AbstractMessenger {
 
     private JDialog messageDialog;
     private JPanel messagePanel;
+    private Timer activeTimer;
 
     private ToastMessenger(JFrame targetWindowIn) {
         targetWindow = targetWindowIn;
@@ -61,11 +62,16 @@ public class ToastMessenger extends AbstractMessenger {
         componentAdapter = new ComponentAdapter() {
             @Override
             public void componentShown(ComponentEvent e) {
-                // FINALLY it shows its face. *cracks knuckles*
-                // NOW you can be positively NUKED out of here.
                 windowVisible.set(true);
-                cancelHook.set(true);
-                close();
+
+                if (activeTimer == null || !activeTimer.isRunning() || cancelHook.get()) {
+                    // FINALLY it shows its face. *cracks knuckles*
+                    // NOW you can be positively NUKED out of here.
+                    cancelHook.set(true);
+                    close();
+                } else {
+                    updateLocation(targetWindow);
+                }
             }
 
             @Override
@@ -96,6 +102,10 @@ public class ToastMessenger extends AbstractMessenger {
         }
 
         if (messageDialog != null) {
+            if (activeTimer != null) {
+                activeTimer.stop();
+            }
+
             targetWindow.removeComponentListener(componentAdapter);
 
             messageDialog.setVisible(false);
@@ -193,7 +203,11 @@ public class ToastMessenger extends AbstractMessenger {
         progressContainer.add(messageProgressBar, BorderLayout.CENTER);
         messagePanel.add(progressContainer, BorderLayout.SOUTH);
 
-        Timer timer = new Timer(50, new ActionListener() {
+        if (activeTimer != null && activeTimer.isRunning()) {
+            activeTimer.stop();
+        }
+
+        activeTimer = new Timer(50, new ActionListener() {
             int elapsed = 0;
 
             @Override
@@ -215,6 +229,7 @@ public class ToastMessenger extends AbstractMessenger {
 
         updateLocation(targetWindow);
 
+        targetWindow.removeComponentListener(componentAdapter);
         targetWindow.addComponentListener(componentAdapter);
 
         messageDialog.setShape(new RoundRectangle2D.Double(0, 0,
@@ -228,7 +243,7 @@ public class ToastMessenger extends AbstractMessenger {
 
         messageDialog.setVisible(true);
 
-        timer.start();
+        activeTimer.start();
     }
 
     @Override
@@ -239,6 +254,10 @@ public class ToastMessenger extends AbstractMessenger {
     }
 
     private void updateLocation(JFrame appWindow) {
+        if (messageDialog == null) {
+            return;
+        }
+
         Point frameLoc = appWindow.getLocation();
         int x = frameLoc.x + (appWindow.getWidth() - messageDialog.getWidth()) / 2;
         int y = frameLoc.y + appWindow.getHeight() - messageDialog.getHeight() - 20;
@@ -254,12 +273,7 @@ public class ToastMessenger extends AbstractMessenger {
     }
 
     public static void show(JFrame parent, Message message) {
-        AbstractMessenger instance = _instances.get(parent);
-        if (instance == null) {// This operation is quick, should be fine with virtual threads.
-            AbstractMessenger newInstance = new ToastMessenger(parent);
-            instance = _instances.computeIfAbsent(parent, key -> newInstance);
-        }
-
+        AbstractMessenger instance = _instances.computeIfAbsent(parent, ToastMessenger::new);
         instance.display(message);
     }
 }
