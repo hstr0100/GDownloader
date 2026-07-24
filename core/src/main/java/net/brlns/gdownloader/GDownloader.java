@@ -136,6 +136,7 @@ import static net.brlns.gdownloader.util.StringUtils.notNullOrEmpty;
 // TODO Direct-HTTP: resume chunked
 // TODO Direct-HTTP: post-processors (unzip, convert, etc)
 // TODO Direct-HTTP: metadata extractors for host resolvers
+// TODO Rest API for browser-level requests (url add/remove, batch updates, start/stop)
 /**
  * GDownloader - GUI wrapper for yt-dlp
  *

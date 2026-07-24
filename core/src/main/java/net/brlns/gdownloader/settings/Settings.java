@@ -46,13 +46,16 @@ import net.brlns.gdownloader.settings.enums.WebFilterEnum;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class Settings {
 
-    public static final int CONFIG_VERSION = 37;
+    public static final int CONFIG_VERSION = 38;
 
     @JsonProperty("ConfigVersion")
     private int configVersion = CONFIG_VERSION;
 
     @JsonProperty("PersistenceDatabaseInitialized")
     private boolean persistenceDatabaseInitialized = false;
+
+    @JsonProperty("PersistenceDatabaseMigratedToCached")
+    private boolean persistenceDatabaseMigratedToCached = true;
 
     @JsonProperty("ShowWelcomeScreen")
     private boolean showWelcomeScreen = true;
@@ -385,6 +388,10 @@ public class Settings {
                 legacyGlobalToggle && !galleryDLSettings.getExtraCommandLineArguments().isEmpty());
             spotDLSettings.setEnableExtraArguments(
                 legacyGlobalToggle && !spotDLSettings.getExtraCommandLineArguments().isEmpty());
+        }
+
+        if (getConfigVersion() < 38) {
+            setPersistenceDatabaseMigratedToCached(false);
         }
 
         setConfigVersion(CONFIG_VERSION);

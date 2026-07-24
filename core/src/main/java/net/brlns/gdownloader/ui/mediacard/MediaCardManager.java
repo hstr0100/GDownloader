@@ -518,7 +518,7 @@ public final class MediaCardManager {
 
                 MediaCardUIUpdateEntry entry;
                 while ((entry = mediaCardUIUpdateQueue.poll()) != null) {
-                    if (++count == 500) {// Process in batches of 500 items every 100ms
+                    if (++count == 1000) {// Process in batches of 1000 items every 100ms
                         break;
                     }
 
