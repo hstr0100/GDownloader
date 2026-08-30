@@ -26,7 +26,8 @@ import lombok.Getter;
 public enum LanguageEnum implements ISettingsEnum {
     ENGLISH(Locale.ENGLISH),
     BRAZIL_PORTUGUESE(Locale.of("pt", "BR")),
-    MEXICAN_SPANISH(Locale.of("es", "MX"));
+    MEXICAN_SPANISH(Locale.of("es", "MX")),
+    SIMPLIFIED_CHINESE(Locale.of("zh", "CN"));
 
     private final Locale locale;
 
