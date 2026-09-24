@@ -42,7 +42,7 @@ public enum LanguageEnum implements ISettingsEnum {
 
     @Override
     public String getDisplayName() {
-        return locale.getDisplayName(Locale.getDefault());
+        return locale.getDisplayName(Locale.getDefault(Locale.Category.DISPLAY));
     }
 
     public static LanguageEnum getLanguageEnumForLocale(Locale locale) {

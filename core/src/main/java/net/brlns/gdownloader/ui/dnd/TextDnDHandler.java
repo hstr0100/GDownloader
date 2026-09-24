@@ -50,7 +50,8 @@ public class TextDnDHandler implements IDnDHandler {
     @Override
     public boolean canImport(TransferSupport support) {
         return support.isDataFlavorSupported(DataFlavor.stringFlavor)
-            || support.isDataFlavorSupported(DataFlavor.selectionHtmlFlavor);
+            || support.isDataFlavorSupported(DataFlavor.selectionHtmlFlavor)
+            || support.isDataFlavorSupported(DataFlavor.javaFileListFlavor);
     }
 
     @Override

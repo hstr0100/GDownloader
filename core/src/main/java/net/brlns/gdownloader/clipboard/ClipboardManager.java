@@ -22,6 +22,7 @@ import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.StringSelection;
 import java.awt.datatransfer.Transferable;
+import java.io.File;
 import java.net.URI;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -38,6 +39,7 @@ import net.brlns.gdownloader.ui.message.Message;
 import net.brlns.gdownloader.ui.message.MessageTypeEnum;
 import net.brlns.gdownloader.ui.message.PopupMessenger;
 import net.brlns.gdownloader.ui.message.ToastMessenger;
+import net.brlns.gdownloader.util.URLUtils;
 import net.brlns.gdownloader.util.collection.ExpiringSet;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -56,6 +58,9 @@ import static net.brlns.gdownloader.lang.Language.l10n;
  */
 @Slf4j
 public class ClipboardManager {
+
+    private static final Pattern PLAIN_TEXT_URL_PATTERN
+        = Pattern.compile("(http[^\\s]*|magnet:[^\\s]*)(?=\\s|$|http|magnet:)");
 
     private final GDownloader main;
 
@@ -235,6 +240,30 @@ public class ClipboardManager {
         return dataMap;
     }
 
+    private List<File> fetchDroppedFiles(Transferable transferable) {
+        if (!transferable.isDataFlavorSupported(DataFlavor.javaFileListFlavor)) {
+            return List.of();
+        }
+
+        try {
+            Object data = transferable.getTransferData(DataFlavor.javaFileListFlavor);
+
+            if (data instanceof List<?> list) {
+                return list.stream()
+                    .filter(File.class::isInstance)
+                    .map(File.class::cast)
+                    .filter(file -> URLUtils.isInternetShortcut(file)
+                    || URLUtils.isPlainTextFile(file)
+                    || URLUtils.isHtmlFile(file))
+                    .toList();
+            }
+        } catch (Exception e) {
+            log.warn("Cannot obtain dropped files: {}", e.getMessage());
+        }
+
+        return List.of();
+    }
+
     private CompletableFuture<Integer> submitClipboardScan(@Nullable Transferable transferableIn, boolean force) {
         if (clipboardBlocked.get() || main.getDownloadManager().isBlocked()) {
             return CompletableFuture.completedFuture(0);
@@ -245,7 +274,9 @@ public class ClipboardManager {
         }
 
         clipboardLock.lock();
+
         final Map<FlavorType, String> extractedData;
+        final List<File> droppedFiles;
         try {
             Transferable transferable = (transferableIn != null) ? transferableIn : clipboard.getContents(null);
             if (transferable == null) {
@@ -253,6 +284,7 @@ public class ClipboardManager {
             }
 
             extractedData = fetchTransferableData(transferable);
+            droppedFiles = (transferableIn != null) ? fetchDroppedFiles(transferable) : List.of();
         } finally {
             clipboardLock.unlock();
         }
@@ -268,6 +300,32 @@ public class ClipboardManager {
 
                     if (force || hasChanged(flavorType, data)) {
                         urls.addAll(extractUrlsFromString(data));
+                    }
+                }
+
+                for (File file : droppedFiles) {
+                    if (URLUtils.isInternetShortcut(file)) {
+                        String url = URLUtils.readInternetShortcut(file);
+
+                        if (url != null && isValidURL(url)) {
+                            urls.add(url);
+                        } else if (main.getConfig().isDebugMode()) {
+                            log.debug("No valid URL found in dropped shortcut {}", file);
+                        }
+                    } else if (URLUtils.isHtmlFile(file) || URLUtils.isPlainTextFile(file)) {
+                        String content = URLUtils.readTextFile(file);
+
+                        if (content != null) {
+                            Set<String> found = URLUtils.isHtmlFile(file)
+                                ? extractUrlsFromString(content)
+                                : extractUrlsFromPlainText(content);
+
+                            if (main.getConfig().isDebugMode()) {
+                                log.debug("Found {} URLs in dropped file {}", found.size(), file);
+                            }
+
+                            urls.addAll(found);
+                        }
                     }
                 }
 
@@ -368,21 +426,27 @@ public class ClipboardManager {
         }
 
         if (links.isEmpty() && media.isEmpty()) {
-            String regex = "(http[^\\s]*|magnet:[^\\s]*)(?=\\s|$|http|magnet:)";
-            Pattern pattern = Pattern.compile(regex);
-            Matcher matcher = pattern.matcher(content);
-
-            while (matcher.find()) {
-                String url = matcher.group(1);
-
-                if (isValidURL(url)) {
-                    result.add(url);
-                }
-            }
+            result.addAll(extractUrlsFromPlainText(content));
         }
 
         links.forEach(link -> result.add(link.attr("href")));
         media.forEach(src -> result.add(src.attr("src")));
+
+        return result;
+    }
+
+    private Set<String> extractUrlsFromPlainText(String content) {
+        Set<String> result = new HashSet<>();
+
+        Matcher matcher = PLAIN_TEXT_URL_PATTERN.matcher(content);
+
+        while (matcher.find()) {
+            String url = matcher.group(1);
+
+            if (isValidURL(url)) {
+                result.add(url);
+            }
+        }
 
         return result;
     }

@@ -20,7 +20,9 @@ import jakarta.annotation.Nullable;
 import java.io.File;
 import java.io.UnsupportedEncodingException;
 import java.net.*;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.LinkedHashMap;
 import java.util.Locale;
@@ -35,6 +37,9 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 public final class URLUtils {
+
+    private static final long MAX_INTERNET_SHORTCUT_SIZE = 64 * 1024;// 64KB
+    private static final long MAX_TEXT_FILE_SIZE = 10L * 1024 * 1024;// 10MB
 
     public static String getGlobalUserAgent() {
         return FirefoxUserAgentProvider.getLatestFirefoxUserAgent();
@@ -338,6 +343,101 @@ public final class URLUtils {
         String lower = url.toLowerCase(Locale.ROOT);
 
         return lower.startsWith("http://") || lower.startsWith("https://");
+    }
+
+    public static boolean isInternetShortcut(@NonNull File file) {
+        return file.getName().toLowerCase(Locale.ROOT).endsWith(".url");
+    }
+
+    @Nullable
+    public static String readInternetShortcut(@NonNull File file) {
+        String content = readTextFile(file, MAX_INTERNET_SHORTCUT_SIZE);
+
+        return content != null ? parseInternetShortcut(content) : null;
+    }
+
+    public static boolean isPlainTextFile(@NonNull File file) {
+        return file.getName().toLowerCase(Locale.ROOT).endsWith(".txt");
+    }
+
+    public static boolean isHtmlFile(@NonNull File file) {
+        String name = file.getName().toLowerCase(Locale.ROOT);
+
+        return name.endsWith(".html") || name.endsWith(".htm") || name.endsWith(".xhtml");
+    }
+
+    @Nullable
+    public static String readTextFile(@NonNull File file) {
+        return readTextFile(file, MAX_TEXT_FILE_SIZE);
+    }
+
+    @Nullable
+    private static String readTextFile(File file, long maxSize) {
+        try {
+            if (!file.isFile()) {
+                return null;
+            }
+
+            if (file.length() > maxSize) {
+                log.warn("Skipping {}, file is too large", file);
+                return null;
+            }
+
+            byte[] bytes = Files.readAllBytes(file.toPath());
+
+            Charset charset = StandardCharsets.UTF_8;
+            if (bytes.length >= 2) {
+                int b0 = bytes[0] & 0xFF;
+                int b1 = bytes[1] & 0xFF;
+
+                if (b0 == 0xFF && b1 == 0xFE) {
+                    charset = StandardCharsets.UTF_16LE;
+                } else if (b0 == 0xFE && b1 == 0xFF) {
+                    charset = StandardCharsets.UTF_16BE;
+                }
+            }
+
+            return new String(bytes, charset);
+        } catch (Exception e) {
+            log.warn("Failed to read file {}: {}", file, e.getMessage());
+        }
+
+        return null;
+    }
+
+    @Nullable
+    public static String parseInternetShortcut(@NonNull String content) {
+        // Strip BOM
+        String text = !content.isEmpty() && content.charAt(0) == '\uFEFF'
+            ? content.substring(1) : content;
+
+        boolean inShortcutSection = true;
+
+        for (String rawLine : text.split("\\R")) {
+            String line = rawLine.strip();
+
+            if (line.startsWith("[") && line.endsWith("]")) {
+                inShortcutSection = line.equalsIgnoreCase("[InternetShortcut]");
+                continue;
+            }
+
+            if (!inShortcutSection) {
+                continue;
+            }
+
+            int separator = line.indexOf('=');
+            if (separator <= 0) {
+                continue;
+            }
+
+            if (line.substring(0, separator).strip().equalsIgnoreCase("URL")) {
+                String value = line.substring(separator + 1).strip();
+
+                return value.isEmpty() ? null : value;
+            }
+        }
+
+        return null;
     }
 
     @Nullable
