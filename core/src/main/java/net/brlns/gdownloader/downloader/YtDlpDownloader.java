@@ -16,7 +16,6 @@
  */
 package net.brlns.gdownloader.downloader;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.annotation.Nullable;
 import jakarta.annotation.PreDestroy;
 import java.io.File;
@@ -68,6 +67,7 @@ import net.brlns.gdownloader.util.DirectoryUtils;
 import net.brlns.gdownloader.util.FileUtils;
 import net.brlns.gdownloader.util.Pair;
 import net.brlns.gdownloader.util.URLUtils;
+import tools.jackson.databind.JsonNode;
 
 import static net.brlns.gdownloader.GDownloader.spawn;
 import static net.brlns.gdownloader.downloader.enums.DownloadFlagsEnum.*;
@@ -198,7 +198,7 @@ public class YtDlpDownloader extends AbstractDownloader {
 
                     JsonNode urlNode = node.get("url");
                     if (urlNode != null && !urlNode.isNull()) {
-                        videoUrls.add(urlNode.asText());
+                        videoUrls.add(urlNode.asString());
                     }
                 }
 

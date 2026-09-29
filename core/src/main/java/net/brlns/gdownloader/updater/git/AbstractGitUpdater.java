@@ -16,7 +16,6 @@
  */
 package net.brlns.gdownloader.updater.git;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.annotation.Nullable;
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -35,7 +34,6 @@ import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.time.Duration;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -52,6 +50,7 @@ import net.brlns.gdownloader.util.NoFallbackAvailableException;
 import net.brlns.gdownloader.util.Pair;
 import net.brlns.gdownloader.util.StringUtils;
 import net.brlns.gdownloader.util.URLUtils;
+import tools.jackson.databind.JsonNode;
 
 import static net.brlns.gdownloader.updater.UpdateStatusEnum.*;
 import static net.brlns.gdownloader.util.LockUtils.*;
@@ -373,15 +372,11 @@ public abstract class AbstractGitUpdater implements IUpdater {
             return null;
         }
 
-        Iterator<JsonNode> assets = jsonNode.get("assets").elements();
-
-        while (assets.hasNext()) {
-            JsonNode asset = assets.next();
-
-            String downloadUrl = asset.get("browser_download_url").asText();
+        for (JsonNode asset : jsonNode.get("assets").values()) {
+            String downloadUrl = asset.get("browser_download_url").asString();
 
             if (downloadUrl.endsWith(getReleaseBinaryName())) {
-                return new Pair<>(tagName.asText(), downloadUrl);
+                return new Pair<>(tagName.asString(), downloadUrl);
             }
         }
 

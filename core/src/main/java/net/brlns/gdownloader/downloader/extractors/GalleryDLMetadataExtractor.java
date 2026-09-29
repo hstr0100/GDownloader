@@ -17,8 +17,6 @@
  */
 package net.brlns.gdownloader.downloader.extractors;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import java.io.File;
 import java.time.Duration;
 import java.util.*;
@@ -31,6 +29,8 @@ import net.brlns.gdownloader.downloader.GalleryDlDownloader;
 import net.brlns.gdownloader.downloader.structs.MediaInfo;
 import net.brlns.gdownloader.downloader.structs.Thumbnail;
 import net.brlns.gdownloader.process.ProcessArguments;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
 
 import static net.brlns.gdownloader.util.StringUtils.nullOrEmpty;
 
@@ -272,7 +272,7 @@ public class GalleryDLMetadataExtractor implements IMetadataExtractor {
                 if (node != null && !node.isMissingNode() && (node.isArray() || node.isObject())) {
                     return Optional.of(node);
                 }
-            } catch (JsonProcessingException e) {
+            } catch (JacksonException e) {
                 // noisy on purpose; most candidates are expected to fail - ignore.
             }
         }
@@ -325,11 +325,11 @@ public class GalleryDLMetadataExtractor implements IMetadataExtractor {
             for (JsonNode child : eventNode) {
                 if (child.isObject()) {
                     objectsToScan.add(child);
-                } else if (child.isTextual() && isHttpUrl(child.asText())) {
+                } else if (child.isString() && isHttpUrl(child.asString())) {
                     // gallery-dl's [3, url, kwdict] "file" message: the url arg is the
                     // actual media location and is at least as trustworthy as anything
                     // we'd dig out of the kwdict.
-                    tupleUrl = child.asText();
+                    tupleUrl = child.asString();
                 }
             }
         }
@@ -518,8 +518,8 @@ public class GalleryDLMetadataExtractor implements IMetadataExtractor {
 
         for (String key : keys) {
             JsonNode match = node.findValue(key);
-            if (match != null && match.isTextual() && !match.asText().isBlank()) {
-                return match.asText();
+            if (match != null && match.isString() && !match.asString().isBlank()) {
+                return match.asString();
             }
         }
 
@@ -629,8 +629,8 @@ public class GalleryDLMetadataExtractor implements IMetadataExtractor {
 
         for (String key : alternatives) {
             JsonNode match = entry.findValue(key);
-            if (match != null && match.isTextual() && !match.asText().isBlank()) {
-                addThumbnailCandidate(candidates, seen, match.asText(), 0, 0, 0);
+            if (match != null && match.isString() && !match.asString().isBlank()) {
+                addThumbnailCandidate(candidates, seen, match.asString(), 0, 0, 0);
             }
         }
 
@@ -762,17 +762,17 @@ public class GalleryDLMetadataExtractor implements IMetadataExtractor {
                     for (String key : targetKeys) {
                         if (currentNode.hasNonNull(key)) {
                             JsonNode valueNode = currentNode.get(key);
-                            if (valueNode.isTextual() && !valueNode.asText().trim().isEmpty()) {
-                                return valueNode.asText();
+                            if (valueNode.isString() && !valueNode.asString().trim().isEmpty()) {
+                                return valueNode.asString();
                             } else if (valueNode.isNumber()) {
                                 return String.valueOf(valueNode.asLong());
                             }
                         }
                     }
 
-                    currentNode.elements().forEachRemaining(depthQueue::add);
+                    depthQueue.addAll(currentNode.values());
                 } else if (currentNode.isArray()) {
-                    currentNode.elements().forEachRemaining(depthQueue::add);
+                    depthQueue.addAll(currentNode.values());
                 }
             }
 
@@ -801,8 +801,8 @@ public class GalleryDLMetadataExtractor implements IMetadataExtractor {
                         Map.Entry<String, JsonNode> field = it.next();
                         JsonNode valueNode = field.getValue();
 
-                        if (valueNode.isTextual()) {
-                            String potentialUrl = valueNode.asText();
+                        if (valueNode.isString()) {
+                            String potentialUrl = valueNode.asString();
                             String evaluationString = potentialUrl.toLowerCase(Locale.ROOT);
 
                             if (evaluationString.startsWith("http")
@@ -820,7 +820,7 @@ public class GalleryDLMetadataExtractor implements IMetadataExtractor {
                         depthQueue.add(valueNode);
                     }
                 } else if (currentNode.isArray()) {
-                    currentNode.elements().forEachRemaining(depthQueue::add);
+                    depthQueue.addAll(currentNode.values());
                 }
             }
 

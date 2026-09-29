@@ -79,7 +79,7 @@ dependencies {
 
     implementation("ch.qos.logback:logback-classic:$logbackVersion")
     implementation("com.github.kwhat:jnativehook:$jnativehookVersion")
-    implementation("com.fasterxml.jackson.core:jackson-databind:$jacksonVersion")
+    implementation("tools.jackson.core:jackson-databind:$jacksonVersion")
     implementation("org.jsoup:jsoup:$jsoupVersion")
     implementation("org.slf4j:slf4j-api:$slf4jVersion")
     implementation("net.java.dev.jna:jna:$jnaVersion")

@@ -16,11 +16,11 @@
  */
 package net.brlns.gdownloader.persistence;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.util.XXHash64;
+import tools.jackson.core.JacksonException;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -38,7 +38,7 @@ public class EntityFingerprint {
             xxHash.update(json, 0, json.length);
 
             return xxHash.digest();
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             if (!warnedOnce.compareAndSet(false, true)) {
                 log.warn("Failed to compute a fingerprint for {}, dirty-checking"
                     + " will be disabled for it", snapshot != null ? snapshot.getClass() : null, e);

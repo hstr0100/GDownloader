@@ -16,7 +16,6 @@
  */
 package net.brlns.gdownloader.downloader.hosts.impl;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.annotation.Nullable;
 import java.net.URI;
 import java.net.http.HttpRequest;
@@ -36,6 +35,7 @@ import net.brlns.gdownloader.downloader.hosts.ResolvedFile;
 import net.brlns.gdownloader.downloader.hosts.RetryLaterException;
 import net.brlns.gdownloader.util.StringUtils;
 import net.brlns.gdownloader.util.URLUtils;
+import tools.jackson.databind.JsonNode;
 
 /**
  * Resolves gofile.io share links (single files or whole folders, recursively)

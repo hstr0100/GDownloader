@@ -16,7 +16,6 @@
  */
 package net.brlns.gdownloader.downloader.hosts.impl;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.annotation.Nullable;
 import java.io.IOException;
 import java.net.URI;
@@ -32,6 +31,7 @@ import net.brlns.gdownloader.downloader.hosts.HostResolverContext;
 import net.brlns.gdownloader.downloader.hosts.HostResolverException;
 import net.brlns.gdownloader.downloader.hosts.IHostResolver;
 import net.brlns.gdownloader.util.URLUtils;
+import tools.jackson.databind.JsonNode;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -230,6 +230,6 @@ public abstract class AbstractHostResolver implements IHostResolver {
 
     @Nullable
     protected static String text(@Nullable JsonNode node) {
-        return node == null || node.isMissingNode() || node.isNull() ? null : node.asText();
+        return node == null || node.isMissingNode() || node.isNull() ? null : node.asString();
     }
 }

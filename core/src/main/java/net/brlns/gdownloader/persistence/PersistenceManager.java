@@ -16,12 +16,6 @@
  */
 package net.brlns.gdownloader.persistence;
 
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.PropertyName;
-import com.fasterxml.jackson.databind.introspect.Annotated;
-import com.fasterxml.jackson.databind.introspect.JacksonAnnotationIntrospector;
-import com.fasterxml.jackson.databind.json.JsonMapper;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import jakarta.persistence.EntityManager;
@@ -39,6 +33,16 @@ import net.brlns.gdownloader.persistence.repository.DownloadHistoryRepository;
 import net.brlns.gdownloader.persistence.repository.MediaInfoRepository;
 import net.brlns.gdownloader.persistence.repository.QueueEntryRepository;
 import org.eclipse.persistence.config.PersistenceUnitProperties;
+import tools.jackson.databind.DeserializationFeature;
+import tools.jackson.databind.MapperFeature;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.PropertyName;
+import tools.jackson.databind.SerializationFeature;
+import tools.jackson.databind.cfg.EnumFeature;
+import tools.jackson.databind.cfg.MapperConfig;
+import tools.jackson.databind.introspect.Annotated;
+import tools.jackson.databind.introspect.JacksonAnnotationIntrospector;
+import tools.jackson.databind.json.JsonMapper;
 
 import static net.brlns.gdownloader.GDownloader.GLOBAL_THREAD_POOL;
 
@@ -54,16 +58,24 @@ public class PersistenceManager implements AutoCloseable {
     public static final ObjectMapper ENTITY_MAPPER = JsonMapper.builder()
         .annotationIntrospector(new JacksonAnnotationIntrospector() {
             @Override
-            public PropertyName findNameForSerialization(Annotated a) {
+            public PropertyName findNameForSerialization(MapperConfig<?> config, Annotated a) {
                 return null; // Ignore @JsonProperty as our db fields do not match the json DTOs
             }
 
             @Override
-            public PropertyName findNameForDeserialization(Annotated a) {
+            public PropertyName findNameForDeserialization(MapperConfig<?> config, Annotated a) {
                 return null;
             }
         })
+        .disable(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY)
+        .disable(
+            DeserializationFeature.FAIL_ON_TRAILING_TOKENS,
+            DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES)
+        .disable(
+            EnumFeature.READ_ENUMS_USING_TO_STRING,
+            EnumFeature.WRITE_ENUMS_USING_TO_STRING)
         .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+        .disable(SerializationFeature.FAIL_ON_EMPTY_BEANS)
         .build();
 
     private final GDownloader main;

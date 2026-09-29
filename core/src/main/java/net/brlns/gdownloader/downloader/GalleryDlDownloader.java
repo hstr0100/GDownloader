@@ -16,7 +16,6 @@
  */
 package net.brlns.gdownloader.downloader;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import jakarta.annotation.Nullable;
 import jakarta.annotation.PreDestroy;
 import java.io.BufferedReader;
@@ -49,6 +48,7 @@ import net.brlns.gdownloader.util.FileUtils;
 import net.brlns.gdownloader.util.Pair;
 import net.brlns.gdownloader.util.StringUtils;
 import net.brlns.gdownloader.util.URLUtils;
+import tools.jackson.core.JacksonException;
 
 import static net.brlns.gdownloader.downloader.enums.DownloadFlagsEnum.*;
 import static net.brlns.gdownloader.downloader.enums.DownloadTypeEnum.*;
@@ -195,7 +195,7 @@ public class GalleryDlDownloader extends AbstractDownloader {
             try {
                 genericArguments.add("-o", "downloader.ytdl.raw-options="
                     + GDownloader.OBJECT_MAPPER.writeValueAsString(rawOptions));
-            } catch (JsonProcessingException e) {
+            } catch (JacksonException e) {
                 log.error("Failed to serialize ytdl raw-options", e);
             }
         }

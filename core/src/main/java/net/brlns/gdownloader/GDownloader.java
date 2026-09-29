@@ -16,8 +16,6 @@
  */
 package net.brlns.gdownloader;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.kwhat.jnativehook.GlobalScreen;
 import com.github.kwhat.jnativehook.NativeHookException;
 import com.github.kwhat.jnativehook.mouse.NativeMouseEvent;
@@ -78,6 +76,14 @@ import net.brlns.gdownloader.ui.message.PopupMessenger;
 import net.brlns.gdownloader.ui.themes.ThemeProvider;
 import net.brlns.gdownloader.updater.*;
 import net.brlns.gdownloader.util.*;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.DeserializationFeature;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.MapperFeature;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.SerializationFeature;
+import tools.jackson.databind.cfg.EnumFeature;
+import tools.jackson.databind.json.JsonMapper;
 
 import static net.brlns.gdownloader.lang.Language.*;
 import static net.brlns.gdownloader.system.ShutdownRegistry.closeable;
@@ -154,7 +160,17 @@ public final class GDownloader {
     public static final String CACHE_DIRETORY_NAME = "tmp";
     public static final String OLD_CACHE_DIRETORY_NAME = "gdownloader_cache";
 
-    public static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    public static final ObjectMapper OBJECT_MAPPER = JsonMapper.builder()
+        .disable(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY)
+        .disable(
+            DeserializationFeature.FAIL_ON_TRAILING_TOKENS,
+            DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES)
+        .disable(
+            EnumFeature.READ_ENUMS_USING_TO_STRING,
+            EnumFeature.WRITE_ENUMS_USING_TO_STRING)
+        .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+        .disable(SerializationFeature.FAIL_ON_EMPTY_BEANS)
+        .build();
 
     public static boolean HAS_JNATIVEHOOK = false;
 
@@ -607,7 +623,7 @@ public final class GDownloader {
         try {
             config = OBJECT_MAPPER.readValue(configFile, Settings.class);
             config.doMigration();
-        } catch (IOException e) {
+        } catch (JacksonException e) {
             config = new Settings();
             updateConfig();
 
@@ -655,7 +671,7 @@ public final class GDownloader {
             EventDispatcher.dispatch(SettingsChangeEvent.builder()
                 .settings(configIn)
                 .build());
-        } catch (IOException e) {
+        } catch (JacksonException e) {
             handleException(e);
         }
     }
