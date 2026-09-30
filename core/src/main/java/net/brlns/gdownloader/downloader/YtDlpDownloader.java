@@ -62,6 +62,7 @@ import net.brlns.gdownloader.settings.enums.VideoContainerEnum;
 import net.brlns.gdownloader.ui.message.Message;
 import net.brlns.gdownloader.ui.message.MessageTypeEnum;
 import net.brlns.gdownloader.ui.message.ToastMessenger;
+import net.brlns.gdownloader.updater.git.PotProviderUpdater;
 import net.brlns.gdownloader.util.CancelHook;
 import net.brlns.gdownloader.util.DirectoryUtils;
 import net.brlns.gdownloader.util.FileUtils;
@@ -89,8 +90,35 @@ public class YtDlpDownloader extends AbstractDownloader {
     @Setter
     private Optional<File> denoPath = Optional.empty();
 
+    @Getter
+    @Setter
+    private Optional<File> potProviderPath = Optional.empty();
+
     public YtDlpDownloader(DownloadManager managerIn) {
         super(managerIn);
+    }
+
+    private void addPotProviderArguments(ProcessArguments arguments) {
+        if (!settings().isUsePoToken()) {
+            return;
+        }
+
+        File pluginFile = PotProviderUpdater.getPluginFile();
+
+        getPotProviderPath()
+            .or(() -> Optional.of(PotProviderUpdater.getProviderFile()))
+            .filter(potProvider -> potProvider.exists() && pluginFile.exists())
+            .ifPresent(potProvider -> {
+                arguments.add(
+                    "--plugin-dirs",
+                    PotProviderUpdater.getPluginDirectory().getAbsolutePath()
+                );
+
+                arguments.add(
+                    "--extractor-args",
+                    "youtubepot-bgutilcli:cli_path=" + potProvider.getAbsolutePath()
+                );
+            });
     }
 
     @Override
@@ -165,6 +193,8 @@ public class YtDlpDownloader extends AbstractDownloader {
                         "deno:" + deno.getAbsolutePath()
                     );
                 });
+
+                addPotProviderArguments(arguments);
 
                 if (main.getConfig().isReadCookiesFromBrowser()) {
                     arguments.add(
@@ -276,6 +306,8 @@ public class YtDlpDownloader extends AbstractDownloader {
                 );
             });
 
+            addPotProviderArguments(arguments);
+
             if (main.getConfig().isReadCookiesFromBrowser()) {
                 arguments.add(
                     "--cookies-from-browser",
@@ -346,6 +378,8 @@ public class YtDlpDownloader extends AbstractDownloader {
                 "deno:" + deno.getAbsolutePath()
             );
         });
+
+        addPotProviderArguments(genericArguments);
 
         main.getFfmpegTranscoder().getFfmpegPath().ifPresent(ffmpeg
             -> genericArguments.add("--ffmpeg-location", ffmpeg.getAbsolutePath()));

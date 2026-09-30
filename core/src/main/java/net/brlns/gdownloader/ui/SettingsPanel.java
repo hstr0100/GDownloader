@@ -1459,6 +1459,14 @@ public class SettingsPanel {
 
         addCheckBox(panel, CheckBoxBuilder.builder()
             .background(resolveColor(panel))
+            .labelKey("settings.use_po_token")
+            .getter(settings.getYtDlpSettings()::isUsePoToken)
+            .setter(settings.getYtDlpSettings()::setUsePoToken)
+            .requiresRestart(true)
+            .build());
+
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
             .labelKey("settings.downloader.direct_http.media_transcoding")
             .getter(settings.getYtDlpSettings()::isMediaTranscoding)
             .setter(settings.getYtDlpSettings()::setMediaTranscoding)

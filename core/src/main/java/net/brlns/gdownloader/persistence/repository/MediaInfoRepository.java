@@ -16,8 +16,8 @@
  */
 package net.brlns.gdownloader.persistence.repository;
 
-import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
+import java.util.Collections;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.persistence.entity.MediaInfoEntity;
 import net.brlns.gdownloader.persistence.entity.QueueEntryEntity;
@@ -41,9 +41,7 @@ public class MediaInfoRepository extends PersistenceRepository<Long, MediaInfoEn
             log.info("Add MediaInfo for id {} title: {}", mediaInfo.getDownloadId(), mediaInfo.getTitle());
         }
 
-        try (EntityManager em = getEmf().createEntityManager()) {
-            em.getTransaction().begin();
-
+        inTransaction(Collections.singletonList(mediaInfo.getDownloadId()), (em) -> {
             QueueEntryEntity queueEntry = em.find(QueueEntryEntity.class, mediaInfo.getDownloadId());
             if (queueEntry != null) {
                 MediaInfoEntity existingInfo = em.find(MediaInfoEntity.class, mediaInfo.getDownloadId());
@@ -56,8 +54,6 @@ public class MediaInfoRepository extends PersistenceRepository<Long, MediaInfoEn
                 queueEntry.setMediaInfo(mediaInfo);
                 em.merge(queueEntry);
             }
-
-            em.getTransaction().commit();
-        }
+        });
     }
 }

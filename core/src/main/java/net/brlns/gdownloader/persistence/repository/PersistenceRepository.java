@@ -18,7 +18,10 @@ package net.brlns.gdownloader.persistence.repository;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
+import jakarta.persistence.Id;
 import jakarta.persistence.TypedQuery;
+import java.lang.reflect.Field;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
@@ -30,11 +33,41 @@ import lombok.extern.slf4j.Slf4j;
 public class PersistenceRepository<K, T> extends AbstractRepository {
 
     private final Class<T> entityClass;
+    private final Field idField;
 
     public PersistenceRepository(EntityManagerFactory emfIn, Class<T> entityClassIn) {
         super(emfIn);
 
         entityClass = entityClassIn;
+        idField = findIdField(entityClassIn);
+    }
+
+    private static Field findIdField(Class<?> type) {
+        for (Class<?> current = type; current != null && current != Object.class; current = current.getSuperclass()) {
+            for (Field field : current.getDeclaredFields()) {
+                if (field.isAnnotationPresent(Id.class)) {
+                    field.setAccessible(true);
+
+                    return field;
+                }
+            }
+        }
+
+        throw new IllegalStateException("No @Id field found on " + type.getName());
+    }
+
+    private Object identifierOf(T entity) {
+        try {
+            return idField.get(entity);
+        } catch (IllegalAccessException e) {
+            throw new IllegalStateException("Cannot read the id of " + entityClass.getName(), e);
+        }
+    }
+
+    private List<Object> identifiersOf(List<T> entities) {
+        return entities.stream()
+            .map(this::identifierOf)
+            .toList();
     }
 
     public List<T> getAll() {
@@ -58,19 +91,11 @@ public class PersistenceRepository<K, T> extends AbstractRepository {
             log.trace("Insert All: {}", entities);
         }
 
-        try (EntityManager em = getEmf().createEntityManager()) {
-            em.getTransaction().begin();
-
+        return inTransaction(identifiersOf(entities), (em) -> {
             for (T entity : entities) {
                 em.merge(entity);
             }
-
-            em.getTransaction().commit();
-            return true;
-        } catch (Exception e) {
-            log.error("Failed to insert entities", e);
-            return false;
-        }
+        });
     }
 
     public boolean upsertAll(List<T> entities) {
@@ -82,19 +107,11 @@ public class PersistenceRepository<K, T> extends AbstractRepository {
             log.trace("Upsert All: {}", entities);
         }
 
-        try (EntityManager em = getEmf().createEntityManager()) {
-            em.getTransaction().begin();
-
+        return inTransaction(identifiersOf(entities), (em) -> {
             for (T entity : entities) {
                 em.merge(entity);
             }
-
-            em.getTransaction().commit();
-            return true;
-        } catch (Exception e) {
-            log.error("Failed to upsert entities", e);
-            return false;
-        }
+        });
     }
 
     public boolean upsert(T entity) {
@@ -102,17 +119,9 @@ public class PersistenceRepository<K, T> extends AbstractRepository {
             log.trace("Upsert: {}", entity);
         }
 
-        try (EntityManager em = getEmf().createEntityManager()) {
-            em.getTransaction().begin();
-
+        return inTransaction(Collections.singletonList(identifierOf(entity)), (em) -> {
             em.merge(entity);
-
-            em.getTransaction().commit();
-            return true;
-        } catch (Exception e) {
-            log.error("Failed to upsert entity", e);
-            return false;
-        }
+        });
     }
 
     public boolean remove(K id) {
@@ -120,25 +129,16 @@ public class PersistenceRepository<K, T> extends AbstractRepository {
             log.trace("Remove: {}", id);
         }
 
-        try (EntityManager em = getEmf().createEntityManager()) {
-            em.getTransaction().begin();
-
+        return inTransactionCommitIf(Collections.singletonList(id), (em) -> {
             T entity = em.find(entityClass, id);
-            if (entity != null) {
-                em.remove(entity);
-
-                em.getTransaction().commit();
-
-                return true;
-            } else {
-                em.getTransaction().rollback();
-
+            if (entity == null) {
                 return false;
             }
-        } catch (Exception e) {
-            log.error("Failed to remove entity", e);
-            return false;
-        }
+
+            em.remove(entity);
+
+            return true;
+        });
     }
 
     public Optional<T> getById(K id) {

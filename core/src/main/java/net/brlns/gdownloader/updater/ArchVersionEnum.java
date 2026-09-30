@@ -39,12 +39,14 @@ public enum ArchVersionEnum {
     MAC_X64(UpdateDefinitions.builder()
         .ytDlpBinary("yt-dlp_macos")
         .denoBinary("deno-x86_64-apple-darwin.zip")
+        .potProviderBinary("bgutil-pot-macos-x86_64")
         .spotDlBinary("-darwin")
         .os(OS.MAC)
         .build()),
     MAC_ARM64(UpdateDefinitions.builder()
         .ytDlpBinary("yt-dlp_macos")
         .denoBinary("deno-aarch64-apple-darwin.zip")
+        .potProviderBinary("bgutil-pot-macos-aarch64")
         .spotDlBinary("-darwin")
         .os(OS.MAC)
         .build()),
@@ -57,6 +59,7 @@ public enum ArchVersionEnum {
     WINDOWS_X64(UpdateDefinitions.builder()
         .ytDlpBinary("yt-dlp.exe")
         .denoBinary("deno-x86_64-pc-windows-msvc.zip")
+        .potProviderBinary("bgutil-pot-windows-x86_64.exe")
         .galleryDlBinary("gallery-dl.exe")
         .spotDlBinary("-win32.exe")
         // Neither Apache Compress nor any java library that I know of supports the -mx=9 option used by FFmpeg's 7zs
@@ -69,6 +72,7 @@ public enum ArchVersionEnum {
     LINUX_X64(UpdateDefinitions.builder()
         .ytDlpBinary("yt-dlp_linux")
         .denoBinary("deno-x86_64-unknown-linux-gnu.zip")
+        .potProviderBinary("bgutil-pot-linux-x86_64")
         .galleryDlBinary("gallery-dl.bin")
         .spotDlBinary("-linux")
         .selfBinary("linux_portable_amd64.zip")
@@ -82,6 +86,7 @@ public enum ArchVersionEnum {
     LINUX_ARM64(UpdateDefinitions.builder()
         .ytDlpBinary("yt-dlp_linux_aarch64")
         .denoBinary("deno-aarch64-unknown-linux-gnu.zip")
+        .potProviderBinary("bgutil-pot-linux-aarch64")
         // As of 2025-04-26, updates for other architectures are only supported by AppImage
         //.selfBinary("linux_portable_arm64.zip")
         .selfAppImageBinary("aarch64.AppImage")
@@ -187,6 +192,7 @@ public enum ArchVersionEnum {
         private final String ytDlpBinary;
         // New huge absurd dependency required for dealing with YouTube shenanigans.
         private final String denoBinary;
+        private final String potProviderBinary;
         private final String galleryDlBinary;
         private final String spotDlBinary;
         private final String ffmpegBinary;

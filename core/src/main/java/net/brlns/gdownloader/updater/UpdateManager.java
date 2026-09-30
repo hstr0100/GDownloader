@@ -60,6 +60,7 @@ public final class UpdateManager {
 
         registerUpdater(new YtDlpUpdater(main));
         registerUpdater(new DenoUpdater(main));
+        registerUpdater(new PotProviderUpdater(main));
         registerUpdater(new GalleryDlUpdater(main));
         registerUpdater(new SpotDLUpdater(main));
         registerUpdater(new FFMpegUpdater(main));
