@@ -118,6 +118,11 @@ public class YtDlpDownloader extends AbstractDownloader {
                     "--extractor-args",
                     "youtubepot-bgutilcli:cli_path=" + potProvider.getAbsolutePath()
                 );
+
+                arguments.add(
+                    "--extractor-args",
+                    "youtube:player_client=default,mweb,web_safari"
+                );
             });
     }
 
