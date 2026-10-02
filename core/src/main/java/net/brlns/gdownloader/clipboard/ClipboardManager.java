@@ -39,6 +39,7 @@ import net.brlns.gdownloader.ui.message.Message;
 import net.brlns.gdownloader.ui.message.MessageTypeEnum;
 import net.brlns.gdownloader.ui.message.PopupMessenger;
 import net.brlns.gdownloader.ui.message.ToastMessenger;
+import net.brlns.gdownloader.util.FileDropUtils;
 import net.brlns.gdownloader.util.URLUtils;
 import net.brlns.gdownloader.util.collection.ExpiringSet;
 import org.jsoup.Jsoup;
@@ -241,27 +242,11 @@ public class ClipboardManager {
     }
 
     private List<File> fetchDroppedFiles(Transferable transferable) {
-        if (!transferable.isDataFlavorSupported(DataFlavor.javaFileListFlavor)) {
-            return List.of();
-        }
-
-        try {
-            Object data = transferable.getTransferData(DataFlavor.javaFileListFlavor);
-
-            if (data instanceof List<?> list) {
-                return list.stream()
-                    .filter(File.class::isInstance)
-                    .map(File.class::cast)
-                    .filter(file -> URLUtils.isInternetShortcut(file)
-                    || URLUtils.isPlainTextFile(file)
-                    || URLUtils.isHtmlFile(file))
-                    .toList();
-            }
-        } catch (Exception e) {
-            log.warn("Cannot obtain dropped files: {}", e.getMessage());
-        }
-
-        return List.of();
+        return FileDropUtils.getDroppedFiles(transferable).stream()
+            .filter(file -> URLUtils.isInternetShortcut(file)
+            || URLUtils.isPlainTextFile(file)
+            || URLUtils.isHtmlFile(file))
+            .toList();
     }
 
     private CompletableFuture<Integer> submitClipboardScan(@Nullable Transferable transferableIn, boolean force) {
