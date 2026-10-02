@@ -1462,7 +1462,6 @@ public class SettingsPanel {
             .labelKey("settings.use_po_token")
             .getter(settings.getYtDlpSettings()::isUsePoToken)
             .setter(settings.getYtDlpSettings()::setUsePoToken)
-            .requiresRestart(true)
             .build());
 
         addCheckBox(panel, CheckBoxBuilder.builder()
@@ -1500,7 +1499,6 @@ public class SettingsPanel {
             .labelKey("settings.downloader.gallery_dl.enabled")
             .getter(settings.getGalleryDLSettings()::isEnabled)
             .setter(settings.getGalleryDLSettings()::setEnabled)
-            .requiresRestart(true)
             .build());
 
         addCustomDirectorySettings(panel, settings.getGalleryDLSettings(), DownloaderIdEnum.GALLERY_DL);
@@ -1570,7 +1568,6 @@ public class SettingsPanel {
             .labelKey("settings.downloader.spotdl.enabled")
             .getter(settings.getSpotDLSettings()::isEnabled)
             .setter(settings.getSpotDLSettings()::setEnabled)
-            .requiresRestart(true)
             .build());
 
         addCustomDirectorySettings(panel, settings.getSpotDLSettings(), DownloaderIdEnum.SPOTDL);
@@ -1611,7 +1608,6 @@ public class SettingsPanel {
             .labelKey("settings.downloader.direct_http.enabled")
             .getter(settings.getDirectHttpSettings()::isEnabled)
             .setter(settings.getDirectHttpSettings()::setEnabled)
-            .requiresRestart(true)
             .build());
 
         addCustomDirectorySettings(panel, settings.getDirectHttpSettings(), DownloaderIdEnum.DIRECT_HTTP);

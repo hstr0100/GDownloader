@@ -28,6 +28,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
@@ -70,9 +71,17 @@ public abstract class AbstractDownloader {
     @Getter
     protected final DownloadManager manager;
 
+    private final AtomicBoolean lastKnownEnabled = new AtomicBoolean();
+
     public AbstractDownloader(DownloadManager managerIn) {
         main = managerIn.getMain();
         manager = managerIn;
+    }
+
+    protected boolean syncEnabledState() {
+        boolean enabled = isEnabled();
+
+        return lastKnownEnabled.getAndSet(enabled) != enabled;
     }
 
     public abstract AbstractDownloaderSettings settings();

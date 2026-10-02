@@ -17,7 +17,11 @@
 package net.brlns.gdownloader.updater;
 
 import jakarta.annotation.PostConstruct;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import lombok.Getter;
@@ -26,6 +30,7 @@ import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.downloader.DownloadManager;
 import net.brlns.gdownloader.event.EventDispatcher;
 import net.brlns.gdownloader.event.impl.PerformUpdateCheckEvent;
+import net.brlns.gdownloader.event.impl.SettingsChangeEvent;
 import net.brlns.gdownloader.ui.message.Message;
 import net.brlns.gdownloader.ui.message.MessageTypeEnum;
 import net.brlns.gdownloader.ui.message.PopupMessenger;
@@ -46,10 +51,16 @@ public final class UpdateManager {
 
     private final GDownloader main;
 
+    private final Map<IUpdater, Boolean> lastKnownEnabled = new ConcurrentHashMap<>();
+
+    private final Set<IUpdater> pendingSetup = ConcurrentHashMap.newKeySet();
+
     public UpdateManager(GDownloader mainIn) {
         main = mainIn;
 
         init();
+
+        EventDispatcher.register(SettingsChangeEvent.class, (event) -> installNewlyEnabledUpdaters());
     }
 
     @PostConstruct
@@ -74,11 +85,47 @@ public final class UpdateManager {
         updaters.remove(updater);
     }
 
+    private synchronized void installNewlyEnabledUpdaters() {
+        if (lastKnownEnabled.isEmpty()) {// Still booting
+            return;
+        }
+
+        for (IUpdater updater : updaters) {
+            boolean enabled = updater.isEnabled();
+            Boolean previous = lastKnownEnabled.put(updater, enabled);
+
+            if (enabled && !Boolean.TRUE.equals(previous)) {
+                pendingSetup.add(updater);
+            }
+        }
+
+        if (pendingSetup.isEmpty()) {
+            return;
+        }
+
+        List<IUpdater> targets = List.copyOf(pendingSetup);
+        if (checkForUpdates(false, false, targets)) {
+            pendingSetup.removeAll(targets);
+        }
+    }
+
     public boolean checkForUpdates() {
         return checkForUpdates(false);
     }
 
     public boolean checkForUpdates(boolean isBooting) {
+        return checkForUpdates(isBooting, !isBooting);
+    }
+
+    public boolean checkForUpdatesFromSettings() {
+        return checkForUpdates(false, false);
+    }
+
+    public boolean checkForUpdates(boolean isBooting, boolean installIfMissing) {
+        return checkForUpdates(isBooting, installIfMissing, updaters);
+    }
+
+    public boolean checkForUpdates(boolean isBooting, boolean installIfMissing, Collection<IUpdater> targets) {
         DownloadManager downloadManager = main.getDownloadManager();
         if (!isBooting) {
             if (downloadManager.isBlocked()) {// This means we are already checking for updates
@@ -92,6 +139,10 @@ public final class UpdateManager {
                 .messageType(MessageTypeEnum.INFO)
                 .discardDuplicates(true)
                 .build());
+        }
+
+        for (IUpdater updater : updaters) {
+            lastKnownEnabled.putIfAbsent(updater, updater.isEnabled());
         }
 
         downloadManager.block();
@@ -111,14 +162,14 @@ public final class UpdateManager {
                     .networkOnline(true)
                     .build());
 
-                CountDownLatch latch = new CountDownLatch(updaters.size());
+                CountDownLatch latch = new CountDownLatch(targets.size());
 
-                for (IUpdater updater : updaters) {
+                for (IUpdater updater : targets) {
                     if (updater.isEnabled()) {
                         GLOBAL_THREAD_POOL.execute(() -> {
                             try {
                                 log.info("Starting {} updater", updater.getName());
-                                updater.check(!isBooting);
+                                updater.check(installIfMissing);
                             } catch (NoFallbackAvailableException e) {
                                 log.error("{} updater failed and no fallback is available."
                                     + " Your OS might be unsupported.", updater.getName());
@@ -142,7 +193,7 @@ public final class UpdateManager {
 
                 log.info("Finished checking for updates");
 
-                boolean updated = updaters.stream()
+                boolean updated = targets.stream()
                     .anyMatch(IUpdater::isUpdated);
 
                 if (!isBooting) {
@@ -157,7 +208,7 @@ public final class UpdateManager {
                         .build());
                 }
 
-                for (IUpdater updater : updaters) {
+                for (IUpdater updater : targets) {
                     if (updater.isUpdated() && updater.isRestartRequired()) {
                         log.info("Restarting to apply updates.");
                         main.restart();
@@ -183,6 +234,8 @@ public final class UpdateManager {
                     .checking(false)
                     .networkOnline(true)
                     .build());
+
+                installNewlyEnabledUpdaters();
             }
         });
 

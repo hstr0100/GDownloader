@@ -41,6 +41,8 @@ import net.brlns.gdownloader.downloader.structs.DownloadResult;
 import net.brlns.gdownloader.downloader.structs.FormatInfo;
 import net.brlns.gdownloader.downloader.structs.MediaInfo;
 import net.brlns.gdownloader.event.EventDispatcher;
+import net.brlns.gdownloader.event.impl.PerformUpdateCheckEvent;
+import net.brlns.gdownloader.event.impl.SettingsChangeEvent;
 import net.brlns.gdownloader.event.IEvent;
 import net.brlns.gdownloader.event.impl.QueueLiveSortToggledEvent;
 import net.brlns.gdownloader.event.impl.QueueSortOrderChangedEvent;
@@ -148,10 +150,51 @@ public class DownloadManager implements IEvent, AutoCloseable {
         registerDownloader(new GalleryDlDownloader(this));
         registerDownloader(new SpotDLDownloader(this));
         registerDownloader(new DirectHttpDownloader(this));
+
+        EventDispatcher.register(SettingsChangeEvent.class,
+            (event) -> spawn(this::syncDownloaderStates));
+        EventDispatcher.register(PerformUpdateCheckEvent.class, (event) -> {
+            if (!event.isChecking()) {
+                spawn(this::syncDownloaderStates);
+            }
+        });
+    }
+
+    private synchronized void syncDownloaderStates() {
+        List<AbstractDownloader> changed = downloaders.stream()
+            .filter(AbstractDownloader::syncEnabledState)
+            .toList();
+
+        if (changed.isEmpty()) {
+            return;
+        }
+
+        for (QueueEntry entry : sequencer.getAllEntries()) {
+            if (entry.getCurrentQueueCategory() == COMPLETED) {
+                continue;
+            }
+
+            entry.setDownloaders(getCompatibleDownloaders(entry.getUrl()));
+
+            changed.forEach(downloader -> {
+                DownloaderIdEnum downloaderId = downloader.getDownloaderId();
+
+                if (downloader.isEnabled()) {
+                    // May have been blacklisted for failing while it was off.
+                    entry.unblackListDownloader(downloaderId);
+                } else if (entry.getCurrentQueueCategory() == RUNNING
+                    && entry.getCurrentDownloader() == downloaderId) {
+                    stopSingleDownload(entry);
+                }
+            });
+        }
+
+        fireListeners();
     }
 
     public final void registerDownloader(AbstractDownloader downloader) {
         downloaders.add(downloader);
+        downloader.syncEnabledState();
     }
 
     @PostConstruct

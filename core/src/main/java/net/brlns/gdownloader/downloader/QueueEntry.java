@@ -104,7 +104,7 @@ public class QueueEntry implements ICheckpointable<Long> {
     private final String originalUrl;
     private final String url;
     private final long downloadId;
-    private final List<AbstractDownloader> downloaders;
+    private final AtomicReference<List<AbstractDownloader>> downloaders;
 
     private final List<DownloaderIdEnum> downloaderBlacklist = new CopyOnWriteArrayList<>();
 
@@ -200,7 +200,7 @@ public class QueueEntry implements ICheckpointable<Long> {
         originalUrl = originalUrlIn;
         url = urlIn;
         downloadId = downloadIdIn;
-        downloaders = downloadersIn;
+        downloaders = new AtomicReference<>(downloadersIn);
 
         mediaCard.setUrlHint(url);
 
@@ -371,6 +371,18 @@ public class QueueEntry implements ICheckpointable<Long> {
 
     public void resetDownloaderBlacklist() {
         downloaderBlacklist.clear();
+    }
+
+    public void unblackListDownloader(DownloaderIdEnum downloaderId) {
+        downloaderBlacklist.removeIf(id -> id == downloaderId);
+    }
+
+    public List<AbstractDownloader> getDownloaders() {
+        return downloaders.get();
+    }
+
+    public void setDownloaders(List<AbstractDownloader> newDownloaders) {
+        downloaders.set(List.copyOf(newDownloaders));
     }
 
     public boolean isDownloaderBlacklisted(DownloaderIdEnum downloaderId) {
