@@ -180,7 +180,7 @@ public final class UpdateManager {
                             }
                         });
                     } else {
-                        log.info("{} updater is not supported on this platform or runtime method.", updater.getName());
+                        log.info("{} updater is not supported on this platform or runtime method.", updater.getClass().getName());
                         latch.countDown();
                     }
                 }

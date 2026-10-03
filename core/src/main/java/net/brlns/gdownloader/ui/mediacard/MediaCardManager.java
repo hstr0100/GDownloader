@@ -135,6 +135,10 @@ public final class MediaCardManager {
 
     private final AtomicLong lastManualReorderTime = new AtomicLong();
     private final AtomicLong lastLiveSortRefresh = new AtomicLong();
+    private final AtomicBoolean liveSortPending = new AtomicBoolean();
+
+    private final Queue<Runnable> settledActions = new ConcurrentLinkedQueue<>();
+    private final AtomicBoolean restoringQueue = new AtomicBoolean();
 
     public MediaCardManager(GDownloader mainIn, GUIManager managerIn) {
         main = mainIn;
@@ -147,6 +151,7 @@ public final class MediaCardManager {
 
         mediaCardQueueTimer = new Timer(50, e -> {
             processMediaCardQueue();
+            runSettledActions();
             maybeApplyLiveSort();
         });
         mediaCardQueueTimer.start();
@@ -542,10 +547,8 @@ public final class MediaCardManager {
                 int count = 0;
 
                 MediaCardUIUpdateEntry entry;
-                while ((entry = mediaCardUIUpdateQueue.poll()) != null) {
-                    if (++count == 1000) {// Process in batches of 1000 items every 100ms
-                        break;
-                    }
+                while (count < 1000 && (entry = mediaCardUIUpdateQueue.poll()) != null) {// Process in batches of 1000 items every 100ms
+                    count++;
 
                     int id = entry.getMediaCard().getId();
 
@@ -570,7 +573,12 @@ public final class MediaCardManager {
                 }
 
                 if (!added.isEmpty()) {
-                    orderedIds.addAll(added);
+                    Set<Integer> present = new HashSet<>(orderedIds);
+                    for (int id : added) {
+                        if (present.add(id)) {
+                            orderedIds.add(id);
+                        }
+                    }
                 }
 
                 recomputeFilteredIds();
@@ -590,7 +598,9 @@ public final class MediaCardManager {
                 //if (!manager.getAppWindow().isVisible()) {
                 //    manager.getAppWindow().setVisible(true);
                 //}
-                if (main.getConfig().isAutoScrollToBottom() && scrollToBottom) {
+                if (main.getConfig().isAutoScrollToBottom() && scrollToBottom
+                    && !restoringQueue.get()
+                    && main.getDownloadManager().isAutoScrollApplicable()) {
                     scrollPaneToBottom(queueScrollPane);
                 }
             }
@@ -957,6 +967,7 @@ public final class MediaCardManager {
                     orderedIds.add(targetIndex, mediaCard.getId());
 
                     lastManualReorderTime.set(System.currentTimeMillis());
+                    liveSortPending.set(true);
 
                     recomputeFilteredIds();
                     updateVisibleWindow(true);
@@ -998,7 +1009,7 @@ public final class MediaCardManager {
                 }
             }
 
-            if (resolved.isEmpty()) {
+            if (resolved.isEmpty() || resolved.equals(orderedIds)) {
                 return;
             }
 
@@ -1017,9 +1028,47 @@ public final class MediaCardManager {
         });
     }
 
+    public void requestLiveSort() {
+        liveSortPending.set(true);
+    }
+
+    public void setRestoringQueue(boolean restoring) {
+        restoringQueue.set(restoring);
+    }
+
+    public void runWhenSettled(@NonNull Runnable action) {
+        settledActions.add(action);
+    }
+
+    private void runSettledActions() {
+        if (settledActions.isEmpty()
+            || mediaQueuePane == null || queueScrollPane == null
+            || !mediaCardUIUpdateQueue.isEmpty()
+            || currentlyUpdatingMediaCards.get()) {
+            return;
+        }
+
+        Runnable action;
+        while ((action = settledActions.poll()) != null) {
+            try {
+                action.run();
+            } catch (Exception e) {
+                log.error("Failed to run post-load action", e);
+            }
+        }
+    }
+
     private void maybeApplyLiveSort() {
-        if (mediaQueuePane == null || queueScrollPane == null
-            || !main.getDownloadManager().isLiveSortEnabled()) {
+        if (!liveSortPending.get()) {
+            return;
+        }
+
+        if (!main.getDownloadManager().isLiveSortEnabled()) {
+            liveSortPending.set(false);
+            return;
+        }
+
+        if (mediaQueuePane == null || queueScrollPane == null) {
             return;
         }
 
@@ -1033,7 +1082,10 @@ public final class MediaCardManager {
             return;
         }
 
+        liveSortPending.set(false);
         lastLiveSortRefresh.set(now);
+
+        main.getDownloadManager().syncSequencerOrder();
 
         List<Integer> sortedIds = main.getDownloadManager().getSortedMediaCardIds();
         if (!sortedIds.isEmpty() && !sortedIds.equals(orderedIds)) {
@@ -1067,6 +1119,12 @@ public final class MediaCardManager {
             EventDispatcher.dispatch(QueueFilterChangedEvent.builder()
                 .filter(filter)
                 .build());
+        }
+
+        if (main.getConfig().isRememberQueueSortAndFilter()
+            && main.getConfig().getQueueStatusFilter() != filter) {
+            main.getConfig().setQueueStatusFilter(filter);
+            main.updateConfig();
         }
     }
 

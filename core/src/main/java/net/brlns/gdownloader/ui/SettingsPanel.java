@@ -44,6 +44,8 @@ import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.downloader.AbstractDownloader;
 import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
+import net.brlns.gdownloader.downloader.enums.QueueFilterEnum;
+import net.brlns.gdownloader.downloader.enums.QueueSortOrderEnum;
 import net.brlns.gdownloader.ffmpeg.enums.AudioBitrateEnum;
 import net.brlns.gdownloader.ffmpeg.structs.FFmpegConfig;
 import net.brlns.gdownloader.filters.AbstractUrlFilter;
@@ -695,6 +697,24 @@ public class SettingsPanel {
             .labelKey("settings.restore_session_after_restart")
             .getter(settings::isRestoreSessionAfterRestart)
             .setter(settings::setRestoreSessionAfterRestart)
+            .build());
+
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.remember_queue_sort_and_filter")
+            .getter(settings::isRememberQueueSortAndFilter)
+            .setter(settings::setRememberQueueSortAndFilter)
+            .onSet((selected) -> {
+                if (selected) {
+                    settings.setQueueSortOrder(main.getDownloadManager().getSortOrder());
+                    settings.setQueueLiveSortEnabled(main.getDownloadManager().isLiveSortEnabled());
+                    settings.setQueueStatusFilter(main.getGuiManager().getMediaCardManager().getStatusFilter());
+                } else {
+                    settings.setQueueSortOrder(QueueSortOrderEnum.NATURAL);
+                    settings.setQueueLiveSortEnabled(false);
+                    settings.setQueueStatusFilter(QueueFilterEnum.ALL);
+                }
+            })
             .build());
 
         addCheckBox(panel, CheckBoxBuilder.builder()

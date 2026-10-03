@@ -64,6 +64,7 @@ import net.brlns.gdownloader.system.taskbar.TaskbarManager;
 import net.brlns.gdownloader.ui.GUIManager;
 import net.brlns.gdownloader.ui.mediacard.MediaCard;
 import net.brlns.gdownloader.ui.mediacard.MediaCard.StartButtonMode;
+import net.brlns.gdownloader.ui.mediacard.MediaCardManager;
 import net.brlns.gdownloader.ui.mediacard.MediaInfoPopup;
 import net.brlns.gdownloader.ui.message.Message;
 import net.brlns.gdownloader.ui.message.MessageTypeEnum;
@@ -221,6 +222,8 @@ public class DownloadManager implements IEvent, AutoCloseable {
             spawn(() -> {
                 linkCaptureLock.lock();// Intentionally block url capture during the entire restoring proccess
                 try {
+                    main.getGuiManager().getMediaCardManager().setRestoringQueue(true);
+
                     int count = 0;
 
                     // We need an ugly comparator here because of null sequence numbers.
@@ -294,8 +297,12 @@ public class DownloadManager implements IEvent, AutoCloseable {
 
                     initialized.set(true);
                     fireListeners();
+
+                    restoreQueueViewState();
                 }
             });
+        } else {
+            restoreQueueViewState();
         }
     }
 
@@ -710,6 +717,8 @@ public class DownloadManager implements IEvent, AutoCloseable {
         sequencer.addNewEntry(queueEntry);
         fireListeners();
 
+        requestLiveSort();
+
         setSkipDownload(queueEntry, queueEntry.isSkipped());
 
         updateRightClick(queueEntry, queueEntry.getCurrentQueueCategory());
@@ -926,6 +935,8 @@ public class DownloadManager implements IEvent, AutoCloseable {
             requeueEntry(entry, false);
         });
 
+        requestLiveSort();
+
         startDownloads(suggestedDownloaderId.get());
         fireListeners();
     }
@@ -1017,6 +1028,8 @@ public class DownloadManager implements IEvent, AutoCloseable {
             runningPerHost.merge(resolveHostKey(entry), 1, Integer::sum);
 
             submitDownloadTask(entry, false);
+
+            requestLiveSort();
         }
 
         if (!metadataQueryQueue.isEmpty()) {
@@ -1150,6 +1163,8 @@ public class DownloadManager implements IEvent, AutoCloseable {
 
     protected void updatePriority(QueueEntry entry, DownloadPriorityEnum priority) {
         sequencer.updatePriority(entry, priority);
+
+        requestLiveSort();
     }
 
     public List<Integer> getSortedMediaCardIds() {
@@ -1172,6 +1187,60 @@ public class DownloadManager implements IEvent, AutoCloseable {
                 .sortOrder(sortOrder)
                 .build());
         }
+
+        if (main.getConfig().isRememberQueueSortAndFilter()
+            && main.getConfig().getQueueSortOrder() != sortOrder) {
+            main.getConfig().setQueueSortOrder(sortOrder);
+            main.updateConfig();
+        }
+    }
+
+    public void syncSequencerOrder() {
+        sequencer.setSortOrder(sequencer.getCurrentSortOrder());
+    }
+
+    public void requestLiveSort() {
+        if (liveSortEnabled.get()) {
+            main.getGuiManager().getMediaCardManager().requestLiveSort();
+        }
+    }
+
+    public boolean isAutoScrollApplicable() {
+        if (!liveSortEnabled.get()) {
+            return true;
+        }
+
+        return switch (sequencer.getCurrentSortOrder()) {
+            case NATURAL, SEQUENCE, ADDED ->
+                true;
+            default ->
+                false;
+        };
+    }
+
+    private void restoreQueueViewState() {
+        MediaCardManager mediaCardManager = main.getGuiManager().getMediaCardManager();
+
+        mediaCardManager.runWhenSettled(() -> {
+            mediaCardManager.setRestoringQueue(false);
+
+            if (!main.getConfig().isRememberQueueSortAndFilter()) {
+                return;
+            }
+
+            QueueSortOrderEnum sortOrder = main.getConfig().getQueueSortOrder();
+            QueueFilterEnum filter = main.getConfig().getQueueStatusFilter();
+
+            if (filter != null) {
+                mediaCardManager.setStatusFilter(filter);
+            }
+
+            if (sortOrder != null) {
+                setSortOrder(sortOrder);
+            }
+
+            setLiveSortEnabled(main.getConfig().isQueueLiveSortEnabled());
+        });
     }
 
     public QueueSortOrderEnum getSortOrder() {
@@ -1185,6 +1254,8 @@ public class DownloadManager implements IEvent, AutoCloseable {
     public void setLiveSortEnabled(boolean enabled) {
         if (liveSortEnabled.getAndSet(enabled) != enabled) {
             if (enabled) {
+                syncSequencerOrder();
+
                 main.getGuiManager().getMediaCardManager()
                     .reorderMediaCards(getSortedMediaCardIds());
             }
@@ -1192,6 +1263,12 @@ public class DownloadManager implements IEvent, AutoCloseable {
             EventDispatcher.dispatch(QueueLiveSortToggledEvent.builder()
                 .enabled(enabled)
                 .build());
+        }
+
+        if (main.getConfig().isRememberQueueSortAndFilter()
+            && main.getConfig().isQueueLiveSortEnabled() != enabled) {
+            main.getConfig().setQueueLiveSortEnabled(enabled);
+            main.updateConfig();
         }
     }
 
@@ -1237,6 +1314,8 @@ public class DownloadManager implements IEvent, AutoCloseable {
         }
 
         sequencer.changeCategory(entry, category);
+
+        requestLiveSort();
 
         updateRightClick(entry, category);
 

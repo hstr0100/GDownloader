@@ -27,6 +27,8 @@ import java.util.TreeMap;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
+import net.brlns.gdownloader.downloader.enums.QueueFilterEnum;
+import net.brlns.gdownloader.downloader.enums.QueueSortOrderEnum;
 import net.brlns.gdownloader.ffmpeg.enums.AudioCodecEnum;
 import net.brlns.gdownloader.ffmpeg.structs.FFmpegConfig;
 import net.brlns.gdownloader.filters.AbstractUrlFilter;
@@ -209,6 +211,18 @@ public class Settings {
 
     @JsonProperty("WindowPlacements")
     private Map<String, WindowPlacement> windowPlacements = new TreeMap<>();
+
+    @JsonProperty("RememberQueueSortAndFilter")
+    private boolean rememberQueueSortAndFilter = true;
+
+    @JsonProperty("QueueSortOrder")
+    private QueueSortOrderEnum queueSortOrder = QueueSortOrderEnum.NATURAL;
+
+    @JsonProperty("QueueLiveSortEnabled")
+    private boolean queueLiveSortEnabled = false;
+
+    @JsonProperty("QueueStatusFilter")
+    private QueueFilterEnum queueStatusFilter = QueueFilterEnum.ALL;
 
     @JsonProperty("MaximumSimultaneousDownloads")
     private int maxSimultaneousDownloads = 3;

@@ -686,6 +686,8 @@ public class QueueEntry implements ICheckpointable<Long> {
         optionalMediaInfo.set(Optional.of(mediaInfo));
         mediaInfoLoaded.set(true);
 
+        main.getDownloadManager().requestLiveSort();
+
         mediaCard.setLive(mediaInfo.isCurrentlyLive());
 
         markQueried();
