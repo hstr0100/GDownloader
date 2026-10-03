@@ -188,6 +188,11 @@ public class DownloadSequencer {
 
     @Nullable
     public QueueEntry fetchNext() {
+        return fetchNext(entry -> true);
+    }
+
+    @Nullable
+    public QueueEntry fetchNext(@NonNull Predicate<QueueEntry> eligibility) {
         if (categorySets.get(QUEUED).isEmpty()) {
             return null;
         }
@@ -200,7 +205,8 @@ public class DownloadSequencer {
 
                 if (queueEntry.getCurrentQueueCategory() == QUEUED
                     && !queueEntry.getDownloadSkipped().get()
-                    && categorySets.get(QUEUED).contains(downloadId)) {
+                    && categorySets.get(QUEUED).contains(downloadId)
+                    && eligibility.test(queueEntry)) {
 
                     updateEntryCategory(queueEntry, RUNNING);
 

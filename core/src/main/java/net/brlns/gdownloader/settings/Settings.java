@@ -213,6 +213,9 @@ public class Settings {
     @JsonProperty("MaximumSimultaneousDownloads")
     private int maxSimultaneousDownloads = 3;
 
+    @JsonProperty("MaximumSimultaneousDownloadsPerHost")
+    private int maxSimultaneousDownloadsPerHost = 10;
+
     @JsonProperty("PlaylistDownloadOption")
     private PlayListOptionEnum playlistDownloadOption = PlayListOptionEnum.ALWAYS_ASK;
 

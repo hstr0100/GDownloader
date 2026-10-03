@@ -1289,6 +1289,15 @@ public class SettingsPanel {
             .setter(settings::setMaxSimultaneousDownloads)
             .build());
 
+        addSlider(panel, SliderBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.maximum_simultaneous_downloads_per_host")
+            .min(1).max(10).majorTickSpacing(1)
+            .snapToTicks(true)
+            .getter(settings::getMaxSimultaneousDownloadsPerHost)
+            .setter(settings::setMaxSimultaneousDownloadsPerHost)
+            .build());
+
         addCheckBox(panel, CheckBoxBuilder.builder()
             .background(resolveColor(panel))
             .labelKey("settings.prefer_system_executables")

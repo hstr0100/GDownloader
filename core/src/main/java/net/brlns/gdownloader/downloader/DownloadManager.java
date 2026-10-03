@@ -991,18 +991,30 @@ public class DownloadManager implements IEvent, AutoCloseable {
     public void processQueue() {
         processScheduledRetries();
 
-        int maxDownloads = main.getConfig().getMaxSimultaneousDownloads();
+        int maxDownloads = Math.max(1, main.getConfig().getMaxSimultaneousDownloads());
+        int maxDownloadsPerHost = Math.max(1, main.getConfig().getMaxSimultaneousDownloadsPerHost());
+
+        Map<String, Integer> runningPerHost = new HashMap<>();
+
+        if (downloadsRunning.get() && downloadsManuallyStarted.get() && !sequencer.isEmpty(QUEUED)) {
+            for (QueueEntry running : sequencer.getEntries(RUNNING)) {
+                runningPerHost.merge(resolveHostKey(running), 1, Integer::sum);
+            }
+        }
 
         while (downloadsRunning.get()
             && downloadsManuallyStarted.get()
             && !sequencer.isEmpty(QUEUED)
             && sequencer.getCount(RUNNING) < maxDownloads) {
 
-            QueueEntry entry = sequencer.fetchNext();
+            QueueEntry entry = sequencer.fetchNext(candidate
+                -> runningPerHost.getOrDefault(resolveHostKey(candidate), 0) < maxDownloadsPerHost);
             if (entry == null) {
                 //log.info("No more entries to fetch from queue");
                 break;
             }
+
+            runningPerHost.merge(resolveHostKey(entry), 1, Integer::sum);
 
             submitDownloadTask(entry, false);
         }
@@ -1034,6 +1046,12 @@ public class DownloadManager implements IEvent, AutoCloseable {
 
             stopDownloads();
         }
+    }
+
+    private String resolveHostKey(QueueEntry entry) {
+        String host = getHostName(entry.getUrl());
+
+        return host == null ? "" : host.toLowerCase(Locale.ROOT);
     }
 
     private void processScheduledRetries() {
