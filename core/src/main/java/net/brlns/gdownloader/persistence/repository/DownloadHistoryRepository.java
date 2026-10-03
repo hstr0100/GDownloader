@@ -28,6 +28,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.persistence.entity.DownloadHistoryEntity;
@@ -285,50 +286,41 @@ public class DownloadHistoryRepository extends PersistenceRepository<String, Dow
         }
 
         List<String> urlList = new ArrayList<>(urls);
-        int totalRemoved = 0;
+        AtomicInteger removed = new AtomicInteger();
 
-        try (EntityManager em = getEmf().createEntityManager()) {
-            em.getTransaction().begin();
+        boolean success = inTransaction(urlList, (em) -> {
+            int total = 0;
 
-            try {
-                for (int i = 0; i < urlList.size(); i += BULK_DELETE_CHUNK_SIZE) {
-                    List<String> chunk = urlList.subList(i, Math.min(i + BULK_DELETE_CHUNK_SIZE, urlList.size()));
+            for (int i = 0; i < urlList.size(); i += BULK_DELETE_CHUNK_SIZE) {
+                List<String> chunk = urlList.subList(i, Math.min(i + BULK_DELETE_CHUNK_SIZE, urlList.size()));
 
-                    totalRemoved += em.createQuery(
-                        "DELETE FROM DownloadHistoryEntity e WHERE e.url IN :urls")
-                        .setParameter("urls", chunk)
-                        .executeUpdate();
-                }
-
-                em.getTransaction().commit();
-            } catch (Exception e) {
-                em.getTransaction().rollback();
-                throw e;
+                total += em.createQuery(
+                    "DELETE FROM DownloadHistoryEntity e WHERE e.url IN :urls")
+                    .setParameter("urls", chunk)
+                    .executeUpdate();
             }
 
-            invalidateCache();
+            removed.set(total);
+        });
 
-            return totalRemoved;
-        } catch (Exception e) {
-            log.error("Failed to bulk remove download history entries", e);
-
+        if (!success) {
             return 0;
         }
+
+        invalidateCache();
+
+        return removed.get();
     }
 
     public boolean clearAll() {
-        try (EntityManager em = getEmf().createEntityManager()) {
-            em.getTransaction().begin();
+        boolean success = inTransaction(List.of(), (em) -> {
             em.createQuery("DELETE FROM DownloadHistoryEntity").executeUpdate();
-            em.getTransaction().commit();
+        });
 
+        if (success) {
             invalidateCache();
-
-            return true;
-        } catch (Exception e) {
-            log.error("Failed to clear download history", e);
-
-            return false;
         }
+
+        return success;
     }
 }
