@@ -64,7 +64,7 @@ public class RightClickMenu {
         Collection<RightClickMenuEntries> dependents, int sourceX, int sourceY, List<Integer> hierarchy) {
         assert SwingUtilities.isEventDispatchThread();
 
-        if (actions.isEmpty()) {
+        if (actions.isEmpty() || !parentComponent.isShowing()) {
             return;
         }
 

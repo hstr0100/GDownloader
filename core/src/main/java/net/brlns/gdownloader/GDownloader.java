@@ -142,6 +142,7 @@ import static net.brlns.gdownloader.util.StringUtils.notNullOrEmpty;
 // TODO Direct-HTTP: metadata extractors for host resolvers
 // TODO Rest API for browser-level requests (url add/remove, batch updates, start/stop)
 // TODO Support custom cookies.txt locations
+// TODO Regex-based URL ignore-list
 /**
  * GDownloader - GUI wrapper for yt-dlp
  *

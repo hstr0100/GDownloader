@@ -19,6 +19,7 @@ package net.brlns.gdownloader.ui;
 import java.awt.*;
 import java.awt.event.AdjustmentEvent;
 import java.awt.event.AdjustmentListener;
+import java.awt.event.MouseEvent;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
 import java.awt.image.BufferedImage;
@@ -28,6 +29,7 @@ import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import lombok.Data;
@@ -44,6 +46,9 @@ import static net.brlns.gdownloader.ui.themes.ThemeProvider.*;
 public final class UIUtils {
 
     private static final Map<ImageCacheKey, ImageIcon> IMAGE_CACHE = new ConcurrentHashMap<>();
+
+    private static final String SEARCH_FIELD_PROPERTY = "search-field";
+    private static final AtomicBoolean SEARCH_FOCUS_RELEASE_INSTALLED = new AtomicBoolean();
 
     public static void setComponentAndLabelVisible(JComponent component, boolean visible) {
         JLabel label = (JLabel)component.getClientProperty("associated-label");
@@ -292,6 +297,9 @@ public final class UIUtils {
             return;
         }
 
+        textField.putClientProperty(SEARCH_FIELD_PROPERTY, Boolean.TRUE);
+        installSearchFocusRelease();
+
         if (textField.getText().isEmpty()) {
             textField.setText(placeholder);
             textField.setForeground(placeholderColor);
@@ -314,6 +322,38 @@ public final class UIUtils {
                 }
             }
         });
+    }
+
+    private static void installSearchFocusRelease() {
+        if (!SEARCH_FOCUS_RELEASE_INSTALLED.compareAndSet(false, true)) {
+            return;
+        }
+
+        Toolkit.getDefaultToolkit().addAWTEventListener(event -> {
+            if (!(event instanceof MouseEvent mouseEvent)
+                || mouseEvent.getID() != MouseEvent.MOUSE_PRESSED) {
+                return;
+            }
+
+            Component focusOwner = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
+            if (!(focusOwner instanceof JComponent searchField)
+                || searchField.getClientProperty(SEARCH_FIELD_PROPERTY) == null) {
+                return;
+            }
+
+            Component source = mouseEvent.getComponent();
+            if (source == null || source == focusOwner) {
+                return;
+            }
+
+            JRootPane rootPane = SwingUtilities.getRootPane(focusOwner);
+            if (rootPane == null || SwingUtilities.getRootPane(source) != rootPane) {
+                return;
+            }
+
+            rootPane.setFocusable(true);
+            rootPane.requestFocusInWindow();
+        }, AWTEvent.MOUSE_EVENT_MASK);
     }
 
     public static boolean isPlaceholder(JTextField textField, String placeholder) {

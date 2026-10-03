@@ -134,12 +134,7 @@ public class PersistenceManager implements AutoCloseable {
                     PersistenceUnitProperties.DROP_AND_CREATE);
             }
 
-            properties.put(PersistenceUnitProperties.JDBC_URL, "jdbc:hsqldb:"
-                + "file:" + databaseFile + ";"
-                + "sql.syntax_pgs=true;"
-                + "hsqldb.lob_compressed=true;"
-                + "hsqldb.script_format=3;"
-                + "hsqldb.default_table_type=cached");
+            properties.put(PersistenceUnitProperties.JDBC_URL, buildJdbcUrl(databaseFile));
 
             emf = Persistence.createEntityManagerFactory("hsqldbPU", properties);
 
@@ -184,6 +179,17 @@ public class PersistenceManager implements AutoCloseable {
         return false;
     }
 
+    private static String buildJdbcUrl(File databaseFile) {
+        return "jdbc:hsqldb:"
+            + "file:" + databaseFile + ";"
+            + "sql.syntax_pgs=true;"
+            + "hsqldb.lob_compressed=true;"
+            + "hsqldb.script_format=3;"
+            + "hsqldb.default_table_type=cached;"
+            + "hsqldb.tx=mvcc;"
+            + "hsqldb.tx_level=read_committed";
+    }
+
     private void initHistoryDatabase() {
         try {
             File historyDatabaseFile = new File(databaseDirectory, getHistoryDbFileName());
@@ -191,12 +197,7 @@ public class PersistenceManager implements AutoCloseable {
             Map<String, String> historyProperties = new HashMap<>();
             historyProperties.put(PersistenceUnitProperties.DDL_GENERATION,
                 PersistenceUnitProperties.CREATE_OR_EXTEND);
-            historyProperties.put(PersistenceUnitProperties.JDBC_URL, "jdbc:hsqldb:"
-                + "file:" + historyDatabaseFile + ";"
-                + "sql.syntax_pgs=true;"
-                + "hsqldb.lob_compressed=true;"
-                + "hsqldb.script_format=3;"
-                + "hsqldb.default_table_type=cached");
+            historyProperties.put(PersistenceUnitProperties.JDBC_URL, buildJdbcUrl(historyDatabaseFile));
 
             historyEmf = Persistence.createEntityManagerFactory("historyPU", historyProperties);
 

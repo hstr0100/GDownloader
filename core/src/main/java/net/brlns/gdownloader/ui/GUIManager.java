@@ -466,14 +466,6 @@ public final class GUIManager implements AutoCloseable {
             }
         });
 
-        searchField.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_A, KeyEvent.CTRL_DOWN_MASK), "selectAllCards");
-        searchField.getActionMap().put("selectAllCards", new AbstractAction() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                mediaCardManager.selectAllMediaCards();
-            }
-        });
-
         searchDebounceTimer = new Timer(150, e -> {
             if (isPlaceholder(searchField, l10n("gui.search.tooltip"))) {
                 updateMatchCountLabel("", 0);

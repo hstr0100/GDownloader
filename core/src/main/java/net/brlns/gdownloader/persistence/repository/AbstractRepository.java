@@ -18,11 +18,12 @@ package net.brlns.gdownloader.persistence.repository;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
+import java.sql.SQLException;
 import java.util.Collection;
-import java.util.Map;
-import java.util.Objects;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.Collections;
+import java.util.IdentityHashMap;
+import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import lombok.Getter;
@@ -34,9 +35,9 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public abstract class AbstractRepository {
 
-    private static final int WRITE_LOCK_STRIPES = 256;
-
-    private static final Map<EntityManagerFactory, ReentrantLock[]> WRITE_LOCKS = new ConcurrentHashMap<>();
+    private static final int MAX_ATTEMPTS = 3;
+    private static final long BACKOFF_BASE_MILLIS = 5;
+    private static final int BACKOFF_MAX_SHIFT = 6;
 
     private static final ThreadLocal<Boolean> WRITING = new ThreadLocal<>();
 
@@ -60,63 +61,88 @@ public abstract class AbstractRepository {
             throw new IllegalStateException("Nested write transactions are not allowed");
         }
 
-        ReentrantLock[] stripes = WRITE_LOCKS.computeIfAbsent(emf, key -> createStripes());
-
-        int[] indexes = keys.stream()
-            .mapToInt(key -> Math.floorMod(Objects.hashCode(key), WRITE_LOCK_STRIPES))
-            .distinct()
-            .sorted()
-            .toArray();
-
-        int acquired = 0;
+        WRITING.set(Boolean.TRUE);
 
         try {
-            for (; acquired < indexes.length; acquired++) {
-                stripes[indexes[acquired]].lock();
-            }
-
-            WRITING.set(Boolean.TRUE);
-
-            try (EntityManager em = getEmf().createEntityManager()) {
+            for (int attempt = 1;; attempt++) {
                 try {
-                    em.getTransaction().begin();
+                    boolean committed = runOnce(action);
 
-                    if (!action.test(em)) {
-                        em.getTransaction().rollback();
-
-                        return false;
-                    }
-
-                    em.getTransaction().commit();
-
-                    return true;
+                    return committed;
                 } catch (Exception e) {
-                    if (em.getTransaction().isActive()) {
-                        em.getTransaction().rollback();
+                    if (attempt < MAX_ATTEMPTS && isTransient(e) && backOff(attempt)) {
+                        log.debug("Transient database conflict, retrying write ({}/{})", attempt, MAX_ATTEMPTS);
+
+                        continue;
                     }
 
-                    throw e;
-                }
-            } catch (Exception e) {
-                log.error("Failed to write entities", e);
+                    log.error("Failed to write entities", e);
 
-                return false;
+                    return false;
+                }
             }
         } finally {
             WRITING.remove();
+        }
+    }
 
-            while (acquired > 0) {
-                stripes[indexes[--acquired]].unlock();
+    private boolean runOnce(Predicate<EntityManager> action) {
+        try (EntityManager em = getEmf().createEntityManager()) {
+            try {
+                em.getTransaction().begin();
+
+                if (!action.test(em)) {
+                    em.getTransaction().rollback();
+
+                    return false;
+                }
+
+                em.getTransaction().commit();
+
+                return true;
+            } catch (RuntimeException e) {
+                if (em.getTransaction().isActive()) {
+                    em.getTransaction().rollback();
+                }
+
+                throw e;
             }
         }
     }
 
-    private static ReentrantLock[] createStripes() {
-        ReentrantLock[] stripes = new ReentrantLock[WRITE_LOCK_STRIPES];
-        for (int i = 0; i < stripes.length; i++) {
-            stripes[i] = new ReentrantLock();
+    private static boolean isTransient(Throwable error) {
+        Set<Throwable> seen = Collections.newSetFromMap(new IdentityHashMap<>());
+
+        int depth = 0;
+        for (Throwable t = error; t != null && seen.add(t) && depth++ < 12; t = t.getCause()) {
+            if (!(t instanceof SQLException sql)) {
+                continue;
+            }
+
+            int chained = 0;
+            for (SQLException current = sql; current != null && chained++ < 8; current = current.getNextException()) {
+                String state = current.getSQLState();
+
+                if (state != null && (state.startsWith("40") || state.equals("23505"))) {
+                    return true;
+                }
+            }
         }
 
-        return stripes;
+        return false;
+    }
+
+    private static boolean backOff(int attempt) {
+        long ceiling = BACKOFF_BASE_MILLIS << Math.min(attempt, BACKOFF_MAX_SHIFT);
+
+        try {
+            Thread.sleep(ThreadLocalRandom.current().nextLong(ceiling) + 1);
+
+            return true;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+
+            return false;
+        }
     }
 }

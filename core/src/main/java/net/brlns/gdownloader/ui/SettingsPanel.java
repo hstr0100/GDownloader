@@ -153,6 +153,13 @@ public class SettingsPanel {
         validateCustomDirectory(settings.getSpotDLSettings());
         validateCustomDirectory(settings.getDirectHttpSettings());
 
+        Settings live = main.getConfig();
+        if (settings.isRememberQueueSortAndFilter() == live.isRememberQueueSortAndFilter()) {
+            settings.setQueueSortOrder(live.getQueueSortOrder());
+            settings.setQueueLiveSortEnabled(live.isQueueLiveSortEnabled());
+            settings.setQueueStatusFilter(live.getQueueStatusFilter());
+        }
+
         main.updateConfig(settings);
 
         main.getGuiManager().refreshAppWindow();

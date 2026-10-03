@@ -21,6 +21,12 @@
             <!-- <property name="eclipselink.ddl-generation" value="create-or-extend-tables"/> -->
             <property name="eclipselink.ddl-generation.output-mode" value="database"/>
             <property name="eclipselink.logging.level" value="SEVERE"/>
+
+            <property name="eclipselink.cache.shared.default" value="false"/>
+            <property name="eclipselink.jdbc.write-connections.min" value="4"/>
+            <property name="eclipselink.jdbc.write-connections.max" value="32"/>
+            <property name="eclipselink.jdbc.read-connections.min" value="2"/>
+            <property name="eclipselink.jdbc.read-connections.max" value="16"/>
         </properties>
     </persistence-unit>
 
@@ -37,6 +43,12 @@
             <!-- <property name="eclipselink.ddl-generation" value="create-or-extend-tables"/> -->
             <property name="eclipselink.ddl-generation.output-mode" value="database"/>
             <property name="eclipselink.logging.level" value="SEVERE"/>
+
+            <property name="eclipselink.cache.shared.default" value="false"/>
+            <property name="eclipselink.jdbc.write-connections.min" value="4"/>
+            <property name="eclipselink.jdbc.write-connections.max" value="32"/>
+            <property name="eclipselink.jdbc.read-connections.min" value="2"/>
+            <property name="eclipselink.jdbc.read-connections.max" value="16"/>
         </properties>
     </persistence-unit>
 </persistence>

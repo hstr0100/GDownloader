@@ -1171,16 +1171,28 @@ public class HistoryWindow {
 
         if (!existingFiles.isEmpty()) {
             menu.put(l10n("gui.delete_files"),
-                new RunnableMenuEntry(() -> deleteFilesFromHistory(entry),
+                new MultiActionMenuEntry<>(
+                    () -> entry,
+                    (entries) -> deleteFilesFromHistory(entries),
                     () -> "/assets/bin.png"));
 
             menu.put(l10n("gui.delete_files_and_remove"),
-                new RunnableMenuEntry(() -> deleteAndRemoveFromHistory(entry),
+                new MultiActionMenuEntry<>(
+                    () -> entry,
+                    (entries) -> deleteAndRemoveFromHistory(entries),
                     () -> "/assets/bin.png"));
         }
 
         menu.put(l10n("gui.history.remove"),
-            new RunnableMenuEntry(() -> removeUrlsFromHistory(Set.of(entry.getUrl())),
+            new MultiActionMenuEntry<>(
+                () -> entry.getUrl(),
+                (urls) -> {
+                    Set<String> toRemove = selectedUrls.contains(entry.getUrl()) && selectedUrls.size() > 1
+                        ? new LinkedHashSet<>(selectedUrls)
+                        : new LinkedHashSet<>(urls);
+
+                    removeUrlsFromHistory(toRemove);
+                },
                 () -> "/assets/x-mark.png"));
 
         return menu;
@@ -1218,30 +1230,52 @@ public class HistoryWindow {
         return deletedAny;
     }
 
-    private void deleteFilesFromHistory(DownloadHistoryEntity entry) {
+    private void deleteFilesFromHistory(Collection<DownloadHistoryEntity> entries) {
         spawn(() -> {
-            boolean success = deleteExistingFiles(entry);
+            boolean success = false;
+
+            for (DownloadHistoryEntity entry : entries) {
+                if (deleteExistingFiles(entry)) {
+                    success = true;
+                }
+            }
+
+            boolean deletedAny = success;
 
             runOnEDT(() -> {
-                entityCache.remove(entry.getUrl());
+                for (DownloadHistoryEntity entry : entries) {
+                    entityCache.remove(entry.getUrl());
+                }
 
-                showDeleteFilesToast(success);
+                showDeleteFilesToast(deletedAny);
             });
         });
     }
 
-    private void deleteAndRemoveFromHistory(DownloadHistoryEntity entry) {
-        Set<String> urls = Set.of(entry.getUrl());
+    private void deleteAndRemoveFromHistory(Collection<DownloadHistoryEntity> entries) {
+        Set<String> urls = new LinkedHashSet<>();
+
+        for (DownloadHistoryEntity entry : entries) {
+            urls.add(entry.getUrl());
+        }
 
         spawn(() -> {
-            boolean success = deleteExistingFiles(entry);
+            boolean success = false;
+
+            for (DownloadHistoryEntity entry : entries) {
+                if (deleteExistingFiles(entry)) {
+                    success = true;
+                }
+            }
+
+            boolean deletedAny = success;
 
             removeFromRepo(urls);
 
             runOnEDT(() -> {
                 purgeFromLocalState(urls);
 
-                showDeleteFilesToast(success);
+                showDeleteFilesToast(deletedAny);
             });
         });
     }
