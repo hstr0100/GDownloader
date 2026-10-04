@@ -399,8 +399,12 @@ public abstract class AbstractDownloader {
         return resolvePreviewDirectory(null);
     }
 
+    public File resolveTargetDirectory(@Nullable QueueEntry entry) {
+        return resolvePreviewDirectory(entry != null ? entry.getCustomDownloadDirectory() : null);
+    }
+
     private File resolvePreviewDirectory(@Nullable String entryOverride) {
-        File downloadsDir = main.getOrCreateDownloadsDirectory();
+        File downloadsDir = main.getDownloadsDirectory();
 
         if (notNullOrEmpty(entryOverride)) {
             return new File(entryOverride);

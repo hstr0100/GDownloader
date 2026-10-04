@@ -32,6 +32,10 @@ public enum StatusIndicatorEnum implements ISettingsEnum {
         "/assets/wireless.png",
         "gui.status.network_offline",
         UIColors.TOAST_WARNING),
+    STORAGE_LOW(
+        "/assets/hard-disk.png",
+        "gui.status.storage_low",
+        UIColors.TOAST_WARNING),
     FFMPEG_NOT_FOUND(
         "/assets/toast-error.png",
         "gui.status.ffmpeg_not_detected",

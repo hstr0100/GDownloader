@@ -215,6 +215,9 @@ public class Settings {
     @JsonProperty("RememberQueueSortAndFilter")
     private boolean rememberQueueSortAndFilter = true;
 
+    @JsonProperty("StorageSenseEnabled")
+    private boolean storageSenseEnabled = true;
+
     @JsonProperty("QueueSortOrder")
     private QueueSortOrderEnum queueSortOrder = QueueSortOrderEnum.NATURAL;
 

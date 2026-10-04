@@ -143,6 +143,7 @@ import static net.brlns.gdownloader.util.StringUtils.notNullOrEmpty;
 // TODO Rest API for browser-level requests (url add/remove, batch updates, start/stop)
 // TODO Support custom cookies.txt locations
 // TODO Regex-based URL ignore-list
+// TODO Checkbox-based filter by status dropdown
 /**
  * GDownloader - GUI wrapper for yt-dlp
  *

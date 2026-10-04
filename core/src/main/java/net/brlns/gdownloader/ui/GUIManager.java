@@ -54,6 +54,7 @@ import net.brlns.gdownloader.event.impl.QueueFilterChangedEvent;
 import net.brlns.gdownloader.event.impl.QueueLiveSortToggledEvent;
 import net.brlns.gdownloader.event.impl.QueueSortOrderChangedEvent;
 import net.brlns.gdownloader.event.impl.SettingsChangeEvent;
+import net.brlns.gdownloader.event.impl.StorageStatusEvent;
 import net.brlns.gdownloader.settings.Settings;
 import net.brlns.gdownloader.system.ShutdownRegistry.CloseBefore;
 import net.brlns.gdownloader.system.taskbar.TaskbarManager;
@@ -363,6 +364,18 @@ public final class GUIManager implements AutoCloseable {
                     statusIndicator.removeStatus(NETWORK_OFFLINE);
                 }
             });
+
+            EventDispatcher.registerEDT(StorageStatusEvent.class, (event) -> {
+                if (event.isLow()) {
+                    statusIndicator.addStatus(STORAGE_LOW);
+                } else {
+                    statusIndicator.removeStatus(STORAGE_LOW);
+                }
+            });
+
+            if (main.getDownloadManager().getStorageSense().hasBlockedVolumes()) {
+                statusIndicator.addStatus(STORAGE_LOW);
+            }
 
             JPanel headerPanel = new JPanel();
             headerPanel.setLayout(new BoxLayout(headerPanel, BoxLayout.Y_AXIS));
