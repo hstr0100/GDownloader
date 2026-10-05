@@ -742,13 +742,6 @@ public class SettingsPanel {
 
         addCheckBox(panel, CheckBoxBuilder.builder()
             .background(resolveColor(panel))
-            .labelKey("settings.storage_sense")
-            .getter(settings::isStorageSenseEnabled)
-            .setter(settings::setStorageSenseEnabled)
-            .build());
-
-        addCheckBox(panel, CheckBoxBuilder.builder()
-            .background(resolveColor(panel))
             .labelKey("settings.start_on_system_startup")
             .getter(settings::isAutoStart)
             .setter(settings::setAutoStart)
@@ -1330,6 +1323,13 @@ public class SettingsPanel {
             .snapToTicks(true)
             .getter(settings::getMaxSimultaneousDownloadsPerHost)
             .setter(settings::setMaxSimultaneousDownloadsPerHost)
+            .build());
+
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.storage_sense")
+            .getter(settings::isStorageSenseEnabled)
+            .setter(settings::setStorageSenseEnabled)
             .build());
 
         addCheckBox(panel, CheckBoxBuilder.builder()
