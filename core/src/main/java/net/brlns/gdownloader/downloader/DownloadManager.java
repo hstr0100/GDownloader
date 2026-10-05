@@ -145,6 +145,8 @@ public class DownloadManager implements IEvent, AutoCloseable {
 
     private final Queue<PendingRemoval> pendingRemovals = new ConcurrentLinkedQueue<>();
 
+    private final Object removalFlushLock = new Object();
+
     private final CheckpointTracker<Long> queueEntryCheckpoints = new CheckpointTracker<>();
 
     @SuppressWarnings("this-escape")
@@ -417,6 +419,13 @@ public class DownloadManager implements IEvent, AutoCloseable {
 
     public CompletableFuture<Boolean> captureUrl(@Nullable String inputUrl,
         boolean force, PlayListOptionEnum playlistOption) {
+        flushPendingRemovals();
+
+        return captureUrlInternal(inputUrl, force, playlistOption);
+    }
+
+    private CompletableFuture<Boolean> captureUrlInternal(@Nullable String inputUrl,
+        boolean force, PlayListOptionEnum playlistOption) {
         CompletableFuture<Boolean> future = new CompletableFuture<>();
 
         List<AbstractDownloader> compatibleDownloaders = getCompatibleDownloaders(inputUrl);
@@ -469,7 +478,7 @@ public class DownloadManager implements IEvent, AutoCloseable {
                                 }
 
                                 if (video != null && video.contains("?v=") && !video.contains("list=")) {
-                                    return captureUrl(video, force);
+                                    return captureUrlInternal(video, force, main.getConfig().getPlaylistDownloadOption());
                                 } else {
                                     future.complete(false);
                                     return future;
@@ -494,7 +503,7 @@ public class DownloadManager implements IEvent, AutoCloseable {
                         }
 
                         if (video != null && video.contains("?v=") && !video.contains("list=")) {
-                            return captureUrl(video, force);
+                            return captureUrlInternal(video, force, main.getConfig().getPlaylistDownloadOption());
                         } else {
                             future.complete(false);
                             return future;
@@ -583,7 +592,7 @@ public class DownloadManager implements IEvent, AutoCloseable {
                             }
 
                             if (video != null && video.contains("?v=") && !video.contains("list=")) {
-                                return captureUrl(video, force);
+                                return captureUrlInternal(video, force, main.getConfig().getPlaylistDownloadOption());
                             } else {
                                 future.complete(false);
                                 return future;
@@ -795,15 +804,17 @@ public class DownloadManager implements IEvent, AutoCloseable {
     }
 
     private void flushPendingRemovals() {
-        List<PendingRemoval> batch = new ArrayList<>();
+        synchronized (removalFlushLock) {
+            List<PendingRemoval> batch = new ArrayList<>();
 
-        PendingRemoval removal;
-        while ((removal = pendingRemovals.poll()) != null) {
-            batch.add(removal);
-        }
+            PendingRemoval removal;
+            while ((removal = pendingRemovals.poll()) != null) {
+                batch.add(removal);
+            }
 
-        if (!batch.isEmpty()) {
-            applyRemovals(batch);
+            if (!batch.isEmpty()) {
+                applyRemovals(batch);
+            }
         }
     }
 

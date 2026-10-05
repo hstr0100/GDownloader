@@ -516,7 +516,7 @@ public class DownloadSequencer {
             entry.getDownloadPriority().getWeight(),
             entry.getCurrentSequence(),
             entry.getDownloadId(),
-            entry.getTemporarySortOrder(),
+            currentSortOrder,
             entry
         );
     }
