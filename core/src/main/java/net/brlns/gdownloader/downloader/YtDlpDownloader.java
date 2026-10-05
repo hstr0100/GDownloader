@@ -98,7 +98,12 @@ public class YtDlpDownloader extends AbstractDownloader {
         super(managerIn);
     }
 
-    private void addPotProviderArguments(ProcessArguments arguments) {
+    public void addPotProviderArguments(ProcessArguments arguments) {
+        addPotProviderArguments(arguments, null);
+    }
+
+    public void addPotProviderArguments(ProcessArguments arguments,
+        @Nullable ProcessArguments ifSuccessfulAppend) {
         if (!settings().isUsePoToken()) {
             return;
         }
@@ -118,6 +123,10 @@ public class YtDlpDownloader extends AbstractDownloader {
                     "--extractor-args",
                     "youtubepot-bgutilcli:cli_path=" + potProvider.getAbsolutePath()
                 );
+
+                if (ifSuccessfulAppend != null) {
+                    arguments.addAll(ifSuccessfulAppend);
+                }
 
                 //arguments.add(
                 //    "--extractor-args",
@@ -187,7 +196,7 @@ public class YtDlpDownloader extends AbstractDownloader {
                     "--dump-json",
                     "--flat-playlist");
 
-                String proxyUrl = main.getConfig().getProxySettings().createProxyUrl();
+                String proxyUrl = main.getHttpManager().getDownloaderProxyUrl();
                 if (proxyUrl != null) {
                     arguments.add("--proxy", proxyUrl);
                 }
@@ -299,7 +308,7 @@ public class YtDlpDownloader extends AbstractDownloader {
                 "--flat-playlist",
                 "--playlist-items", "1");
 
-            String proxyUrl = main.getConfig().getProxySettings().createProxyUrl();
+            String proxyUrl = main.getHttpManager().getDownloaderProxyUrl();
             if (proxyUrl != null) {
                 arguments.add("--proxy", proxyUrl);
             }

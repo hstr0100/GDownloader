@@ -279,7 +279,7 @@ public final class GDownloader {
             handleException(e);
         }
 
-        httpManager = new HttpManager(this);
+        httpManager = closeable(new HttpManager(this));
         updateManager = new UpdateManager(this);
         ffmpegTranscoder = closeable(new FFmpegTranscoder(processMonitor));
         clipboardManager = new ClipboardManager(this);
@@ -1108,6 +1108,8 @@ public final class GDownloader {
     }
 
     public static void main(String[] args) {
+        System.setProperty("jdk.http.auth.tunneling.disabledSchemes", "");
+
         boolean noGui = false;
         int uiScale = 1;
         boolean disableHWAccel = true;

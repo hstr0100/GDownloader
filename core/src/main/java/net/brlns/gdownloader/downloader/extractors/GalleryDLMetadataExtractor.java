@@ -109,7 +109,7 @@ public class GalleryDLMetadataExtractor implements IMetadataExtractor {
             "--config-ignore",
             urlIn);
 
-        String proxyUrl = downloader.getMain().getConfig().getProxySettings().createProxyUrl();
+        String proxyUrl = downloader.getMain().getHttpManager().getDownloaderProxyUrl();
         if (proxyUrl != null) {
             arguments.add("--proxy", proxyUrl);
         }

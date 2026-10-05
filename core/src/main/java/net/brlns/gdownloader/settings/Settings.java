@@ -268,8 +268,6 @@ public class Settings {
     @JsonProperty("AutoDownloadRetry")
     private boolean autoDownloadRetry = true;
 
-    // TODO: wire up, dynamically throttle downloaders when starting new tasks based on best-effort bandwidth allocation stategy.
-    // we can calculate this based on max simultaneous downloads, or active downloads if the queue processor is MIA.
     @JsonProperty("GlobalMaxDownloadSpeedBytesPerSecond")
     private long globalMaxDownloadSpeedBytesPerSecond = 0l;
 

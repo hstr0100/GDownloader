@@ -73,6 +73,7 @@ open module net.brlns.gdownloader {
     exports net.brlns.gdownloader.settings.downloader;
     exports net.brlns.gdownloader.settings.enums;
     exports net.brlns.gdownloader.system;
+    exports net.brlns.gdownloader.system.proxy;
     exports net.brlns.gdownloader.system.taskbar;
     exports net.brlns.gdownloader.ui;
     exports net.brlns.gdownloader.ui.builder;

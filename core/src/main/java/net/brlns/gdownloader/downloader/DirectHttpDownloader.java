@@ -68,6 +68,7 @@ import net.brlns.gdownloader.downloader.structs.DownloadResult;
 import net.brlns.gdownloader.downloader.webscanner.WebScanner;
 import net.brlns.gdownloader.downloader.webscanner.WebScannerExtensions;
 import net.brlns.gdownloader.settings.downloader.DirectHttpSettings;
+import net.brlns.gdownloader.system.proxy.BandwidthThrottle;
 import net.brlns.gdownloader.util.DirectoryUtils;
 import net.brlns.gdownloader.util.FileUtils;
 import net.brlns.gdownloader.util.Pair;
@@ -1184,10 +1185,12 @@ public class DirectHttpDownloader extends AbstractDownloader {
                             while ((bytesRead = inputStream.read(buffer)) != -1 && alive.get()) {
                                 if (chunkData.getThrottle() != null) {
                                     chunkData.getThrottle().acquire(bytesRead, alive);
+                                }
 
-                                    if (!alive.get()) {
-                                        break;
-                                    }
+                                main.getHttpManager().getGlobalThrottle().acquire(bytesRead, alive);
+
+                                if (!alive.get()) {
+                                    break;
                                 }
 
                                 outputFile.write(buffer, 0, bytesRead);
@@ -1612,78 +1615,6 @@ public class DirectHttpDownloader extends AbstractDownloader {
         private boolean singleUse;
         private HttpURLConnection existingConnection;
         private Supplier<ResolvedFile> reissueSupplier;
-    }
-
-    private static final class BandwidthThrottle {
-
-        private final Object lock = new Object();
-        private final Supplier<Long> bytesPerSecond;
-        private long availableTokens;
-        private long lastRefillNanos;
-
-        private BandwidthThrottle(Supplier<Long> bytesPerSecondIn) {
-            bytesPerSecond = bytesPerSecondIn;
-            availableTokens = Math.max(0, bytesPerSecond.get());
-            lastRefillNanos = System.nanoTime();
-        }
-
-        private void acquire(int bytes, Supplier<Boolean> aliveCheck) {
-            synchronized (lock) {
-                if (bytesPerSecond.get() <= 0) {
-                    return;
-                }
-
-                refillLocked();
-
-                while (availableTokens < bytes) {
-                    if (aliveCheck != null && !aliveCheck.get()) {
-                        return;
-                    }
-
-                    long currentLimit = bytesPerSecond.get();
-                    if (currentLimit <= 0) {
-                        return;
-                    }
-
-                    long deficit = bytes - availableTokens;
-                    long waitMillis = Math.max(1, (long)(deficit / (double)currentLimit * 1000));
-                    waitMillis = Math.min(waitMillis, 200L);
-
-                    try {
-                        lock.wait(waitMillis);
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                        return;
-                    }
-
-                    refillLocked();
-                }
-
-                availableTokens -= bytes;
-            }
-        }
-
-        // Caller must hold the lock.
-        private void refillLocked() {
-            long currentLimit = bytesPerSecond.get();
-            if (currentLimit <= 0) {
-                return;
-            }
-
-            long now = System.nanoTime();
-            long elapsedNanos = now - lastRefillNanos;
-
-            if (elapsedNanos > 0) {
-                long refill = (long)(elapsedNanos / 1e9 * currentLimit);
-                if (refill > 0) {
-                    if (availableTokens < currentLimit) {
-                        availableTokens = Math.min(currentLimit, availableTokens + refill);
-                    }
-
-                    lastRefillNanos = now;
-                }
-            }
-        }
     }
 
     private static final class RateLimitedException extends IOException {

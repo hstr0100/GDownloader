@@ -178,13 +178,40 @@ public class SpotDLDownloader extends AbstractDownloader {
         main.getFfmpegTranscoder().getFFmpegExecutable().ifPresent(ffmpeg
             -> genericArguments.add("--ffmpeg", ffmpeg));
 
+        // spotDL only supports http/https proxies, we prefer socks5.
+        // so its requests go unthrottled until they fix this upstream.
+        // as a workaround, we can smuggle our throttling proxy straight to the underlying yt-dlp.
+        String proxyUrl = manager.getMain().getHttpManager().getUpstreamProxyUrl();
+        if (proxyUrl != null) {
+            genericArguments.add("--proxy", proxyUrl);
+        }
+
+        ProcessArguments ytDlpArguments = new ProcessArguments();
+
         YtDlpDownloader ytdlp = (YtDlpDownloader)main.getDownloadManager()
             .getDownloader(DownloaderIdEnum.YT_DLP);
         ytdlp.getDenoPath().ifPresent(deno -> {
-            genericArguments.add(
-                "--yt-dlp-args",
-                "--js-runtimes deno:" + deno.getAbsolutePath());
+            ytDlpArguments.add("--js-runtimes", "deno:" + deno.getAbsolutePath());
         });
+
+        ytdlp.addPotProviderArguments(ytDlpArguments,
+            new ProcessArguments(
+                "--extractor-args",
+                "youtube:player_client=web_music,mweb"
+            )
+        );
+
+        // we assume our proxy comes last in the argument chain and wins.
+        String downloaderProxyUrl = manager.getMain().getHttpManager().getDownloaderProxyUrl();
+        if (downloaderProxyUrl != null) {
+            ytDlpArguments.add("--proxy", downloaderProxyUrl);
+        }
+
+        if (!ytDlpArguments.isEmpty()) {
+            genericArguments.add(
+                "--yt-dlp-args", String.join(" ", ytDlpArguments)
+            );
+        }
 
         genericArguments.addAll(filter.getArguments(this, ALL, manager, tmpPath, entry.getUrl()));
 

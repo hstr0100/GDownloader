@@ -97,15 +97,6 @@ public class GenericFilter extends AbstractUrlFilter {
 
                 switch (typeEnum) {
                     case ALL -> {
-                        if (config.getYtDlpSettings().isEnableExtraArguments()) {
-                            for (String arg : config.getYtDlpSettings()
-                                .getExtraCommandLineArguments().split(" ")) {
-                                if (!arg.trim().isEmpty()) {
-                                    arguments.add(arg);
-                                }
-                            }
-                        }
-
                         if (config.isAutoDownloadRetry()) {
                             arguments.add(
                                 "--fragment-retries", config.getMaxFragmentRetries()
@@ -123,7 +114,7 @@ public class GenericFilter extends AbstractUrlFilter {
                             arguments.add("--impersonate", "chrome:windows-10");
                         }
 
-                        String proxyUrl = config.getProxySettings().createProxyUrl();
+                        String proxyUrl = manager.getMain().getHttpManager().getDownloaderProxyUrl();
                         if (proxyUrl != null) {
                             arguments.add("--proxy", proxyUrl);
                         }
@@ -160,6 +151,15 @@ public class GenericFilter extends AbstractUrlFilter {
                                 "--windows-filenames",
                                 "--trim-filenames", 240// Give some extra room for fragment files
                             );
+                        }
+
+                        if (config.getYtDlpSettings().isEnableExtraArguments()) {
+                            for (String arg : config.getYtDlpSettings()
+                                .getExtraCommandLineArguments().split(" ")) {
+                                if (!arg.trim().isEmpty()) {
+                                    arguments.add(arg);
+                                }
+                            }
                         }
                     }
                     case VIDEO -> {
@@ -322,15 +322,6 @@ public class GenericFilter extends AbstractUrlFilter {
 
                 switch (typeEnum) {
                     case ALL -> {
-                        if (config.getGalleryDLSettings().isEnableExtraArguments()) {
-                            for (String arg : config.getGalleryDLSettings()
-                                .getExtraCommandLineArguments().split(" ")) {
-                                if (!arg.trim().isEmpty()) {
-                                    arguments.add(arg);
-                                }
-                            }
-                        }
-
                         arguments.add(
                             "--retries", config.getMaxDownloadRetries());
 
@@ -345,7 +336,7 @@ public class GenericFilter extends AbstractUrlFilter {
                             arguments.add("--user-agent", "browser");
                         }
 
-                        String proxyUrl = config.getProxySettings().createProxyUrl();
+                        String proxyUrl = manager.getMain().getHttpManager().getDownloaderProxyUrl();
                         if (proxyUrl != null) {
                             arguments.add("--proxy", proxyUrl);
                         }
@@ -362,6 +353,15 @@ public class GenericFilter extends AbstractUrlFilter {
                                     "--cookies",
                                     cookieJar.getAbsolutePath()
                                 );
+                            }
+                        }
+
+                        if (config.getGalleryDLSettings().isEnableExtraArguments()) {
+                            for (String arg : config.getGalleryDLSettings()
+                                .getExtraCommandLineArguments().split(" ")) {
+                                if (!arg.trim().isEmpty()) {
+                                    arguments.add(arg);
+                                }
                             }
                         }
                     }
@@ -398,25 +398,11 @@ public class GenericFilter extends AbstractUrlFilter {
 
                 switch (typeEnum) {
                     case ALL -> {
-                        if (config.getSpotDLSettings().isEnableExtraArguments()) {
-                            for (String arg : config.getSpotDLSettings()
-                                .getExtraCommandLineArguments().split(" ")) {
-                                if (!arg.trim().isEmpty()) {
-                                    arguments.add(arg);
-                                }
-                            }
-                        }
-
                         arguments.add(
                             "--max-retries", config.getMaxDownloadRetries());
 
                         if (config.getYtDlpSettings().isUseSponsorBlock()) {
                             arguments.add("--sponsor-block");
-                        }
-
-                        String proxyUrl = config.getProxySettings().createProxyUrl();
-                        if (proxyUrl != null) {
-                            arguments.add("--proxy", proxyUrl);
                         }
 
                         File cookieJar = downloader.getCookieJarFile();
@@ -425,6 +411,15 @@ public class GenericFilter extends AbstractUrlFilter {
                                 "--cookie-file",
                                 cookieJar.getAbsolutePath()
                             );
+                        }
+
+                        if (config.getSpotDLSettings().isEnableExtraArguments()) {
+                            for (String arg : config.getSpotDLSettings()
+                                .getExtraCommandLineArguments().split(" ")) {
+                                if (!arg.trim().isEmpty()) {
+                                    arguments.add(arg);
+                                }
+                            }
                         }
                     }
                     case SPOTIFY -> {

@@ -98,6 +98,9 @@ public final class MediaCardManager {
     private final Map<Integer, MediaCard> mediaCards = new ConcurrentHashMap<>();
 
     private final List<Integer> orderedIds = new ArrayList<>();
+    private final Set<Integer> orderedIdSet = new HashSet<>();
+    private final AtomicBoolean filterPending = new AtomicBoolean();
+    private final AtomicBoolean filtersDirty = new AtomicBoolean();
     private List<Integer> filteredIds = new ArrayList<>();
     private final Map<Integer, MediaCardPanel> renderedCards = new LinkedHashMap<>();
 
@@ -152,6 +155,7 @@ public final class MediaCardManager {
         mediaCardQueueTimer = new Timer(50, e -> {
             processMediaCardQueue();
             runSettledActions();
+            applyDirtyFilters();
             maybeApplyLiveSort();
         });
         mediaCardQueueTimer.start();
@@ -546,8 +550,10 @@ public final class MediaCardManager {
 
                 int count = 0;
 
+                int batchLimit = mediaCardUIUpdateQueue.size() > 5000 ? 5000 : 1000;
+
                 MediaCardUIUpdateEntry entry;
-                while (count < 1000 && (entry = mediaCardUIUpdateQueue.poll()) != null) {// Process in batches of 1000 items every 100ms
+                while (count < batchLimit && (entry = mediaCardUIUpdateQueue.poll()) != null) {// Process in batches of 1000 items every 100ms
                     count++;
 
                     int id = entry.getMediaCard().getId();
@@ -560,8 +566,13 @@ public final class MediaCardManager {
                     }
                 }
 
+                boolean needsFullRecompute = false;
+
                 if (!removed.isEmpty()) {
+                    needsFullRecompute = true;
+
                     orderedIds.removeIf(removed::contains);
+                    orderedIdSet.removeAll(removed);
 
                     for (int id : removed) {
                         MediaCardPanel panel = renderedCards.remove(id);
@@ -572,16 +583,22 @@ public final class MediaCardManager {
                     }
                 }
 
+                List<Integer> appended = new ArrayList<>(added.size());
                 if (!added.isEmpty()) {
-                    Set<Integer> present = new HashSet<>(orderedIds);
                     for (int id : added) {
-                        if (present.add(id)) {
+                        if (orderedIdSet.add(id)) {
                             orderedIds.add(id);
+                            appended.add(id);
                         }
                     }
                 }
 
-                recomputeFilteredIds();
+                if (needsFullRecompute) {
+                    recomputeFilteredIds();
+                } else if (!appended.isEmpty()) {
+                    appendFilteredIds(appended);
+                }
+
                 updateVisibleWindow(true);
             } finally {
                 lastMediaCardQueueUpdate.set(System.currentTimeMillis());
@@ -643,6 +660,30 @@ public final class MediaCardManager {
             mediaQueuePane.revalidate();
             mediaQueuePane.repaint();
         });
+    }
+
+    private void appendFilteredIds(List<Integer> appended) {
+        String query = currentSearchQuery.get();
+        QueueFilterEnum statusFilter = currentStatusFilter.get();
+
+        boolean unfiltered = query.isEmpty() && statusFilter == QueueFilterEnum.ALL;
+
+        for (int id : appended) {
+            MediaCard card = mediaCards.get(id);
+            if (card == null) {
+                continue;
+            }
+
+            if (unfiltered
+                || ((query.isEmpty() || matchesSearch(card, query)) && statusFilter.matches(card.getCategory()))) {
+                filteredIds.add(id);
+            }
+        }
+
+        Consumer<Integer> listener = matchCountListener.get();
+        if (listener != null) {
+            listener.accept(filteredIds.size());
+        }
     }
 
     private void recomputeFilteredIds() {
@@ -1133,11 +1174,35 @@ public final class MediaCardManager {
     }
 
     public void onMediaCardCategoryChanged() {
-        applyCardFilters();
+        if (currentStatusFilter.get() == QueueFilterEnum.ALL
+            && currentSearchQuery.get().isEmpty()) {
+            return;
+        }
+
+        filtersDirty.set(true);
+    }
+
+    private void applyDirtyFilters() {
+        if (!filtersDirty.get()
+            || restoringQueue.get()
+            || currentlyUpdatingMediaCards.get()
+            || !mediaCardUIUpdateQueue.isEmpty()) {
+            return;
+        }
+
+        if (filtersDirty.getAndSet(false)) {
+            applyCardFilters();
+        }
     }
 
     private void applyCardFilters() {
+        if (!filterPending.compareAndSet(false, true)) {
+            return;
+        }
+
         runOnEDT(() -> {
+            filterPending.set(false);
+
             if (ShutdownRegistry.isClosed()) {
                 return;
             }

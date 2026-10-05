@@ -1670,73 +1670,10 @@ public class SettingsPanel {
             .setter(settings.getDirectHttpSettings()::setMediaTranscoding)
             .build());
 
-        {
-            UIColors background = resolveColor(panel);
-            JLabel label = createLabel("settings.downloader.direct_http.max_download_speed", LIGHT_TEXT);
-
-            long currentBytesPerSecond = settings.getDirectHttpSettings().getMaxDownloadSpeedBytesPerSecond();
-
-            JLabel valueLabel = new JLabel(formatSpeedLabel(currentBytesPerSecond));
-            valueLabel.setForeground(color(LIGHT_TEXT));
-
-            JSlider slider = new JSlider(JSlider.HORIZONTAL, 0, 100,
-                MathUtils.convertBytesPerSecondToSliderValue(currentBytesPerSecond));
-            customizeSlider(slider, background, SLIDER_FOREGROUND);
-
-            Dictionary<Integer, JLabel> sliderLabels = new Hashtable<>();
-            sliderLabels.put(0, new JLabel("∞"));
-            sliderLabels.put(20, new JLabel("1MB"));
-            sliderLabels.put(40, new JLabel("10MB"));
-            sliderLabels.put(60, new JLabel("100MB"));
-            sliderLabels.put(80, new JLabel("1GB"));
-            sliderLabels.put(100, new JLabel("10GB"));
-            slider.setLabelTable(sliderLabels);
-            slider.setMajorTickSpacing(20);
-            slider.setPaintTicks(true);
-            slider.setPaintLabels(true);
-
-            SpinnerNumberModel spinnerModel = new SpinnerNumberModel(
-                currentBytesPerSecond / 1024L, 0L,
-                MathUtils.getMaxThrottleBytesPerSecond() / 1024L, 64L);
-            JSpinner speedSpinner = new JSpinner(spinnerModel);
-            speedSpinner.setEditor(new JSpinner.NumberEditor(speedSpinner));
-            customizeComponent(speedSpinner, background, LIGHT_TEXT);
-
-            final Object syncObj = new Object();
-
-            slider.addChangeListener(e -> {
-                long bytesPerSecond = MathUtils.convertSliderValueToBytesPerSecond(slider.getValue());
-                settings.getDirectHttpSettings().setMaxDownloadSpeedBytesPerSecond(bytesPerSecond);
-                valueLabel.setText(formatSpeedLabel(bytesPerSecond));
-
-                if (!slider.getValueIsAdjusting()) {
-                    synchronized (syncObj) {
-                        speedSpinner.setValue(bytesPerSecond / 1024L);
-                    }
-                }
-            });
-
-            speedSpinner.addChangeListener(e -> {
-                synchronized (syncObj) {
-                    long bytesPerSecond = ((Number)speedSpinner.getValue()).longValue() * 1024L;
-                    settings.getDirectHttpSettings().setMaxDownloadSpeedBytesPerSecond(bytesPerSecond);
-                    valueLabel.setText(formatSpeedLabel(bytesPerSecond));
-                    slider.setValue(MathUtils.convertBytesPerSecondToSliderValue(bytesPerSecond));
-                }
-            });
-
-            JPanel sliderPanel = new JPanel(new BorderLayout(5, 0));
-            sliderPanel.setBackground(color(background));
-            sliderPanel.add(slider, BorderLayout.CENTER);
-            sliderPanel.add(speedSpinner, BorderLayout.EAST);
-
-            JPanel wrapperPanel = new JPanel(new BorderLayout());
-            wrapperPanel.setBackground(color(background));
-            wrapperPanel.add(valueLabel, BorderLayout.NORTH);
-            wrapperPanel.add(sliderPanel, BorderLayout.CENTER);
-
-            wrapComponentRow(panel, label, wrapperPanel, background);
-        }
+        addBandwidthSlider(panel,
+            "settings.downloader.direct_http.max_download_speed",
+            settings.getDirectHttpSettings()::getMaxDownloadSpeedBytesPerSecond,
+            settings.getDirectHttpSettings()::setMaxDownloadSpeedBytesPerSecond);
 
         addSlider(panel, SliderBuilder.builder()
             .background(resolveColor(panel))
@@ -2215,6 +2152,11 @@ public class SettingsPanel {
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         panel.setBackground(color(BACKGROUND));
 
+        addBandwidthSlider(panel,
+            "settings.network.global_max_download_speed",
+            settings::getGlobalMaxDownloadSpeedBytesPerSecond,
+            settings::setGlobalMaxDownloadSpeedBytesPerSecond);
+
         addLabel(panel, "settings.network.proxy.title");
 
         ProxySettings proxySettings = settings.getProxySettings();
@@ -2584,6 +2526,75 @@ public class SettingsPanel {
                 }
             })
             .build());
+    }
+
+    private static void addBandwidthSlider(JPanel panel, String labelKey,
+        Supplier<Long> getter, Consumer<Long> setter) {
+        UIColors background = resolveColor(panel);
+        JLabel label = createLabel(labelKey, LIGHT_TEXT);
+
+        long currentBytesPerSecond = getter.get();
+
+        JLabel valueLabel = new JLabel(formatSpeedLabel(currentBytesPerSecond));
+        valueLabel.setForeground(color(LIGHT_TEXT));
+
+        JSlider slider = new JSlider(JSlider.HORIZONTAL, 0, 100,
+            MathUtils.convertBytesPerSecondToSliderValue(currentBytesPerSecond));
+        customizeSlider(slider, background, SLIDER_FOREGROUND);
+
+        Dictionary<Integer, JLabel> sliderLabels = new Hashtable<>();
+        sliderLabels.put(0, new JLabel("∞"));
+        sliderLabels.put(20, new JLabel("1MB"));
+        sliderLabels.put(40, new JLabel("10MB"));
+        sliderLabels.put(60, new JLabel("100MB"));
+        sliderLabels.put(80, new JLabel("1GB"));
+        sliderLabels.put(100, new JLabel("10GB"));
+        slider.setLabelTable(sliderLabels);
+        slider.setMajorTickSpacing(20);
+        slider.setPaintTicks(true);
+        slider.setPaintLabels(true);
+
+        SpinnerNumberModel spinnerModel = new SpinnerNumberModel(
+            currentBytesPerSecond / 1024L, 0L,
+            MathUtils.getMaxThrottleBytesPerSecond() / 1024L, 64L);
+        JSpinner speedSpinner = new JSpinner(spinnerModel);
+        speedSpinner.setEditor(new JSpinner.NumberEditor(speedSpinner));
+        customizeComponent(speedSpinner, background, LIGHT_TEXT);
+
+        final Object syncObj = new Object();
+
+        slider.addChangeListener(e -> {
+            long bytesPerSecond = MathUtils.convertSliderValueToBytesPerSecond(slider.getValue());
+            setter.accept(bytesPerSecond);
+            valueLabel.setText(formatSpeedLabel(bytesPerSecond));
+
+            if (!slider.getValueIsAdjusting()) {
+                synchronized (syncObj) {
+                    speedSpinner.setValue(bytesPerSecond / 1024L);
+                }
+            }
+        });
+
+        speedSpinner.addChangeListener(e -> {
+            synchronized (syncObj) {
+                long bytesPerSecond = ((Number)speedSpinner.getValue()).longValue() * 1024L;
+                setter.accept(bytesPerSecond);
+                valueLabel.setText(formatSpeedLabel(bytesPerSecond));
+                slider.setValue(MathUtils.convertBytesPerSecondToSliderValue(bytesPerSecond));
+            }
+        });
+
+        JPanel sliderPanel = new JPanel(new BorderLayout(5, 0));
+        sliderPanel.setBackground(color(background));
+        sliderPanel.add(slider, BorderLayout.CENTER);
+        sliderPanel.add(speedSpinner, BorderLayout.EAST);
+
+        JPanel wrapperPanel = new JPanel(new BorderLayout());
+        wrapperPanel.setBackground(color(background));
+        wrapperPanel.add(valueLabel, BorderLayout.NORTH);
+        wrapperPanel.add(sliderPanel, BorderLayout.CENTER);
+
+        wrapComponentRow(panel, label, wrapperPanel, background);
     }
 
     private static String formatSpeedLabel(long bytesPerSecond) {
