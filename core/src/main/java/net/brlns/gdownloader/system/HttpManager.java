@@ -75,6 +75,10 @@ public class HttpManager implements AutoCloseable {
         return globalThrottle;
     }
 
+    public boolean isThrottlingActive() {
+        return main.getConfig().getGlobalMaxDownloadSpeedBytesPerSecond() > 0;
+    }
+
     @Nullable
     public String getThrottlingProxyUrl() {
         if (main.getConfig().getGlobalMaxDownloadSpeedBytesPerSecond() <= 0

@@ -37,6 +37,15 @@ public final class BandwidthThrottle {
         lastRefillNanos = System.nanoTime();
     }
 
+    public int sliceFor(int maxBytes) {
+        long limit = bytesPerSecond.get();
+        if (limit <= 0) {
+            return maxBytes;
+        }
+
+        return (int)Math.max(1024L, Math.min(maxBytes, limit / 10L));
+    }
+
     public void acquire(int bytes, Supplier<Boolean> aliveCheck) {
         if (bytesPerSecond.get() <= 0) {
             return;

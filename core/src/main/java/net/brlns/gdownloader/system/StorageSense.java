@@ -23,13 +23,14 @@ import java.io.IOException;
 import java.nio.file.FileStore;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
@@ -68,16 +69,13 @@ public class StorageSense implements AutoCloseable {
     private static final long RESUME_MARGIN_BYTES = 128L * MIB;
 
     private static final long MONITOR_INTERVAL_MILLIS = 500;
-    private static final long COMMIT_WINDOW_MILLIS = 2000;
-    private static final long MAX_BLOCK_MILLIS = TimeUnit.MINUTES.toMillis(10);
-    private static final long VOLUME_CACHE_MILLIS = TimeUnit.MINUTES.toMillis(1);
 
-    private final Map<String, Blocked> blocked = new ConcurrentHashMap<>();
-    private final Map<String, Commit> commits = new ConcurrentHashMap<>();
-    private final Map<Path, CachedVolume> volumeCache = new ConcurrentHashMap<>();
+    private final Object checkLock = new Object();
 
     private final AtomicBoolean monitorStarted = new AtomicBoolean();
     private final AtomicBoolean shutdown = new AtomicBoolean();
+
+    private volatile Set<String> halted = Set.of();
 
     private volatile Supplier<Collection<File>> watchSupplier = List::of;
     private volatile CancelHook disableHook = new CancelHook();
@@ -120,84 +118,50 @@ public class StorageSense implements AutoCloseable {
         disableHook = hook;
     }
 
-    private boolean isEnabled() {
-        return !disableHook.get();
+    public boolean isHalted() {
+        return !halted.isEmpty();
     }
 
-    public boolean hasBlockedVolumes() {
-        return isEnabled() && !blocked.isEmpty();
+    public List<String> getHaltedVolumes() {
+        return List.copyOf(halted);
     }
 
-    public List<String> getBlockedLabels() {
-        return blocked.values().stream().map(entry -> entry.volume().label()).toList();
-    }
+    public boolean check() {
+        Set<String> current = new LinkedHashSet<>();
+        boolean changed;
 
-    public boolean isBlocked(Collection<File> footprint) {
-        if (!hasBlockedVolumes()) {
-            return false;
-        }
+        synchronized (checkLock) {
+            Set<String> previous = halted;
 
-        return resolveAll(footprint).keySet().stream().anyMatch(blocked::containsKey);
-    }
+            if (!disableHook.get()) {
+                for (Map.Entry<String, FileStore> volume : resolveVolumes(watchSupplier.get()).entrySet()) {
+                    long required = LOW_SPACE_BYTES
+                        + (previous.contains(volume.getKey()) ? RESUME_MARGIN_BYTES : 0L);
 
-    public boolean tryAdmit(Collection<File> footprint, long expectedBytes) {
-        if (!isEnabled()) {
-            return true;
-        }
+                    if (usableSpace(volume.getValue()) < required) {
+                        current.add(volume.getKey());
+                    }
+                }
+            }
 
-        Map<String, Volume> volumes = resolveAll(footprint);
+            changed = !current.equals(previous);
 
-        if (volumes.keySet().stream().anyMatch(blocked::containsKey)) {
-            return false;
-        }
+            if (changed) {
+                halted = Collections.unmodifiableSet(current);
 
-        Map<String, Probe> probes = probe(volumes);
-        List<Probe> low = probes.values().stream().filter(Probe::isLow).toList();
-
-        if (!low.isEmpty()) {
-            blockAndPublish(low);
-
-            return false;
-        }
-
-        if (expectedBytes <= 0) {
-            return true;
-        }
-
-        long now = System.currentTimeMillis();
-
-        for (Probe probe : probes.values()) {
-            Commit commit = commits.get(probe.volume().id());
-            long committed = commit != null && now - commit.at() < COMMIT_WINDOW_MILLIS ? commit.bytes() : 0L;
-
-            if (probe.usable() - committed < LOW_SPACE_BYTES + expectedBytes) {
-                return false;
+                log.warn("Storage halted volumes: {}", current);
             }
         }
 
-        volumes.keySet().forEach(id -> commits.compute(id, (key, commit) -> new Commit(
-            commit != null && now - commit.at() < COMMIT_WINDOW_MILLIS ? commit.bytes() + expectedBytes : expectedBytes,
-            now)));
-
-        return true;
-    }
-
-    public boolean reportFailure(Collection<File> footprint, boolean storageSignal) {
-        if (!storageSignal || !isEnabled()) {
-            return false;
+        if (changed) {
+            EventDispatcher.dispatch(StorageStatusEvent.builder()
+                .low(!current.isEmpty())
+                .volumes(List.copyOf(current))
+                .timestamp(System.currentTimeMillis())
+                .build());
         }
 
-        Map<String, Probe> probes = probe(resolveAll(footprint));
-
-        if (probes.isEmpty()) {
-            return false;
-        }
-
-        List<Probe> culprits = probes.values().stream().filter(Probe::isLow).toList();
-
-        blockAndPublish(culprits.isEmpty() ? probes.values() : culprits);
-
-        return true;
+        return !current.isEmpty();
     }
 
     public void startBackgroundMonitor() {
@@ -208,15 +172,7 @@ public class StorageSense implements AutoCloseable {
         Thread monitorThread = new Thread(() -> {
             while (!shutdown.get()) {
                 try {
-                    if (isEnabled()) {
-                        Map<String, Probe> probes = probe(resolveAll(watchSupplier.get()));
-
-                        blockAndPublish(probes.values().stream().filter(Probe::isLow).toList());
-                        releaseRecoveredVolumes();
-                    } else if (!blocked.isEmpty()) {
-                        blocked.clear();
-                        publish(List.of());
-                    }
+                    check();
 
                     TimeUnit.MILLISECONDS.sleep(MONITOR_INTERVAL_MILLIS);
                 } catch (InterruptedException e) {
@@ -232,67 +188,6 @@ public class StorageSense implements AutoCloseable {
         monitorThread.start();
     }
 
-    private void releaseRecoveredVolumes() {
-        long now = System.currentTimeMillis();
-        boolean released = false;
-
-        for (Blocked entry : List.copyOf(blocked.values())) {
-            long required = Math.max(LOW_SPACE_BYTES, entry.freeAtBlock())
-                + RESUME_MARGIN_BYTES;
-
-            if (usableSpace(entry.volume().store()) >= required
-                || now - entry.blockedAt() >= MAX_BLOCK_MILLIS) {
-                blocked.remove(entry.volume().id());
-                released = true;
-
-                log.info("Releasing storage volume {}", entry.volume().label());
-            }
-        }
-
-        if (released) {
-            publish(List.of());
-        }
-    }
-
-    private void blockAndPublish(Collection<Probe> probes) {
-        List<String> newlyBlocked = new ArrayList<>();
-        long now = System.currentTimeMillis();
-
-        for (Probe probe : probes) {
-            Volume volume = probe.volume();
-            Blocked entry = new Blocked(volume, Math.min(probe.usable(), 1L << 50), now);
-
-            if (blocked.putIfAbsent(volume.id(), entry) == null) {
-                newlyBlocked.add(volume.label());
-
-                log.warn("Storage volume {} is out of space", volume.label());
-            }
-        }
-
-        if (!newlyBlocked.isEmpty()) {
-            publish(newlyBlocked);
-        }
-    }
-
-    private void publish(List<String> newlyBlocked) {
-        List<String> labels = getBlockedLabels();
-
-        EventDispatcher.dispatch(StorageStatusEvent.builder()
-            .low(!labels.isEmpty())
-            .volumes(labels)
-            .newlyBlocked(List.copyOf(newlyBlocked))
-            .timestamp(System.currentTimeMillis())
-            .build());
-    }
-
-    private Map<String, Probe> probe(Map<String, Volume> volumes) {
-        Map<String, Probe> probes = new LinkedHashMap<>();
-
-        volumes.forEach((id, volume) -> probes.put(id, new Probe(volume, usableSpace(volume.store()))));
-
-        return probes;
-    }
-
     private long usableSpace(FileStore store) {
         try {
             return store.getUsableSpace();
@@ -301,79 +196,33 @@ public class StorageSense implements AutoCloseable {
         }
     }
 
-    private Map<String, Volume> resolveAll(Collection<File> directories) {
-        Map<String, Volume> volumes = new LinkedHashMap<>();
+    private Map<String, FileStore> resolveVolumes(Collection<File> directories) {
+        Map<String, FileStore> volumes = new LinkedHashMap<>();
 
         for (File directory : directories) {
-            Volume volume = resolveVolume(directory);
+            try {
+                Path existing = directory.toPath().toAbsolutePath().normalize();
 
-            if (volume != null) {
-                volumes.putIfAbsent(volume.id(), volume);
+                while (existing != null && !Files.exists(existing)) {
+                    existing = existing.getParent();
+                }
+
+                if (existing != null) {
+                    FileStore store = Files.getFileStore(existing);
+
+                    volumes.putIfAbsent(store.toString(), store);
+                }
+            } catch (IOException | SecurityException e) {
+                log.debug("Unable to resolve storage volume for {}: {}", directory, e.getMessage());
             }
         }
 
         return volumes;
     }
 
-    @Nullable
-    private Volume resolveVolume(File directory) {
-        Path path = directory.toPath().toAbsolutePath().normalize();
-        long now = System.currentTimeMillis();
-
-        CachedVolume cached = volumeCache.get(path);
-        if (cached != null && now - cached.resolvedAt() < VOLUME_CACHE_MILLIS) {
-            return cached.volume();
-        }
-
-        try {
-            Path existing = path;
-            while (existing != null && !Files.exists(existing)) {
-                existing = existing.getParent();
-            }
-
-            if (existing != null) {
-                FileStore store = Files.getFileStore(existing);
-                Volume volume = new Volume(store.toString(), path.toString(), store);
-
-                volumeCache.put(path, new CachedVolume(volume, now));
-
-                return volume;
-            }
-        } catch (IOException | SecurityException e) {
-            log.debug("Unable to resolve storage volume for {}: {}", path, e.getMessage());
-        }
-
-        volumeCache.remove(path);
-
-        return null;
-    }
-
     @PreDestroy
     @Override
     public void close() {
         shutdown.set(true);
-    }
-
-    private record Volume(String id, String label, FileStore store) {
-
-    }
-
-    private record CachedVolume(Volume volume, long resolvedAt) {
-
-    }
-
-    private record Commit(long bytes, long at) {
-
-    }
-
-    private record Blocked(Volume volume, long freeAtBlock, long blockedAt) {
-
-    }
-
-    private record Probe(Volume volume, long usable) {
-
-        private boolean isLow() {
-            return usable < LOW_SPACE_BYTES;
-        }
     }
 }

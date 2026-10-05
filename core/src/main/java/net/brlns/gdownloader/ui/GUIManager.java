@@ -373,7 +373,7 @@ public final class GUIManager implements AutoCloseable {
                 }
             });
 
-            if (main.getDownloadManager().getStorageSense().hasBlockedVolumes()) {
+            if (main.getDownloadManager().getStorageSense().isHalted()) {
                 statusIndicator.addStatus(STORAGE_LOW);
             }
 

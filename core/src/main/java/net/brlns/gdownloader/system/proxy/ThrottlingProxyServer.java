@@ -17,7 +17,6 @@
 package net.brlns.gdownloader.system.proxy;
 
 import jakarta.annotation.Nullable;
-import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -191,7 +190,7 @@ public final class ThrottlingProxyServer implements AutoCloseable {
             client.setTcpNoDelay(true);
             client.setSoTimeout(HANDSHAKE_TIMEOUT_MILLIS);
 
-            DataInputStream in = new DataInputStream(new BufferedInputStream(client.getInputStream()));
+            DataInputStream in = new DataInputStream(client.getInputStream());
             OutputStream out = client.getOutputStream();
 
             if (!negotiate(in, out)) {
@@ -356,7 +355,8 @@ public final class ThrottlingProxyServer implements AutoCloseable {
             while (true) {
                 int read;
                 try {
-                    read = in.read(buffer);
+                    read = in.read(buffer, 0, limiter != null
+                        ? limiter.sliceFor(buffer.length) : buffer.length);
                 } catch (SocketTimeoutException e) {
                     if (System.nanoTime() - lastActivity.get() >= IDLE_TIMEOUT_NANOS) {
                         throw e;

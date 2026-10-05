@@ -30,7 +30,6 @@ public class StorageStatusEvent implements IEvent {
 
     private final boolean low;
     private final List<String> volumes;
-    private final List<String> newlyBlocked;
     private final long timestamp;
 
 }

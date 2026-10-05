@@ -63,7 +63,6 @@ import net.brlns.gdownloader.persistence.ICheckpointable;
 import net.brlns.gdownloader.persistence.PersistenceManager;
 import net.brlns.gdownloader.persistence.entity.QueueEntryEntity;
 import net.brlns.gdownloader.settings.enums.*;
-import net.brlns.gdownloader.system.StorageSense;
 import net.brlns.gdownloader.ui.mediacard.MediaCard;
 import net.brlns.gdownloader.ui.menu.*;
 import net.brlns.gdownloader.ui.message.Message;
@@ -135,8 +134,6 @@ public class QueueEntry implements ICheckpointable<Long> {
     private final AtomicBoolean downloadSkipped = new AtomicBoolean(false);
 
     private final AtomicBoolean rateLimitDetected = new AtomicBoolean(false);
-
-    private final AtomicBoolean storageFailureHint = new AtomicBoolean(false);
 
     private final CancelHook cancelHook = new CancelHook();
     private final AtomicBoolean running = new AtomicBoolean(false);
@@ -465,11 +462,6 @@ public class QueueEntry implements ICheckpointable<Long> {
         cancelHook.set(false);
         process = null;
         rateLimitDetected.set(false);
-        storageFailureHint.set(false);
-    }
-
-    public boolean consumeStorageFailureHint() {
-        return storageFailureHint.getAndSet(false);
     }
 
     public void markRateLimited() {
@@ -850,10 +842,6 @@ public class QueueEntry implements ICheckpointable<Long> {
 
     public void updateStatus(DownloadStatusEnum status, String text, boolean log) {
         if (!text.isEmpty()) {
-            if (StorageSense.looksLikeOutOfSpace(text)) {
-                storageFailureHint.set(true);
-            }
-
             if (log) {
                 logOutput(text);
             }

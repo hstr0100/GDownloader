@@ -1630,6 +1630,15 @@ public class SettingsPanel {
             .requiresRestart(true)
             .build());
 
+        // Intentionally bridge these settings between the two downloaders for now,
+        // might decouple or move it to general later.
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.use_po_token")
+            .getter(settings.getYtDlpSettings()::isUsePoToken)
+            .setter(settings.getYtDlpSettings()::setUsePoToken)
+            .build());
+
         addExtraArgumentsSettings(panel,
             settings.getSpotDLSettings()::isEnableExtraArguments,
             settings.getSpotDLSettings()::setEnableExtraArguments,

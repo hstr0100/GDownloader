@@ -101,6 +101,17 @@ public class GenericFilter extends AbstractUrlFilter {
                             arguments.add(
                                 "--fragment-retries", config.getMaxFragmentRetries()
                             );
+
+                            if (manager.getMain().getHttpManager().isThrottlingActive()) {
+                                arguments.add(
+                                    "--retry-sleep", "fragment:exp=1:20",
+                                    "--retry-sleep", "http:exp=1:20"
+                                );
+                            }
+                        }
+
+                        if (manager.getMain().getHttpManager().isThrottlingActive()) {
+                            arguments.add("--socket-timeout", 60);
                         }
 
                         if (config.isRandomIntervalBetweenDownloads()) {

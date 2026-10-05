@@ -1188,8 +1188,8 @@ public class HistoryWindow {
                 () -> entry.getUrl(),
                 (urls) -> {
                     Set<String> toRemove = selectedUrls.contains(entry.getUrl()) && selectedUrls.size() > 1
-                        ? new LinkedHashSet<>(selectedUrls)
-                        : new LinkedHashSet<>(urls);
+                    ? new LinkedHashSet<>(selectedUrls)
+                    : new LinkedHashSet<>(urls);
 
                     removeUrlsFromHistory(toRemove);
                 },

@@ -41,12 +41,12 @@ import net.brlns.gdownloader.downloader.structs.DownloadResult;
 import net.brlns.gdownloader.downloader.structs.FormatInfo;
 import net.brlns.gdownloader.downloader.structs.MediaInfo;
 import net.brlns.gdownloader.event.EventDispatcher;
-import net.brlns.gdownloader.event.impl.PerformUpdateCheckEvent;
-import net.brlns.gdownloader.event.impl.SettingsChangeEvent;
-import net.brlns.gdownloader.event.impl.StorageStatusEvent;
 import net.brlns.gdownloader.event.IEvent;
+import net.brlns.gdownloader.event.impl.PerformUpdateCheckEvent;
 import net.brlns.gdownloader.event.impl.QueueLiveSortToggledEvent;
 import net.brlns.gdownloader.event.impl.QueueSortOrderChangedEvent;
+import net.brlns.gdownloader.event.impl.SettingsChangeEvent;
+import net.brlns.gdownloader.event.impl.StorageStatusEvent;
 import net.brlns.gdownloader.filters.AbstractUrlFilter;
 import net.brlns.gdownloader.filters.GenericFilter;
 import net.brlns.gdownloader.filters.YoutubeFilter;
@@ -170,23 +170,29 @@ public class DownloadManager implements IEvent, AutoCloseable {
         storageSense.setDisableHook(new CancelHook()
             .addCondition(() -> main.getConfig().isStorageSenseEnabled(), true));
 
-        storageSense.setWatchSupplier(() -> {
-            List<File> watched = new ArrayList<>();
+        storageSense.setWatchSupplier(this::getWatchedDirectories);
+    }
 
-            watched.add(new File(main.getDownloadsDirectory(), GDownloader.CACHE_DIRETORY_NAME));
+    private List<File> getWatchedDirectories() {
+        List<File> watched = new ArrayList<>();
 
-            for (AbstractDownloader downloader : downloaders) {
-                if (downloader.isEnabled()) {
-                    watched.add(downloader.resolveTargetDirectory(null));
+        watched.add(new File(main.getDownloadsDirectory(), GDownloader.CACHE_DIRETORY_NAME));
+
+        for (AbstractDownloader downloader : downloaders) {
+            if (downloader.isEnabled()) {
+                watched.add(downloader.resolveTargetDirectory(null));
+            }
+        }
+
+        for (QueueCategoryEnum category : List.of(RUNNING, QUEUED)) {
+            for (QueueEntry entry : sequencer.getEntries(category)) {
+                if (entry.hasCustomDownloadDirectory()) {
+                    watched.add(new File(entry.getCustomDownloadDirectory()));
                 }
             }
+        }
 
-            for (QueueEntry entry : sequencer.getEntries(RUNNING)) {
-                watched.addAll(getRunningFootprint(entry));
-            }
-
-            return watched;
-        });
+        return watched;
     }
 
     private synchronized void syncDownloaderStates() {
@@ -1036,8 +1042,7 @@ public class DownloadManager implements IEvent, AutoCloseable {
         int maxDownloadsPerHost = Math.max(1, main.getConfig().getMaxSimultaneousDownloadsPerHost());
 
         Map<String, Integer> runningPerHost = new HashMap<>();
-        Map<DownloaderIdEnum, Boolean> storageHeldMemo = new EnumMap<>(DownloaderIdEnum.class);
-        Map<Long, QueueEntry> storageDeferred = new HashMap<>();
+        boolean storageHalted = storageSense.isHalted();
 
         if (downloadsRunning.get() && downloadsManuallyStarted.get() && !sequencer.isEmpty(QUEUED)) {
             for (QueueEntry running : sequencer.getEntries(RUNNING)) {
@@ -1047,13 +1052,12 @@ public class DownloadManager implements IEvent, AutoCloseable {
 
         while (downloadsRunning.get()
             && downloadsManuallyStarted.get()
+            && !storageHalted
             && !sequencer.isEmpty(QUEUED)
             && sequencer.getCount(RUNNING) < maxDownloads) {
 
             QueueEntry entry = sequencer.fetchNext(candidate
-                -> runningPerHost.getOrDefault(resolveHostKey(candidate), 0) < maxDownloadsPerHost
-                && !isStorageHeld(candidate, storageHeldMemo)
-                && admitStorage(candidate, storageDeferred));
+                -> runningPerHost.getOrDefault(resolveHostKey(candidate), 0) < maxDownloadsPerHost);
 
             if (entry == null) {
                 //log.info("No more entries to fetch from queue");
@@ -1067,15 +1071,6 @@ public class DownloadManager implements IEvent, AutoCloseable {
             requestLiveSort();
         }
 
-        for (QueueEntry deferred : storageDeferred.values()) {
-            DownloadStatusEnum status = deferred.getDownloadStatus();
-
-            if (status == DownloadStatusEnum.QUEUED || status == DownloadStatusEnum.STOPPED) {
-                deferred.updateStatus(DownloadStatusEnum.WAITING,
-                    l10n("gui.download_status.waiting_for_storage"));
-            }
-        }
-
         if (!metadataQueryQueue.isEmpty()) {
             if (currentlyQueryingCount.get() < main.getConfig().getMaxSimultaneousQueryMetadataTasks()) {
                 QueueEntry entry = metadataQueryQueue.poll();
@@ -1086,10 +1081,9 @@ public class DownloadManager implements IEvent, AutoCloseable {
             }
         }
 
-        if (downloadsRunning.get() && sequencer.isEmpty(RUNNING) && sequencer.isEmpty(SCHEDULED)
-            && storageDeferred.isEmpty() && !hasStorageHeldEntries(storageHeldMemo)) {
+        if (downloadsRunning.get() && sequencer.isEmpty(RUNNING) && sequencer.isEmpty(SCHEDULED)) {
             if (main.getConfig().isDisplayDownloadsCompleteNotification()
-                && shouldNotifyCompletion.get() && !sequencer.isEmpty()) {
+                && shouldNotifyCompletion.get() && !storageHalted && !sequencer.isEmpty()) {
                 PopupMessenger.show(Message.builder()
                     .title("gui.downloads_complete.notification_title")
                     .message("gui.downloads_complete.complete")
@@ -1112,107 +1106,18 @@ public class DownloadManager implements IEvent, AutoCloseable {
         return host == null ? "" : host.toLowerCase(Locale.ROOT);
     }
 
-    private List<File> getStorageFootprint(QueueEntry entry, @Nullable AbstractDownloader downloader) {
-        List<File> footprint = new ArrayList<>(2);
-        footprint.add(new File(main.getDownloadsDirectory(), GDownloader.CACHE_DIRETORY_NAME));
+    private String getStorageStatusText() {
+        List<String> volumes = storageSense.getHaltedVolumes();
 
-        if (downloader != null) {
-            footprint.add(downloader.resolveTargetDirectory(entry));
-        }
-
-        return footprint;
+        return volumes.isEmpty()
+            ? l10n("gui.download_status.not_started")
+            : l10n("gui.download_status.storage_halted", String.join(", ", volumes));
     }
 
-    @Nullable
-    private AbstractDownloader predictDownloader(QueueEntry entry) {
-        DownloaderIdEnum forced = entry.getForcedDownloader();
-        if (forced == null) {
-            forced = suggestedDownloaderId.get();
-        }
-
-        for (AbstractDownloader downloader : entry.getDownloaders()) {
-            DownloaderIdEnum downloaderId = downloader.getDownloaderId();
-
-            if (forced != null && forced != downloaderId) {
-                continue;
-            }
-
-            if (entry.isDownloaderBlacklisted(downloaderId) && downloaderId != forced) {
-                continue;
-            }
-
-            return downloader;
-        }
-
-        return null;
-    }
-
-    private List<File> getRunningFootprint(QueueEntry entry) {
-        DownloaderIdEnum currentId = entry.getCurrentDownloader();
-
-        return getStorageFootprint(entry,
-            currentId != null ? getDownloader(currentId) : predictDownloader(entry));
-    }
-
-    private boolean isStorageHeld(QueueEntry entry, Map<DownloaderIdEnum, Boolean> memo) {
-        if (!storageSense.hasBlockedVolumes()) {
-            return false;
-        }
-
-        AbstractDownloader predicted = predictDownloader(entry);
-
-        if (predicted == null || entry.hasCustomDownloadDirectory()) {
-            return storageSense.isBlocked(getStorageFootprint(entry, predicted));
-        }
-
-        return memo.computeIfAbsent(predicted.getDownloaderId(),
-            id -> storageSense.isBlocked(getStorageFootprint(entry, predicted)));
-    }
-
-    private boolean admitStorage(QueueEntry entry, Map<Long, QueueEntry> deferred) {
-        if (storageSense.tryAdmit(getStorageFootprint(entry, predictDownloader(entry)), entry.getExpectedSizeBytes())) {
-            return true;
-        }
-
-        deferred.put(entry.getDownloadId(), entry);
-
-        return false;
-    }
-
-    private boolean hasStorageHeldEntries(Map<DownloaderIdEnum, Boolean> memo) {
-        return sequencer.getEntries(QUEUED).stream()
-            .anyMatch(entry -> !entry.getDownloadSkipped().get()
-            && (entry.getDownloadStatus() == DownloadStatusEnum.WAITING || isStorageHeld(entry, memo)));
-    }
-
-    private void holdForStorage(QueueEntry entry) {
-        entry.updateStatus(DownloadStatusEnum.WAITING,
-            l10n("gui.download_status.waiting_for_storage"));
+    private void requeueForStorage(QueueEntry entry) {
+        entry.updateStatus(DownloadStatusEnum.QUEUED, getStorageStatusText());
 
         offerTo(QUEUED, entry);
-    }
-
-    private boolean holdIfStorageFailure(QueueEntry entry, boolean storageSignal) {
-        if (entry.getCancelHook().get()
-            || !storageSense.reportFailure(getRunningFootprint(entry), storageSignal)) {
-            return false;
-        }
-
-        log.warn("Download of {} failed for lack of storage space", entry.getUrl());
-
-        holdForStorage(entry);
-
-        return true;
-    }
-
-    private void haltRunningOnBlockedVolumes() {
-        for (QueueEntry entry : sequencer.getEntries(RUNNING)) {
-            if (!entry.getCancelHook().get() && storageSense.isBlocked(getRunningFootprint(entry))) {
-                log.warn("Halting download {}, its storage volume is out of space", entry.getUrl());
-
-                stopDownload(entry, () -> holdForStorage(entry));
-            }
-        }
     }
 
     private void onStorageStatusChanged(StorageStatusEvent event) {
@@ -1220,31 +1125,21 @@ public class DownloadManager implements IEvent, AutoCloseable {
             return;
         }
 
-        if (!event.getNewlyBlocked().isEmpty()) {
+        if (event.isLow()) {
             PopupMessenger.show(Message.builder()
                 .title("gui.error_popup_title")
-                .message("gui.status.storage_low")
+                .message("gui.download_status.storage_halted", String.join(", ", event.getVolumes()))
                 .durationMillis(6000)
                 .messageType(MessageTypeEnum.ERROR)
                 .discardDuplicates(true)
                 .build());
 
-            haltRunningOnBlockedVolumes();
-        }
-
-        Map<DownloaderIdEnum, Boolean> memo = new EnumMap<>(DownloaderIdEnum.class);
-
-        for (QueueEntry entry : sequencer.getEntries(QUEUED)) {
-            DownloadStatusEnum status = entry.getDownloadStatus();
-            boolean held = isStorageHeld(entry, memo);
-
-            if (status == DownloadStatusEnum.WAITING && !held) {
-                entry.updateStatus(DownloadStatusEnum.QUEUED,
-                    l10n("gui.download_status.not_started"));
-            } else if (held && !entry.getDownloadSkipped().get()
-                && (status == DownloadStatusEnum.QUEUED || status == DownloadStatusEnum.STOPPED)) {
-                entry.updateStatus(DownloadStatusEnum.WAITING,
-                    l10n("gui.download_status.waiting_for_storage"));
+            for (QueueEntry entry : sequencer.getEntries(RUNNING)) {
+                if (!entry.getCancelHook().get()) {
+                    stopDownload(entry, () -> {
+                        requeueForStorage(entry);
+                    });
+                }
             }
         }
 
@@ -1765,8 +1660,8 @@ public class DownloadManager implements IEvent, AutoCloseable {
 
                         entry.setCurrentDownloader(downloaderId);
 
-                        if (storageSense.isBlocked(getRunningFootprint(entry))) {
-                            holdForStorage(entry);
+                        if (storageSense.isHalted()) {
+                            requeueForStorage(entry);
                             return;
                         }
 
@@ -1822,11 +1717,9 @@ public class DownloadManager implements IEvent, AutoCloseable {
                             return;
                         }
 
-                        boolean failedResult = FLAG_MAIN_CATEGORY_FAILED.isSet(flags)
-                            || FLAG_TRANSCODING_FAILED.isSet(flags);
-
-                        if (failedResult && holdIfStorageFailure(entry,
-                            entry.consumeStorageFailureHint() || StorageSense.looksLikeOutOfSpace(lastOutput))) {
+                        if ((FLAG_MAIN_CATEGORY_FAILED.isSet(flags) || FLAG_TRANSCODING_FAILED.isSet(flags))
+                            && StorageSense.looksLikeOutOfSpace(lastOutput) && storageSense.check()) {
+                            requeueForStorage(entry);
                             return;
                         }
 
@@ -1955,8 +1848,8 @@ public class DownloadManager implements IEvent, AutoCloseable {
 
                 offerTo(FAILED, entry);
             } catch (Exception e) {
-                if (holdIfStorageFailure(entry,
-                    StorageSense.looksLikeOutOfSpace(e) || entry.consumeStorageFailureHint())) {
+                if (StorageSense.looksLikeOutOfSpace(e) && storageSense.check()) {
+                    requeueForStorage(entry);
                     return;
                 }
 

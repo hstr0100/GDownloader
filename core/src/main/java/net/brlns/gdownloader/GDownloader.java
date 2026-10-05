@@ -95,7 +95,6 @@ import static net.brlns.gdownloader.util.StringUtils.notNullOrEmpty;
 // TODO implement CD Ripper
 // TODO d&d files for conversion to different formats, we already have ffmpeg anyway
 //
-// TODO max simultaneous downloads should be independent per website
 // TODO scale on resolution DPI
 // TODO verify checksums during updates, check signatures
 // TODO write a component factory for GUIManager
@@ -129,14 +128,12 @@ import static net.brlns.gdownloader.util.StringUtils.notNullOrEmpty;
 // TODO Remove ffmpeg requirement by omitting transcoding arguments
 // TODO Implement plugin API, create example plugin, create more events.
 // prio
-// TODO save last window size in config
 // TODO when changing download path, move the cache directory to the new location. Need to take available space into consideration
 // TODO button to cancel update check
 // TODO run transcoder for audio-only downloads
 // TODO transcode specific-format downloads if requested by user
 // TODO fetch first playlist item for metadata, then fetch the full playlist for individual filtering/processing/state tracking
 // TODO right click > query metadata
-// TODO pause downloads when space runs out in DL path
 // TODO Direct-HTTP: resume chunked
 // TODO Direct-HTTP: post-processors (unzip, convert, etc)
 // TODO Direct-HTTP: metadata extractors for host resolvers
