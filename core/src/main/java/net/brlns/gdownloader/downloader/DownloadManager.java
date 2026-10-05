@@ -143,6 +143,8 @@ public class DownloadManager implements IEvent, AutoCloseable {
 
     private final LRUCache<String, Long> recentlyDeletedUrls = new LRUCache<>(1000);
 
+    private final Queue<PendingRemoval> pendingRemovals = new ConcurrentLinkedQueue<>();
+
     private final CheckpointTracker<Long> queueEntryCheckpoints = new CheckpointTracker<>();
 
     @SuppressWarnings("this-escape")
@@ -655,27 +657,12 @@ public class DownloadManager implements IEvent, AutoCloseable {
 
     private void initializeAndEnqueueEntry(QueueEntry queueEntry) {
         queueEntry.getMediaCard().setOnClose((reason) -> {
-            queueEntry.close(reason);
+            PendingRemoval removal = new PendingRemoval(queueEntry, reason);
 
-            linkCaptureLock.lock();
-            try {
-                capturedPlaylists.remove(queueEntry.getUrl());
-                capturedLinks.remove(queueEntry.getUrl());
-                capturedLinks.remove(queueEntry.getOriginalUrl());
-            } finally {
-                linkCaptureLock.unlock();
-            }
-
-            if (sequencer.removeEntry(queueEntry)) {
-                fireListeners();
-            }
-
-            if (reason != CloseReasonEnum.SHUTDOWN) {
-                deleteCheckpoint(queueEntry);
-            }
-
-            if (reason == CloseReasonEnum.MANUAL) {
-                recentlyDeletedUrls.put(queueEntry.getOriginalUrl(), System.currentTimeMillis());
+            if (reason == CloseReasonEnum.SHUTDOWN) {
+                applyRemovals(List.of(removal));
+            } else {
+                pendingRemovals.add(removal);
             }
         });
 
@@ -807,11 +794,63 @@ public class DownloadManager implements IEvent, AutoCloseable {
         }
     }
 
-    private void deleteCheckpoint(QueueEntry queueEntry) {
-        queueEntryCheckpoints.forget(queueEntry.getCheckpointKey());
+    private void flushPendingRemovals() {
+        List<PendingRemoval> batch = new ArrayList<>();
 
-        if (persistence.isInitialized()) {
-            persistence.getQueueEntries().remove(queueEntry.getDownloadId());
+        PendingRemoval removal;
+        while ((removal = pendingRemovals.poll()) != null) {
+            batch.add(removal);
+        }
+
+        if (!batch.isEmpty()) {
+            applyRemovals(batch);
+        }
+    }
+
+    private void applyRemovals(List<PendingRemoval> batch) {
+        for (PendingRemoval removal : batch) {
+            removal.entry().close(removal.reason());
+        }
+
+        linkCaptureLock.lock();
+        try {
+            for (PendingRemoval removal : batch) {
+                QueueEntry entry = removal.entry();
+
+                capturedPlaylists.remove(entry.getUrl());
+                capturedLinks.remove(entry.getUrl());
+                capturedLinks.remove(entry.getOriginalUrl());
+            }
+        } finally {
+            linkCaptureLock.unlock();
+        }
+
+        boolean sequencerChanged = false;
+        List<Long> checkpointIds = new ArrayList<>();
+
+        for (PendingRemoval removal : batch) {
+            QueueEntry entry = removal.entry();
+
+            if (sequencer.removeEntry(entry)) {
+                sequencerChanged = true;
+            }
+
+            if (removal.reason() != CloseReasonEnum.SHUTDOWN) {
+                queueEntryCheckpoints.forget(entry.getCheckpointKey());
+                checkpointIds.add(entry.getDownloadId());
+            }
+
+            if (removal.reason() == CloseReasonEnum.MANUAL) {
+                recentlyDeletedUrls.put(entry.getOriginalUrl(), System.currentTimeMillis());
+            }
+        }
+
+        if (!checkpointIds.isEmpty() && persistence.isInitialized()) {
+            persistence.getQueueEntries().removeAll(checkpointIds);
+        }
+
+        if (sequencerChanged) {
+            fireListeners();
         }
     }
 
@@ -1036,6 +1075,8 @@ public class DownloadManager implements IEvent, AutoCloseable {
     }
 
     public void processQueue() {
+        flushPendingRemovals();
+
         processScheduledRetries();
 
         int maxDownloads = Math.max(1, main.getConfig().getMaxSimultaneousDownloads());
@@ -1981,11 +2022,17 @@ public class DownloadManager implements IEvent, AutoCloseable {
 
         stopDownloads();
 
+        flushPendingRemovals();
+
         clearQueue(RUNNING, CloseReasonEnum.SHUTDOWN, false);
         clearQueue(CloseReasonEnum.SHUTDOWN);
 
         for (AbstractDownloader downloader : downloaders) {
             downloader.close();
         }
+    }
+
+    private record PendingRemoval(QueueEntry entry, CloseReasonEnum reason) {
+
     }
 }

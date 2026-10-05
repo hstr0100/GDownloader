@@ -21,6 +21,7 @@ import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.Id;
 import jakarta.persistence.TypedQuery;
 import java.lang.reflect.Field;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -138,6 +139,25 @@ public class PersistenceRepository<K, T> extends AbstractRepository {
             em.remove(entity);
 
             return true;
+        });
+    }
+
+    public boolean removeAll(Collection<K> ids) {
+        if (ids.isEmpty()) {
+            return true;
+        }
+
+        if (log.isTraceEnabled()) {
+            log.trace("Remove All: {}", ids);
+        }
+
+        return inTransaction(ids, (em) -> {
+            for (K id : ids) {
+                T entity = em.find(entityClass, id);
+                if (entity != null) {
+                    em.remove(entity);
+                }
+            }
         });
     }
 

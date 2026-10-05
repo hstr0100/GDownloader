@@ -31,6 +31,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import javax.imageio.ImageIO;
 import javax.swing.*;
+import javax.swing.text.JTextComponent;
 import javax.swing.Timer;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
@@ -314,8 +315,15 @@ public final class GUIManager implements AutoCloseable {
                 if (e.getID() == KeyEvent.KEY_PRESSED) {
                     if ((e.getModifiersEx() & KeyEvent.CTRL_DOWN_MASK) != 0) {
                         switch (e.getKeyCode()) {
-                            case KeyEvent.VK_V ->
-                                main.getClipboardManager().pasteURLsFromClipboard();
+                            case KeyEvent.VK_V -> {
+                                Component source = e.getComponent();
+
+                                if (source != null
+                                    && SwingUtilities.windowForComponent(source) == appWindow
+                                    && !(source instanceof JTextComponent)) {
+                                    main.getClipboardManager().pasteURLsFromClipboard();
+                                }
+                            }
                             case KeyEvent.VK_F -> {
                                 if (appWindow.isVisible()) {
                                     runOnEDT(() -> {

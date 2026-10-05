@@ -566,13 +566,10 @@ public final class MediaCardManager {
                     }
                 }
 
-                boolean needsFullRecompute = false;
-
                 if (!removed.isEmpty()) {
-                    needsFullRecompute = true;
-
                     orderedIds.removeIf(removed::contains);
                     orderedIdSet.removeAll(removed);
+                    filteredIds.removeIf(removed::contains);
 
                     for (int id : removed) {
                         MediaCardPanel panel = renderedCards.remove(id);
@@ -593,10 +590,10 @@ public final class MediaCardManager {
                     }
                 }
 
-                if (needsFullRecompute) {
-                    recomputeFilteredIds();
-                } else if (!appended.isEmpty()) {
+                if (!appended.isEmpty()) {
                     appendFilteredIds(appended);
+                } else if (!removed.isEmpty()) {
+                    notifyMatchCount();
                 }
 
                 updateVisibleWindow(true);
@@ -680,6 +677,10 @@ public final class MediaCardManager {
             }
         }
 
+        notifyMatchCount();
+    }
+
+    private void notifyMatchCount() {
         Consumer<Integer> listener = matchCountListener.get();
         if (listener != null) {
             listener.accept(filteredIds.size());
