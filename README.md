@@ -9,16 +9,17 @@ It supports various platforms such as YouTube, Crunchyroll, Twitch, X/Twitter, S
 
 ## Features
 
-- Batch download videos, image galleries and playlists
-- Supports multiple sites and content types
-- Seamlessly switch between the supported downloaders
-- Embeds thumbnails and subtitles in the resulting media files, when available
-- Automatic FFMPEG setup for Windows upon first boot
-- Hardware-accelerated automatic video transcoding
-- Keeps yt-dlp, spotDL and gallery-dl always updated and ready go
+- Batch download videos, songs, image galleries, and playlists from multiple supported websites.
+- Four downloaders in one app, chosen automatically for each link: yt-dlp, gallery-dl, spotDL and a built-in one for regular files
+- Scan a web page to find and download its images, videos and audio
+- Everything is set up and kept up to date for you, no Python or command line needed
+- Hardware-accelerated video conversion (NVIDIA, Intel, AMD), detected automatically
+- Pauses when your disk is almost full and picks the queue back up after a restart
+- Download history that can skip links you already downloaded
 - Multiple customizable settings to best suit your usage style
-- Available in three languages: en-US, pt-BR and es-MX
+- Embeds thumbnails and subtitles in the resulting media files, when available
 - Easy toggles for downloading audio, video, or both
+- Available in four languages: en-US, pt-BR, es-MX and zh-CN
 
 ## Motivation
 
@@ -120,6 +121,23 @@ To activate gallery-dl support, navigate to `Settings` > `Download Settings`, sc
 
 To activate spotDL support, navigate to `Settings` > `Download Settings`, scroll down to the bottom and check the option `Enable spotDL downloader.` then, restart the program.
 
+### What Is A PO Token And Do I Need It?
+
+A PO (Proof of Origin) Token is a value that YouTube's official clients generate to prove that a request comes from a genuine player. When YouTube suspects automated traffic, it may refuse to serve certain streams unless the request carries a valid token. You may see errors such as HTTP 403, missing formats, or videos that only offer low-quality options.
+
+You do **not** need it for most downloads, and it is turned off by default. Consider enabling it if YouTube downloads (or Spotify downloads through spotDL, which fetch audio from YouTube) start failing or lose formats.
+
+To enable it, open the yt-dlp settings (or spotDL settings) and check Use PO Token Provider. GDownloader downloads the provider automatically, keeps it updated, and configures it for yt-dlp. No restart or manual setup is required.
+
+How it works:
+- GDownloader uses [bgutil-ytdlp-pot-provider-rs](https://github.com/jim60105/bgutil-ytdlp-pot-provider-rs), a Rust rewrite of [bgutil-ytdlp-pot-provider](https://github.com/Brainicism/bgutil-ytdlp-pot-provider), together with its yt-dlp plugin.
+- The provider runs automatically when yt-dlp needs it. There is no need to configure or manage anything manually.
+- Deno, which yt-dlp uses to solve YouTube's JavaScript challenges, is also managed by GDownloader.
+
+Notes:
+- The feature is experimental. If downloads still fail, try updating, signing in via `Read Cookies from Browser`, or turning the option off again.
+- Only YouTube is affected. Other sites ignore it.
+
 ### My Downloads Are Stuck Transcoding
 
 If you are using a supported media player such as VLC, disabling the option `Convert audio to a widely supported codec (Slow)` under `Download Settings` will result in significant improvements in speed during the final transcoding step.
@@ -141,4 +159,3 @@ We welcome any feedback you may have to improve the user experience.
 - yt-dlp builds by [yt-dlp/yt-dlp](https://github.com/yt-dlp/yt-dlp)
 - gallery-dl builds by [mikf/gallery-dl](https://github.com/mikf/gallery-dl)
 - spotDL builds by [spotDL/spotify-downloader](https://github.com/spotDL/spotify-downloader)
-
