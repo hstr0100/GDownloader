@@ -22,7 +22,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           java-version: 25
-          distribution: 'temurin'
+          distribution: 'zulu'
 
       - name: Submit dependency graph
         uses: gradle/actions/dependency-submission@v4

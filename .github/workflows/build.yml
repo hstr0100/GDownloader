@@ -40,7 +40,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           java-version: ${{ matrix.JAVA_VERSION }}
-          distribution: 'temurin'
+          distribution: 'zulu'
 
       - name: Install dependencies
         run: |
@@ -139,7 +139,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           java-version: ${{ matrix.JAVA_VERSION }}
-          distribution: 'temurin'
+          distribution: 'zulu'
 
       - name: Cache WiX Toolset installation
         id: wix-cache
@@ -206,7 +206,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           java-version: ${{ matrix.JAVA_VERSION }}
-          distribution: 'temurin'
+          distribution: 'zulu'
 
       - name: Make gradlew executable
         run: chmod +x ./gradlew

@@ -973,7 +973,6 @@ public final class GDownloader {
             File parentDir = appFile.getParentFile();
 
             if (parentDir != null) {
-                log.info("Portable runtime directory: {}", parentDir.getAbsolutePath());
                 return parentDir;
             }
         }

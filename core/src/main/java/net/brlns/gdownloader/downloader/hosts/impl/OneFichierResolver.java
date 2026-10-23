@@ -49,6 +49,10 @@ public class OneFichierResolver extends AbstractHostResolver {
     private static final Pattern URL_PATTERN = Pattern.compile("^(?:https?://)?[^/]*1fichier\\.com/\\?.+");
     private static final Pattern ID_PATTERN = Pattern.compile("1fichier\\.com/\\?([a-zA-Z0-9]+)");
     private static final Pattern AF_PATTERN = Pattern.compile("af=([0-9]+)");
+    private static final Pattern COUNTDOWN_PATTERN = Pattern.compile("var\\s+ct\\s*=\\s*(\\d+)");
+    private static final Pattern CDN_LINK_PATTERN = Pattern.compile(
+        "^https?://(?!img\\.|www\\.)[a-z0-9-]+\\.1fichier\\.com/[^?#]+$", Pattern.CASE_INSENSITIVE);
+    private static final int MAX_INLINE_WAIT_SECONDS = 180;
 
     @Override
     public String getId() {
@@ -104,6 +108,63 @@ public class OneFichierResolver extends AbstractHostResolver {
         Duration timeout = context.getRequestTimeout() != null
             ? context.getRequestTimeout() : Duration.ofSeconds(15);
 
+        HttpResponse<String> response = postPage(context, uri, cleanUrl, afCookieValue, password, timeout);
+        Document doc = parseResponse(response);
+
+        String dlUrl = findDownloadUrl(doc, cleanUrl);
+
+        if (dlUrl == null) {
+            throwIfLimited(doc, response);
+
+            Element form = doc.selectFirst("form#f1");
+            Element startButton = doc.selectFirst("#dlw");
+
+            if (form != null && startButton != null) {
+                int waitSeconds = extractCountdown(response.body());
+
+                if (waitSeconds > MAX_INLINE_WAIT_SECONDS) {
+                    throw new RetryLaterException(Duration.ofSeconds(waitSeconds),
+                        "Wait limit reached");
+                }
+
+                waitCancellable(context, waitSeconds + 1,
+                    "gui.direct_http.download_status.retrying_in");
+
+                ensureNotCancelled(context);
+
+                context.notifyStatus("gui.host_resolver.status.resolving", getDisplayName());
+
+                response = postPage(context, uri, cleanUrl, afCookieValue, password, timeout);
+                doc = parseResponse(response);
+
+                dlUrl = findDownloadUrl(doc, cleanUrl);
+
+                if (dlUrl == null) {
+                    throwIfLimited(doc, response);
+                }
+            }
+        }
+
+        if (dlUrl != null) {
+            context.notifyStatus("gui.host_resolver.status.resolved", dlUrl);
+
+            return List.of(ResolvedFile.builder()
+                .url(dlUrl)
+                .referer(cleanUrl)
+                .forceSingleChunk(true)
+                .build());
+        }
+
+        log.warn("1Fichier parser failed. No warnings, countdown form or CDN link found. HTTP Status: {}, HTML Length: {}",
+            response.statusCode(), response.body().length());
+
+        throw new HostResolverException(
+            "Link generation failed", false);
+    }
+
+    private HttpResponse<String> postPage(HostResolverContext context, URI uri, String cleanUrl,
+        String afCookieValue, String password, Duration timeout) throws HostResolverException {
+
         HttpRequest.Builder builder = newRequestBuilder(uri, timeout)
             .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8")
             .header("Accept-Language", "en-US,en;q=0.5")
@@ -119,6 +180,8 @@ public class OneFichierResolver extends AbstractHostResolver {
 
         HttpResponse<String> response = sendSniffingRequest(context, builder.build());
 
+        throwIfRateLimited(response, getDisplayName(), Duration.ofMinutes(1));
+
         if (response.statusCode() == 403 || response.statusCode() == 503) {
             log.warn("1Fichier returned HTTP {}", response.statusCode());
 
@@ -131,8 +194,11 @@ public class OneFichierResolver extends AbstractHostResolver {
                 "File not found", false);
         }
 
-        String htmlBody = response.body();
-        Document doc = Jsoup.parse(htmlBody);
+        return response;
+    }
+
+    private Document parseResponse(HttpResponse<String> response) throws HostResolverException {
+        Document doc = Jsoup.parse(response.body());
 
         if (doc.title().toLowerCase(Locale.ROOT).contains("just a moment")) {
             log.warn("1Fichier is protected by Cloudflare.");
@@ -141,41 +207,35 @@ public class OneFichierResolver extends AbstractHostResolver {
                 "Link generation failed", true);
         }
 
-        Element dlLinkElement = doc.selectFirst("a.ok.btn-general.btn-orange");
-        if (dlLinkElement == null) {
-            dlLinkElement = doc.selectFirst("a.btn-orange");
-        }
+        return doc;
+    }
 
-        if (dlLinkElement == null) {
-            dlLinkElement = doc.selectFirst("a[href*=.1fichier.com/]");
-        }
+    private String findDownloadUrl(Document doc, String cleanUrl) {
+        for (Element anchor : doc.select("a[href]")) {
+            String href = anchor.attr("href").trim();
 
-        if (dlLinkElement != null && dlLinkElement.hasAttr("href")) {
-            String dlUrl = dlLinkElement.attr("href");
-
-            if (!dlUrl.equals(cleanUrl) && dlUrl.startsWith("http")) {
-                context.notifyStatus("gui.host_resolver.status.resolved", dlUrl);
-
-                return List.of(ResolvedFile.builder()
-                    .url(dlUrl)
-                    .referer(cleanUrl)
-                    .forceSingleChunk(true)
-                    .build());
+            if (!href.equals(cleanUrl) && CDN_LINK_PATTERN.matcher(href).matches()) {
+                return href;
             }
         }
 
-        Elements ctWarns = doc.select("div.ct_warn");
+        return null;
+    }
 
-        if (ctWarns.isEmpty()) {
-            log.warn("1Fichier parser failed. No warning divs and no CDN link found. HTTP Status: {}, HTML Length: {}",
-                response.statusCode(), htmlBody.length());
-
-            throw new HostResolverException(
-                "Link generation failed", false);
+    private int extractCountdown(String html) {
+        Matcher matcher = COUNTDOWN_PATTERN.matcher(html);
+        if (matcher.find()) {
+            return Math.max(1, Integer.parseInt(matcher.group(1)));
         }
 
-        for (Element warn : ctWarns) {
-            String text = warn.text().toLowerCase(Locale.ROOT);
+        return 60;
+    }
+
+    private void throwIfLimited(Document doc, HttpResponse<String> response) throws HostResolverException {
+        Elements notices = doc.select("div.ct_warn, div.notice, div.alert, div.warn");
+
+        for (Element notice : notices) {
+            String text = notice.text().toLowerCase(Locale.ROOT);
 
             if (text.contains("you must wait")) {
                 int minutes = extractNumber(text);
@@ -186,17 +246,17 @@ public class OneFichierResolver extends AbstractHostResolver {
                     minutes = 1;
                 }
 
-                // TODO: retry-later scheduler, we can wait for 10 minutes, but not for 10 hours.
                 throw new RetryLaterException(Duration.ofMinutes(minutes),
                     "Wait limit reached");
             }
 
             if (text.contains("temporarily limited")
                 || text.contains("high demand")
-                || text.contains("guest slots")) {
+                || text.contains("guest slots")
+                || text.contains("slots are currently in use")
+                || text.contains("no free slot")) {
                 log.info("1Fichier limit detected: high demand / no free guest slots");
 
-                // We can pester them for this one, 1 minute should be fine.
                 throw new RetryLaterException(Duration.ofMinutes(1),
                     "Temporarily limited due to high demand");
             }
@@ -222,10 +282,12 @@ public class OneFichierResolver extends AbstractHostResolver {
             }
         }
 
-        log.warn("1Fichier returned unknown warning state: {}", ctWarns.text());
+        if (!notices.isEmpty()) {
+            log.warn("1Fichier returned unknown warning state: {}", notices.text());
 
-        throw new RetryLaterException(Duration.ofMinutes(5),
-            "Unrecognized site response");
+            throw new RetryLaterException(Duration.ofMinutes(5),
+                "Unrecognized site response");
+        }
     }
 
     private String getCleanUrl(String url) {

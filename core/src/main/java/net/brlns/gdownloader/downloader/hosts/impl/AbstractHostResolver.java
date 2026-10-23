@@ -30,6 +30,7 @@ import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.downloader.hosts.HostResolverContext;
 import net.brlns.gdownloader.downloader.hosts.HostResolverException;
 import net.brlns.gdownloader.downloader.hosts.IHostResolver;
+import net.brlns.gdownloader.downloader.hosts.RetryLaterException;
 import net.brlns.gdownloader.util.URLUtils;
 import tools.jackson.databind.JsonNode;
 
@@ -214,11 +215,37 @@ public abstract class AbstractHostResolver implements IHostResolver {
     }
 
     protected void requireSuccess(HttpResponse<?> response, String context) throws HostResolverException {
+        throwIfRateLimited(response, context, Duration.ofSeconds(30));
+
         if (response.statusCode() / 100 != 2) {
             throw new HostResolverException(
                 context + " failed with HTTP " + response.statusCode(),
-                response.statusCode() == 429 || response.statusCode() >= 500);
+                response.statusCode() >= 500);
         }
+    }
+
+    protected void throwIfRateLimited(HttpResponse<?> response, String context, Duration fallback)
+        throws RetryLaterException {
+
+        if (response.statusCode() != 429) {
+            return;
+        }
+
+        Duration delay = fallback;
+
+        String header = response.headers().firstValue("Retry-After").orElse(null);
+        if (header != null) {
+            try {
+                long seconds = Long.parseLong(header.trim());
+                delay = Duration.ofSeconds(Math.max(5, Math.min(seconds, 3600)));
+            } catch (NumberFormatException ignored) {
+            }
+        }
+
+        log.info("{} was rate limited (HTTP 429), retrying in {}", context, delay);
+
+        throw new RetryLaterException(delay,
+            context + " rate limited");
     }
 
     protected void ensureNotCancelled(HostResolverContext context) throws HostResolverException {

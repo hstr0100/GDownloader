@@ -58,7 +58,7 @@ public class GoFileResolver extends AbstractHostResolver {
     private static final String LANGUAGE = "en-US";
 
     // Salt extracted from gofile.io/dist/js/wt.obf.js - this will eventually change.
-    private static final String WT_SALT = "9844d94d963d30";
+    private static final String WT_SALT = "12af056dacea0b";
     private static final long WT_WINDOW_SECONDS = 14400; // 4-hour
 
     private final AtomicReference<String> accountToken = new AtomicReference<>();
