@@ -839,9 +839,13 @@ public class DirectHttpDownloader extends AbstractDownloader {
                 l10n("gui.direct_http.download_status.error.content_length_unknown", fileUrl));
         }
 
-        String detectedFileName = suggestedFileName != null && !suggestedFileName.isBlank()
+        String rawFileName = suggestedFileName != null && !suggestedFileName.isBlank()
             ? suggestedFileName
             : getFileNameFromHeaders(connection);
+
+        String detectedFileName = rawFileName != null
+            ? FileUtils.sanitizeRelativePath(rawFileName)
+            : null;
 
         log.debug("Detected filename: {}", detectedFileName);
         if (detectedFileName == null || detectedFileName.isEmpty()) {
@@ -862,7 +866,7 @@ public class DirectHttpDownloader extends AbstractDownloader {
         Path basePath = queueEntry.getTmpDirectory().toPath();
         Path urlPath = Paths.get("");
         if (settings().isOrganizeFilesIntoFolders() && suggestedUrlPath != null) {
-            urlPath = Paths.get(suggestedUrlPath);
+            urlPath = Paths.get(FileUtils.sanitizeRelativePath(suggestedUrlPath));
         }
 
         Path targetPath = basePath.resolve(urlPath);

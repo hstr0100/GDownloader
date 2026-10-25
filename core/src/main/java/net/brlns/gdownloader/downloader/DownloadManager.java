@@ -16,11 +16,6 @@
  */
 package net.brlns.gdownloader.downloader;
 
-import net.brlns.gdownloader.downloader.impl.DirectHttpDownloader;
-import net.brlns.gdownloader.downloader.impl.SpotDLDownloader;
-import net.brlns.gdownloader.downloader.impl.YtDlpDownloader;
-import net.brlns.gdownloader.downloader.impl.GalleryDlDownloader;
-import net.brlns.gdownloader.downloader.impl.CyberdropDlDownloader;
 import jakarta.annotation.Nullable;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
@@ -42,6 +37,11 @@ import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.downloader.enums.*;
 import net.brlns.gdownloader.downloader.extractors.MetadataManager;
+import net.brlns.gdownloader.downloader.impl.CyberdropDlDownloader;
+import net.brlns.gdownloader.downloader.impl.DirectHttpDownloader;
+import net.brlns.gdownloader.downloader.impl.GalleryDlDownloader;
+import net.brlns.gdownloader.downloader.impl.SpotDLDownloader;
+import net.brlns.gdownloader.downloader.impl.YtDlpDownloader;
 import net.brlns.gdownloader.downloader.structs.DownloadResult;
 import net.brlns.gdownloader.downloader.structs.FormatInfo;
 import net.brlns.gdownloader.downloader.structs.MediaInfo;

@@ -16,7 +16,6 @@
  */
 package net.brlns.gdownloader.downloader;
 
-import net.brlns.gdownloader.downloader.impl.YtDlpDownloader;
 import jakarta.annotation.Nullable;
 import java.awt.Color;
 import java.awt.image.BufferedImage;
@@ -53,6 +52,7 @@ import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.downloader.enums.*;
+import net.brlns.gdownloader.downloader.impl.YtDlpDownloader;
 import net.brlns.gdownloader.downloader.structs.MediaInfo;
 import net.brlns.gdownloader.event.EventDispatcher;
 import net.brlns.gdownloader.event.EventDispatcher.LambdaHandler;

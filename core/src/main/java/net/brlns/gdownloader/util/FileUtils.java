@@ -18,6 +18,8 @@ package net.brlns.gdownloader.util;
 
 import jakarta.annotation.Nullable;
 import java.io.*;
+import java.nio.charset.Charset;
+import java.nio.charset.CharsetEncoder;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -44,6 +46,8 @@ import org.slf4j.helpers.MessageFormatter;
  */
 @Slf4j
 public final class FileUtils {
+
+    private static final Charset NATIVE_CHARSET = Charset.forName(System.getProperty("sun.jnu.encoding", "UTF-8"));
 
     private static final LRUCache<File, Optional<String>> MIME_TYPE_CACHE = new LRUCache<>(2000);
 
@@ -220,9 +224,48 @@ public final class FileUtils {
     }
 
     public static Path relativize(Path originalDirectory, Path targetDirectory, Path file) {
-        Path relativePath = originalDirectory.relativize(file);
+        Path target = targetDirectory;
 
-        return targetDirectory.resolve(relativePath);
+        for (Path element : originalDirectory.relativize(file)) {
+            target = target.resolve(toNativeSafe(element.toString()));
+        }
+
+        return target;
+    }
+
+    public static String sanitizeRelativePath(String path) {
+        StringBuilder result = new StringBuilder();
+
+        for (String segment : path.split("[/\\\\]")) {
+            if (segment.isBlank() || segment.equals(".") || segment.equals("..")) {
+                continue;
+            }
+
+            if (!result.isEmpty()) {
+                result.append('/');
+            }
+
+            result.append(toNativeSafe(segment));
+        }
+
+        return result.toString();
+    }
+
+    /**
+     * The JVM converts file names using the locale's charset, not UTF-8.
+     * Any unresolved character makes Path.resolve(String) throw InvalidPathException
+     */
+    private static String toNativeSafe(String name) {
+        CharsetEncoder encoder = NATIVE_CHARSET.newEncoder();
+        if (GDownloader.isWindows() || encoder.canEncode(name)) {
+            return name;
+        }
+
+        StringBuilder result = new StringBuilder(name.length());
+        name.codePoints().forEach(codePoint -> result.appendCodePoint(
+            encoder.canEncode(new String(Character.toChars(codePoint))) ? codePoint : '_'));
+
+        return result.toString();
     }
 
     public static Path relativize(File originalDirectory, File targetDirectory, Path file) {

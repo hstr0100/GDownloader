@@ -80,7 +80,7 @@ public class WelcomeScreen {
 
             frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-            frame.setSize(780, 570);
+            frame.setSize(780, 600);
             frame.setLayout(new BorderLayout());
             frame.setResizable(false);
             frame.setMinimumSize(new Dimension(frame.getWidth(), frame.getHeight()));

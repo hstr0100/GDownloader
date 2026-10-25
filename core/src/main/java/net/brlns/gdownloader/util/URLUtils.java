@@ -285,7 +285,7 @@ public final class URLUtils {
                     .append(normalizedPath.replaceAll("/$", ""));  // Remove trailing slash
             }
 
-            return result.toString()
+            return FileUtils.sanitizeRelativePath(result.toString())
                 .replace("/", File.separator);// Apply platform separator
         } catch (URISyntaxException e) {
             log.error("Invalid URL: {} {}", urlString, e.getMessage());
