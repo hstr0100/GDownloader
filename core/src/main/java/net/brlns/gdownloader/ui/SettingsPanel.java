@@ -207,11 +207,11 @@ public class SettingsPanel {
             frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
             frame.setLayout(new BorderLayout());
             //frame.setResizable(false);
-            frame.setMinimumSize(new Dimension(1050, 726));
+            frame.setMinimumSize(new Dimension(1070, 726));
             frame.setIconImage(main.getGuiManager().getAppIcon());
 
             WindowStateManager.manage(main, frame, "settings_window", () -> {
-                frame.setSize(1010, 726);
+                frame.setSize(1070, 726);
                 frame.setLocationRelativeTo(null);
             });
 

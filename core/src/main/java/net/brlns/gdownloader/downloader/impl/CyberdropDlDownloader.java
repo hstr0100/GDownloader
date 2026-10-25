@@ -481,17 +481,8 @@ public class CyberdropDlDownloader extends AbstractDownloader {
         }
 
         String name = downloads.path(0).path("description").asString("");
-        String baseName = name.replaceFirst("\\.[^./\\\\]{1,5}$", "").toLowerCase(Locale.ROOT);
-        String title = entry.getTitle().toLowerCase(Locale.ROOT);
 
         StringBuilder text = new StringBuilder();
-
-        String truncatedTitle = title.substring(0, Math.min(70, title.length()));
-
-        if (!name.isEmpty() && (baseName.isEmpty() || baseName.isEmpty()
-            || !(truncatedTitle.contains(baseName) || baseName.contains(truncatedTitle)))) {
-            text.append(name).append(" - ");
-        }
 
         if (downloads.size() > 1) {
             text.append("(+").append(downloads.size() - 1).append(") ");
@@ -505,6 +496,10 @@ public class CyberdropDlDownloader extends AbstractDownloader {
 
         if (speed > 0) {
             text.append(" (").append(StringUtils.getHumanReadableFileSize((long)speed)).append("/s)");
+        }
+
+        if (!name.isEmpty()) {
+            text.append(" - ").append(name);
         }
 
         long eta = downloads.path(0).path("eta").asLong(0);
