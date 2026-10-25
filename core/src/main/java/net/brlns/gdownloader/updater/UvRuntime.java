@@ -23,6 +23,9 @@ import java.io.InputStreamReader;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
+import java.util.function.DoubleConsumer;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
 import net.brlns.gdownloader.process.ProcessArguments;
@@ -75,17 +78,40 @@ public final class UvRuntime {
             environmentDir.getAbsolutePath(),
             "--python", pythonVersion,
             "--managed-python",
-            "--allow-existing"));
+            "--allow-existing"),
+            (line) -> {
+                // no-op
+            }
+        );
     }
 
-    public void installPackage(File environmentDir, String packageName, String version) throws Exception {
+    public void installPackage(File environmentDir, String packageName, String version,
+        DoubleConsumer progress) throws Exception {
+
+        AtomicInteger started = new AtomicInteger();
+        AtomicInteger finished = new AtomicInteger();
+
         run(new ProcessArguments(
             provision().getAbsolutePath(),
             "pip",
             "install",
             "--python", getPythonExecutable(environmentDir).getAbsolutePath(),
             "--reinstall-package", packageName,
-            packageName + "==" + version));
+            packageName + "==" + version),
+            line -> {
+                String trimmed = line.trim();
+
+                if (trimmed.startsWith("Resolved ")) {
+                    progress.accept(30);
+                } else if (trimmed.startsWith("Downloading ")) {
+                    started.incrementAndGet();
+                } else if (trimmed.startsWith("Downloaded ")) {
+                    progress.accept(30 + finished.incrementAndGet() * 60.0 / started.get());
+                } else if (trimmed.startsWith("Prepared ")) {
+                    progress.accept(90);
+                }
+            }
+        );
     }
 
     public static File getPythonExecutable(File environmentDir) {
@@ -116,7 +142,7 @@ public final class UvRuntime {
         return environment;
     }
 
-    private void run(ProcessArguments arguments) throws Exception {
+    private void run(ProcessArguments arguments, Consumer<String> lineListener) throws Exception {
         log.info("Running: {}", arguments);
 
         Map<String, String> environment = getPythonEnvironment();
@@ -152,6 +178,8 @@ public final class UvRuntime {
                         log.debug("[uv] {}", line);
 
                         lastOutput = line;
+
+                        lineListener.accept(line);
                     }
                 } else {
                     Thread.sleep(100);

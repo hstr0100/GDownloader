@@ -116,7 +116,8 @@ public abstract class AbstractPythonToolUpdater extends AbstractGitUpdater {
         notifyProgress(DOWNLOADING, 100);
 
         notifyProgress(UNPACKING, 0);
-        uvRuntime.installPackage(environmentDir, getPackageName(), version);
+        uvRuntime.installPackage(environmentDir, getPackageName(), version,
+            (progress) -> notifyProgress(UNPACKING, progress));
         notifyProgress(UNPACKING, 100);
 
         if (!outputFile.exists()) {
