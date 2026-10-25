@@ -343,7 +343,7 @@ public final class GDownloader {
     }
 
     public void runPostUpdateInitTasks() {
-        GLOBAL_THREAD_POOL.execute(() -> {
+        spawn(() -> {
             downloadManager.init();
             ffmpegTranscoder.init();
         });
@@ -791,7 +791,7 @@ public final class GDownloader {
             .messageType(MessageTypeEnum.INFO)
             .build());
 
-        GLOBAL_THREAD_POOL.execute(() -> {
+        spawn(() -> {
             File directory = getDownloadsDirectory();
             if (directory.exists()) {
                 DirectoryDeduplicator.deduplicateDirectory(directory);

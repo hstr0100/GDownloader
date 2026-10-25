@@ -151,6 +151,7 @@ public class SettingsPanel {
         validateCustomDirectory(settings.getYtDlpSettings());
         validateCustomDirectory(settings.getGalleryDLSettings());
         validateCustomDirectory(settings.getSpotDLSettings());
+        validateCustomDirectory(settings.getCyberdropDLSettings());
         validateCustomDirectory(settings.getDirectHttpSettings());
 
         Settings live = main.getConfig();
@@ -206,7 +207,7 @@ public class SettingsPanel {
             frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
             frame.setLayout(new BorderLayout());
             //frame.setResizable(false);
-            frame.setMinimumSize(new Dimension(1010, 726));
+            frame.setMinimumSize(new Dimension(1050, 726));
             frame.setIconImage(main.getGuiManager().getAppIcon());
 
             WindowStateManager.manage(main, frame, "settings_window", () -> {
@@ -415,6 +416,8 @@ public class SettingsPanel {
                                 .setEnabled(settings.getGalleryDLSettings().isEnabled());
                             newSettings.getSpotDLSettings()
                                 .setEnabled(settings.getSpotDLSettings().isEnabled());
+                            newSettings.getCyberdropDLSettings()
+                                .setEnabled(settings.getCyberdropDLSettings().isEnabled());
                             newSettings.getDirectHttpSettings()
                                 .setEnabled(settings.getDirectHttpSettings().isEnabled());
 
@@ -896,6 +899,10 @@ public class SettingsPanel {
             "settings.downloader.spotdl",
             "/assets/music.png",
             () -> createSpotDLSettingsTab()));
+        downloadTabs.add(new SettingsMenuEntry(
+            "settings.downloader.cyberdrop_dl",
+            "/assets/cyberdrop.png",
+            () -> createCyberdropDLSettingsTab()));
         downloadTabs.add(new SettingsMenuEntry(
             "settings.downloader.direct_http",
             "/assets/internet.png",
@@ -1646,6 +1653,67 @@ public class SettingsPanel {
             settings.getSpotDLSettings()::setExtraCommandLineArguments,
             "settings.extra_spotdl_arguments",
             "--proxy http://example.com:1234");
+
+        return wrapInScrollableSettingsPanel(panel);
+    }
+
+    private JPanel createCyberdropDLSettingsTab() {
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setBackground(color(BACKGROUND));
+
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.downloader.cyberdrop_dl.enabled")
+            .getter(settings.getCyberdropDLSettings()::isEnabled)
+            .setter(settings.getCyberdropDLSettings()::setEnabled)
+            .build());
+
+        addCustomDirectorySettings(panel, settings.getCyberdropDLSettings(), DownloaderIdEnum.CYBERDROP_DL);
+
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.downloader.cyberdrop_dl.respect_config_file")
+            .getter(settings.getCyberdropDLSettings()::isRespectConfigFile)
+            .setter(settings.getCyberdropDLSettings()::setRespectConfigFile)
+            .build());
+
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.downloader.cyberdrop_dl.deduplicate_files")
+            .getter(settings.getCyberdropDLSettings()::isFileDeduplication)
+            .setter(settings.getCyberdropDLSettings()::setFileDeduplication)
+            .build());
+
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.downloader.cyberdrop_dl.flatten_output")
+            .getter(settings.getCyberdropDLSettings()::isFlattenOutput)
+            .setter(settings.getCyberdropDLSettings()::setFlattenOutput)
+            .build());
+
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.downloader.cyberdrop_dl.enable_transcoding")
+            .getter(settings.getCyberdropDLSettings()::isMediaTranscoding)
+            .setter(settings.getCyberdropDLSettings()::setMediaTranscoding)
+            .build());
+
+        addCheckBox(panel, CheckBoxBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.prefer_system_executable")
+            .getter(settings.getCyberdropDLSettings()::isPreferSystemExecutable)
+            .setter(settings.getCyberdropDLSettings()::setPreferSystemExecutable)
+            .requiresRestart(true)
+            .build());
+
+        addExtraArgumentsSettings(panel,
+            settings.getCyberdropDLSettings()::isEnableExtraArguments,
+            settings.getCyberdropDLSettings()::setEnableExtraArguments,
+            settings.getCyberdropDLSettings()::getExtraCommandLineArguments,
+            settings.getCyberdropDLSettings()::setExtraCommandLineArguments,
+            "settings.extra_cyberdrop_dl_arguments",
+            "--deep-scrape");
 
         return wrapInScrollableSettingsPanel(panel);
     }

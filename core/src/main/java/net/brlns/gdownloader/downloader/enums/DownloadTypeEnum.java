@@ -38,6 +38,7 @@ public enum DownloadTypeEnum implements ISettingsEnum {
     DESCRIPTION(DownloaderIdEnum.YT_DLP),
     GALLERY(DownloaderIdEnum.GALLERY_DL),
     SPOTIFY(DownloaderIdEnum.SPOTDL),
+    CYBERDROP(DownloaderIdEnum.CYBERDROP_DL),
     DIRECT(DownloaderIdEnum.DIRECT_HTTP);
 
     private static final Map<DownloaderIdEnum, List<DownloadTypeEnum>> CACHE

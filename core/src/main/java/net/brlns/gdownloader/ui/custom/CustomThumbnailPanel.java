@@ -71,6 +71,8 @@ public class CustomThumbnailPanel extends JPanel {
                 loadIcon("/assets/music.png", ICON, 78);
             case GALLERY, THUMBNAILS ->
                 loadIcon("/assets/picture.png", ICON, 78);
+            case CYBERDROP ->
+                loadIcon("/assets/cyberdrop.png", ICON, 78);
             case DIRECT, SUBTITLES, DESCRIPTION ->
                 loadIcon("/assets/internet.png", ICON, 78);
             default ->

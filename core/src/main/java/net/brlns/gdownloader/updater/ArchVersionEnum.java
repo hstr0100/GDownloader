@@ -31,7 +31,7 @@ import net.brlns.gdownloader.GDownloader;
 @AllArgsConstructor
 public enum ArchVersionEnum {
     // gallery-dl support is pretty much barely there due to their lack of native binaries.
-    // Python installations are brittle and not something we want to mess with.
+    // "There was a hole here. It's gone now"
     MAC_LEGACY(UpdateDefinitions.builder()
         .ytDlpBinary("yt-dlp_macos_legacy")
         .os(OS.MAC)
@@ -41,6 +41,7 @@ public enum ArchVersionEnum {
         .denoBinary("deno-x86_64-apple-darwin.zip")
         .potProviderBinary("bgutil-pot-macos-x86_64")
         .spotDlBinary("-darwin")
+        .uvBinary("uv-x86_64-apple-darwin.tar.gz")
         .os(OS.MAC)
         .build()),
     MAC_ARM64(UpdateDefinitions.builder()
@@ -48,11 +49,13 @@ public enum ArchVersionEnum {
         .denoBinary("deno-aarch64-apple-darwin.zip")
         .potProviderBinary("bgutil-pot-macos-aarch64")
         .spotDlBinary("-darwin")
+        .uvBinary("uv-aarch64-apple-darwin.tar.gz")
         .os(OS.MAC)
         .build()),
     WINDOWS_X86(UpdateDefinitions.builder()
         .ytDlpBinary("yt-dlp_x86.exe")
         .spotDlBinary("-win32.exe")
+        .uvBinary("uv-i686-pc-windows-msvc.zip")
         .os(OS.WINDOWS)
         .build()),
     // TODO: https://aka.ms/vs/17/release/vc_redist.x86.exe
@@ -62,6 +65,7 @@ public enum ArchVersionEnum {
         .potProviderBinary("bgutil-pot-windows-x86_64.exe")
         .galleryDlBinary("gallery-dl.exe")
         .spotDlBinary("-win32.exe")
+        .uvBinary("uv-x86_64-pc-windows-msvc.zip")
         // Neither Apache Compress nor any java library that I know of supports the -mx=9 option used by FFmpeg's 7zs
         // Hence the need to download their huge zip instead.
         .ffmpegBinary("-full_build.zip")
@@ -75,18 +79,21 @@ public enum ArchVersionEnum {
         .potProviderBinary("bgutil-pot-linux-x86_64")
         .galleryDlBinary("gallery-dl.bin")
         .spotDlBinary("-linux")
+        .uvBinary("uv-x86_64-unknown-linux-gnu.tar.gz")
         .selfBinary("linux_portable_amd64.zip")
         .selfAppImageBinary("x86_64.AppImage")
         .os(OS.LINUX)
         .build()),
     LINUX_ARM(UpdateDefinitions.builder()
         .ytDlpBinary("yt-dlp_linux_armv7l")
+        .uvBinary("uv-armv7-unknown-linux-gnueabihf.tar.gz")
         .os(OS.LINUX)
         .build()),
     LINUX_ARM64(UpdateDefinitions.builder()
         .ytDlpBinary("yt-dlp_linux_aarch64")
         .denoBinary("deno-aarch64-unknown-linux-gnu.zip")
         .potProviderBinary("bgutil-pot-linux-aarch64")
+        .uvBinary("uv-aarch64-unknown-linux-gnu.tar.gz")
         // As of 2025-04-26, updates for other architectures are only supported by AppImage
         //.selfBinary("linux_portable_arm64.zip")
         .selfAppImageBinary("aarch64.AppImage")
@@ -195,6 +202,7 @@ public enum ArchVersionEnum {
         private final String potProviderBinary;
         private final String galleryDlBinary;
         private final String spotDlBinary;
+        private final String uvBinary;
         private final String ffmpegBinary;
         private final String selfBinary;
         private final String selfAppImageBinary;

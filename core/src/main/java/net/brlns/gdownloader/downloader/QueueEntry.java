@@ -16,6 +16,7 @@
  */
 package net.brlns.gdownloader.downloader;
 
+import net.brlns.gdownloader.downloader.impl.YtDlpDownloader;
 import jakarta.annotation.Nullable;
 import java.awt.Color;
 import java.awt.image.BufferedImage;

@@ -44,7 +44,7 @@ import tools.jackson.databind.introspect.Annotated;
 import tools.jackson.databind.introspect.JacksonAnnotationIntrospector;
 import tools.jackson.databind.json.JsonMapper;
 
-import static net.brlns.gdownloader.GDownloader.GLOBAL_THREAD_POOL;
+import static net.brlns.gdownloader.GDownloader.spawn;
 
 /**
  * This class relies on HSQLDB and EclipseLink JPA.
@@ -153,7 +153,7 @@ public class PersistenceManager implements AutoCloseable {
             if (needsMigration) {
                 log.info("Legacy configuration detected. Migrating database tables to CACHED format...");
 
-                GLOBAL_THREAD_POOL.execute(() -> {
+                spawn(() -> {
                     try {
                         convertToCachedTables(emf);
                         if (historyInitialized) {

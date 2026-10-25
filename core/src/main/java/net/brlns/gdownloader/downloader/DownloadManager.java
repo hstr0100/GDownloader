@@ -16,6 +16,11 @@
  */
 package net.brlns.gdownloader.downloader;
 
+import net.brlns.gdownloader.downloader.impl.DirectHttpDownloader;
+import net.brlns.gdownloader.downloader.impl.SpotDLDownloader;
+import net.brlns.gdownloader.downloader.impl.YtDlpDownloader;
+import net.brlns.gdownloader.downloader.impl.GalleryDlDownloader;
+import net.brlns.gdownloader.downloader.impl.CyberdropDlDownloader;
 import jakarta.annotation.Nullable;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
@@ -159,6 +164,7 @@ public class DownloadManager implements IEvent, AutoCloseable {
         registerDownloader(new YtDlpDownloader(this));
         registerDownloader(new GalleryDlDownloader(this));
         registerDownloader(new SpotDLDownloader(this));
+        registerDownloader(new CyberdropDlDownloader(this));
         registerDownloader(new DirectHttpDownloader(this));
 
         EventDispatcher.register(SettingsChangeEvent.class,

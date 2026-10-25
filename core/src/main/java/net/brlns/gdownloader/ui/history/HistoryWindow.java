@@ -1113,6 +1113,8 @@ public class HistoryWindow {
                 DownloadTypeEnum.GALLERY;
             case SPOTDL ->
                 DownloadTypeEnum.SPOTIFY;
+            case CYBERDROP_DL ->
+                DownloadTypeEnum.CYBERDROP;
             case DIRECT_HTTP ->
                 DownloadTypeEnum.DIRECT;
             default ->

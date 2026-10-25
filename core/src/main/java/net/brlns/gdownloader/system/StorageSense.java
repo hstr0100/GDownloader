@@ -50,6 +50,7 @@ public class StorageSense implements AutoCloseable {
         "not enough space",
         "not enough disk space",
         "insufficient disk space",
+        "insufficient free space",
         "insufficient space",
         "disk full",
         "disk quota exceeded",

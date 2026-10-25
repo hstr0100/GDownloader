@@ -140,6 +140,9 @@ public class Settings {
     @JsonProperty("SpotDLSettings")
     private SpotDLSettings spotDLSettings = new SpotDLSettings();
 
+    @JsonProperty("CyberdropDLSettings")
+    private CyberdropDLSettings cyberdropDLSettings = new CyberdropDLSettings();
+
     @JsonProperty("DirectHttpSettings")
     private DirectHttpSettings directHttpSettings = new DirectHttpSettings();
 

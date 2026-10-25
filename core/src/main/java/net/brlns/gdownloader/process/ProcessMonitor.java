@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -163,9 +164,24 @@ public final class ProcessMonitor implements AutoCloseable {
 
     public Process startProcess(List<String> arguments,
         CancelHook cancelHook) throws IOException {
-        Process process = new ProcessBuilder(arguments)
-            .redirectErrorStream(true)
-            .start();
+        return startProcess(arguments, Map.of(), cancelHook);
+    }
+
+    public Process startProcess(List<String> arguments,
+        Map<String, String> environment,
+        CancelHook cancelHook) throws IOException {
+        ProcessBuilder builder = new ProcessBuilder(arguments)
+            .redirectErrorStream(true);
+
+        environment.forEach((key, value) -> {
+            if (value == null) {
+                builder.environment().remove(key);
+            } else {
+                builder.environment().put(key, value);
+            }
+        });
+
+        Process process = builder.start();
 
         trackProcess(process, cancelHook);
         return process;

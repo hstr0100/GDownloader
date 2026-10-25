@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package net.brlns.gdownloader.downloader;
+package net.brlns.gdownloader.downloader.impl;
 
 import jakarta.annotation.Nullable;
 import jakarta.annotation.PreDestroy;
@@ -55,6 +55,9 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
+import net.brlns.gdownloader.downloader.AbstractDownloader;
+import net.brlns.gdownloader.downloader.DownloadManager;
+import net.brlns.gdownloader.downloader.QueueEntry;
 import net.brlns.gdownloader.downloader.enums.DownloadStatusEnum;
 import net.brlns.gdownloader.downloader.enums.DownloadTypeEnum;
 import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;

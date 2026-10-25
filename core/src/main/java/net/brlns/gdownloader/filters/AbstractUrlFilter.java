@@ -217,6 +217,9 @@ public abstract class AbstractUrlFilter implements ITranslatable {
     @JsonProperty("ExtraSpotDLArguments")
     private Map<DownloadTypeEnum, List<String>> extraSpotDLArguments = new HashMap<>();
 
+    @JsonProperty("ExtraCyberdropDlArguments")
+    private Map<DownloadTypeEnum, List<String>> extraCyberdropDlArguments = new HashMap<>();
+
     @JsonProperty("QualitySettings")
     private QualitySettings qualitySettings = QualitySettings.builder().build();
 
@@ -243,6 +246,11 @@ public abstract class AbstractUrlFilter implements ITranslatable {
         extraSpotDLArguments.put(DownloadTypeEnum.ALL, new ArrayList<>());
         for (DownloadTypeEnum downloadType : DownloadTypeEnum.getForDownloaderId(DownloaderIdEnum.SPOTDL)) {
             extraSpotDLArguments.put(downloadType, new ArrayList<>());
+        }
+
+        extraCyberdropDlArguments.put(DownloadTypeEnum.ALL, new ArrayList<>());
+        for (DownloadTypeEnum downloadType : DownloadTypeEnum.getForDownloaderId(DownloaderIdEnum.CYBERDROP_DL)) {
+            extraCyberdropDlArguments.put(downloadType, new ArrayList<>());
         }
     }
 
@@ -293,6 +301,11 @@ public abstract class AbstractUrlFilter implements ITranslatable {
             case SPOTDL -> {
                 if (extraSpotDLArguments.containsKey(typeEnum)) {
                     arguments.addAll(extraSpotDLArguments.get(typeEnum));
+                }
+            }
+            case CYBERDROP_DL -> {
+                if (extraCyberdropDlArguments.containsKey(typeEnum)) {
+                    arguments.addAll(extraCyberdropDlArguments.get(typeEnum));
                 }
             }
             default -> {

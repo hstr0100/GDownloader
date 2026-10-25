@@ -310,6 +310,12 @@ public class WelcomeScreen {
             settings.getSpotDLSettings()::isEnabled,
             settings.getSpotDLSettings()::setEnabled);
 
+        JCheckBox cyberdropDlCheckbox = new JCheckBox(
+            l10n("settings.downloader.cyberdrop_dl.enabled").replace(":", ""));
+        customizeCheckBox(cyberdropDlCheckbox,
+            settings.getCyberdropDLSettings()::isEnabled,
+            settings.getCyberdropDLSettings()::setEnabled);
+
         JCheckBox directHttpCheckbox = new JCheckBox(
             l10n("settings.downloader.direct_http.enabled").replace(":", ""));
         customizeCheckBox(directHttpCheckbox,
@@ -326,6 +332,8 @@ public class WelcomeScreen {
         optionsPanel.add(galleryDlCheckbox);
         optionsPanel.add(Box.createRigidArea(new Dimension(0, 10)));
         optionsPanel.add(spotDlCheckbox);
+        optionsPanel.add(Box.createRigidArea(new Dimension(0, 10)));
+        optionsPanel.add(cyberdropDlCheckbox);
         optionsPanel.add(Box.createRigidArea(new Dimension(0, 10)));
         optionsPanel.add(directHttpCheckbox);
 

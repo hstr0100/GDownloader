@@ -460,6 +460,54 @@ public class GenericFilter extends AbstractUrlFilter {
                         throw new IllegalArgumentException();
                 }
             }
+
+            case CYBERDROP_DL -> {
+                switch (typeEnum) {
+                    case ALL -> {
+                        arguments.add(
+                            "--attempts", config.getMaxDownloadRetries() + 1,
+                            "--no-update-check");
+
+                        if (config.isRandomIntervalBetweenDownloads()) {
+                            arguments.add(
+                                "--delay", 10,
+                                "--jitter", 15
+                            );
+                        }
+
+                        String proxyUrl = manager.getMain().getHttpManager().getUpstreamProxyUrl();
+                        if (proxyUrl != null && proxyUrl.startsWith("http")) {
+                            arguments.add("--proxy", proxyUrl);
+                        }
+
+                        File cookieJar = downloader.getCookieJarFile();
+                        if (cookieJar != null) {
+                            arguments.add(
+                                "--cookies",
+                                cookieJar.getAbsolutePath()
+                            );
+                        }
+
+                        arguments.add(config.isUseUploadTimeAsFileTime() ? "--mtime" : "--no-mtime");
+
+                        if (config.getCyberdropDLSettings().isEnableExtraArguments()) {
+                            for (String arg : config.getCyberdropDLSettings()
+                                .getExtraCommandLineArguments().split(" ")) {
+                                if (!arg.trim().isEmpty()) {
+                                    arguments.add(arg);
+                                }
+                            }
+                        }
+                    }
+
+                    case CYBERDROP -> {
+                        arguments.add("--download-folder", savePath.getAbsolutePath());
+                    }
+
+                    default ->
+                        throw new IllegalArgumentException();
+                }
+            }
             default -> {
 
             }

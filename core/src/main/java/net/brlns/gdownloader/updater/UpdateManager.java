@@ -37,8 +37,8 @@ import net.brlns.gdownloader.ui.message.PopupMessenger;
 import net.brlns.gdownloader.updater.git.*;
 import net.brlns.gdownloader.util.NoFallbackAvailableException;
 
-import static net.brlns.gdownloader.GDownloader.GLOBAL_THREAD_POOL;
 import static net.brlns.gdownloader.GDownloader.handleException;
+import static net.brlns.gdownloader.GDownloader.spawn;
 
 /**
  * @author Gabriel / hstr0100 / vertx010
@@ -49,6 +49,9 @@ public final class UpdateManager {
     @Getter
     private final List<IUpdater> updaters = new CopyOnWriteArrayList<>();
 
+    @Getter
+    private final UvRuntime uvRuntime;
+
     private final GDownloader main;
 
     private final Map<IUpdater, Boolean> lastKnownEnabled = new ConcurrentHashMap<>();
@@ -57,6 +60,7 @@ public final class UpdateManager {
 
     public UpdateManager(GDownloader mainIn) {
         main = mainIn;
+        uvRuntime = new UvRuntime(mainIn);
 
         init();
 
@@ -74,6 +78,7 @@ public final class UpdateManager {
         registerUpdater(new PotProviderUpdater(main));
         registerUpdater(new GalleryDlUpdater(main));
         registerUpdater(new SpotDLUpdater(main));
+        registerUpdater(new CyberdropDlUpdater(main, uvRuntime));
         registerUpdater(new FFMpegUpdater(main));
     }
 
@@ -153,7 +158,7 @@ public final class UpdateManager {
             .networkOnline(false)
             .build());
 
-        GLOBAL_THREAD_POOL.execute(() -> {
+        spawn(() -> {
             try {
                 main.getConnectivityListener().waitForConnectivity();
 
@@ -166,7 +171,7 @@ public final class UpdateManager {
 
                 for (IUpdater updater : targets) {
                     if (updater.isEnabled()) {
-                        GLOBAL_THREAD_POOL.execute(() -> {
+                        spawn(() -> {
                             try {
                                 log.info("Starting {} updater", updater.getName());
                                 updater.check(installIfMissing);

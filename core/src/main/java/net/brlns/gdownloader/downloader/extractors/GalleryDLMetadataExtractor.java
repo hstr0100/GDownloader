@@ -25,7 +25,7 @@ import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
-import net.brlns.gdownloader.downloader.GalleryDlDownloader;
+import net.brlns.gdownloader.downloader.impl.GalleryDlDownloader;
 import net.brlns.gdownloader.downloader.structs.MediaInfo;
 import net.brlns.gdownloader.downloader.structs.Thumbnail;
 import net.brlns.gdownloader.process.ProcessArguments;

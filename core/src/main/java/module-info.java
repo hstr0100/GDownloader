@@ -52,6 +52,7 @@ open module net.brlns.gdownloader {
     exports net.brlns.gdownloader.downloader.extractors;
     exports net.brlns.gdownloader.downloader.hosts;
     exports net.brlns.gdownloader.downloader.hosts.impl;
+    exports net.brlns.gdownloader.downloader.impl;
     exports net.brlns.gdownloader.downloader.structs;
     exports net.brlns.gdownloader.downloader.webscanner;
     exports net.brlns.gdownloader.event;

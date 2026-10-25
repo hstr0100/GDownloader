@@ -23,7 +23,7 @@ import java.nio.file.StandardCopyOption;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import net.brlns.gdownloader.GDownloader;
-import net.brlns.gdownloader.downloader.YtDlpDownloader;
+import net.brlns.gdownloader.downloader.impl.YtDlpDownloader;
 import net.brlns.gdownloader.downloader.enums.DownloaderIdEnum;
 import net.brlns.gdownloader.updater.ArchVersionEnum;
 

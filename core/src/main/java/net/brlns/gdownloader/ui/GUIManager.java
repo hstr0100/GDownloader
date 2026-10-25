@@ -23,6 +23,7 @@ import java.awt.dnd.DragSource;
 import java.awt.dnd.DropTarget;
 import java.awt.event.*;
 import java.io.IOException;
+import java.util.List;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -1349,6 +1350,7 @@ public final class GUIManager implements AutoCloseable {
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.gridx = 0;
         gbc.gridy = GridBagConstraints.RELATIVE;
+        gbc.gridwidth = 2;
         gbc.anchor = GridBagConstraints.CENTER;
         gbc.insets = new Insets(5, 0, 5, 0);
 
@@ -1374,6 +1376,33 @@ public final class GUIManager implements AutoCloseable {
         spacerPanel.setOpaque(false);
         spacerPanel.setPreferredSize(new Dimension(1, 20));
         updaterPane.add(spacerPanel, gbc);
+
+        Map<IUpdater, JPanel> updaterRows = new LinkedHashMap<>();
+
+        Runnable layoutUpdaterRows = () -> {
+            updaterRows.values().forEach(updaterPane::remove);
+
+            List<JPanel> visibleRows = updaterRows.entrySet().stream()
+                .filter(entry -> entry.getKey().isEnabled())
+                .map(Map.Entry::getValue)
+                .toList();
+
+            int rowsPerColumn = visibleRows.size() > 6 ? (visibleRows.size() + 1) / 2 : Math.max(visibleRows.size(), 1);
+
+            GridBagConstraints rowGbc = new GridBagConstraints();
+            rowGbc.fill = GridBagConstraints.HORIZONTAL;
+            rowGbc.insets = new Insets(5, 10, 5, 10);
+
+            for (int i = 0; i < visibleRows.size(); i++) {
+                rowGbc.gridx = i / rowsPerColumn;
+                rowGbc.gridy = 3 + i % rowsPerColumn;
+
+                updaterPane.add(visibleRows.get(i), rowGbc);
+            }
+
+            updaterPane.revalidate();
+            updaterPane.repaint();
+        };
 
         for (IUpdater updater : main.getUpdateManager().getUpdaters()) {
             JPanel updaterRowPanel = new JPanel(new GridBagLayout());
@@ -1401,8 +1430,8 @@ public final class GUIManager implements AutoCloseable {
 
             CustomProgressBar progressBar = new CustomProgressBar(Color.WHITE);
             progressBar.setStringPainted(true);
-            progressBar.setPreferredSize(new Dimension(200, 15));
-            progressBar.setMaximumSize(new Dimension(200, 15));
+            progressBar.setPreferredSize(new Dimension(180, 15));
+            progressBar.setMaximumSize(new Dimension(180, 15));
             Runnable defaultState = () -> {
                 progressBar.setValue(0);
                 progressBar.setString(l10n("enums.update_status.checking"));
@@ -1420,16 +1449,9 @@ public final class GUIManager implements AutoCloseable {
             updaterRowPanel.add(updaterLabel, labelGbc);
             updaterRowPanel.add(progressBar, progressBarGbc);
 
-            gbc.gridx = 0;
-            gbc.gridy = GridBagConstraints.RELATIVE;
-            gbc.fill = GridBagConstraints.HORIZONTAL;
-            updaterPane.add(updaterRowPanel, gbc);
+            updaterRows.put(updater, updaterRowPanel);
 
-            updaterRowPanel.setVisible(updater.isEnabled());
-
-            EventDispatcher.registerEDT(SettingsChangeEvent.class, (event) -> {
-                updaterRowPanel.setVisible(updater.isEnabled());
-            });
+            EventDispatcher.registerEDT(SettingsChangeEvent.class, (event) -> layoutUpdaterRows.run());
 
             updater.registerListener((status, progress) -> {
                 runOnEDT(() -> {
@@ -1470,6 +1492,8 @@ public final class GUIManager implements AutoCloseable {
                 });
             });
         }
+
+        layoutUpdaterRows.run();
 
         return updaterPane;
     }

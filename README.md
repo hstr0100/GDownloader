@@ -1,6 +1,6 @@
 # GDownloader
 
-A user-friendly graphical user interface (GUI) for [yt-dlp](https://github.com/yt-dlp/yt-dlp), [gallery-dl](https://github.com/mikf/gallery-dl) and [spotDL](https://github.com/spotDL/spotify-downloader) written in Java.
+A user-friendly graphical user interface (GUI) for [yt-dlp](https://github.com/yt-dlp/yt-dlp), [gallery-dl](https://github.com/mikf/gallery-dl), [spotDL](https://github.com/spotDL/spotify-downloader) and [Cyberdrop-DL](https://github.com/Cyberdrop-DL/cyberdrop-dl) written in Java.
 
 ## Overview
 
@@ -10,7 +10,7 @@ It supports various platforms such as YouTube, Crunchyroll, Twitch, X/Twitter, S
 ## Features
 
 - Batch download videos, songs, image galleries, and playlists from multiple supported websites.
-- Four downloaders in one app, chosen automatically for each link: yt-dlp, gallery-dl, spotDL and a built-in one for regular files
+- Five downloaders in one app, chosen automatically for each link: yt-dlp, gallery-dl, spotDL, Cyberdrop-DL and a built-in one for regular files
 - Scan a web page to find and download its images, videos and audio
 - Everything is set up and kept up to date for you, no Python or command line needed
 - Hardware-accelerated video conversion (NVIDIA, Intel, AMD), detected automatically
@@ -117,6 +117,12 @@ Please be aware that some configuration parameters may conflict with GDownloader
 
 To activate gallery-dl support, navigate to `Settings` > `Download Settings`, scroll down to the bottom and check the option `Enable gallery-dl downloader.` then, restart the program.
 
+### Cyberdrop-DL Support
+
+To activate Cyberdrop-DL support, navigate to `Settings` > `Cyberdrop-DL` and check the option `Enable Cyberdrop-DL Downloader`.
+
+Cyberdrop-DL is only distributed as a Python package, GDownloader installs and updates it using [uv](https://github.com/astral-sh/uv), along with its own copy of Python. No Python installation is required, and nothing is installed system-wide. Alternatively, enable `Prefer System Executable` to use a `cyberdrop-dl` already available on your `PATH`.
+
 ### spotDL Support
 
 To activate spotDL support, navigate to `Settings` > `Download Settings`, scroll down to the bottom and check the option `Enable spotDL downloader.` then, restart the program.
@@ -159,3 +165,5 @@ We welcome any feedback you may have to improve the user experience.
 - yt-dlp builds by [yt-dlp/yt-dlp](https://github.com/yt-dlp/yt-dlp)
 - gallery-dl builds by [mikf/gallery-dl](https://github.com/mikf/gallery-dl)
 - spotDL builds by [spotDL/spotify-downloader](https://github.com/spotDL/spotify-downloader)
+- Cyberdrop-DL by [Cyberdrop-DL/cyberdrop-dl](https://github.com/Cyberdrop-DL/cyberdrop-dl)
+- uv by [astral-sh/uv](https://github.com/astral-sh/uv)

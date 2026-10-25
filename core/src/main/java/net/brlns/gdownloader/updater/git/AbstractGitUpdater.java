@@ -353,8 +353,7 @@ public abstract class AbstractGitUpdater implements IUpdater {
         return String.format("https://api.github.com/repos/%s/%s/releases/latest", getUser(), getRepo());
     }
 
-    @Nullable
-    protected Pair<String, String> getLatestReleaseTag() throws IOException, InterruptedException {
+    protected JsonNode fetchLatestRelease() throws IOException, InterruptedException {
         HttpRequest request = HttpRequest.newBuilder()
             .uri(URI.create(getAPIEndpoint()))
             .timeout(Duration.ofSeconds(20))
@@ -365,7 +364,12 @@ public abstract class AbstractGitUpdater implements IUpdater {
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
         //log.info(response.body());
-        JsonNode jsonNode = GDownloader.OBJECT_MAPPER.readTree(response.body());
+        return GDownloader.OBJECT_MAPPER.readTree(response.body());
+    }
+
+    @Nullable
+    protected Pair<String, String> getLatestReleaseTag() throws IOException, InterruptedException {
+        JsonNode jsonNode = fetchLatestRelease();
 
         JsonNode tagName = jsonNode.get("tag_name");
         if (tagName == null) {

@@ -20,12 +20,15 @@ import jakarta.annotation.Nullable;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.function.DoubleConsumer;
+import java.util.zip.GZIPInputStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipInputStream;
@@ -37,6 +40,7 @@ import java.util.zip.ZipOutputStream;
 public final class ArchiveUtils {
 
     private static final int BUFFER_SIZE = 4096;
+    private static final int TAR_BLOCK_SIZE = 512;
 
     public static void inflateZip(File file, Path destDir, boolean removeRoot, DoubleConsumer progressCallback) throws IOException {
         if (Files.notExists(destDir)) {
@@ -79,6 +83,190 @@ public final class ArchiveUtils {
         }
     }
 
+    public static void inflateTarGz(File file, Path destDir, boolean removeRoot, DoubleConsumer progressCallback) throws IOException {
+        Path destination = destDir.toAbsolutePath().normalize();
+        Files.createDirectories(destination);
+
+        long totalBytes = Math.max(file.length(), 1);
+
+        try (
+            FileInputStream fileIn = new FileInputStream(file);
+            GZIPInputStream tarIn = new GZIPInputStream(fileIn)) {
+            byte[] header = new byte[TAR_BLOCK_SIZE];
+            String overrideName = null;
+            String topDirectoryName = null;
+
+            while (tarIn.readNBytes(header, 0, TAR_BLOCK_SIZE) == TAR_BLOCK_SIZE && !isEmptyBlock(header)) {
+                long size = parseTarSize(header);
+                char type = (char)header[156];
+
+                if (type == 'L' || type == 'x') {
+                    String content = new String(tarIn.readNBytes((int)size), StandardCharsets.UTF_8);
+                    tarIn.skipNBytes(tarPadding(size));
+
+                    overrideName = type == 'L' ? readTarString(content) : readPaxPath(content, overrideName);
+
+                    continue;
+                }
+
+                if (type == 'g') {
+                    tarIn.skipNBytes(size + tarPadding(size));
+
+                    continue;
+                }
+
+                String entryName = overrideName;
+                if (entryName == null) {
+                    String prefix = readTarString(header, 345, 155);
+                    entryName = readTarString(header, 0, 100);
+
+                    if (!prefix.isEmpty()) {
+                        entryName = prefix + "/" + entryName;
+                    }
+                }
+
+                overrideName = null;
+                entryName = entryName.replace("\\", "/");
+
+                if (entryName.startsWith("./")) {
+                    entryName = entryName.substring(2);
+                }
+
+                if (topDirectoryName == null) {
+                    topDirectoryName = getTopDirectoryName(entryName);
+                }
+
+                if (removeRoot && topDirectoryName != null && entryName.startsWith(topDirectoryName + "/")) {
+                    entryName = entryName.substring(topDirectoryName.length() + 1);
+                }
+
+                boolean regularFile = type == '0' || type == '\0';
+
+                if (!entryName.isEmpty() && regularFile) {
+                    extractEntry(new BoundedInputStream(tarIn, size), entryName, destination);
+
+                    if ((parseTarOctal(header, 100, 8) & 0111) != 0) {
+                        destination.resolve(entryName).toFile().setExecutable(true, false);
+                    }
+                } else {
+                    if (!entryName.isEmpty() && type == '5') {
+                        extractEntry(InputStream.nullInputStream(), entryName.endsWith("/") ? entryName : entryName + "/", destination);
+                    }
+
+                    tarIn.skipNBytes(size);
+                }
+
+                tarIn.skipNBytes(tarPadding(size));
+
+                double progress = (double)fileIn.getChannel().position() / totalBytes * 100;
+                progressCallback.accept(Math.clamp(progress, 0d, 100d));
+            }
+        }
+
+        progressCallback.accept(100);
+    }
+
+    private static boolean isEmptyBlock(byte[] block) {
+        for (byte value : block) {
+            if (value != 0) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static long parseTarSize(byte[] header) {
+        if ((header[124] & 0x80) == 0) {
+            return parseTarOctal(header, 124, 12);
+        }
+
+        long size = header[124] & 0x7F;
+        for (int i = 125; i < 136; i++) {
+            size = (size << 8) | (header[i] & 0xFF);
+        }
+
+        return size;
+    }
+
+    private static String readPaxPath(String records, String fallback) {
+        for (String record : records.split("\n")) {
+            int separator = record.indexOf(' ');
+
+            if (separator != -1 && record.startsWith("path=", separator + 1)) {
+                return record.substring(separator + 6);
+            }
+        }
+
+        return fallback;
+    }
+
+    private static long parseTarOctal(byte[] buffer, int offset, int length) {
+        String value = readTarString(buffer, offset, length).trim();
+
+        return value.isEmpty() ? 0 : Long.parseLong(value, 8);
+    }
+
+    private static String readTarString(String value) {
+        int end = value.indexOf('\0');
+
+        return end == -1 ? value : value.substring(0, end);
+    }
+
+    private static String readTarString(byte[] buffer, int offset, int length) {
+        int limit = Math.min(offset + length, buffer.length);
+        int end = offset;
+
+        while (end < limit && buffer[end] != 0) {
+            end++;
+        }
+
+        return new String(buffer, offset, end - offset, StandardCharsets.UTF_8);
+    }
+
+    private static long tarPadding(long size) {
+        return (TAR_BLOCK_SIZE - size % TAR_BLOCK_SIZE) % TAR_BLOCK_SIZE;
+    }
+
+    private static final class BoundedInputStream extends FilterInputStream {
+
+        private long remaining;
+
+        private BoundedInputStream(InputStream in, long limit) {
+            super(in);
+
+            remaining = limit;
+        }
+
+        @Override
+        public int read() throws IOException {
+            if (remaining <= 0) {
+                return -1;
+            }
+
+            int value = super.read();
+            if (value != -1) {
+                remaining--;
+            }
+
+            return value;
+        }
+
+        @Override
+        public int read(byte[] buffer, int offset, int length) throws IOException {
+            if (remaining <= 0) {
+                return -1;
+            }
+
+            int count = super.read(buffer, offset, (int)Math.min(length, remaining));
+            if (count > 0) {
+                remaining -= count;
+            }
+
+            return count;
+        }
+    }
+
     private static int countEntries(File file) throws IOException {
         try (ZipFile zipFile = new ZipFile(file)) {
             return zipFile.size();
@@ -98,8 +286,10 @@ public final class ArchiveUtils {
     private static void extractEntry(InputStream zipIn, String entryName, Path outputDir) throws IOException {
         entryName = entryName.replace("\\", "/");
 
-        Path outFile = outputDir.resolve(entryName).normalize();
-        if (!outFile.startsWith(outputDir)) {
+        Path root = outputDir.toAbsolutePath().normalize();
+        Path outFile = root.resolve(entryName).normalize();
+
+        if (!outFile.startsWith(root)) {
             throw new IOException("Zip entry is outside of the output dir: " + entryName);
         }
 
