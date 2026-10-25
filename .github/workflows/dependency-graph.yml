@@ -26,3 +26,7 @@ jobs:
 
       - name: Submit dependency graph
         uses: gradle/actions/dependency-submission@v4
+        env:
+          # Report only the runtime classpaths for Dependabot.
+          DEPENDENCY_GRAPH_INCLUDE_CONFIGURATIONS: 'runtimeClasspath'
+          DEPENDENCY_GRAPH_EXCLUDE_CONFIGURATIONS: '.*[Tt]est.*'
