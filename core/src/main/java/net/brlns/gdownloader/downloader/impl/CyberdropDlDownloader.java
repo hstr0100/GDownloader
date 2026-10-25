@@ -486,8 +486,10 @@ public class CyberdropDlDownloader extends AbstractDownloader {
 
         StringBuilder text = new StringBuilder();
 
-        if (!name.isEmpty() && (baseName.isEmpty() || title.isEmpty()
-            || !(title.contains(baseName) || baseName.contains(title)))) {
+        String truncatedTitle = title.substring(0, Math.min(70, title.length()));
+
+        if (!name.isEmpty() && (baseName.isEmpty() || baseName.isEmpty()
+            || !(truncatedTitle.contains(baseName) || baseName.contains(truncatedTitle)))) {
             text.append(name).append(" - ");
         }
 
@@ -510,8 +512,11 @@ public class CyberdropDlDownloader extends AbstractDownloader {
             text.append(" - ").append(StringUtils.formatETATime(eta * 1000));
         }
 
-        double percent = total > 0 ? done * 100d / total : -1;
-        double roundedPercent = Math.round(percent * 10) / 10.0;
+        boolean validTotal = total > 0 && done <= total;
+
+        double roundedPercent = validTotal
+            ? Math.round((done * 100d / total) * 10) / 10.0
+            : -1;
 
         entry.getMediaCard().setPercentage(roundedPercent);
         entry.updateStatus(DownloadStatusEnum.DOWNLOADING, text.toString(), false);
