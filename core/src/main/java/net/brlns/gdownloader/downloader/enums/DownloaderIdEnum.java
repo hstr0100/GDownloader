@@ -27,7 +27,7 @@ public enum DownloaderIdEnum implements ISettingsEnum {
     YT_DLP("yt-dlp", "https://github.com/yt-dlp/yt-dlp"),
     GALLERY_DL("gallery-dl", "https://github.com/mikf/gallery-dl"),
     SPOTDL("spotDL", "https://github.com/spotDL/spotify-downloader"),
-    CYBERDROP_DL("Cyberdrop-DL", "https://github.com/Cyberdrop-DL/cyberdrop-dl"),
+    CYBERDROP_DL("cyberdrop-dl", "https://github.com/Cyberdrop-DL/cyberdrop-dl"),
     DIRECT_HTTP("Direct-HTTP", "https://github.com/hstr0100/GDownloader");
 
     private final String displayName;
