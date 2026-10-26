@@ -468,6 +468,12 @@ public class GenericFilter extends AbstractUrlFilter {
                             "--attempts", config.getMaxDownloadRetries() + 1,
                             "--no-update-check");
 
+                        // Parallel downloads make the progress display erratic.
+                        arguments.add(
+                            "--downloads", 1,
+                            "--downloads.per-domain", 1
+                        );
+
                         if (config.isRandomIntervalBetweenDownloads()) {
                             arguments.add(
                                 "--delay", 10,
