@@ -1450,6 +1450,11 @@ public class DownloadManager implements IEvent, AutoCloseable {
             shouldNotifyCompletion.set(true);
         }
 
+        if (category == FAILED) {
+            downloaders.forEach(downloader
+                -> downloader.cleanupFailedEntry(entry));
+        }
+
         sequencer.changeCategory(entry, category);
 
         requestLiveSort();

@@ -286,6 +286,15 @@ public class CyberdropDlDownloader extends AbstractDownloader {
     }
 
     @Override
+    public void cleanupFailedEntry(QueueEntry entry) {
+        File tmpPath = entry.getTmpDirectory();
+
+        if (tmpPath != null && new File(tmpPath, LOGS_DIRECTORY_NAME).exists()) {
+            entry.cleanDirectories();
+        }
+    }
+
+    @Override
     protected void processMediaFiles(QueueEntry entry) {
         File finalPath = resolveOutputDirectory(entry);
 

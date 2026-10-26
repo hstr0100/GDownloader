@@ -47,15 +47,13 @@ public final class DirectoryUtils {
                 .sorted(Comparator.reverseOrder()) // Ensure deeper directories are deleted first
                 .forEach(path -> {
                     try {
-                        if (!Files.deleteIfExists(path)) {
-                            allSucceeded.set(false);
-                        }
+                        Files.deleteIfExists(path);
                     } catch (NoSuchFileException e) {
                         // Already gone - we welcome this fact.
                     } catch (IOException e) {
                         log.error("Failed to delete: {}", path, e);
                         // Windows shenanigans
-                        if (e.getMessage().contains("used by another process")) {
+                        if (String.valueOf(e.getMessage()).contains("used by another process")) {
                             path.toFile().deleteOnExit();
                         }
 

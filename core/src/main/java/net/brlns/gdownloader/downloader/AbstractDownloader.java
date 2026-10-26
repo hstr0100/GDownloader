@@ -96,6 +96,10 @@ public abstract class AbstractDownloader {
 
     protected abstract void processMediaFiles(QueueEntry entry);
 
+    public void cleanupFailedEntry(QueueEntry entry) {
+        // no-op
+    }
+
     public abstract Optional<File> getExecutablePath();
 
     public abstract void setExecutablePath(Optional<File> file);
