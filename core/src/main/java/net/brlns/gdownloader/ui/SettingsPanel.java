@@ -19,6 +19,8 @@ package net.brlns.gdownloader.ui;
 import jakarta.annotation.Nullable;
 import java.awt.*;
 import java.awt.event.ActionEvent;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
 import java.awt.event.MouseAdapter;
@@ -83,6 +85,15 @@ import static net.brlns.gdownloader.util.StringUtils.notNullOrEmpty;
  */
 @Slf4j
 public class SettingsPanel {
+
+    private static final int WINDOW_WIDTH = 1070;
+    private static final int WINDOW_HEIGHT = 726;
+
+    private static final int MIN_USABLE_WIDTH = 800;
+    private static final int MIN_USABLE_HEIGHT = 560;
+
+    private static final int SIDEBAR_BUTTON_SIZE = 120;
+    private static final int SIDEBAR_BUTTON_MIN_SIZE = 48;
 
     private final GDownloader main;
     private final GUIManager manager;
@@ -207,15 +218,22 @@ public class SettingsPanel {
             frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
             frame.setLayout(new BorderLayout());
             //frame.setResizable(false);
-            frame.setMinimumSize(new Dimension(1070, 726));
+            Dimension smallestScreen = ScreenMetrics.getSmallestUsableScreenSize();
+            Dimension windowSize = new Dimension(
+                Math.min(WINDOW_WIDTH, smallestScreen.width),
+                Math.min(WINDOW_HEIGHT, smallestScreen.height));
+
+            frame.setMinimumSize(windowSize);
             frame.setIconImage(main.getGuiManager().getAppIcon());
 
             WindowStateManager.manage(main, frame, "settings_window", () -> {
-                frame.setSize(1070, 726);
+                frame.setSize(windowSize);
                 frame.setLocationRelativeTo(null);
             });
 
             sidebarPanel = new JPanel();
+            List<JButton> sidebarButtons = new ArrayList<>();
+            List<String> sidebarIcons = new ArrayList<>();
             sidebarPanel.setBackground(color(SIDE_PANEL));
             sidebarPanel.setLayout(new GridBagLayout());
 
@@ -280,7 +298,7 @@ public class SettingsPanel {
                     JButton button = new JButton();
                     button.setToolTipText(entry.getDisplayName());
                     button.setCursor(new Cursor(Cursor.HAND_CURSOR));
-                    button.setPreferredSize(new Dimension(120, 120));
+                    button.setPreferredSize(new Dimension(SIDEBAR_BUTTON_SIZE, SIDEBAR_BUTTON_SIZE));
                     button.setBorderPainted(false);
                     button.setContentAreaFilled(false);
                     button.setOpaque(true);
@@ -314,6 +332,8 @@ public class SettingsPanel {
                     entry.setNavAction(action);
 
                     sidebarPanel.add(button, gbc);
+                    sidebarButtons.add(button);
+                    sidebarIcons.add(entry.getIcon());
 
                     gbc.gridy++;
 
@@ -524,6 +544,13 @@ public class SettingsPanel {
                 gbc.fill = GridBagConstraints.HORIZONTAL;
                 sidebarPanel.add(gabPanel, gbc);
             }
+
+            sidebarPanel.addComponentListener(new ComponentAdapter() {
+                @Override
+                public void componentResized(ComponentEvent e) {
+                    fitSidebarButtons(sidebarButtons, sidebarIcons);
+                }
+            });
 
             frame.add(sidebarPanel, BorderLayout.WEST);
 
@@ -818,6 +845,17 @@ public class SettingsPanel {
             customizeSlider(slider, background, SLIDER_FOREGROUND);
             wrapComponentRow(panel, label, slider, background);
         }
+
+        addSlider(panel, SliderBuilder.builder()
+            .background(resolveColor(panel))
+            .labelKey("settings.ui_scale")
+            .min(100).max(getMaxUiScalePercentage()).majorTickSpacing(25)
+            .snapToTicks(true)
+            .requiresRestart(true)
+            .getter(() -> Math.clamp(Math.round(settings.getUiScalePercentage() / 25f) * 25,
+            100, getMaxUiScalePercentage()))
+            .setter(settings::setUiScalePercentage)
+            .build());
 
         addCheckBox(panel, CheckBoxBuilder.builder()
             .background(resolveColor(panel))
@@ -2351,6 +2389,44 @@ public class SettingsPanel {
         panelWrapper.add(scrollPane, BorderLayout.CENTER);
 
         return panelWrapper;
+    }
+
+    private void fitSidebarButtons(List<JButton> buttons, List<String> icons) {
+        if (buttons.isEmpty()) {
+            return;
+        }
+
+        int reserved = 0;
+        for (Component component : sidebarPanel.getComponents()) {
+            if (!(component instanceof JButton button && buttons.contains(button))) {
+                reserved += component.getPreferredSize().height;
+            }
+        }
+
+        int size = Math.clamp((sidebarPanel.getHeight() - reserved) / buttons.size(),
+            SIDEBAR_BUTTON_MIN_SIZE, SIDEBAR_BUTTON_SIZE);
+
+        if (buttons.get(0).getPreferredSize().height == size) {
+            return;
+        }
+
+        Dimension buttonSize = new Dimension(SIDEBAR_BUTTON_SIZE, size);
+
+        for (int i = 0; i < buttons.size(); i++) {
+            JButton button = buttons.get(i);
+            button.setPreferredSize(buttonSize);
+            button.setMinimumSize(buttonSize);
+            button.setIcon(loadIcon(icons.get(i), ICON, size / 2));
+        }
+
+        sidebarPanel.revalidate();
+        sidebarPanel.repaint();
+    }
+
+    private static int getMaxUiScalePercentage() {
+        double fit = ScreenMetrics.getLargestFittingScale(MIN_USABLE_WIDTH, MIN_USABLE_HEIGHT);
+
+        return Math.clamp((int)Math.floor(fit * 4) * 25, 100, 300);
     }
 
     public static UIColors resolveColor(JPanel panel) {

@@ -246,11 +246,11 @@ public final class GDownloader {
 
         initConfig(workDir);
 
+        initToolkit(config);
+
         if (config.isDebugMode()) {
             printDebugInformation();
         }
-
-        initToolkit(config);
 
         initLanguage(config);
         updateConfig();

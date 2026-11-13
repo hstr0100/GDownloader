@@ -16,9 +16,13 @@
  */
 package net.brlns.gdownloader.ui;
 
+import java.awt.Dimension;
+import java.awt.GraphicsConfiguration;
 import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
+import java.awt.Insets;
 import java.awt.Rectangle;
+import java.awt.Toolkit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.swing.SwingUtilities;
@@ -31,8 +35,8 @@ public final class ScreenMetrics {
 
     private static final long REFRESH_INTERVAL_MS = 2000;
 
-    private static AtomicReference<Rectangle> cachedScreenBounds = new AtomicReference<>();
-    private static AtomicLong lastRefresh = new AtomicLong();
+    private static final AtomicReference<Rectangle> cachedScreenBounds = new AtomicReference<>();
+    private static final AtomicLong lastRefresh = new AtomicLong();
 
     private ScreenMetrics() {
     }
@@ -54,7 +58,50 @@ public final class ScreenMetrics {
     }
 
     public static void invalidate() {
-        cachedScreenBounds = null;
+        cachedScreenBounds.set(null);
+    }
+
+    public static Rectangle getUsableArea(GraphicsConfiguration config) {
+        Rectangle bounds = config.getBounds();
+        Insets insets = Toolkit.getDefaultToolkit().getScreenInsets(config);
+
+        return new Rectangle(
+            bounds.x + insets.left,
+            bounds.y + insets.top,
+            bounds.width - insets.left - insets.right,
+            bounds.height - insets.top - insets.bottom);
+    }
+
+    public static Dimension getSmallestUsableScreenSize() {
+        int width = Integer.MAX_VALUE;
+        int height = Integer.MAX_VALUE;
+
+        for (GraphicsDevice device : GraphicsEnvironment.getLocalGraphicsEnvironment().getScreenDevices()) {
+            Rectangle usable = getUsableArea(device.getDefaultConfiguration());
+
+            width = Math.min(width, usable.width);
+            height = Math.min(height, usable.height);
+        }
+
+        return new Dimension(width, height);
+    }
+
+    public static double getLargestFittingScale(int width, int height) {
+        double bestFit = 1.0;
+
+        for (GraphicsDevice device : GraphicsEnvironment.getLocalGraphicsEnvironment().getScreenDevices()) {
+            GraphicsConfiguration config = device.getDefaultConfiguration();
+            double currentScale = config.getDefaultTransform().getScaleX();
+            Rectangle usable = getUsableArea(config);
+
+            double fit = Math.min(
+                usable.width * currentScale / width,
+                usable.height * currentScale / height);
+
+            bestFit = Math.max(bestFit, fit);
+        }
+
+        return bestFit;
     }
 
     public static final class Debouncer {
