@@ -98,13 +98,17 @@ public final class MetadataManager {
             return;
         }
 
-        URLThumbnailLoader.tryLoadFavicon(url).ifPresentOrElse(
-            favicon -> {
-                mediaInfo.setFallbackThumbnailImage(favicon);
+        try {
+            URLThumbnailLoader.tryLoadFavicon(url).ifPresentOrElse(
+                favicon -> {
+                    mediaInfo.setFallbackThumbnailImage(favicon);
 
-                log.debug("Attached a fallback favicon image to {}; extractor produced no thumbnail", url);
-            },
-            () -> log.debug("No favicon available to augment {} either", url)
-        );
+                    log.debug("Attached a fallback favicon image to {}; extractor produced no thumbnail", url);
+                },
+                () -> log.debug("No favicon available to augment {} either", url)
+            );
+        } catch (Exception | OutOfMemoryError e) {
+            log.debug("Failed to augment thumbnail for {}: {}", url, e.toString());
+        }
     }
 }

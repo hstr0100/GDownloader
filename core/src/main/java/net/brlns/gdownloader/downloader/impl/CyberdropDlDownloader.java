@@ -290,6 +290,8 @@ public class CyberdropDlDownloader extends AbstractDownloader {
         File tmpPath = entry.getTmpDirectory();
 
         if (tmpPath != null && new File(tmpPath, LOGS_DIRECTORY_NAME).exists()) {
+            processMediaFiles(entry);
+
             entry.cleanDirectories();
         }
     }

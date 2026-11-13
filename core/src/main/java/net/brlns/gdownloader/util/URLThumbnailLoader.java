@@ -19,6 +19,7 @@ package net.brlns.gdownloader.util;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -51,6 +52,8 @@ import org.jsoup.select.Elements;
 public final class URLThumbnailLoader {
 
     private static final LRUCache<String, Optional<FaviconResult>> FAVICON_CACHE = new LRUCache<>(512);
+
+    private static final int MAX_FETCH_BYTES = 5 * 1024 * 1024;
 
     static {
         // Resorting to sheer ignorance here to make really sure these classes are loaded once and for all.
@@ -377,27 +380,36 @@ public final class URLThumbnailLoader {
             }
 
             HttpClient client = GDownloader.getInstance().getHttpManager().getClient();
-            HttpResponse<byte[]> response = client.send(
-                builder.build(), HttpResponse.BodyHandlers.ofByteArray());
+            HttpResponse<InputStream> response = client.send(
+                builder.build(), HttpResponse.BodyHandlers.ofInputStream());
 
-            if (response.statusCode() / 100 != 2) {
-                log.debug("Fetch got HTTP {} for {}", response.statusCode(), url);
+            byte[] body;
+            try (InputStream in = response.body()) {
+                if (response.statusCode() / 100 != 2) {
+                    log.debug("Fetch got HTTP {} for {}", response.statusCode(), url);
 
-                return Optional.empty();
+                    return Optional.empty();
+                }
+
+                body = in.readNBytes(MAX_FETCH_BYTES);
+                if (in.read() != -1) {
+                    log.debug("Response too large for {}, skipping", url);
+
+                    return Optional.empty();
+                }
             }
 
-            byte[] body = response.body();
             if ("gzip".equalsIgnoreCase(response.headers().firstValue("Content-Encoding").orElse(""))) {
-                body = new GZIPInputStream(new ByteArrayInputStream(body)).readAllBytes();
+                body = new GZIPInputStream(new ByteArrayInputStream(body)).readNBytes(MAX_FETCH_BYTES);
             }
 
             return Optional.of(body);
-        } catch (IOException e) {
-            log.debug("Failed to fetch bytes for {}: {}", url, e.toString());
-
-            return Optional.empty();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
+
+            return Optional.empty();
+        } catch (Exception e) {
+            log.debug("Failed to fetch bytes for {}: {}", url, e.toString());
 
             return Optional.empty();
         }
